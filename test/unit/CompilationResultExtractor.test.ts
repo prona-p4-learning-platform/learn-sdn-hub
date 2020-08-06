@@ -1,0 +1,11 @@
+import extractCompilationResult from "../../src/server/CompilationResultExtractor";
+
+test("it extracts errors successfully", () => {
+  expect(
+    extractCompilationResult(
+      `/tmp/test-wHXUrU/test.p4(13):syntax error, unexpected TYPEDEF, expecting ;
+      typedef
+      error: 1 errors encountered, aborting compilation\n`
+    )
+  ).toEqual(null);
+});
