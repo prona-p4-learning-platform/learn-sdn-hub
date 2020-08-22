@@ -1,10 +1,27 @@
 import * as React from "react";
+import Loginform from "../components/LoginForm";
 
-export default class Hello extends React.Component {
+interface HomeProps {
+  onUserLogin: (token: string, username: string) => void;
+}
+export default class Home extends React.Component {
+  props: HomeProps;
+  constructor(props: HomeProps){
+    super(props)
+  }
+  handleSuccessfulAuthentication(token: string, username: string): void {
+    console.log("Successful auth!");
+    this.props.onUserLogin(token, username)
+  }
+
   render(): React.ReactElement {
     return (
       <>
-        <h1>Home!</h1>
+        <Loginform
+          onSuccessfulAuthentication={(token: string, username: string): void =>
+            this.handleSuccessfulAuthentication(token, username)
+          }
+        ></Loginform>
       </>
     );
   }

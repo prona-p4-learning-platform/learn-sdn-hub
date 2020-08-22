@@ -1,29 +1,5 @@
 import { MongoClient } from "mongodb";
-
-interface UserAccount {
-  name: string;
-  _id: string;
-}
-
-interface UserEnvironment {
-  identifier: string;
-  description: string;
-}
-
-export interface Persister {
-  GetUserAccount: (username: string) => Promise<UserAccount>;
-  GetUserEnvironments: (username: string) => Promise<UserEnvironment[]>;
-  AddUserEnvironment: (
-    username: string,
-    identifier: string,
-    description: string
-  ) => Promise<void>;
-  RemoveUserEnvironment: (
-    username: string,
-    identifier: string
-  ) => Promise<void>;
-}
-
+import { Persister, UserEnvironment, UserAccount } from "./Persister";
 export default class MongoDBPersister implements Persister {
   private mongoClient: MongoClient = null;
   private connectURL: string;

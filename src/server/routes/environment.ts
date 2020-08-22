@@ -1,10 +1,9 @@
 import { Router } from "express";
 import P4Environment from "../P4Environment";
 import bodyParser from "body-parser";
-import fs from "fs";
 import environments from "../Configuration";
 import OpenStackProvider from "../OpenStackProvider";
-import { Persister } from "../database/MongoDBPersister";
+import { Persister } from "../database/Persister";
 
 export default (persister: Persister): Router => {
   const router = Router();

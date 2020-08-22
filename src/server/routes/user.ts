@@ -1,16 +1,26 @@
 import { Router } from "express";
 import bodyParser from "body-parser";
-import jsonwebtoken from "jsonwebtoken";
-import { Persister } from "../database/MongoDBPersister";
+import { AuthenticationProvider } from "../authentication/AuthenticationProvider";
+import environments from "../Configuration";
 
-export default (persister: Persister): Router => {
+export default (authProviders: AuthenticationProvider[]): Router => {
   const router = Router();
-  router.post("/login", bodyParser.json(), (req, res) => {
+
+  router.get("/assignments", async (req, res) => {
+    return res.status(200).json(environments.keys());
+  });
+
+  router.post("/login", bodyParser.json(), async (req, res) => {
     const username = req.body.username;
     const password = req.body.password;
-    if (username === "testuser") {
-      const token = jsonwebtoken.sign({ username: "testuser" }, "shhhhh");
-      return res.status(200).json({ token });
+    console.log(req.body)
+    for (const authProvider of authProviders) {
+      try {
+        const result = await authProvider.authenticateUser(username, password);
+        return res.status(200).json({ token: result.token, username });
+      } catch (err) {
+        console.log(err);
+      }
     }
     return res.status(401).json({ error: "Not authenticated." });
   });

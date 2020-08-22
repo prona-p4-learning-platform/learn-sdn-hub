@@ -5,7 +5,7 @@ import os from "os";
 import SSHConsole, { Console } from "./consoles/SSHConsole";
 import FileHandler from "./filehandler/SSHFileHandler";
 import EnvironmentProvider, { VMEndpoint } from "./OpenStackProvider";
-import { Persister } from "./database/MongoDBPersister";
+import { Persister } from "./database/Persister";
 import extractCompilationResult, {
   CompilationError,
 } from "./CompilationResultExtractor";
@@ -110,7 +110,7 @@ export default class P4Environment {
 
   async makeSureInstanceExists(): Promise<VMEndpoint> {
     const environments = await this.persister.GetUserEnvironments(this.userId);
-    console.log(environments)
+    console.log(environments);
     const filtered = environments.filter(
       (env) => env.description === this.configuration.description
     );
@@ -143,7 +143,6 @@ export default class P4Environment {
     desc: EnvironmentDescription = this.configuration
   ): Promise<void> {
     const endpoint = await this.makeSureInstanceExists();
-    console.log("Got desired endpoint: ", endpoint);
     await this.persister.AddUserEnvironment(
       this.userId,
       endpoint.identifier,

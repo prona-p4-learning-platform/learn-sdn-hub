@@ -1,5 +1,5 @@
 import { MongoClient } from "mongodb";
-import MongoDBPersister from "../src/server/MongoDBPersister";
+import MongoDBPersister from "../../src/server/database/MongoDBPersister";
 
 let instance: MongoDBPersister = null;
 let connection: MongoClient = null;
@@ -21,7 +21,7 @@ beforeAll(async () => {
 
 it("successfully retrieves an existing user", async () => {
   const result = await instance.GetUserAccount("testuser");
-  expect(result).toMatchObject({
+  expect(result).toEqual({
     _id: expect.any(String),
     username: "testuser",
     environments: [{ identifier: "environmentXYZ" }],

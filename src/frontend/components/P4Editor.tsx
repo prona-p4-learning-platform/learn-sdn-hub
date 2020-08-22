@@ -77,7 +77,7 @@ export default class P4Editor extends React.Component<P4EditorProps> {
       });
   }
 
-  render() {
+  render(): JSX.Element {
     const code = this.state.code;
     const options = {
       selectOnLineNumbers: true,

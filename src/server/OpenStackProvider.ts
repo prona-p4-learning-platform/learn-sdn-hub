@@ -5,20 +5,18 @@ export interface VMEndpoint {
   IPAddress: string;
   SSHPort: number;
 }
-
 interface InstanceProvider {
   getServer(identifier: string): Promise<VMEndpoint>;
   createServer(identifier: string): Promise<VMEndpoint>;
 }
-
 export default class OpenStackProvider implements InstanceProvider {
   private openstack: OpenStackClient;
   constructor() {
     this.openstack = pkgcloud.compute.createClient({
-      provider: "openstack", 
+      provider: "openstack",
       username: process.env.OPENSTACK_USERNAME,
       password: process.env.OPENSTACK_PASSWORD,
-      authUrl: process.env.OPENSTACK_AUTHURL, 
+      authUrl: process.env.OPENSTACK_AUTHURL,
       keystoneAuthVersion: "v3",
       region: process.env.OPENSTACK_REGION,
       tenantId: process.env.OPENSTACK_TENANTID,
@@ -27,17 +25,17 @@ export default class OpenStackProvider implements InstanceProvider {
   }
 
   async getServer(identifier: string): Promise<VMEndpoint> {
-    console.log("getServer")
+    console.log("getServer");
     return new Promise((resolve, reject) => {
       this.openstack.getServer(identifier, (err, server) => {
-        console.log(err, server)
+        console.log(err, server);
         if (err) {
           return reject(err);
         }
         //@ts-ignore
         server.client.getServer(server, (err, server) => {
           if (err) return reject(err);
-          console.log(err, server)
+          console.log(err, server);
           //@ts-ignore
           server.client.getServerAddresses(server, (err, addresses) => {
             if (err) {
@@ -79,7 +77,7 @@ export default class OpenStackProvider implements InstanceProvider {
   }
 
   async createServer(identifier: string): Promise<VMEndpoint> {
-    console.log("createServer")
+    console.log("createServer");
     return await new Promise((resolve, reject) => {
       this.openstack.createServer(
         {
