@@ -7,7 +7,8 @@ export default (authProviders: AuthenticationProvider[]): Router => {
   const router = Router();
 
   router.get("/assignments", async (req, res) => {
-    return res.status(200).json(environments.keys());
+    console.log("assignments");
+    return res.status(200).json(Array.from(environments.keys()));
   });
 
   router.post("/login", bodyParser.json(), async (req, res) => {

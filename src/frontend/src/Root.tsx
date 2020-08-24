@@ -7,9 +7,11 @@ import {
   Route,
   Link
 } from "react-router-dom";
-import Home from "../views/Home";
-import Environment from "../views/Environment";
-import PrivateRoute from './PrivateRoute'
+import Home from "./views/Home";
+import Environment from "./views/Environment";
+import PrivateRoute from './components/PrivateRoute'
+import AssignmentOverview from "./views/AssignmentOverview";
+
 interface AppState {
   username: string;
   authenticated: boolean;
@@ -23,13 +25,18 @@ export default class App extends React.Component {
       authenticated: false,
     };
 
-    if (localStorage.getItem("token")) {
+    if (localStorage.getItem("token") !== null) {
+      this.state.authenticated = true
     }
+    if (localStorage.getItem("username") !== null) {
+      this.state.username = localStorage.getItem("username") as string
+    }    
   }
 
   handleUserLogin(token: string, username: string): void {
     this.setState({ username, authenticated: true });
     localStorage.setItem("token", token);
+    localStorage.setItem("username", username);
   }
 
   render(): JSX.Element {
@@ -59,7 +66,7 @@ export default class App extends React.Component {
             />
           </Route>
           <PrivateRoute isAuthenticated={this.state.authenticated} exact path="/assignments">
-            <h1>Assignments!</h1>
+            <AssignmentOverview/>
           </PrivateRoute>
           <PrivateRoute isAuthenticated={this.state.authenticated} exact path="/environment/:environment">
             <Environment />

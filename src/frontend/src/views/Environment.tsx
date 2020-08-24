@@ -15,13 +15,19 @@ type PropsType = RouteComponentProps<PathParamsType> & {};
 
 interface State {
   environmentStatus: string;
+  ttys: string[];
+  files: string[];
 }
 
 export class EnvironmentView extends React.Component<PropsType> {
   public state: State;
   constructor(props: PropsType) {
     super(props);
-    this.state = { environmentStatus: "running" };
+    this.state = { environmentStatus: "running",ttys: [],files: [] };
+  }
+
+  componentDidMount(): void{
+    this.loadEnvironmentConfig()
   }
 
   restartEnvironment(): void {
@@ -40,7 +46,19 @@ export class EnvironmentView extends React.Component<PropsType> {
       });
   }
 
+  loadEnvironmentConfig(): void{
+    fetch(`/api/environment/${this.props.match.params.environment}/configuration`)
+      .then((response) => response.json())
+      .then((data) => {
+        console.log(data);
+        if (data.error !== true) {
+          this.setState({ ttys: data.ttys, files: data.files });
+        }
+      });
+  }
+
   render(): ReactNode {
+    console.log(this.state.files)
     return (
       <Grid container spacing={3}>
         <Grid item xs={6}>
@@ -68,9 +86,9 @@ export class EnvironmentView extends React.Component<PropsType> {
         <Grid item xs={6}>
           <div style={{ height: "500px" }}>
             <EditorTabs
-              endpoints={[
-                `/api/environment/${this.props.match.params.environment}/file/basic.p4`,
-              ]}
+              endpoints={this.state.files.map(fileAlias => 
+                `/api/environment/${this.props.match.params.environment}/file/${fileAlias}`,
+              )}
             />
           </div>
         </Grid>

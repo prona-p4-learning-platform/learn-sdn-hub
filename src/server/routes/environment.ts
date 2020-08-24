@@ -9,6 +9,22 @@ export default (persister: Persister): Router => {
   const router = Router();
   const provider = new OpenStackProvider();
 
+  router.get("/:environment/configuration", (req, res) => {
+    const environment = req.params.environment;
+    const targetEnv = environments.get(String(environment));
+    if (targetEnv === undefined) {
+      return res
+        .status(404)
+        .json({ error: true, message: "Environment not found" });
+    }
+    return res.status(200).json({
+      files: targetEnv.editableFiles.map((file) => file.alias),
+      ttys: targetEnv.tasks
+        .filter((task) => task.provideTty === true)
+        .map((task) => task.name),
+    });
+  });
+
   router.post("/create", (req, res) => {
     const environment = req.query.environment;
     const targetEnv = environments.get(String(environment));
