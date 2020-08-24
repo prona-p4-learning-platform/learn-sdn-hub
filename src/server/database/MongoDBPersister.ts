@@ -11,7 +11,9 @@ export default class MongoDBPersister implements Persister {
 
   private async getClient(): Promise<MongoClient> {
     if (!this.connectPromise) {
-      this.connectPromise = MongoClient.connect(this.connectURL);
+      this.connectPromise = MongoClient.connect(this.connectURL, {
+        useUnifiedTopology: true,
+      });
     }
     if (!this.mongoClient) {
       const client = await this.connectPromise;

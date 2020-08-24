@@ -3,14 +3,7 @@ import { makeStyles } from "@material-ui/core/styles";
 import TextField from "@material-ui/core/TextField";
 import Button from '@material-ui/core/Button';
 
-const useStyles = makeStyles((theme) => ({
-  root: {
-    "& > *": {
-      margin: theme.spacing(1),
-      width: "25ch",
-    },
-  },
-}));
+
 
 export interface LoginFormProps{
     onSuccessfulAuthentication: (token: string, username: string) => void
@@ -22,6 +15,15 @@ export default function(props: LoginFormProps) {
         username : "",
         password : ""
     })
+    const useStyles = makeStyles((theme) => ({
+      root: {
+        "& > *": {
+          margin: theme.spacing(1),
+          width: "25ch",
+        },
+      },
+    }));
+    const classes = useStyles();
 
     const [loginResult , setLoginResult] = useState("")    
 
@@ -43,9 +45,9 @@ export default function(props: LoginFormProps) {
         } else if (result.status===401){
             setLoginResult("Auth failed")
         }
-    }, [state]);
+    }, [state],);
 
-    const classes = useStyles();
+
 
     return (
       <form className={classes.root} noValidate autoComplete="off">
@@ -58,4 +60,3 @@ export default function(props: LoginFormProps) {
       </form>
     );
   }
-}

@@ -7,5 +7,10 @@ test("it extracts errors successfully", () => {
       typedef
       error: 1 errors encountered, aborting compilation\n`
     )
-  ).toEqual(null);
+  ).toEqual([
+    {
+      line: 13,
+      message: "syntax error, unexpected TYPEDEF, expecting ;",
+    },
+  ]);
 });

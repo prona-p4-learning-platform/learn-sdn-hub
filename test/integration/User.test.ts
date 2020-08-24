@@ -14,6 +14,10 @@ beforeAll(async () => {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   });
+  try {
+    await connection.db().dropCollection("users");
+  } catch (err) {}
+
   await connection.db().collection("users").insertOne({
     username: "testuser",
     password: "testpassword",

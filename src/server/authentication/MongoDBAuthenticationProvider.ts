@@ -16,7 +16,6 @@ export default class MongoDBAuthenticationProvider
     username: string,
     password: string
   ): Promise<AuthenticationResult> {
-    console.log(username, password)
     const user = await this.persister.GetUserAccount(username);
     if (user.password === password) {
       return { username: "", token: "", type: "mongodb" };

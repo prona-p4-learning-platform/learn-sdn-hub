@@ -5,7 +5,7 @@ interface HomeProps {
   onUserLogin: (token: string, username: string) => void;
 }
 export default class Home extends React.Component {
-  props: HomeProps;
+  props!: HomeProps;
   constructor(props: HomeProps){
     super(props)
   }

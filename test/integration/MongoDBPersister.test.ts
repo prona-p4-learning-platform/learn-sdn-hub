@@ -10,6 +10,9 @@ beforeAll(async () => {
     useUnifiedTopology: true,
   });
   instance = new MongoDBPersister(process.env.MONGO_URL);
+  try {
+    await connection.db().dropCollection("users");
+  } catch (err) {}
   await connection
     .db()
     .collection("users")
@@ -22,7 +25,7 @@ beforeAll(async () => {
 it("successfully retrieves an existing user", async () => {
   const result = await instance.GetUserAccount("testuser");
   expect(result).toEqual({
-    _id: expect.any(String),
+    _id: expect.anything(),
     username: "testuser",
     environments: [{ identifier: "environmentXYZ" }],
   });

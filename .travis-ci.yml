@@ -1,0 +1,8 @@
+language: node_js
+node_js:
+  - "13"
+  - "12"
+install:
+  - npm install
+script:
+  - cd ./src/frontend && npm run build

@@ -16,7 +16,9 @@ interface P4EditorProps {
 
 export default class P4Editor extends React.Component<P4EditorProps> {
   public state: State;
-  private monaco: typeof monacoEditor;
+  // @ts-ignore
+  private monaco: typeof monacoEditor
+  // @ts-ignore
   private editor: monacoEditor.editor.IStandaloneCodeEditor;
   private decorations: string[] = [];
   constructor(props: P4EditorProps) {
