@@ -34,6 +34,7 @@ export class EnvironmentView extends React.Component<PropsType> {
     this.setState({ environmentStatus: "restarting" });
     fetch(`/api/environment/${this.props.match.params.environment}/restart`, {
       method: "post",
+      headers: {'Content-Type': 'application/json', authorization: localStorage.getItem("token") || ""} 
     })
       .then((response) => response.json())
       .then((data) => {
@@ -47,7 +48,8 @@ export class EnvironmentView extends React.Component<PropsType> {
   }
 
   loadEnvironmentConfig(): void{
-    fetch(`/api/environment/${this.props.match.params.environment}/configuration`)
+    fetch(`/api/environment/${this.props.match.params.environment}/configuration`, 
+    {headers: {'Content-Type': 'application/json', authorization: localStorage.getItem("token") || ""} })
       .then((response) => response.json())
       .then((data) => {
         console.log(data);

@@ -2,7 +2,6 @@ import { EventEmitter } from "events";
 import { Client } from "ssh2";
 import fs from "fs";
 
-
 export interface Console {
   on(event: "ready", listener: () => void): this;
   on(event: "data", listener: (data: string) => void): this;
@@ -66,7 +65,7 @@ export default class SSHConsole extends EventEmitter implements Console {
         port,
         username: "ubuntu",
         privateKey: fs.readFileSync("/home/ubuntu/P4SSHKey"),
-        readyTimeout: 60000,
+        readyTimeout: 90000,
       });
   }
 

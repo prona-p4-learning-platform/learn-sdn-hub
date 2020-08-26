@@ -1,7 +1,7 @@
 export interface AuthenticationResult {
   type: string;
   username: string;
-  token: string;
+  userid: string;
 }
 
 export interface AuthenticationProvider {

@@ -34,7 +34,7 @@ export default class P4Editor extends React.Component<P4EditorProps> {
     editor.focus();
     this.monaco = monaco;
     this.editor = editor;
-    fetch(this.props.endpoint)
+    fetch(this.props.endpoint, {headers: {'Content-Type': 'application/json', authorization: localStorage.getItem("token") || ""} })
       .then((response) => response.text())
       .then((data) => {
         this.setState({ code: data });
@@ -48,7 +48,10 @@ export default class P4Editor extends React.Component<P4EditorProps> {
   };
 
   save(): void {
-    fetch(this.props.endpoint, { method: "post", body: this.state.code })
+    fetch(this.props.endpoint, {
+      method: "post", 
+    body: this.state.code,headers: {'Content-Type': 'text/plain', 
+    authorization: localStorage.getItem("token") || ""}  })
       .then((response) => response.text())
       .then((data) => {
         this.setState({ code: data });

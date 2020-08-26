@@ -19,7 +19,7 @@ export default function AssignmentOverview(props: AssignmentOverviewProps) {
   const createEnvironment = useCallback(async (assignment: string) => {
     const result = await fetch(`/api/environment/create?environment=${assignment}`, {
       method: 'POST', 
-      headers: {'Content-Type': 'application/json'} 
+      headers: {'Content-Type': 'application/json', authorization: localStorage.getItem("token") || ""} 
     })
     
   },[]);
