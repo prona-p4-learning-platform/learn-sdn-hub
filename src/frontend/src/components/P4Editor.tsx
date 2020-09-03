@@ -5,7 +5,7 @@ import MonacoEditor, {
 } from "react-monaco-editor";
 import Button from "@material-ui/core/Button";
 import * as monacoEditor from "monaco-editor/esm/vs/editor/editor.api";
-import augment from './MonacoLanguageServerAugmentation';
+//import augment from './MonacoLanguageServerAugmentation';
 interface State {
   code: string;
 }
@@ -34,7 +34,7 @@ export default class P4Editor extends React.Component<P4EditorProps> {
     editor.focus();
     this.monaco = monaco;
     this.editor = editor;
-    augment(editor.getContainerDomNode());
+    //augment(editor);
     fetch(this.props.endpoint, {headers: {'Content-Type': 'application/json', authorization: localStorage.getItem("token") || ""} })
       .then((response) => response.text())
       .then((data) => {
@@ -107,6 +107,7 @@ export default class P4Editor extends React.Component<P4EditorProps> {
           options={options}
           onChange={this.onChange}
           editorDidMount={this.editorDidMount}
+
         />
       </div>
     );

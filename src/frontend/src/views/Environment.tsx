@@ -23,7 +23,7 @@ export class EnvironmentView extends React.Component<PropsType> {
   public state: State;
   constructor(props: PropsType) {
     super(props);
-    this.state = { environmentStatus: "running",ttys: [],files: [] };
+    this.state = { environmentStatus: "running",ttys: [],files: ["test"] };
   }
 
   componentDidMount(): void{

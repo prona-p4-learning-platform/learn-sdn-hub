@@ -1,144 +1,90 @@
-/* --------------------------------------------------------------------------------------------
- * Copyright (c) 2018 TypeFox GmbH (http://www.typefox.io). All rights reserved.
- * Licensed under the MIT License. See License.txt in the project root for license information.
- * ------------------------------------------------------------------------------------------ */
-import { getLanguageService, TextDocument, CompletionItem } from "vscode-json-languageservice";
-import { MonacoToProtocolConverter, ProtocolToMonacoConverter } from 'monaco-languageclient/lib/monaco-converter';
-import * as monaco from "monaco-editor/esm/vs/editor/editor.api";
-const LANGUAGE_ID = 'json';
-const MODEL_URI = 'inmemory://model.json'
-const MONACO_URI = monaco.Uri.parse(MODEL_URI);
+import { listen, MessageConnection } from 'vscode-ws-jsonrpc';
+import {
+    MonacoLanguageClient, CloseAction, ErrorAction,
+    MonacoServices, createConnection
+} from 'monaco-languageclient';
+import ReconnectingWebSocket  from 'reconnecting-websocket'
+import * as monaco from 'monaco-editor'
+const normalizeUrl = require('normalize-url');
 
-export default function (elem: HTMLElement){
-
-// register the JSON language with Monaco
+// register Monaco languages
 monaco.languages.register({
-    id: LANGUAGE_ID,
-    extensions: ['.json', '.bowerrc', '.jshintrc', '.jscsrc', '.eslintrc', '.babelrc'],
-    aliases: ['JSON', 'json'],
-    mimetypes: ['application/json'],
-});
+    id: 'typescript',
+    extensions: ['.ts'],
+    aliases: ['TypeScript','ts','TS','Typescript','typescript']
+})
 
-// create the Monaco editor
+monaco.languages.register({
+    id: 'p4',
+    extensions: ['.p4'],
+    aliases: ['P4','p4']
+})
+
+// create Monaco editor
 const value = `{
     "$schema": "http://json.schemastore.org/coffeelint",
     "line_endings": "unix"
 }`;
-
-monaco.editor.create(elem, {
-    model: monaco.editor.createModel(value, LANGUAGE_ID, MONACO_URI),
+const editor = monaco.editor.create(document.getElementById("editortest")!, {
+    model: monaco.editor.createModel(value, 'typescript', monaco.Uri.parse('file://model.json')),
     glyphMargin: true,
+    theme: "vs-dark",
     lightbulb: {
         enabled: true
     }
 });
 
-function getModel(): monaco.editor.IModel {
-    return monaco.editor.getModel(MONACO_URI) as monaco.editor.IModel;
-}
+// install Monaco language client services
+//@ts-ignore
+MonacoServices.install(editor, {rootUri: "file:///home/patrick/Desktop/github/monaco-languageclient/example/"});
 
-function createDocument(model: monaco.editor.IReadOnlyModel) {
-    return TextDocument.create(MODEL_URI, model.getModeId(), model.getVersionId(), model.getValue());
-}
-
-function resolveSchema(url: string): Promise<string> {
-    const promise = new Promise<string>((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.onload = () => resolve(xhr.responseText);
-        xhr.onerror = () => reject(xhr.statusText);
-        xhr.open("GET", url, true);
-        xhr.send();
-    });
-    return promise;
-}
-
-const m2p = new MonacoToProtocolConverter();
-const p2m = new ProtocolToMonacoConverter();
-const jsonService = getLanguageService({
-    schemaRequestService: resolveSchema
-});
-const pendingValidationRequests = new Map<string, number>();
-
-monaco.languages.registerCompletionItemProvider(LANGUAGE_ID, {
-    provideCompletionItems(model, position, context, token): monaco.Thenable<monaco.languages.CompletionList> {
-        const document = createDocument(model);
-        const wordUntil = model.getWordUntilPosition(position);
-        const defaultRange = new monaco.Range(position.lineNumber, wordUntil.startColumn, position.lineNumber, wordUntil.endColumn);
-        const jsonDocument = jsonService.parseJSONDocument(document);
-        return jsonService.doComplete(document, m2p.asPosition(position.lineNumber, position.column), jsonDocument).then((list) => {
-            return p2m.asCompletionResult(list, defaultRange);
-        });
-    },
-
-    resolveCompletionItem(model, position, item, token): monaco.languages.CompletionItem | monaco.Thenable<monaco.languages.CompletionItem> {
-        const a : CompletionItem | undefined = m2p.asCompletionItem(item) || undefined
-        //@ts-ignore
-        return jsonService.doResolve(a).then(result => p2m.asCompletionItem(result, item.range) || undefined);
+// create the web socket
+const url = createUrl('ws://localhost:3002/ts')
+const webSocket = createWebSocket(url);
+// listen when the web socket is opened
+listen({
+    webSocket,
+    onConnection: connection => {
+        // create and start the language client
+        const languageClient = createLanguageClient(connection);
+        const disposable = languageClient.start();
+        connection.onClose(() => disposable.dispose());
     }
 });
 
-monaco.languages.registerDocumentRangeFormattingEditProvider(LANGUAGE_ID, {
-    provideDocumentRangeFormattingEdits(model, range, options, token): monaco.languages.TextEdit[] | monaco.Thenable<monaco.languages.TextEdit[]> {
-        const document = createDocument(model);
-        const edits = jsonService.format(document, m2p.asRange(range), m2p.asFormattingOptions(options));
-        return p2m.asTextEdits(edits);
-    }
-});
-
-monaco.languages.registerDocumentSymbolProvider(LANGUAGE_ID, {
-    provideDocumentSymbols(model, token): monaco.languages.DocumentSymbol[] | monaco.Thenable<monaco.languages.DocumentSymbol[]> {
-        const document = createDocument(model);
-        const jsonDocument = jsonService.parseJSONDocument(document);
-        return p2m.asSymbolInformations(jsonService.findDocumentSymbols(document, jsonDocument));
-    }
-});
-
-monaco.languages.registerHoverProvider(LANGUAGE_ID, {
-    provideHover(model, position, token): monaco.languages.Hover | monaco.Thenable<monaco.languages.Hover> {
-        const document = createDocument(model);
-        const jsonDocument = jsonService.parseJSONDocument(document);
-        return jsonService.doHover(document, m2p.asPosition(position.lineNumber, position.column), jsonDocument).then((hover) => {
-            return p2m.asHover(hover)!;
-        });
-    }
-});
-
-getModel().onDidChangeContent((event) => {
-    validate();
-});
-
-function validate(): void {
-    const document = createDocument(getModel());
-    cleanPendingValidation(document);
-    pendingValidationRequests.set(document.uri, setTimeout(() => {
-        pendingValidationRequests.delete(document.uri);
-        doValidate(document);
-    }));
-}
-
-function cleanPendingValidation(document: TextDocument): void {
-    const request = pendingValidationRequests.get(document.uri);
-    if (request !== undefined) {
-        clearTimeout(request);
-        pendingValidationRequests.delete(document.uri);
-    }
-}
-
-function doValidate(document: TextDocument): void {
-    if (document.getText().length === 0) {
-        cleanDiagnostics();
-        return;
-    }
-    const jsonDocument = jsonService.parseJSONDocument(document);
-    jsonService.doValidation(document, jsonDocument).then((diagnostics) => {
-        const markers = p2m.asDiagnostics(diagnostics);
-        monaco.editor.setModelMarkers(getModel(), 'default', markers);
+function createLanguageClient(connection: MessageConnection): MonacoLanguageClient {
+    return new MonacoLanguageClient({
+        name: "Sample Language Client",
+        clientOptions: {
+            // use a language id as a document selector
+            documentSelector: ['typescript'],
+            // disable the default error handler
+            errorHandler: {
+                error: () => ErrorAction.Shutdown,
+                closed: () => CloseAction.DoNotRestart
+            }
+        },
+        // create a language client connection from the JSON RPC connection on demand
+        connectionProvider: {
+            get: (errorHandler, closeHandler) => {
+                return Promise.resolve(createConnection(connection, errorHandler, closeHandler))
+            }
+        }
     });
 }
 
-function cleanDiagnostics(): void {
-    monaco.editor.setModelMarkers(getModel(), 'default', []);
+function createUrl(path: string): string {
+    return normalizeUrl(path);
 }
 
-
+function createWebSocket(url: string): WebSocket {
+    const socketOptions = {
+        maxReconnectionDelay: 10000,
+        minReconnectionDelay: 1000,
+        reconnectionDelayGrowFactor: 1.3,
+        connectionTimeout: 10000,
+        maxRetries: Infinity,
+        debug: true
+    };
+    return new ReconnectingWebSocket(url, [], socketOptions) as WebSocket;
 }
