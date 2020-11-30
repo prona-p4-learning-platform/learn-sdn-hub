@@ -4,7 +4,7 @@ import fs from "fs";
 import os from "os";
 import SSHConsole, { Console } from "./consoles/SSHConsole";
 import FileHandler from "./filehandler/SSHFileHandler";
-import EnvironmentProvider, { VMEndpoint } from "./OpenStackProvider";
+import { InstanceProvider, VMEndpoint } from "./providers/Provider";
 import { Persister } from "./database/Persister";
 import extractCompilationResult, {
   CompilationError,
@@ -44,7 +44,7 @@ export default class P4Environment {
   private editableFiles: Map<string, string>;
   private configuration: EnvironmentDescription;
   private static activeEnvironments = new Map<string, P4Environment>();
-  private environmentProvider: EnvironmentProvider;
+  private environmentProvider: InstanceProvider;
   private persister: Persister;
   private userId: string;
   private filehandler: FileHandler;
@@ -68,6 +68,21 @@ export default class P4Environment {
     });
   }
 
+  static async compileRawOutput(source: string): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const folder = path.join(os.tmpdir(), "test-");
+      fs.mkdtemp(folder, (err, folder) => {
+        if (err) return reject(err);
+        const tmpFilePath = path.join(folder, "test.p4");
+        fs.writeFileSync(path.join(folder, "test.p4"), source);
+        exec(`p4c ${tmpFilePath}`, (err, stdout, stderr) => {
+          console.log(stderr);
+          resolve(stderr);
+        });
+      });
+    });
+  }
+
   public static getActiveEnvironment(alias: string): P4Environment {
     console.log(Array.from(this.activeEnvironments.keys()));
     return P4Environment.activeEnvironments.get(alias);
@@ -76,7 +91,7 @@ export default class P4Environment {
   private constructor(
     userId: string,
     configuration: EnvironmentDescription,
-    environmentProvider: EnvironmentProvider,
+    environmentProvider: InstanceProvider,
     persister: Persister
   ) {
     this.activeConsoles = new Map();
@@ -99,7 +114,7 @@ export default class P4Environment {
     userId: string,
     identifier: string,
     env: EnvironmentDescription,
-    provider: EnvironmentProvider,
+    provider: InstanceProvider,
     persister: Persister
   ): Promise<P4Environment> {
     const environment = new P4Environment(userId, env, provider, persister);
@@ -148,6 +163,7 @@ export default class P4Environment {
       endpoint.identifier,
       this.configuration.description
     );
+    console.log(endpoint);
     this.filehandler = new FileHandler(endpoint.IPAddress, endpoint.SSHPort);
     desc.editableFiles.forEach((val) =>
       this.addEditableFile(val.alias, val.absFilePath)

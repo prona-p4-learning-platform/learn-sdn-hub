@@ -7,6 +7,7 @@
     "test": "jest --config test/unit/jest.config.js",
     "test:integration": "jest --config test/integration/jest.config.js --runInBand",
     "start": "ts-node src/server/index.ts",
+    "start:localvm": "ts-node src/server/localvm.ts",
     "lint": "eslint src/**/**/*.{js,ts,tsx} --fix --debug",
     "compile": "tsc --noEmit"
   },
@@ -37,7 +38,9 @@
     "typescript": "^3.8.3"
   },
   "dependencies": {
+    "@types/cors": "^2.8.8",
     "body-parser": "^1.19.0",
+    "cors": "^2.8.5",
     "jsonwebtoken": "^8.5.1",
     "mongodb": "^3.5.9",
     "node-pty": "^0.9.0",

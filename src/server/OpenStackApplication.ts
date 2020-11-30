@@ -4,7 +4,7 @@ import MongoDBPersister from "./database/MongoDBPersister";
 import MongoDBAuthenticationProvider from "./authentication/MongoDBAuthenticationProvider";
 
 const app = express();
-const persister = new MongoDBPersister(process.env.MONGO_URL);
+const persister = new MongoDBPersister(process.env.MONGODB_URL);
 app.use(api(persister, [new MongoDBAuthenticationProvider(persister)]));
 
 export default app;

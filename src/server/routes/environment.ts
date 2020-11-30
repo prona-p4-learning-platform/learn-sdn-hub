@@ -2,15 +2,20 @@ import { Router, Request } from "express";
 import P4Environment from "../P4Environment";
 import bodyParser from "body-parser";
 import environments from "../Configuration";
-import OpenStackProvider from "../OpenStackProvider";
+import { InstanceProvider } from "../providers/Provider";
 import { Persister } from "../database/Persister";
+import fs from "fs";
+import path from "path";
 import authenticationMiddleware, {
   RequestWithUser,
 } from "../authentication/AuthenticationMiddleware";
 
-export default (persister: Persister): Router => {
+const markdown = fs
+  .readFileSync(path.resolve(__dirname, "../assignments/p4basic.md"))
+  .toString();
+
+export default (persister: Persister, provider: InstanceProvider): Router => {
   const router = Router();
-  const provider = new OpenStackProvider();
 
   router.get("/:environment/configuration", (req: Request, res) => {
     const environment = req.params.environment;
@@ -26,6 +31,10 @@ export default (persister: Persister): Router => {
         .filter((task) => task.provideTty === true)
         .map((task) => task.name),
     });
+  });
+
+  router.get("/:environment/assignment", (req, res) => {
+    res.send(markdown);
   });
 
   router.post(

@@ -1,6 +1,6 @@
 import { Server } from "http";
 import WebSocket from "ws";
-import { match, parse } from "path-to-regexp";
+import { match } from "path-to-regexp";
 import url from "url";
 import P4Environment from "../P4Environment";
 
@@ -9,16 +9,24 @@ interface WebsocketPathParams {
   type: string;
 }
 
-const matcher = match<WebsocketPathParams>(
+interface LSPathParams {
+  language: string;
+}
+
+const envMatcher = match<WebsocketPathParams>(
   "/environment/:environment/type/:type"
 );
+const lsMatcher = match<LSPathParams>("/languageserver/:language");
 
 export default function wrapWSWithExpressApp(server: Server): void {
   const wss = new WebSocket.Server({ server });
   wss.on("connection", function (ws, request) {
-    const matchResult = matcher(url.parse(request.url).pathname);
-    if (matchResult !== false) {
-      const { environment, type } = matchResult.params;
+    const path = url.parse(request.url).pathname;
+    const envMatchResult = envMatcher(path);
+    const lspMatchResult = lsMatcher(path);
+
+    if (envMatchResult !== false) {
+      const { environment, type } = envMatchResult.params;
       const envInstance = P4Environment.getActiveEnvironment(`${environment}`);
       if (envInstance !== undefined) {
         const envConsole = envInstance.getConsoleByAlias(type);
@@ -47,6 +55,8 @@ export default function wrapWSWithExpressApp(server: Server): void {
         );
         ws.close();
       }
+    } else if (lspMatchResult !== false) {
+      //forward connection to LS-Server-Instance
     } else {
       ws.send(`No route handler.`);
       ws.close();

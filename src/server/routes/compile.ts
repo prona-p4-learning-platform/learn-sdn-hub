@@ -13,4 +13,14 @@ router.post("/", bodyParser.text({ type: "text/plain" }), (req, res) => {
     );
 });
 
+router.post("/raw", bodyParser.text({ type: "text/plain" }), (req, res) => {
+  P4Environment.compileRawOutput(req.body)
+    .then((result) =>
+      res.status(200).json({ status: "compilation successful", result })
+    )
+    .catch((err: Error) =>
+      res.status(200).json({ status: "compilation error", err })
+    );
+});
+
 export default router;

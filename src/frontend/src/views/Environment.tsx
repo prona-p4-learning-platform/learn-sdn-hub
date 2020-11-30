@@ -6,6 +6,11 @@ import { withRouter } from "react-router-dom";
 import { RouteComponentProps } from "react-router";
 import Button from "@material-ui/core/Button";
 import { ReactNode } from "react";
+import ReactMarkdown from 'react-markdown'
+import mermaid from 'mermaid'
+import TabControl from '../components/TabControl'
+const hostname = process.env.REACT_APP_API_HOST || ''
+const wsHostname = process.env.REACT_APP_WS_HOST || ''
 
 type PathParamsType = {
   environment: string;
@@ -17,22 +22,25 @@ interface State {
   environmentStatus: string;
   ttys: string[];
   files: string[];
+  assignment: ""
 }
 
 export class EnvironmentView extends React.Component<PropsType> {
   public state: State;
+
   constructor(props: PropsType) {
     super(props);
-    this.state = { environmentStatus: "running",ttys: [],files: ["test"] };
+    this.state = { environmentStatus: "running",ttys: [],files: [], assignment: "" };
   }
 
   componentDidMount(): void{
     this.loadEnvironmentConfig()
+    this.loadAssignment()
   }
 
   restartEnvironment(): void {
     this.setState({ environmentStatus: "restarting" });
-    fetch(`/api/environment/${this.props.match.params.environment}/restart`, {
+    fetch(`${hostname}/api/environment/${this.props.match.params.environment}/restart`, {
       method: "post",
       headers: {'Content-Type': 'application/json', authorization: localStorage.getItem("token") || ""} 
     })
@@ -48,7 +56,7 @@ export class EnvironmentView extends React.Component<PropsType> {
   }
 
   loadEnvironmentConfig(): void{
-    fetch(`/api/environment/${this.props.match.params.environment}/configuration`, 
+    fetch(`${hostname}/api/environment/${this.props.match.params.environment}/configuration`, 
     {headers: {'Content-Type': 'application/json', authorization: localStorage.getItem("token") || ""} })
       .then((response) => response.json())
       .then((data) => {
@@ -59,15 +67,29 @@ export class EnvironmentView extends React.Component<PropsType> {
       });
   }
 
+  loadAssignment(){
+    fetch(`${hostname}/api/environment/${this.props.match.params.environment}/assignment`, 
+    {headers: {'Content-Type': 'application/json', authorization: localStorage.getItem("token") || ""} })
+      .then((response) => response.text())
+      .then((data) => {
+        console.log(data);
+          this.setState({ assignment: data });
+      });
+  }
+
+  componentDidUpdate(){
+    mermaid.init(document.querySelectorAll('code.language-mermaid'))
+  }
+
   render(): ReactNode {
-    console.log(this.state.files)
     return (
       <Grid container spacing={3}>
         <Grid item xs={6}>
-          <Grid item xs={12}>
-            Placeholder Infrastructure display
-          </Grid>
-          <Grid item xs={12}>
+        <TabControl tabNames={["Assignment", "Terminals"]}>
+            <ReactMarkdown
+              source={this.state.assignment}
+            />
+            <Grid item xs={12}>
             <Button
               variant="contained"
               color="primary"
@@ -76,20 +98,23 @@ export class EnvironmentView extends React.Component<PropsType> {
               Reload environment and apply changes
             </Button>
             <h5>Environment status: {this.state.environmentStatus}</h5>
-          </Grid>
-          <Grid item xs={12}>
             {this.state.environmentStatus === "running" && (
               <Terminal
-                wsEndpoint={`ws://${document.location.host}/environment/${this.props.match.params.environment}/type/bash`}
+                wsEndpoint={`${wsHostname}/environment/${this.props.match.params.environment}/type/bash`}
               />
-            )}
+            )}            
+          </Grid>
+        </TabControl>/
+          <Grid item xs={12}>
+            Placeholder Infrastructure display
+    
           </Grid>
         </Grid>
         <Grid item xs={6}>
           <div style={{ height: "500px" }}>
             <EditorTabs
               endpoints={this.state.files.map(fileAlias => 
-                `/api/environment/${this.props.match.params.environment}/file/${fileAlias}`,
+                `${hostname}/api/environment/${this.props.match.params.environment}/file/${fileAlias}`,
               )}
             />
           </div>

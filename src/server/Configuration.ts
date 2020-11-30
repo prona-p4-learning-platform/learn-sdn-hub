@@ -6,7 +6,7 @@ environments.set("p4basic", {
   tasks: [
     {
       name: "bash",
-      cwd: "/home/ubuntu/tutorials/exercises/basic/",
+      cwd: "/home/p4/tutorials/exercises/basic/",
       executable: "make",
       params: ["&& exit && exit"],
       provideTty: true,
@@ -14,14 +14,14 @@ environments.set("p4basic", {
   ],
   editableFiles: [
     {
-      absFilePath: "/home/ubuntu/tutorials/exercises/basic/basic.p4",
+      absFilePath: "/home/p4/tutorials/exercises/basic/basic.p4",
       alias: "basic.p4",
     },
   ],
   stopCommands: [
     {
       name: "bash",
-      cwd: "/home/ubuntu/tutorials/exercises/basic/",
+      cwd: "/home/p4/tutorials/exercises/basic/",
       executable: "make",
       params: ["stop && exit"],
       provideTty: false,

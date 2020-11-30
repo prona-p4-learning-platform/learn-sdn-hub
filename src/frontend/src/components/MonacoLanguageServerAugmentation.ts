@@ -4,7 +4,7 @@ import {
     MonacoServices, createConnection
 } from 'monaco-languageclient';
 import ReconnectingWebSocket  from 'reconnecting-websocket'
-import * as monaco from 'monaco-editor'
+import * as monaco from 'monaco-editor/esm/vs/editor/editor.api'
 const normalizeUrl = require('normalize-url');
 
 // register Monaco languages
@@ -17,29 +17,16 @@ monaco.languages.register({
 monaco.languages.register({
     id: 'p4',
     extensions: ['.p4'],
-    aliases: ['P4','p4']
+    aliases: ['p4', 'P4']
 })
 
-// create Monaco editor
-const value = `{
-    "$schema": "http://json.schemastore.org/coffeelint",
-    "line_endings": "unix"
-}`;
-const editor = monaco.editor.create(document.getElementById("editortest")!, {
-    model: monaco.editor.createModel(value, 'typescript', monaco.Uri.parse('file://model.json')),
-    glyphMargin: true,
-    theme: "vs-dark",
-    lightbulb: {
-        enabled: true
-    }
-});
-
+export default (editor: monaco.editor.IStandaloneCodeEditor) : monaco.editor.IStandaloneCodeEditor=> {
 // install Monaco language client services
-//@ts-ignore
-MonacoServices.install(editor, {rootUri: "file:///home/patrick/Desktop/github/monaco-languageclient/example/"});
+// @ts-ignore
+MonacoServices.install(editor,{rootUri: "file://home/patrick"});
 
 // create the web socket
-const url = createUrl('ws://localhost:3002/ts')
+const url = createUrl('ws://192.168.178.63:3005/p4')
 const webSocket = createWebSocket(url);
 // listen when the web socket is opened
 listen({
@@ -53,14 +40,16 @@ listen({
 });
 
 function createLanguageClient(connection: MessageConnection): MonacoLanguageClient {
+    const model = editor.getModel()
+    const language = model?.getModeId() || ''
     return new MonacoLanguageClient({
-        name: "Sample Language Client",
+        name: "P4 Language Client",
         clientOptions: {
             // use a language id as a document selector
-            documentSelector: ['typescript'],
+            documentSelector: [language],
             // disable the default error handler
             errorHandler: {
-                error: () => ErrorAction.Shutdown,
+                error: () => ErrorAction.Continue,
                 closed: () => CloseAction.DoNotRestart
             }
         },
@@ -84,7 +73,10 @@ function createWebSocket(url: string): WebSocket {
         reconnectionDelayGrowFactor: 1.3,
         connectionTimeout: 10000,
         maxRetries: Infinity,
-        debug: true
+        debug: false,
+        automaticOpen: false
     };
     return new ReconnectingWebSocket(url, [], socketOptions) as WebSocket;
+}
+return editor
 }

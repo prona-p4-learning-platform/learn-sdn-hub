@@ -7,7 +7,7 @@ interface TerminalProps {
 }
 
 export default class XTerminal extends React.Component<TerminalProps> {
-  private myRef = createRef<HTMLDivElement>();
+  private terminalRef = createRef<HTMLDivElement>();
   private attachAddon!: AttachAddon;
   private term!: Terminal;
   private websocket!: WebSocket;
@@ -21,10 +21,10 @@ export default class XTerminal extends React.Component<TerminalProps> {
   }
 
   connectWS() {
-    if (this.myRef.current !== null){
+    if (this.terminalRef.current !== null){
       this.websocket = new WebSocket(this.props.wsEndpoint);
       this.term = new Terminal();
-      this.term.open(this.myRef.current);
+      this.term.open(this.terminalRef.current);
       this.attachAddon = new AttachAddon(this.websocket);
       this.attachAddon.activate(this.term);
     }
@@ -33,7 +33,7 @@ export default class XTerminal extends React.Component<TerminalProps> {
   render() {
     return (
       <>
-        <div ref={this.myRef} id="xterm"></div>
+        <div ref={this.terminalRef} id="xterm"></div>
       </>
     );
   }

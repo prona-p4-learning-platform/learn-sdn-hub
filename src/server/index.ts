@@ -1,7 +1,11 @@
 import WSSetupFunction from "./websocket";
 import { createServer } from "http";
-import DefaultApp from "./DefaultApplication";
+import DefaultApp from "./OpenStackApplication";
+import express from "express";
+import path from "path";
+import cors from "cors";
 
+const port = 3001;
 const server = createServer(DefaultApp);
 
 WSSetupFunction(server);
@@ -13,6 +17,12 @@ DefaultApp.use((req, res, next) => {
   next();
 });
 
-server.listen(3001, function () {
-  console.log("Example app listening on port 3001!\n");
+DefaultApp.use(cors());
+
+DefaultApp.use(
+  express.static(path.resolve(__dirname, "..", "frontend", "build"))
+);
+
+server.listen(port, function () {
+  console.log(`HTTP Server listening on port ${port}\n`);
 });

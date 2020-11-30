@@ -63,8 +63,11 @@ export default class SSHConsole extends EventEmitter implements Console {
       .connect({
         host: ipaddress,
         port,
-        username: "ubuntu",
-        privateKey: fs.readFileSync("/home/ubuntu/P4SSHKey"),
+        username: "p4",
+        password: "p4",
+        privateKey: process.env.SSH_PRIVAT_KEY_PATH
+          ? fs.readFileSync(process.env.SSH_PRIVATE_KEY_PATH)
+          : undefined,
         readyTimeout: 90000,
       });
   }

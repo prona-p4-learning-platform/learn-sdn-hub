@@ -1,14 +1,7 @@
 /// <reference types="../typings/pkgcloud" />
 import pkgcloud, { OpenStackClient } from "pkgcloud";
-export interface VMEndpoint {
-  identifier: string;
-  IPAddress: string;
-  SSHPort: number;
-}
-interface InstanceProvider {
-  getServer(identifier: string): Promise<VMEndpoint>;
-  createServer(identifier: string): Promise<VMEndpoint>;
-}
+import { InstanceProvider, VMEndpoint } from "./Provider";
+
 export default class OpenStackProvider implements InstanceProvider {
   private openstack: OpenStackClient;
   constructor() {

@@ -3,7 +3,7 @@ import { makeStyles } from "@material-ui/core/styles";
 import TextField from "@material-ui/core/TextField";
 import Button from '@material-ui/core/Button';
 
-
+const hostname = process.env.REACT_APP_API_HOST || ''
 
 export interface LoginFormProps{
     onSuccessfulAuthentication: (token: string, username: string) => void
@@ -37,7 +37,7 @@ export default function(props: LoginFormProps) {
 
     const loginRequest = useCallback(async () => {
         // Api request here
-        const result = await fetch("/api/user/login", {method: 'POST', body: JSON.stringify(state), headers: {'Content-Type': 'application/json'} })
+        const result = await fetch(`${hostname}/api/user/login`, {method: 'POST', body: JSON.stringify(state), headers: {'Content-Type': 'application/json'} })
         if (result.status === 200){
             setLoginResult("Auth successful!")
             const a = await result.json()
@@ -52,7 +52,7 @@ export default function(props: LoginFormProps) {
     return (
       <form className={classes.root} noValidate autoComplete="off">
         <TextField id="username" label="Outlined" variant="outlined" onChange={handleChange} />
-        <TextField id="password" label="Outlined" variant="outlined" onChange={handleChange} />
+        <TextField type="password" id="password" label="Outlined" variant="outlined" onChange={handleChange} />
         <Button variant="contained" color="primary" onClick={loginRequest}>
             Login
         </Button>
