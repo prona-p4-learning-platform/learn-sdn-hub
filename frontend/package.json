@@ -82,7 +82,9 @@
     "webpack": "4.42.0",
     "webpack-dev-server": "3.11.0",
     "webpack-manifest-plugin": "2.2.0",
-    "workbox-webpack-plugin": "4.3.1"
+    "workbox-webpack-plugin": "4.3.1",
+    "xterm": "^4.9.0",
+    "xterm-addon-attach": "^0.6.0"
   },
   "scripts": {
     "start": "node scripts/start.js",

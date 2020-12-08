@@ -1,4 +1,5 @@
 const mongoDB = require("@shelf/jest-mongodb/jest-preset");
+console.log(mongoDB)
 module.exports = {
   preset: "ts-jest",
   testEnvironment: "node",

@@ -1,4 +1,4 @@
-import AuthenticationMiddleware from "../../backend/src/authentication/AuthenticationMiddleware";
+import AuthenticationMiddleware from "../../src/authentication/AuthenticationMiddleware";
 import { Request, Response } from "express";
 import jwt from "jsonwebtoken";
 
@@ -36,9 +36,7 @@ test("calls next() if a proper token was passed", () => {
     nexthandler
   );
   expect(nexthandler).toHaveBeenCalled();
-  expect(nexthandler).toHaveBeenCalledWith(
-    expect.objectContaining({
+  expect(mockRequest).toMatchObject({
       user: { iat: expect.any(Number), username: "testuser", id: "testid" },
     })
-  );
 });
