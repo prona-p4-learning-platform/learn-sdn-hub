@@ -1,5 +1,5 @@
 import { MongoClient } from "mongodb";
-import MongoDBPersister from "../../src/server/database/MongoDBPersister";
+import MongoDBPersister from "../../backend/src/database/MongoDBPersister";
 
 let instance: MongoDBPersister = null;
 let connection: MongoClient = null;

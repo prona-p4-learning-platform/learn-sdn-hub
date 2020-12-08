@@ -230,7 +230,7 @@ export default class P4Environment {
         JSON.stringify(endpoint)
       );
       const cc = new Promise((resolve) => {
-        console.on("close", () => resolve());
+        console.on("close", () => resolve(undefined));
       });
       await cc;
     }

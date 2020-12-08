@@ -1,4 +1,4 @@
-import AuthenticationMiddleware from "../../src/server/authentication/AuthenticationMiddleware";
+import AuthenticationMiddleware from "../../backend/src/authentication/AuthenticationMiddleware";
 import { Request, Response } from "express";
 import jwt from "jsonwebtoken";
 

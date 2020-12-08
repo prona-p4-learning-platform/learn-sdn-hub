@@ -1,4 +1,4 @@
-import extractCompilationResult from "../../src/server/CompilationResultExtractor";
+import extractCompilationResult from "../../backend/src/CompilationResultExtractor";
 
 test("it extracts errors successfully", () => {
   expect(

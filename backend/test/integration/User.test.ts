@@ -1,9 +1,9 @@
-import APIRoutes from "../../src/server/Api";
+import APIRoutes from "../../backend/src/Api";
 import request from "supertest";
 import express from "express";
 import { MongoClient } from "mongodb";
-import MongoDBPersister from "../../src/server/database/MongoDBPersister";
-import MongoDBAuthenticationProvider from "../../src/server/authentication/MongoDBAuthenticationProvider";
+import MongoDBPersister from "../../backend/src/database/MongoDBPersister";
+import MongoDBAuthenticationProvider from "../../backend/src/authentication/MongoDBAuthenticationProvider";
 
 const app = express();
 let connection: MongoClient = null;
