@@ -20,6 +20,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
   router.get("/:environment/configuration", (req: Request, res) => {
     const environment = req.params.environment;
     const targetEnv = environments.get(String(environment));
+    console.log("/:environment/configuration");
     if (targetEnv === undefined) {
       return res
         .status(404)

@@ -15,5 +15,6 @@ export default (
   router.use("/api/compile", compileRoutes);
   router.use("/api/environment", environmentRoutes(persister, provider));
   router.use("/api/user", userRoutes(authenticationProviders));
+  console.log("API setup finished");
   return router;
 };

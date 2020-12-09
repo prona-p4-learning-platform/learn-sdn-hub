@@ -11,12 +11,15 @@ interface WebsocketPathParams {
 
 interface LSPathParams {
   language: string;
+  environment: string;
 }
 
 const envMatcher = match<WebsocketPathParams>(
   "/environment/:environment/type/:type"
 );
-const lsMatcher = match<LSPathParams>("/languageserver/:language");
+const lsMatcher = match<LSPathParams>(
+  "/environment/:environment/languageserver/:language"
+);
 
 export default function wrapWSWithExpressApp(server: Server): void {
   const wss = new WebSocket.Server({ server });
@@ -56,7 +59,31 @@ export default function wrapWSWithExpressApp(server: Server): void {
         ws.close();
       }
     } else if (lspMatchResult !== false) {
-      //forward connection to LS-Server-Instance
+      const { environment, language } = lspMatchResult.params;
+      const envInstance = P4Environment.getActiveEnvironment(`${environment}`);
+      if (envInstance !== undefined) {
+        Promise.all([
+          envInstance.getLanguageServerPort(),
+          envInstance.getIPAddress(),
+        ]).then((result) => {
+          const [port, ipAddress] = result;
+          const client = new WebSocket(
+            "ws://" + ipAddress + ":" + port + "/" + language
+          );
+          client.on("open", () => {
+            ws.on("message", (data) => {
+              console.log(data);
+              client.send(data);
+            });
+            client.on("message", (data) => {
+              console.log(data);
+              ws.send(data);
+            });
+          });
+          client.on("close", () => ws.close());
+          ws.on("close", () => client.close());
+        });
+      }
     } else {
       ws.send(`No route handler.`);
       ws.close();

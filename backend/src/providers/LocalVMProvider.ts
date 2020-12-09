@@ -12,6 +12,7 @@ export default class OpenStackProvider implements InstanceProvider {
     return {
       IPAddress: this.ipAddress,
       SSHPort: 22,
+      LanguageServerPort: 3005,
       identifier: "vbox",
     };
   }

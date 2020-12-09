@@ -123,6 +123,16 @@ export default class P4Environment {
     return environment;
   }
 
+  async getLanguageServerPort(): Promise<number> {
+    const endpoint = await this.makeSureInstanceExists();
+    return endpoint.LanguageServerPort;
+  }
+
+  async getIPAddress(): Promise<string> {
+    const endpoint = await this.makeSureInstanceExists();
+    return endpoint.IPAddress;
+  }
+
   async makeSureInstanceExists(): Promise<VMEndpoint> {
     const environments = await this.persister.GetUserEnvironments(this.userId);
     console.log(environments);

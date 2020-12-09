@@ -13,6 +13,7 @@ export default (authProviders: AuthenticationProvider[]): Router => {
   });
 
   router.post("/login", bodyParser.json(), async (req, res) => {
+    console.log("login");
     const username = req.body.username;
     const password = req.body.password;
     for (const authProvider of authProviders) {

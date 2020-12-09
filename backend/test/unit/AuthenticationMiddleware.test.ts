@@ -37,6 +37,6 @@ test("calls next() if a proper token was passed", () => {
   );
   expect(nexthandler).toHaveBeenCalled();
   expect(mockRequest).toMatchObject({
-      user: { iat: expect.any(Number), username: "testuser", id: "testid" },
-    })
+    user: { iat: expect.any(Number), username: "testuser", id: "testid" },
+  });
 });
