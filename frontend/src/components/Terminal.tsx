@@ -1,3 +1,4 @@
+import { Box } from "@material-ui/core";
 import React, { createRef } from "react";
 import { Terminal } from "xterm";
 import { AttachAddon } from "xterm-addon-attach";
@@ -33,7 +34,9 @@ export default class XTerminal extends React.Component<TerminalProps> {
   render() {
     return (
       <>
-        <div ref={this.terminalRef} id="xterm"></div>
+        <Box>
+          <div ref={this.terminalRef} id="xterm"></div>
+        </Box>
       </>
     );
   }

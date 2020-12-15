@@ -16,6 +16,8 @@ import AssignmentOverview from "./views/AssignmentOverview";
 import { makeStyles } from '@material-ui/core/styles';
 import 'fontsource-roboto';
 import { Button } from "@material-ui/core";
+import CssBaseline from '@material-ui/core/CssBaseline';
+
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -64,7 +66,8 @@ export default class App extends React.Component {
 
   render(): JSX.Element {
     return (
-      <div>
+      <React.Fragment>
+        <CssBaseline />
         <Router>
           <AppBar position="static">
             <Toolbar>
@@ -98,7 +101,7 @@ export default class App extends React.Component {
             <Environment />
           </PrivateRoute>
         </Router>
-      </div>
+      </React.Fragment>
     );
   }
 }
