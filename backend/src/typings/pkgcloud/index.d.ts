@@ -29,7 +29,7 @@ declare module "pkgcloud" {
     createServer(
       options: CreateServerOptions,
       callback: (err: Error | null, server: string) => void
-    );
+    ): void;
     destroyServer(): null;
   }
 

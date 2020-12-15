@@ -10,10 +10,6 @@ import authenticationMiddleware, {
   RequestWithUser,
 } from "../authentication/AuthenticationMiddleware";
 
-const markdown = fs
-  .readFileSync(path.resolve(__dirname, "../assignments/p4basic.md"))
-  .toString();
-
 export default (persister: Persister, provider: InstanceProvider): Router => {
   const router = Router();
 
@@ -35,7 +31,20 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
   });
 
   router.get("/:environment/assignment", (req, res) => {
+    const environment = req.params.environment;
+    const targetEnv = environments.get(String(environment));
+    console.log("/:environment/assignment");
+    if (targetEnv === undefined) {
+      return res
+        .status(404)
+        .json({ error: true, message: "Environment not found" });
+    }
+    const markdown = fs
+    .readFileSync(path.resolve(__dirname, targetEnv.assignmentLabSheet))
+    .toString();
+  
     res.send(markdown);
+
   });
 
   router.post(

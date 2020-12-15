@@ -23,7 +23,7 @@ monaco.languages.register({
 export default (editor: monaco.editor.IStandaloneCodeEditor) : monaco.editor.IStandaloneCodeEditor=> {
 // install Monaco language client services
 // @ts-ignore
-MonacoServices.install(editor,{rootUri: "file://home/patrick"});
+MonacoServices.install(editor,{rootUri: "file://tmp"});
 
 // create the web socket
 const url = createUrl('ws://localhost:3001/environment/p4basic/languageserver/p4')

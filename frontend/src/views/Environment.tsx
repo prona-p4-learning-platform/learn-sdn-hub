@@ -9,6 +9,7 @@ import { ReactNode } from "react";
 import ReactMarkdown from 'react-markdown'
 import mermaid from 'mermaid'
 import TabControl from '../components/TabControl'
+import { Typography } from "@material-ui/core";
 const hostname = process.env.REACT_APP_API_HOST || ''
 const wsHostname = process.env.REACT_APP_WS_HOST || ''
 
@@ -85,7 +86,7 @@ export class EnvironmentView extends React.Component<PropsType> {
     return (
       <Grid container spacing={3}>
         <Grid item xs={6}>
-        <TabControl tabNames={["Assignment", "Terminals"]}>
+        <TabControl tabNames={["Assignment", "Mininet Terminal", "Controller Terminal"]}>
             <ReactMarkdown
               source={this.state.assignment}
             />
@@ -104,10 +105,26 @@ export class EnvironmentView extends React.Component<PropsType> {
               />
             )}            
           </Grid>
-        </TabControl>/
           <Grid item xs={12}>
-            Placeholder Infrastructure display
-    
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={(): void => this.restartEnvironment()}
+            >
+              Reload environment and apply changes
+            </Button>
+            <h5>Environment status: {this.state.environmentStatus}</h5>
+            {this.state.environmentStatus === "running" && (
+              <Terminal
+                wsEndpoint={`${wsHostname}/environment/${this.props.match.params.environment}/type/bash2`}
+              />
+            )}            
+          </Grid>
+        </TabControl>
+          <Grid item xs={12}>
+            <Typography variant="body1">
+              Placeholder Infrastructure display
+            </Typography>
           </Grid>
         </Grid>
         <Grid item xs={6}>
