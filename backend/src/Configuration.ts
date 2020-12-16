@@ -11,6 +11,13 @@ environments.set("p4basic", {
       params: ["&& exit && exit"],
       provideTty: true,
     },
+    {
+      name: "bash2",
+      cwd: "/home/p4/tutorials/exercises/basic/",
+      executable: "ls -al",
+      params: [],
+      provideTty: true,
+    },
   ],
   editableFiles: [
     {

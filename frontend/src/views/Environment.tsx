@@ -46,7 +46,6 @@ export class EnvironmentView extends React.Component<PropsType> {
     })
       .then((response) => response.json())
       .then((data) => {
-        console.log(data);
         if (data.error === true) {
           this.setState({ environmentStatus: "error", error: data.message });
         } else {
@@ -60,7 +59,6 @@ export class EnvironmentView extends React.Component<PropsType> {
     {headers: {'Content-Type': 'application/json', authorization: localStorage.getItem("token") || ""} })
       .then((response) => response.json())
       .then((data) => {
-        console.log(data);
         if (data.error !== true) {
           this.setState({ ttys: data.ttys, files: data.files });
         }
@@ -72,7 +70,6 @@ export class EnvironmentView extends React.Component<PropsType> {
     {headers: {'Content-Type': 'application/json', authorization: localStorage.getItem("token") || ""} })
       .then((response) => response.text())
       .then((data) => {
-        console.log(data);
           this.setState({ assignment: data });
       });
   }
@@ -82,6 +79,9 @@ export class EnvironmentView extends React.Component<PropsType> {
   }
 
   render(): ReactNode {
+    const terminals = this.state.ttys.map((alias: string) => <Terminal
+      wsEndpoint={`${wsHostname}/environment/${this.props.match.params.environment}/type/${alias}`}
+    />)
     return (
       <Grid container spacing={3}>
         <Grid item xs={6}>
@@ -99,15 +99,11 @@ export class EnvironmentView extends React.Component<PropsType> {
             </Button>
             <h5>Environment status: {this.state.environmentStatus}</h5>
             {this.state.environmentStatus === "running" && (
-              <Terminal
-                wsEndpoint={`${wsHostname}/environment/${this.props.match.params.environment}/type/bash`}
-              />
+              <TabControl tabNames={this.state.ttys}>{terminals}</TabControl>
             )}            
           </Grid>
         </TabControl>/
-          <Grid item xs={12}>
-            Placeholder Infrastructure display
-    
+          <Grid item xs={12}>    
           </Grid>
         </Grid>
         <Grid item xs={6}>

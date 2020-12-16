@@ -84,7 +84,8 @@
     "webpack-manifest-plugin": "2.2.0",
     "workbox-webpack-plugin": "4.3.1",
     "xterm": "^4.9.0",
-    "xterm-addon-attach": "^0.6.0"
+    "xterm-addon-attach": "^0.6.0",
+    "xterm-for-react": "^1.0.4"
   },
   "scripts": {
     "start": "node scripts/start.js",

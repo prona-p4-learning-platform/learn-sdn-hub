@@ -1,6 +1,5 @@
 import * as React from "react";
 import Loginform from "../components/LoginForm";
-import P4LanguageServiceEditor from '../components/P4LanguageServiceEditor'
 interface HomeProps {
   onUserLogin: (token: string, username: string) => void;
 }
@@ -11,7 +10,6 @@ export default class Home extends React.Component {
     
   }
   handleSuccessfulAuthentication(token: string, username: string): void {
-    console.log("Successful auth!");
     this.props.onUserLogin(token, username)
   }
 

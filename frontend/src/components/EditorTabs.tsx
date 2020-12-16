@@ -13,7 +13,6 @@ interface EditorTabsProps {
 
 function TabPanel(props: EditorTabsProps) {
   const { children, value, index, ...other } = props;
-
   return (
     <div
       role="tabpanel"
