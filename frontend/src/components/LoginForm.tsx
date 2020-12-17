@@ -2,6 +2,16 @@ import React,  {useState, useCallback} from "react";
 import { makeStyles } from "@material-ui/core/styles";
 import TextField from "@material-ui/core/TextField";
 import Button from '@material-ui/core/Button';
+import { Grid, IconButton } from "@material-ui/core";
+import Snackbar from '@material-ui/core/Snackbar';
+import { useHistory } from "react-router-dom";
+import MuiAlert, { AlertProps } from '@material-ui/lab/Alert';
+
+type Severity = "error" | "success" | "info" | "warning" | undefined;
+
+function Alert(props: JSX.IntrinsicAttributes & AlertProps) {
+  return <MuiAlert elevation={6} variant="filled" {...props} />;
+}
 
 const hostname = process.env.REACT_APP_API_HOST || ''
 
@@ -11,10 +21,16 @@ export interface LoginFormProps{
 
 
 export default function(props: LoginFormProps) {
-    const [state , setState] = useState({
+
+  let history = useHistory();
+
+  const [state , setState] = useState({
         username : "",
         password : ""
     })
+
+    const [notificationOpen, setNotificationOpen] = React.useState(false);
+
     const useStyles = makeStyles((theme) => ({
       root: {
         "& > *": {
@@ -25,7 +41,8 @@ export default function(props: LoginFormProps) {
     }));
     const classes = useStyles();
 
-    const [loginResult , setLoginResult] = useState("")    
+    const [loginResult , setLoginResult] = useState("")
+    const [loginSeverity , setLoginSeverity] = useState("error")
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement> ) => {
         const {id , value} = e.target   
@@ -40,23 +57,42 @@ export default function(props: LoginFormProps) {
         const result = await fetch(`${hostname}/api/user/login`, {method: 'POST', body: JSON.stringify(state), headers: {'Content-Type': 'application/json'} })
         if (result.status === 200){
             setLoginResult("Auth successful!")
+            setLoginSeverity("success")
+            setNotificationOpen(true)
             const a = await result.json()
             props.onSuccessfulAuthentication(a.token, a.username)
+            history.push("/assignments")
         } else if (result.status===401){
             setLoginResult("Auth failed")
+            setLoginSeverity("error")
+            setNotificationOpen(true)
         }
     }, [state],);
 
-
+    const handleNotificationClose = () => {
+      setNotificationOpen(false);
+    };
 
     return (
       <form className={classes.root} noValidate autoComplete="off">
-        <TextField id="username" label="Outlined" variant="outlined" onChange={handleChange} />
-        <TextField type="password" id="password" label="Outlined" variant="outlined" onChange={handleChange} />
-        <Button variant="contained" color="primary" onClick={loginRequest}>
-            Login
-        </Button>
-        {loginResult}
+        <Grid container direction="row" justify="flex-start" alignItems="center" spacing={3}>
+          <Grid item>
+            <TextField id="username" label="Username" variant="outlined" onChange={handleChange} />
+          </Grid>
+          <Grid item>
+            <TextField type="password" id="password" label="Password" variant="outlined" onChange={handleChange} />
+          </Grid>
+          <Grid item>
+            <Button variant="contained" color="primary" onClick={loginRequest}>
+                Login
+            </Button>
+            <Snackbar open={notificationOpen} autoHideDuration={6000} onClose={handleNotificationClose}>
+              <Alert onClose={handleNotificationClose} severity={loginSeverity as Severity}>
+                {loginResult}
+              </Alert>
+            </Snackbar>
+          </Grid>
+        </Grid>
       </form>
     );
   }

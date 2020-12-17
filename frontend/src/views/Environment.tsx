@@ -9,6 +9,7 @@ import { ReactNode } from "react";
 import ReactMarkdown from 'react-markdown'
 import mermaid from 'mermaid'
 import TabControl from '../components/TabControl'
+import { Box, Typography } from "@material-ui/core";
 const hostname = process.env.REACT_APP_API_HOST || ''
 const wsHostname = process.env.REACT_APP_WS_HOST || ''
 
@@ -30,10 +31,10 @@ export class EnvironmentView extends React.Component<PropsType> {
 
   constructor(props: PropsType) {
     super(props);
-    this.state = { environmentStatus: "running",ttys: [],files: [], assignment: "" };
+    this.state = { environmentStatus: "running", ttys: [], files: [], assignment: "" };
   }
 
-  componentDidMount(): void{
+  componentDidMount(): void {
     this.loadEnvironmentConfig()
     this.loadAssignment()
   }
@@ -42,7 +43,7 @@ export class EnvironmentView extends React.Component<PropsType> {
     this.setState({ environmentStatus: "restarting" });
     fetch(`${hostname}/api/environment/${this.props.match.params.environment}/restart`, {
       method: "post",
-      headers: {'Content-Type': 'application/json', authorization: localStorage.getItem("token") || ""} 
+      headers: { 'Content-Type': 'application/json', authorization: localStorage.getItem("token") || "" }
     })
       .then((response) => response.json())
       .then((data) => {
@@ -54,9 +55,9 @@ export class EnvironmentView extends React.Component<PropsType> {
       });
   }
 
-  loadEnvironmentConfig(): void{
-    fetch(`${hostname}/api/environment/${this.props.match.params.environment}/configuration`, 
-    {headers: {'Content-Type': 'application/json', authorization: localStorage.getItem("token") || ""} })
+  loadEnvironmentConfig(): void {
+    fetch(`${hostname}/api/environment/${this.props.match.params.environment}/configuration`,
+      { headers: { 'Content-Type': 'application/json', authorization: localStorage.getItem("token") || "" } })
       .then((response) => response.json())
       .then((data) => {
         if (data.error !== true) {
@@ -65,16 +66,16 @@ export class EnvironmentView extends React.Component<PropsType> {
       });
   }
 
-  loadAssignment(){
-    fetch(`${hostname}/api/environment/${this.props.match.params.environment}/assignment`, 
-    {headers: {'Content-Type': 'application/json', authorization: localStorage.getItem("token") || ""} })
+  loadAssignment() {
+    fetch(`${hostname}/api/environment/${this.props.match.params.environment}/assignment`,
+      { headers: { 'Content-Type': 'application/json', authorization: localStorage.getItem("token") || "" } })
       .then((response) => response.text())
       .then((data) => {
           this.setState({ assignment: data });
       });
   }
 
-  componentDidUpdate(){
+  componentDidUpdate() {
     mermaid.init(document.querySelectorAll('code.language-mermaid'))
   }
 
@@ -85,7 +86,7 @@ export class EnvironmentView extends React.Component<PropsType> {
     return (
       <Grid container spacing={3}>
         <Grid item xs={6}>
-        <TabControl tabNames={["Assignment", "Terminals"]}>
+          <TabControl tabNames={["Assignment", "Terminals"]}>
             <ReactMarkdown
               source={this.state.assignment}
             />
@@ -109,7 +110,7 @@ export class EnvironmentView extends React.Component<PropsType> {
         <Grid item xs={6}>
           <div style={{ height: "500px" }}>
             <EditorTabs
-              endpoints={this.state.files.map(fileAlias => 
+              endpoints={this.state.files.map(fileAlias =>
                 `${hostname}/api/environment/${this.props.match.params.environment}/file/${fileAlias}`,
               )}
             />
