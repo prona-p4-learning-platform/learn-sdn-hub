@@ -47,7 +47,6 @@ export class EnvironmentView extends React.Component<PropsType> {
     })
       .then((response) => response.json())
       .then((data) => {
-        console.log(data);
         if (data.error === true) {
           this.setState({ environmentStatus: "error", error: data.message });
         } else {
@@ -61,7 +60,6 @@ export class EnvironmentView extends React.Component<PropsType> {
       { headers: { 'Content-Type': 'application/json', authorization: localStorage.getItem("token") || "" } })
       .then((response) => response.json())
       .then((data) => {
-        console.log(data);
         if (data.error !== true) {
           this.setState({ ttys: data.ttys, files: data.files });
         }
@@ -73,8 +71,7 @@ export class EnvironmentView extends React.Component<PropsType> {
       { headers: { 'Content-Type': 'application/json', authorization: localStorage.getItem("token") || "" } })
       .then((response) => response.text())
       .then((data) => {
-        console.log(data);
-        this.setState({ assignment: data });
+          this.setState({ assignment: data });
       });
   }
 
@@ -83,6 +80,9 @@ export class EnvironmentView extends React.Component<PropsType> {
   }
 
   render(): ReactNode {
+    const terminals = this.state.ttys.map((alias: string) => <Terminal
+      wsEndpoint={`${wsHostname}/environment/${this.props.match.params.environment}/type/${alias}`}
+    />)
     return (
       <Grid container spacing={3}>
         <Grid item xs={6}>
@@ -91,40 +91,20 @@ export class EnvironmentView extends React.Component<PropsType> {
               source={this.state.assignment}
             />
             <Grid item xs={12}>
-              <Grid item xs={12} sm={6}>
-                <Button variant="contained" color="primary" onClick={(): void => this.restartEnvironment()}>
-                  Reload environment and apply changes
-                </Button>
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <Typography variant="body2" align="left">
-                  Environment status: {this.state.environmentStatus}
-                </Typography>
-              </Grid>
-              <Grid item xs={12}>
-                <Typography variant="body2">
-                  Mininet Terminal
-                </Typography>
-                <Box>
-                  {this.state.environmentStatus === "running" && (
-                    <Terminal wsEndpoint={`${wsHostname}/environment/${this.props.match.params.environment}/type/bash`} />
-                  )}
-                </Box>
-                <Typography variant="body2">
-                  Control Plane/P4Runtime Terminal
-                </Typography>
-                <Box>
-                  {this.state.environmentStatus === "running" && (
-                    <Terminal wsEndpoint={`${wsHostname}/environment/${this.props.match.params.environment}/type/bash2`}/>
-                  )}
-                </Box>
-              </Grid>
-            </Grid>
-          </TabControl>
-          <Grid item xs={12}>
-            <Typography variant="body1">
-              Placeholder Infrastructure display
-            </Typography>
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={(): void => this.restartEnvironment()}
+            >
+              Reload environment and apply changes
+            </Button>
+            <h5>Environment status: {this.state.environmentStatus}</h5>
+            {this.state.environmentStatus === "running" && (
+              <TabControl tabNames={this.state.ttys}>{terminals}</TabControl>
+            )}            
+          </Grid>
+        </TabControl>/
+          <Grid item xs={12}>    
           </Grid>
         </Grid>
         <Grid item xs={6}>

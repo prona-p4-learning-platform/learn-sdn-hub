@@ -1,43 +1,38 @@
-import { Box } from "@material-ui/core";
-import React, { createRef } from "react";
-import { Terminal } from "xterm";
+import React from "react";
 import { AttachAddon } from "xterm-addon-attach";
+import { XTerm } from 'xterm-for-react'
 
 interface TerminalProps {
   wsEndpoint: string;
 }
 
 export default class XTerminal extends React.Component<TerminalProps> {
-  private terminalRef = createRef<HTMLDivElement>();
-  private attachAddon!: AttachAddon;
-  private term!: Terminal;
   private websocket!: WebSocket;
-
+  private resizeTimer !: NodeJS.Timeout
   constructor(props: TerminalProps) {
     super(props);
+    this.handleTermRef = this.handleTermRef.bind(this)
   }
 
-  componentDidMount() {
-    this.connectWS();
+  handleTermRef(instance: XTerm |null):void{
+    this.resizeTimer = setInterval(() => {
+      instance?.terminal.resize(instance.terminal.cols,instance.terminal.rows)
+    },200)
   }
 
-  connectWS() {
-    if (this.terminalRef.current !== null){
-      this.websocket = new WebSocket(this.props.wsEndpoint);
-      this.term = new Terminal();
-      this.term.open(this.terminalRef.current);
-      this.attachAddon = new AttachAddon(this.websocket);
-      this.attachAddon.activate(this.term);
-    }
+  componentWillUnmount(){
+    if (this.resizeTimer){
+    clearTimeout(this.resizeTimer)
   }
-
+  }
+  
   render() {
+    this.websocket = new WebSocket(this.props.wsEndpoint);
+    const attachAddon = new AttachAddon(this.websocket);
     return (
-      <>
-        <Box>
-          <div ref={this.terminalRef} id="xterm"></div>
-        </Box>
-      </>
+      <div style={{width:200, height: 200}}>
+        <XTerm ref={this.handleTermRef} addons={[attachAddon]}  />
+      </div>
     );
   }
 }
