@@ -86,12 +86,31 @@ Alias=lsp-loadbalancer.service
 # Run the environment using a local VM ([LocalVMProvider.ts](https://github.com/prona-p4-learning-platform/learn-sdn-hub/blob/master/backend/src/providers/LocalVMProvider.ts))
 
 You can use a virtual machine or a physical or even your local machine and specify the IP address to be used by the backend. The machine must contain p4 tool chain
-and needs to be reachable using SSH. Also, it should run the LSP load balancer, as described above.
+and needs to be reachable using SSH. Also, it should run the LSP load balancer, as described above. Start the backend:
 
 ```
 export VBOX_IP_ADDRESS=<IP address of the virtual machine>
 cd backend
+npm run start:localvm
+```
+
+To run the frontend, you need to creat frontend config file as ".env.local" file in the frontend directory:
 
 ```
+REACT_APP_API_HOST=http://localhost:3001
+REACT_APP_WS_HOST=ws://localhost:3001
+```
+
+You need to adapt "localhost" in the .env.local file if your backend is not running on the same host as the frontend.
+After creating the file, run the frontend by issuing:
+
+```
+cd frontend
+npm run start
+```
+
+A web browser will open automatically leading you to the login in the frontend. If you use the demo authentication provider, you can use user "test123" and password "test123". 
+
+Configuration changes regarding assignments etc. need to be done in backend/src/Configuration.ts. Assignment lab sheets need to be stored in backend/src/assigments.
 
 # Run the environment using OpenStack ([OpenStackProvider.ts](https://github.com/prona-p4-learning-platform/learn-sdn-hub/blob/master/backend/src/providers/OpenStackProvider.ts))
