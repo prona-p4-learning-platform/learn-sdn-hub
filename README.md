@@ -16,7 +16,7 @@ npm run build
 
 # Prepare a host (e.g. virtual machine/image) to be used by the backend to run p4 code and the language server for vscode
 
-Easiest way to get started is using the [p4 tutorials VM](https://github.com/p4lang/tutorials)) and run it in VirtualBox or another hypervisor. You also need to give the
+Easiest way to get started is using the [p4 tutorials VM](https://github.com/p4lang/tutorials) and run it in VirtualBox or another hypervisor. You also need to give the
 machine an IP address that can be reached from the backend (see providers in next steps). You can also prepare a Ubuntu VM by using the 
 [installation scripts](https://github.com/jafingerhut/p4-guide/blob/master/bin/install-p4dev-v2.sh) from the p4 guide
 repo. By default and for the following example configuration, we assume the VM to have a user p4 with password p4 (as the default for the p4 tutorial vms).
