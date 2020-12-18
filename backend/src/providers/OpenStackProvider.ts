@@ -41,7 +41,7 @@ export default class OpenStackProvider implements InstanceProvider {
                 identifier,
                 IPAddress: addresses[Object.keys(addresses)[0]][0].addr,
                 SSHPort: 22,
-                LanguageServerPort: 3005
+                LanguageServerPort: 3005,
               });
             } else {
               reject(new Error("Instance has no IP Addresses."));
@@ -100,7 +100,7 @@ export default class OpenStackProvider implements InstanceProvider {
                     identifier: server.id,
                     IPAddress: addresses[Object.keys(addresses)[0]][0].addr,
                     SSHPort: 22,
-                    LanguageServerPort: 3005
+                    LanguageServerPort: 3005,
                   });
                 } else {
                   setTimeout(
