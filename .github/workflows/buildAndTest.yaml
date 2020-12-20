@@ -1,16 +1,11 @@
 name: Node.js CI
-
-on: [push, pull_request]
-
+on: [push]
 jobs:
   backend:
-
     runs-on: ubuntu-latest
-
     strategy:
       matrix:
         node-version: [15.x]
-
     steps:
     - uses: actions/checkout@v2
     - name: Use Node.js ${{ matrix.node-version }}
