@@ -32,6 +32,7 @@ export interface EnvironmentDescription {
   description: string;
   editableFiles: Array<AliasedFile>;
   stopCommands: Array<Task>;
+  assignmentLabSheet: string;
 }
 
 export interface P4EnvironmentResult {
