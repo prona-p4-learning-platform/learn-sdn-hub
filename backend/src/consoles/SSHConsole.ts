@@ -1,5 +1,5 @@
 import { EventEmitter } from "events";
-import { Client } from "ssh2";
+import { Client, ClientChannel } from "ssh2";
 import fs from "fs";
 
 export interface Console {
@@ -16,7 +16,7 @@ export default class SSHConsole extends EventEmitter implements Console {
   private console: Client;
   private cwd: string;
   private args: Array<string>;
-  private stream: any;
+  private stream: ClientChannel;
 
   constructor(
     ipaddress: string,
@@ -32,7 +32,7 @@ export default class SSHConsole extends EventEmitter implements Console {
 
     this.console = new Client();
     this.console.on("ready", () => {
-      this.console.shell((err: any, stream: any) => {
+      this.console.shell((err, stream) => {
         if (err) throw err;
         this.emit("ready");
         this.stream = stream;
@@ -42,8 +42,7 @@ export default class SSHConsole extends EventEmitter implements Console {
             this.console.end();
             this.emit("close");
           })
-          .on("data", (data: any) => {
-            //console.log("OUTPUT: " + data);
+          .on("data", (data: string) => {
             this.emit("data", data);
           });
         stream.write("cd " + this.cwd + "\n");

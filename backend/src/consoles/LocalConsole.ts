@@ -1,6 +1,6 @@
 import { EventEmitter } from "events";
 import { IPty } from "node-pty";
-const pty = require("node-pty");
+import pty from "node-pty";
 
 export interface Console {
   on(event: "ready", listener: () => void): this;
