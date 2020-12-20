@@ -3,12 +3,10 @@ import { makeStyles } from '@material-ui/core/styles';
 import CloudUploadIcon from '@material-ui/icons/CloudUpload';
 import PlayCircleFilledWhiteIcon from '@material-ui/icons/PlayCircleFilledWhite';
 import Button from "@material-ui/core/Button";
-import { Link } from 'react-router-dom';
-import { ListItemSecondaryAction, Typography } from '@material-ui/core';
+import { ListItemSecondaryAction } from '@material-ui/core';
 import List from '@material-ui/core/List';
 import ListItem from '@material-ui/core/ListItem';
 import ListItemText from '@material-ui/core/ListItemText';
-import ListSubheader from '@material-ui/core/ListSubheader';
 
 const useStyles = makeStyles((theme) => ({
   button: {
@@ -35,7 +33,7 @@ export default function AssignmentOverview(props: AssignmentOverviewProps) {
   },[load])
 
   const createEnvironment = useCallback(async (assignment: string) => {
-    const result = await fetch(`${hostname}/api/environment/create?environment=${assignment}`, {
+    await fetch(`${hostname}/api/environment/create?environment=${assignment}`, {
       method: 'POST', 
       headers: {'Content-Type': 'application/json', authorization: localStorage.getItem("token") || ""} 
     })
@@ -54,7 +52,7 @@ export default function AssignmentOverview(props: AssignmentOverviewProps) {
                   <Button variant="contained" color="primary" className={classes.button} startIcon={<CloudUploadIcon />} onClick={() => createEnvironment(assignment)}>
                     Deploy
                   </Button>
-                  <Button variant="contained" color="secondary" className={classes.button} startIcon={<PlayCircleFilledWhiteIcon />} disabled={assignment != deployedAssignment} href={`/environment/${assignment}`}>
+                  <Button variant="contained" color="secondary" className={classes.button} startIcon={<PlayCircleFilledWhiteIcon />} disabled={assignment !== deployedAssignment} href={`/environment/${assignment}`}>
                     Start Assignment
                   </Button>
                 </ListItemSecondaryAction>

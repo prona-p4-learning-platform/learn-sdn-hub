@@ -9,7 +9,6 @@ import { ReactNode } from "react";
 import ReactMarkdown from 'react-markdown'
 import mermaid from 'mermaid'
 import TabControl from '../components/TabControl'
-import { Box, Typography } from "@material-ui/core";
 const hostname = process.env.REACT_APP_API_HOST || ''
 const wsHostname = process.env.REACT_APP_WS_HOST || ''
 

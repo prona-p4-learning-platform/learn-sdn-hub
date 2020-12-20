@@ -1,7 +1,7 @@
 import * as React from 'react';
 import * as monaco from 'monaco-editor';
 import editorCreator from './MonacoLanguageServerAugmentation';
-import MonacoReact, { EditorDidMount } from 'react-monaco-editor'
+import MonacoReact from 'react-monaco-editor'
 interface MonacoEditorProps extends monaco.editor.IStandaloneEditorConstructionOptions{
     path: string;
     value: string;
