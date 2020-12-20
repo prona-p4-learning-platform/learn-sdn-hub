@@ -1,9 +1,21 @@
 # learn-sdn-hub
 
-# Installation
+## Prerequisites
+
+Both the host running the backend and frontend as well as the VM or host executing the p4 environment need node.js. To install it, you can use nvm:
 
 ```
-git clone git@github.com:prona-p4-learning-platform/learn-sdn-hub.git
+wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.37.2/install.sh | bash
+nvm install 15
+bash
+```
+
+Make sure to close and reopen the shell afterwards to have nvm automatically in your environment.
+
+## Installation
+
+```
+git clone https://github.com/prona-p4-learning-platform/learn-sdn-hub.git
 cd learn-sdn-hub
 cd backend
 npm install
@@ -14,7 +26,7 @@ npm install
 npm run build
 ```
 
-# Prepare a host (e.g. virtual machine/image) to be used by the backend to run p4 code and the language server for vscode
+## Prepare a host (e.g. virtual machine/image) to be used by the backend to run p4 code and the language server for vscode
 
 Easiest way to get started is using the [p4 tutorials VM](https://github.com/p4lang/tutorials) and run it in VirtualBox or another hypervisor. You also need to give the
 machine an IP address that can be reached from the backend (see providers in next steps). You can also prepare a Ubuntu VM by using the 
@@ -24,15 +36,13 @@ repo. By default and for the following example configuration, we assume the VM t
 To install the LSP and the LSP load balancer in the VM, run the following in the VM (currently using latest feature version of node, hence 15):
 
 ```
-wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.37.2/install.sh | bash
-nvm install 15
 git clone https://github.com/wylieconlon/jsonrpc-ws-proxy
 cd jsonrpc-ws-proxy
 npm install
 npm run prepare
 ```
 
-Create a servers.yml file in the home directory containing the location of the p4 LSP, e.g.:
+Create a servers.yml file in the jsonrpc-ws-proxy directory containing the location of the p4 LSP, e.g.:
 
 ```
 langservers:
@@ -83,7 +93,7 @@ Alias=lsp-loadbalancer.service
 ```
 
 
-# Run the environment using a local VM ([LocalVMProvider.ts](https://github.com/prona-p4-learning-platform/learn-sdn-hub/blob/master/backend/src/providers/LocalVMProvider.ts))
+## Run the environment using a local VM ([LocalVMProvider.ts](https://github.com/prona-p4-learning-platform/learn-sdn-hub/blob/master/backend/src/providers/LocalVMProvider.ts))
 
 You can use a virtual machine or a physical or even your local machine and specify the IP address to be used by the backend. The machine must contain p4 tool chain
 and needs to be reachable using SSH. Also, it should run the LSP load balancer, as described above. Start the backend:
@@ -113,6 +123,6 @@ A web browser will open automatically leading you to the login in the frontend. 
 
 Configuration changes regarding assignments etc. need to be done in backend/src/Configuration.ts. Assignment lab sheets need to be stored in backend/src/assigments.
 
-# Run the environment using OpenStack ([OpenStackProvider.ts](https://github.com/prona-p4-learning-platform/learn-sdn-hub/blob/master/backend/src/providers/OpenStackProvider.ts))
+## Run the environment using OpenStack ([OpenStackProvider.ts](https://github.com/prona-p4-learning-platform/learn-sdn-hub/blob/master/backend/src/providers/OpenStackProvider.ts))
 
 t.b.d. (to be documented ;))
