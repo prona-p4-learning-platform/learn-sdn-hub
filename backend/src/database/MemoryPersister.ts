@@ -26,10 +26,11 @@ export default class MemoryPersister implements Persister {
     }
   }
 
-  async RemoveUserEnvironment(
-    username: string,
-    identifier: string
-  ): Promise<void> {}
+  async RemoveUserEnvironment(): Promise<void> {
+    return undefined;
+  }
 
-  async close(): Promise<void> {}
+  async close(): Promise<void> {
+    return undefined;
+  }
 }

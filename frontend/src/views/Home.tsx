@@ -5,10 +5,7 @@ interface HomeProps {
 }
 export default class Home extends React.Component {
   props!: HomeProps;
-  constructor(props: HomeProps){
-    super(props)
-    
-  }
+  
   handleSuccessfulAuthentication(token: string, username: string): void {
     this.props.onUserLogin(token, username)
   }

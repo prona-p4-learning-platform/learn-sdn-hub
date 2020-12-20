@@ -3,7 +3,7 @@ import { createServer } from "http";
 import express, { Router } from "express";
 import cors from "cors";
 
-export default function (api: Router) {
+export default function (api: Router): void {
   const port = 3001;
   const app = express();
   const server = createServer(app);

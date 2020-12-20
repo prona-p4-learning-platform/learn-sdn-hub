@@ -2,7 +2,6 @@ import * as React from "react";
 import Button from "@material-ui/core/Button";
 import P4LanguageServiceEditor from './P4LanguageServiceEditor'
 import * as monaco from 'monaco-editor';
-const hostname = process.env.REACT_APP_API_HOST || ''
 
 interface State {
   code: string

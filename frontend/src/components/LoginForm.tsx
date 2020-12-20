@@ -2,7 +2,7 @@ import React,  {useState, useCallback} from "react";
 import { makeStyles } from "@material-ui/core/styles";
 import TextField from "@material-ui/core/TextField";
 import Button from '@material-ui/core/Button';
-import { Grid, IconButton } from "@material-ui/core";
+import { Grid } from "@material-ui/core";
 import Snackbar from '@material-ui/core/Snackbar';
 import { useHistory } from "react-router-dom";
 import MuiAlert, { AlertProps } from '@material-ui/lab/Alert';
@@ -28,6 +28,7 @@ export default function(props: LoginFormProps) {
         username : "",
         password : ""
     })
+    const {onSuccessfulAuthentication} = props
 
     const [notificationOpen, setNotificationOpen] = React.useState(false);
 
@@ -60,14 +61,14 @@ export default function(props: LoginFormProps) {
             setLoginSeverity("success")
             setNotificationOpen(true)
             const a = await result.json()
-            props.onSuccessfulAuthentication(a.token, a.username)
+            onSuccessfulAuthentication(a.token, a.username)
             history.push("/assignments")
         } else if (result.status===401){
             setLoginResult("Auth failed")
             setLoginSeverity("error")
             setNotificationOpen(true)
         }
-    }, [state],);
+    }, [state,onSuccessfulAuthentication, history]);
 
     const handleNotificationClose = () => {
       setNotificationOpen(false);

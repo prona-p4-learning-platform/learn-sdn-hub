@@ -40,11 +40,10 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
         .json({ error: true, message: "Environment not found" });
     }
     const markdown = fs
-    .readFileSync(path.resolve(__dirname, targetEnv.assignmentLabSheet))
-    .toString();
-  
-    res.send(markdown);
+      .readFileSync(path.resolve(__dirname, targetEnv.assignmentLabSheet))
+      .toString();
 
+    res.send(markdown);
   });
 
   router.post(
