@@ -1,4 +1,6 @@
 /// <reference types="../typings/pkgcloud" />
+/* eslint-disable @typescript-eslint/ban-ts-comment */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import pkgcloud, { OpenStackClient } from "pkgcloud";
 import { InstanceProvider, VMEndpoint } from "./Provider";
 
@@ -41,7 +43,7 @@ export default class OpenStackProvider implements InstanceProvider {
                 identifier,
                 IPAddress: addresses[Object.keys(addresses)[0]][0].addr,
                 SSHPort: 22,
-                LanguageServerPort: 3005
+                LanguageServerPort: 3005,
               });
             } else {
               reject(new Error("Instance has no IP Addresses."));
@@ -83,7 +85,7 @@ export default class OpenStackProvider implements InstanceProvider {
           keyname: "P4 Template Machine",
         },
         //@ts-ignore
-        (err: Error, server: object) => {
+        (err: Error, server: any) => {
           if (err) return reject(err);
           //@ts-ignore
 
@@ -100,7 +102,7 @@ export default class OpenStackProvider implements InstanceProvider {
                     identifier: server.id,
                     IPAddress: addresses[Object.keys(addresses)[0]][0].addr,
                     SSHPort: 22,
-                    LanguageServerPort: 3005
+                    LanguageServerPort: 3005,
                   });
                 } else {
                   setTimeout(

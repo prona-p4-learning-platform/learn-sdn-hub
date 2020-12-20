@@ -6,30 +6,15 @@ import MenuIcon from '@material-ui/icons/Menu';
 import Typography from '@material-ui/core/Typography';
 import {
   BrowserRouter as Router,
-  Route,
-  Link
+  Route
 } from "react-router-dom";
 import Home from "./views/Home";
 import Environment from "./views/Environment";
 import PrivateRoute from './components/PrivateRoute'
 import AssignmentOverview from "./views/AssignmentOverview";
-import { makeStyles } from '@material-ui/core/styles';
 import 'fontsource-roboto';
 import { Button } from "@material-ui/core";
 import CssBaseline from '@material-ui/core/CssBaseline';
-
-
-const useStyles = makeStyles((theme) => ({
-  root: {
-    flexGrow: 1,
-  },
-  menuButton: {
-    marginRight: theme.spacing(2),
-  },
-  title: {
-    flexGrow: 1,
-  },
-}));
 
 interface AppState {
   username: string;

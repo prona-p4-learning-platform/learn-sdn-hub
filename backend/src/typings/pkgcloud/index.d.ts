@@ -1,5 +1,3 @@
-import * as pkgcloud from "pkgcloud";
-
 declare module "pkgcloud" {
   interface CreateServerOptions {
     name: string;
