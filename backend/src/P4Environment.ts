@@ -2,7 +2,7 @@ import { exec } from "child_process";
 import path from "path";
 import fs from "fs";
 import os from "os";
-import SSHConsole, { Console } from "./consoles/ReusableSSHConsole";
+import SSHConsole, { Console } from "./consoles/SSHConsole";
 import FileHandler from "./filehandler/SSHFileHandler";
 import { InstanceProvider, VMEndpoint } from "./providers/Provider";
 import { Persister } from "./database/Persister";

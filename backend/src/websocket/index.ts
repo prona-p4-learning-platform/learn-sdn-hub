@@ -80,6 +80,10 @@ export default function wrapWSWithExpressApp(server: Server): void {
               ws.send(data);
             });
           });
+          client.on("error", (err) => {
+            console.log(err);
+            ws.close();
+          });
           client.on("close", () => ws.close());
           ws.on("close", () => client.close());
         });
