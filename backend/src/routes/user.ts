@@ -3,17 +3,23 @@ import bodyParser from "body-parser";
 import { AuthenticationProvider } from "../authentication/AuthenticationProvider";
 import environments from "../Configuration";
 import jwt from "jsonwebtoken";
+import { celebrate, Joi, Segments } from "celebrate";
+
+const loginValidator = celebrate({
+  [Segments.BODY]: Joi.object().keys({
+    username: Joi.string().required(),
+    password: Joi.string().required(),
+  }),
+});
 
 export default (authProviders: AuthenticationProvider[]): Router => {
   const router = Router();
 
   router.get("/assignments", async (req, res) => {
-    console.log("assignments");
     return res.status(200).json(Array.from(environments.keys()));
   });
 
-  router.post("/login", bodyParser.json(), async (req, res) => {
-    console.log("login");
+  router.post("/login", bodyParser.json(), loginValidator, async (req, res) => {
     const username = req.body.username;
     const password = req.body.password;
     for (const authProvider of authProviders) {
