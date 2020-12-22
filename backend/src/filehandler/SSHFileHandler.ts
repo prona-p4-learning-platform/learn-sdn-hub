@@ -11,6 +11,10 @@ export default class SSHFileHandler {
         console.log(err);
         this.hasClosedOrErrored = true;
       })
+      .on("close", () => {
+        console.log("SSHFileHandler has been closed.");
+        this.hasClosedOrErrored = true;
+      })
       .connect({
         host: ipaddress,
         port,
