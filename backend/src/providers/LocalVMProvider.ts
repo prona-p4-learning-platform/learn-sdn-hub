@@ -1,7 +1,7 @@
 import { InstanceProvider, VMEndpoint } from "./Provider";
 export default class OpenStackProvider implements InstanceProvider {
-  private ipAddress: string = "127.0.0.1";
-  private sshPort: number = 22;
+  private ipAddress = "127.0.0.1";
+  private sshPort = 22;
   constructor() {
     if (process.env.VBOX_IP_ADDRESS != undefined) {
       this.ipAddress = process.env.VBOX_IP_ADDRESS;
