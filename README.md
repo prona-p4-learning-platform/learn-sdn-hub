@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-Both the host running the backend and frontend as well as the VM or host executing the p4 environment need node.js. To install it, you can use nvm:
+Both the host running the backend and frontend as well as the VM or host executing the p4 environment need node.js. To install it, you can use, e.g., nvm:
 
 ```
 wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.37.2/install.sh | bash
@@ -93,18 +93,41 @@ Alias=lsp-loadbalancer.service
 ```
 
 
-## Run the environment using a local VM ([LocalVMProvider.ts](https://github.com/prona-p4-learning-platform/learn-sdn-hub/blob/master/backend/src/providers/LocalVMProvider.ts))
+## Run the backend using a local VM ([LocalVMProvider.ts](https://github.com/prona-p4-learning-platform/learn-sdn-hub/blob/master/backend/src/providers/LocalVMProvider.ts))
 
-You can use a virtual machine or a physical or even your local machine and specify the IP address to be used by the backend. The machine must contain p4 tool chain
-and needs to be reachable using SSH. Also, it should run the LSP load balancer, as described above. Start the backend:
+You can use a virtual machine or a physical or even your local machine and specify the IP address to be used by the backend to run P4 code and assignments. The machine must contain p4 tool chain (esp. [p4c](https://github.com/p4lang/p4c)) and needs to be reachable using SSH. Also, it should run the LSP load balancer, as described above. Start the backend:
 
 ```
-export VBOX_IP_ADDRESS=<IP address of the virtual machine>
+export VBOX_IP_ADDRESS=<IP address of the host to execute P4 on>
+export VBOX_SSH_PORT=<SSH port of the host to execute P4 on>
+export SSH_USERNAME=<Username to be used for the ssh connection, e.g., "p4">
+export SSH_PASSWORD=<Password to be used for the ssh connection>
 cd backend
 npm run start:localvm
 ```
+Optionally you can also ```export SSH_PRIVATE_KEY_PATH=<SSH keyfile>``` to use an SSH keyfile for the connections to the host running your P4 assignments.
 
-To run the frontend, you need to creat frontend config file as ".env.local" file in the frontend directory:
+## Run the backend using OpenStack ([OpenStackProvider.ts](https://github.com/prona-p4-learning-platform/learn-sdn-hub/blob/master/backend/src/providers/OpenStackProvider.ts))
+
+Instead of using a preinstalled local VM or host to run your P4 code and assignments, also an OpenStack provider is available, that creates OpenStack instances for deployed assignments. In OpenStack an image is necessary, that contains p4 tool chain etc., as documented above for the local VM use-case. The provider is based on [pkgcloud](https://github.com/pkgcloud/pkgcloud). OpenStack keystone needs to be available using v3.
+
+```
+export OPENSTACK_USERNAME=<Username to access OpenStack API>
+export OPENSTACK_PASSWORD=<Passwort for connection to OpenStack>
+export OPENSTACK_AUTHURL=<OpenStack Auth URL, needs to support keystone identity API v3, e.g., "https://my-openstack-cloud:5000/v3">
+export OPENSTACK_REGION=<OpenStack region, e.g., "RegionOne">
+export OPENSTACK_TENANTID=<OpenStack tenant/project ID>
+export OPENSTACK_DOMAINNAME=<OpenStack domain, e.g., "default">
+export SSH_USERNAME=<Username to be used for the ssh connection, e.g., "p4">
+export SSH_PASSWORD=<Password to be used for the ssh connection>
+cd backend
+npm run start
+```
+Optionally you can also ```export SSH_PRIVATE_KEY_PATH=<SSH keyfile>``` to use an SSH keyfile for the connections to the host running your P4 assignments.
+
+## Run the frontend
+
+To run the frontend, you need to create frontend config file as ".env.local" file in the frontend directory:
 
 ```
 REACT_APP_API_HOST=http://localhost:3001
@@ -119,10 +142,12 @@ cd frontend
 npm run start
 ```
 
-A web browser will open automatically leading you to the login in the frontend. If you use the demo authentication provider, you can use user "test123" and password "test123". 
+A web browser will open automatically leading you to the login in the frontend. If you use the demo authentication provider, you can use user "p4" and password "p4". 
+
+## Configure assignments, editable files, lab sheets, SSH consoles etc.
 
 Configuration changes regarding assignments etc. need to be done in backend/src/Configuration.ts. Assignment lab sheets need to be stored in backend/src/assigments.
 
-## Run the environment using OpenStack ([OpenStackProvider.ts](https://github.com/prona-p4-learning-platform/learn-sdn-hub/blob/master/backend/src/providers/OpenStackProvider.ts))
+## Using MongoDB as authentication provider
 
 t.b.d. (to be documented ;))
