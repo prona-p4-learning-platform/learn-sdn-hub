@@ -4,7 +4,7 @@ import express, { Router } from "express";
 import cors from "cors";
 import { errors } from "celebrate";
 import path from "path";
-import history from 'connect-history-api-fallback'
+import history from "connect-history-api-fallback";
 export default function (api: Router): void {
   const port = 3001;
   const app = express();
@@ -16,8 +16,8 @@ export default function (api: Router): void {
   app.use(api);
   app.use(errors());
   const frontendStaticDir = path.resolve(__dirname, "..", "static");
-  console.log("Serving static html from "+frontendStaticDir)
-  app.use(history())
+  console.log("Serving static html from " + frontendStaticDir);
+  app.use(history());
   app.use(express.static(frontendStaticDir));
   server.listen(port, function () {
     console.log(`HTTP Server listening on port ${port}`);
