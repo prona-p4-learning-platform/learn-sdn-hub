@@ -8,7 +8,7 @@ environments.set("p4basic", {
       name: "bash",
       cwd: "/home/p4/tutorials/exercises/basic/",
       executable: "make",
-      params: ["&& exit && exit"],
+      params: [" stop && make && exit && exit"],
       provideTty: true,
     },
     {

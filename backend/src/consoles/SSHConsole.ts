@@ -11,12 +11,16 @@ export interface Console {
   close(): void;
 }
 
+type CustomizedSSHClient = Client & {
+  ready: boolean;
+};
+
 export default class SSHConsole extends EventEmitter implements Console {
   private command: string;
-  private console: Client;
   private cwd: string;
   private args: Array<string>;
   private stream: ClientChannel;
+  private static sshSessions: Map<string, CustomizedSSHClient> = new Map();
 
   constructor(
     ipaddress: string,
@@ -29,46 +33,72 @@ export default class SSHConsole extends EventEmitter implements Console {
     this.command = command;
     this.args = args;
     this.cwd = cwd;
+    let sshConsole: CustomizedSSHClient;
+    const consoleIdentifier = `${ipaddress}:${port}`;
+    if (SSHConsole.sshSessions.has(consoleIdentifier)) {
+      sshConsole = SSHConsole.sshSessions.get(consoleIdentifier);
+      if (sshConsole.ready === false) {
+        sshConsole.on("ready", () => {
+          sshConsole.ready = true;
+          this.setupShellStream(sshConsole);
+        });
+      } else {
+        this.setupShellStream(sshConsole);
+      }
+    } else {
+      sshConsole = new Client() as CustomizedSSHClient;
+      sshConsole.ready = false;
+      SSHConsole.sshSessions.set(consoleIdentifier, sshConsole);
+      sshConsole.on("ready", () => {
+        sshConsole.ready = true;
+        this.setupShellStream(sshConsole);
+      });
+      sshConsole.on("error", (err) => {
+        console.log(err);
+      });
 
-    this.console = new Client();
-    this.console.on("ready", () => {
-      this.console.shell((err, stream) => {
-        if (err) throw err;
-        this.emit("ready");
-        this.stream = stream;
-        stream
-          .on("close", () => {
-            console.log("Stream :: close");
-            this.console.end();
-            this.emit("close");
-          })
-          .on("data", (data: string) => {
-            this.emit("data", data);
-          });
-        stream.write("cd " + this.cwd + "\n");
-        stream.write(this.command + " " + this.args.join(" ") + "\n");
+      sshConsole.on("close", () => {
+        console.log("SSH connection closed.");
+        SSHConsole.sshSessions.delete(consoleIdentifier);
       });
+      console.log("Establishing SSH connection " + ipaddress + ":" + port);
+      sshConsole
+        .on("ready", function () {
+          console.log("Client :: ready");
+        })
+        .on("error", (err) => {
+          console.log("Error handler!", err);
+        })
+        .connect({
+          host: ipaddress,
+          port,
+          username: process.env.SSH_USERNAME,
+          password: process.env.SSH_PASSWORD,
+          privateKey: process.env.SSH_PRIVATE_KEY_PATH
+            ? fs.readFileSync(process.env.SSH_PRIVATE_KEY_PATH)
+            : undefined,
+          readyTimeout: 10000,
+        });
+    }
+  }
+
+  private setupShellStream(sshConsole: CustomizedSSHClient) {
+    sshConsole.shell((err, stream) => {
+      console.log("setting up shell");
+      if (err) throw err;
+      this.emit("ready");
+      this.stream = stream;
+      stream
+        .on("close", () => {
+          console.log("Stream :: close");
+          this.emit("close");
+        })
+        .on("data", (data: string) => {
+          this.emit("data", data);
+        });
+      stream.write("cd " + this.cwd + "\n");
+      stream.write(this.command + " " + this.args.join(" ") + "\n");
     });
-    this.console.on("error", (err) => {
-      console.log(err);
-      this.console.end();
-      this.emit("close");
-    });
-    console.log("Establishing SSH connection " + ipaddress + ":" + port);
-    this.console
-      .on("ready", function () {
-        console.log("Client :: ready");
-      })
-      .connect({
-        host: ipaddress,
-        port,
-        username: "p4",
-        password: "p4",
-        privateKey: process.env.SSH_PRIVAT_KEY_PATH
-          ? fs.readFileSync(process.env.SSH_PRIVATE_KEY_PATH)
-          : undefined,
-        readyTimeout: 90000,
-      });
   }
 
   write(data: string): void {
