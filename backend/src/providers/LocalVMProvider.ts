@@ -10,7 +10,7 @@ export default class OpenStackProvider implements InstanceProvider {
       this.sshPort = parseInt(process.env.VBOX_SSH_PORT);
     }
     console.log(
-      `Using LocalVMProvider with ipAddress: ${this.ipAddress} and sshPort: ${this.sshPort}`
+      `Using LocalVMProvider with ipAddress: ${this.ipAddress} (env var: VBOX_IP_ADDRESS) and sshPort: ${this.sshPort} (env var: VBOX_SSH_PORT)`
     );
   }
 
