@@ -24,6 +24,7 @@ const lsMatcher = match<LSPathParams>(
 export default function wrapWSWithExpressApp(server: Server): void {
   const wss = new WebSocket.Server({ server });
   wss.on("connection", function (ws, request) {
+    console.log(request.headers.authorization);
     const path = url.parse(request.url).pathname;
     const envMatchResult = envMatcher(path);
     const lspMatchResult = lsMatcher(path);
