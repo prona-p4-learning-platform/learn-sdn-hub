@@ -6,7 +6,6 @@ import ConsoleHandler from "./ConsoleHandler";
 import LanguageServerHandler from "./LanguageServerHandler";
 import { TokenPayload } from "../authentication/AuthenticationMiddleware";
 import jwt from "jsonwebtoken";
-import user from "../routes/user";
 interface WebsocketPathParams {
   environment: string;
   type: string;
