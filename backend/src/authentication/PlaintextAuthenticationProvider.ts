@@ -10,7 +10,7 @@ export default class PlaintextAuthenticationProvider
     password: string
   ): Promise<AuthenticationResult> {
     if (password === "p4") {
-      return { username: username, userid: "p4", type: "plain" };
+      return { username: username, userid: username, type: "plain" };
     }
     throw new Error("AuthenticationError");
   }

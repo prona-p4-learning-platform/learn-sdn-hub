@@ -50,43 +50,11 @@ export default class P4Environment {
   private userId: string;
   private filehandler: FileHandler;
 
-  static async compile(source: string): Promise<CompilationResult> {
-    return new Promise((resolve, reject) => {
-      const folder = path.join(os.tmpdir(), "test-");
-      fs.mkdtemp(folder, (err, folder) => {
-        if (err) return reject(err);
-        const tmpFilePath = path.join(folder, "test.p4");
-        fs.writeFileSync(path.join(folder, "test.p4"), source);
-        exec(`p4c ${tmpFilePath}`, (err, stdout, stderr) => {
-          console.log(stderr);
-          //if (err) return reject(new Error(stderr));
-          const errors = extractCompilationResult(stderr);
-          resolve({
-            errors,
-          });
-        });
-      });
-    });
-  }
-
-  static async compileRawOutput(source: string): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const folder = path.join(os.tmpdir(), "test-");
-      fs.mkdtemp(folder, (err, folder) => {
-        if (err) return reject(err);
-        const tmpFilePath = path.join(folder, "test.p4");
-        fs.writeFileSync(path.join(folder, "test.p4"), source);
-        exec(`p4c ${tmpFilePath}`, (err, stdout, stderr) => {
-          console.log(stderr);
-          resolve(stderr);
-        });
-      });
-    });
-  }
-
-  public static getActiveEnvironment(alias: string): P4Environment {
-    console.log(Array.from(this.activeEnvironments.keys()));
-    return P4Environment.activeEnvironments.get(alias);
+  public static getActiveEnvironment(
+    alias: string,
+    userid: string
+  ): P4Environment {
+    return P4Environment.activeEnvironments.get(`${userid}-${alias}`);
   }
 
   private constructor(
@@ -119,8 +87,12 @@ export default class P4Environment {
     persister: Persister
   ): Promise<P4Environment> {
     const environment = new P4Environment(userId, env, provider, persister);
+    console.log(`${userId}-${identifier}`);
     await environment.start(env);
-    P4Environment.activeEnvironments.set(identifier, environment);
+    P4Environment.activeEnvironments.set(
+      `${userId}-${identifier}`,
+      environment
+    );
     return environment;
   }
 

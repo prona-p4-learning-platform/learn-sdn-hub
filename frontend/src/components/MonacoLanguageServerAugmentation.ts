@@ -24,7 +24,7 @@ export default (editor: monaco.editor.IStandaloneCodeEditor) : monaco.editor.ISt
 // install Monaco language client services
 // @ts-ignore
 MonacoServices.install(editor,{rootUri: "file://tmp"});
-
+return editor
 // create the web socket
 const url = createUrl('ws://localhost:3001/environment/p4basic/languageserver/p4')
 const webSocket = createWebSocket(url);
