@@ -1,26 +1,40 @@
 import { InstanceProvider, VMEndpoint } from "./Provider";
-export default class OpenStackProvider implements InstanceProvider {
-  private ipAddress: string;
+export default class LocalVMProvider implements InstanceProvider {
   private availableInstances: Map<string, VMEndpoint> = new Map();
   private availableInstancesList: string[] = [];
   constructor() {
-    this.ipAddress = process.env.VBOX_IP_ADDRESS;
-    console.log(
-      `VirtualBoxProvider VBOX_IP_ADDRESS from env: ${this.ipAddress}`
-    );
-    this.availableInstances.set("vbox", {
-      IPAddress: this.ipAddress,
-      SSHPort: 22,
-      LanguageServerPort: 3005,
-      identifier: "vbox",
+    let ipAddresses: string[] = [];
+    let sshPorts: number[] = [];
+    if (process.env.VBOX_IP_ADDRESSES != undefined) {
+      ipAddresses = process.env.VBOX_IP_ADDRESSES.split(",");
+    } else {
+      console.log(
+        "No VBOX_IP_ADDRESSES environment variable set. LocalVMProvider can not provide instances."
+      );
+      return;
+    }
+    if (process.env.VBOX_SSH_PORTS != undefined) {
+      sshPorts = process.env.VBOX_SSH_PORT.split(",").map((port) =>
+        Number.parseInt(port)
+      );
+    } else {
+      console.log(
+        "No VBOX_SSH_PORTS environment variable set. LocalVMProvider uses Port 22 for all instances."
+      );
+      sshPorts = ipAddresses.map(() => 22);
+    }
+    ipAddresses.forEach((ipAddress, index) => {
+      console.log(
+        `Adding VM to LocalVMProvider pool: ${ipAddress} with SSH port: ${sshPorts[index]}`
+      );
+      this.availableInstances.set(`vm-${index}`, {
+        IPAddress: ipAddress,
+        SSHPort: sshPorts[index],
+        LanguageServerPort: 3005,
+        identifier: `vm-${index}`,
+      });
+      this.availableInstancesList.push(`vm-${index}`);
     });
-    this.availableInstances.set("vbox2", {
-      IPAddress: "192.168.178.108",
-      SSHPort: 22,
-      LanguageServerPort: 3005,
-      identifier: "vbox2",
-    });
-    this.availableInstancesList = ["vbox", "vbox2"];
   }
 
   async getServer(identifier: string): Promise<VMEndpoint> {
@@ -29,7 +43,6 @@ export default class OpenStackProvider implements InstanceProvider {
 
   async createServer(): Promise<VMEndpoint> {
     if (this.availableInstancesList.length > 0) {
-      console.log(this.availableInstancesList);
       return this.availableInstances.get(this.availableInstancesList.pop());
     }
     throw new Error("Cannot create server.");
