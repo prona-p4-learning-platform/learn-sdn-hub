@@ -12,12 +12,22 @@ export default class XTerminal extends React.Component<TerminalProps> {
   constructor(props: TerminalProps) {
     super(props);
     this.handleTermRef = this.handleTermRef.bind(this)
+    this.websocket = new WebSocket(this.props.wsEndpoint);
   }
 
   handleTermRef(instance: XTerm |null):void{
+
     this.resizeTimer = setInterval(() => {
       instance?.terminal.resize(instance.terminal.cols,instance.terminal.rows)
     },200)
+  }
+
+  componentDidMount(){
+    this.websocket.onopen = (e) => {
+      console.log((e.target as WebSocket).readyState)
+      if ((e.target as WebSocket).readyState !== WebSocket.OPEN) return;
+      this.websocket.send(`auth ${ localStorage.getItem("token")}` )
+    }    
   }
 
   componentWillUnmount(){
@@ -27,7 +37,7 @@ export default class XTerminal extends React.Component<TerminalProps> {
   }
   
   render() {
-    this.websocket = new WebSocket(this.props.wsEndpoint);
+
     const attachAddon = new AttachAddon(this.websocket);
     return (
       <div style={{width:200, height: 200}}>

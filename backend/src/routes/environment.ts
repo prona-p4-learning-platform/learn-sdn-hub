@@ -106,8 +106,11 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
     "/:environment/file/:alias",
     authenticationMiddleware,
     fileWithAliasValidator,
-    (req, res) => {
-      const env = P4Environment.getActiveEnvironment(req.params.environment);
+    (req: RequestWithUser, res) => {
+      const env = P4Environment.getActiveEnvironment(
+        req.params.environment,
+        req.user.id
+      );
       env
         .readFile(req.params.alias)
         .then((content: string) => {
@@ -125,8 +128,11 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
     bodyParser.text({ type: "text/plain" }),
     authenticationMiddleware,
     fileWithAliasValidator,
-    (req, res) => {
-      const env = P4Environment.getActiveEnvironment(req.params.environment);
+    (req: RequestWithUser, res) => {
+      const env = P4Environment.getActiveEnvironment(
+        req.params.environment,
+        req.user.id
+      );
       env
         .writeFile(req.params.alias, req.body)
         .then(() => res.status(200).end())
@@ -140,8 +146,11 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
     "/:environment/restart",
     authenticationMiddleware,
     environmentPathParamValidator,
-    (req, res) => {
-      const env = P4Environment.getActiveEnvironment(req.params.environment);
+    (req: RequestWithUser, res) => {
+      const env = P4Environment.getActiveEnvironment(
+        req.params.environment,
+        req.user.id
+      );
       env
         .restart()
         .then(() => {

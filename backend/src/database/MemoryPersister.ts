@@ -1,18 +1,21 @@
 import { Persister, UserEnvironment, UserAccount } from "./Persister";
 
-const environments: UserEnvironment[] = [];
-
+const userEnvironments: Map<string, Map<string, UserEnvironment>> = new Map();
 export default class MemoryPersister implements Persister {
-  async GetUserAccount(): Promise<UserAccount> {
+  async GetUserAccount(username: string): Promise<UserAccount> {
     return {
-      username: "testuser",
-      _id: "user-id-123",
-      password: "test123",
+      username,
+      _id: username,
+      password: "p4",
     };
   }
 
-  async GetUserEnvironments(): Promise<UserEnvironment[]> {
-    return environments;
+  async GetUserEnvironments(username: string): Promise<UserEnvironment[]> {
+    const userEnvironment = userEnvironments.get(username);
+    if (userEnvironment) {
+      return [...userEnvironment.values()];
+    }
+    return [];
   }
 
   async AddUserEnvironment(
@@ -20,9 +23,13 @@ export default class MemoryPersister implements Persister {
     identifier: string,
     description: string
   ): Promise<void> {
-    const filtered = environments.filter((e) => e.identifier === identifier);
-    if (filtered.length === 0) {
-      environments.push({ identifier, description });
+    if (
+      userEnvironments.has(username) &&
+      userEnvironments.get(username).has(identifier)
+    ) {
+      userEnvironments
+        .get(username)
+        .set(identifier, { identifier, description });
     }
   }
 

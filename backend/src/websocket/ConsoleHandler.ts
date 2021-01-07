@@ -4,9 +4,11 @@ import P4Environment from "../P4Environment";
 export default function (
   ws: WebSocket,
   environment: string,
+  userid: string,
   type: string
 ): void {
-  const envInstance = P4Environment.getActiveEnvironment(`${environment}`);
+  console.log(environment, userid);
+  const envInstance = P4Environment.getActiveEnvironment(environment, userid);
   if (envInstance !== undefined) {
     const envConsole = envInstance.getConsoleByAlias(type);
     if (envConsole === undefined) {
