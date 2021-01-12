@@ -19,7 +19,7 @@ const port = window && window.location && window.location.port;
 
 var backendURL = protocol + "//" + hostname + ":" + port;
 
-if (process.env.REACT_APP_API_HOST != undefined) {
+if (process.env.REACT_APP_API_HOST !== undefined) {
   backendURL = process.env.REACT_APP_API_HOST;
 }
 

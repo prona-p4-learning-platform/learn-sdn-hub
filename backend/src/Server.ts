@@ -5,9 +5,8 @@ import cors from "cors";
 import { errors } from "celebrate";
 import path from "path";
 import history from "connect-history-api-fallback";
-import { Int32 } from "mongodb";
 export default function (api: Router): void {
-  var port = 3001;
+  let port = 3001;
   const app = express();
   const server = createServer(app);
 

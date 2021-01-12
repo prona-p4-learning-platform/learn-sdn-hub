@@ -28,7 +28,11 @@ export const LSAugmentation =  (editor: monaco.editor.IStandaloneCodeEditor) : m
     MonacoServices.install(editor,{rootUri: "file://tmp"});
     const hostname = window && window.location && window.location.hostname;
     const port = window && window.location && window.location.port;
-        const url = createUrl('ws://' + hostname + ':' + port + '/environment/p4basic/languageserver/p4')
+    var wsBackendURL = "ws://" + hostname + ":" + port;
+    if (process.env.REACT_APP_WS_HOST != undefined) {
+        wsBackendURL = process.env.REACT_APP_WS_HOST;
+    }
+    const url = createUrl(wsBackendURL + '/environment/p4basic/languageserver/p4')
     const webSocket = createWebSocket(url);
     // listen when the web socket is opened
     listen({

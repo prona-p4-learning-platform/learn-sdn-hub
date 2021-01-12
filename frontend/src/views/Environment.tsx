@@ -15,12 +15,12 @@ const hostname = window && window.location && window.location.hostname;
 const port = window && window.location && window.location.port;
 
 var backendURL = protocol + "//" + hostname + ":" + port;
-var wsBackendURL = "ws:" + "//" + hostname + ":" + port;
+var wsBackendURL = "ws://" + hostname + ":" + port;
 
-if (process.env.REACT_APP_API_HOST != undefined) {
+if (process.env.REACT_APP_API_HOST !== undefined) {
   backendURL = process.env.REACT_APP_API_HOST;
 }
-if (process.env.REACT_APP_WS_HOST != undefined) {
+if (process.env.REACT_APP_WS_HOST !== undefined) {
   wsBackendURL = process.env.REACT_APP_WS_HOST;
 }
 
