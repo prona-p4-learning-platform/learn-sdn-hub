@@ -6,6 +6,7 @@ import { Grid } from "@material-ui/core";
 import Snackbar from '@material-ui/core/Snackbar';
 import { useHistory } from "react-router-dom";
 import MuiAlert, { AlertProps } from '@material-ui/lab/Alert';
+import BackendEndpointSetup, { getBackendURL } from '../components/BackendEndpointSetup'
 
 type Severity = "error" | "success" | "info" | "warning" | undefined;
 
@@ -13,15 +14,7 @@ function Alert(props: JSX.IntrinsicAttributes & AlertProps) {
   return <MuiAlert elevation={6} variant="filled" {...props} />;
 }
 
-const protocol = window && window.location && window.location.protocol;
-const hostname = window && window.location && window.location.hostname;
-const port = window && window.location && window.location.port;
-
-var backendURL = protocol + "//" + hostname + ":" + port;
-
-if (process.env.REACT_APP_API_HOST !== undefined) {
-  backendURL = process.env.REACT_APP_API_HOST;
-}
+let backendURL = getBackendURL();
 
 export interface LoginFormProps{
     onSuccessfulAuthentication: (token: string, username: string) => void

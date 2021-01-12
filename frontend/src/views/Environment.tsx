@@ -10,9 +10,9 @@ import ReactMarkdown from 'react-markdown'
 import mermaid from 'mermaid'
 import TabControl from '../components/TabControl'
 
-const protocol = window && window.location && window.location.protocol;
-const hostname = window && window.location && window.location.hostname;
-const port = window && window.location && window.location.port;
+const protocol = window?.location?.protocol ?? "http";
+const hostname = window?.location?.hostname ?? "localhost";
+const port = window?.location?.port ?? "3001";
 
 var backendURL = protocol + "//" + hostname + ":" + port;
 var wsBackendURL = "ws://" + hostname + ":" + port;

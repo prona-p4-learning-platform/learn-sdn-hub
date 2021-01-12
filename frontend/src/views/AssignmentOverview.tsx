@@ -7,6 +7,7 @@ import { ListItemSecondaryAction } from '@material-ui/core';
 import List from '@material-ui/core/List';
 import ListItem from '@material-ui/core/ListItem';
 import ListItemText from '@material-ui/core/ListItemText';
+import { getBackendURL } from '../components/BackendEndpointSetup'
 
 const useStyles = makeStyles((theme) => ({
   button: {
@@ -14,14 +15,7 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const protocol = window && window.location && window.location.protocol;
-const hostname = window && window.location && window.location.hostname;
-const port = window && window.location && window.location.port;
-
-var backendURL = protocol + "//" + hostname + ":" + port;
-if (process.env.REACT_APP_API_HOST !== undefined) {
-  backendURL = process.env.REACT_APP_API_HOST;
-}
+let backendURL = getBackendURL();
 
 interface AssignmentOverviewProps {
 };

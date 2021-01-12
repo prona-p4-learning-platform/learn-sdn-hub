@@ -5,6 +5,7 @@ import {
 } from 'monaco-languageclient';
 import ReconnectingWebSocket  from 'reconnecting-websocket'
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.api'
+import { getWsBackendURL } from './BackendEndpoint';
 const normalizeUrl = require('normalize-url');
 
 // register Monaco languages
@@ -26,13 +27,7 @@ export const LSAugmentation =  (editor: monaco.editor.IStandaloneCodeEditor) : m
     // install Monaco language client services
     // @ts-ignore
     MonacoServices.install(editor,{rootUri: "file://tmp"});
-    const hostname = window && window.location && window.location.hostname;
-    const port = window && window.location && window.location.port;
-    var wsBackendURL = "ws://" + hostname + ":" + port;
-    if (process.env.REACT_APP_WS_HOST !== undefined) {
-        wsBackendURL = process.env.REACT_APP_WS_HOST;
-    }
-    const url = createUrl(wsBackendURL + '/environment/p4basic/languageserver/p4')
+    const url = createUrl(getWsBackendURL() + '/environment/p4basic/languageserver/p4')
     const webSocket = createWebSocket(url);
     // listen when the web socket is opened
     listen({
