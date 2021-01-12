@@ -24,11 +24,11 @@ RUN echo '#!/bin/bash\n' \
          '  echo "You need to specify a host used to run the P4 assignments.\nThis can be done, e.g., by running \"docker run -it --rm -p 3001:3001 prona/learn-sdn-hub <BACKEND_HTTP_PORT> <VBOX_IP_ADDRESS> <VBOX_SSH_PORT> <SSH_USERNAME> <SSH_PASSWORD>\"\n(see also VBOX_IP_ADDRESSES, VBOX_SSH_PORTS, SSH_USERNAME and SSH_PASSWORD in learn-sdn-hub documentation)"\n' \
          '  exit 1\n' \
          'fi\n' \
-         'export BACKEND_HTTP_PORT=$2\n' \
-         'export VBOX_IP_ADDRESSES=$3\n' \
-         'export VBOX_SSH_PORTS=$4\n' \
-         'export SSH_USERNAME=$5\n' \
-         'export SSH_PASSWORD=$6\n' \
+         'export BACKEND_HTTP_PORT=$1\n' \
+         'export VBOX_IP_ADDRESSES=$2\n' \
+         'export VBOX_SSH_PORTS=$3\n' \
+         'export SSH_USERNAME=$4\n' \
+         'export SSH_PASSWORD=$5\n' \
          'cd backend && npm run start:localvm\n' >start-learn-sdn-hub.sh
 RUN chmod +x start-learn-sdn-hub.sh
 
