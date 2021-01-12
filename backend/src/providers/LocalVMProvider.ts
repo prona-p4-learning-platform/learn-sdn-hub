@@ -14,7 +14,7 @@ export default class LocalVMProvider implements InstanceProvider {
       return;
     }
     if (process.env.VBOX_SSH_PORTS != undefined) {
-      sshPorts = process.env.VBOX_SSH_PORT.split(",").map((port) =>
+      sshPorts = process.env.VBOX_SSH_PORTS.split(",").map((port) =>
         Number.parseInt(port)
       );
     } else {

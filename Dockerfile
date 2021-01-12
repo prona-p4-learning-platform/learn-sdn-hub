@@ -21,11 +21,11 @@ RUN cp -a frontend/build/* backend/static/
 RUN echo '#!/bin/bash\n' \
          'if [ ! $# -eq 4 ]\n' \
          'then\n' \
-         '  echo "You need to specify a host used to run the P4 assignments.\nThis can be done, e.g., by running \"docker run -it --rm -p 3001:3001 flex/learn-sdn-hub <VBOX_IP_ADDRESS> <VBOX_SSH_PORT> <SSH_USERNAME> <SSH_PASSWORD>\"\n(see also VBOX_IP_ADDRESS, VBOX_SSH_PORT, SSH_USERNAME and SSH_PASSWORD in learn-sdn-hub documentation)"\n' \
+         '  echo "You need to specify a host used to run the P4 assignments.\nThis can be done, e.g., by running \"docker run -it --rm -p 3001:3001 flex/learn-sdn-hub <VBOX_IP_ADDRESSES> <VBOX_SSH_PORTS> <SSH_USERNAME> <SSH_PASSWORD>\"\n(see also VBOX_IP_ADDRESS, VBOX_SSH_PORT, SSH_USERNAME and SSH_PASSWORD in learn-sdn-hub documentation)"\n' \
          '  exit 1\n' \
          'fi\n' \
-         'export VBOX_IP_ADDRESS=$1\n' \
-         'export VBOX_SSH_PORT=$2\n' \
+         'export VBOX_IP_ADDRESSES=$1\n' \
+         'export VBOX_SSH_PORTS=$2\n' \
          'export SSH_USERNAME=$3\n' \
          'export SSH_PASSWORD=$4\n' \
          'cd backend && npm run start:localvm\n' >start-learn-sdn-hub.sh

@@ -98,8 +98,8 @@ Alias=lsp-loadbalancer.service
 You can use a virtual machine or a physical or even your local machine and specify the IP address to be used by the backend to run P4 code and assignments. The machine must contain p4 tool chain (esp. [p4c](https://github.com/p4lang/p4c)) and needs to be reachable using SSH. Also, it should run the LSP load balancer, as described above. Start the backend:
 
 ```
-export VBOX_IP_ADDRESS=<IP address of the host to execute P4 on>
-export VBOX_SSH_PORT=<SSH port of the host to execute P4 on>
+export VBOX_IP_ADDRESSES=<IP address of the host to execute P4 on>
+export VBOX_SSH_PORTS=<SSH port of the host to execute P4 on>
 export SSH_USERNAME=<Username to be used for the ssh connection, e.g., "p4">
 export SSH_PASSWORD=<Password to be used for the ssh connection>
 cd backend
