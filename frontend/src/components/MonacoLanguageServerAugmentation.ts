@@ -29,7 +29,7 @@ export const LSAugmentation =  (editor: monaco.editor.IStandaloneCodeEditor) : m
     const hostname = window && window.location && window.location.hostname;
     const port = window && window.location && window.location.port;
     var wsBackendURL = "ws://" + hostname + ":" + port;
-    if (process.env.REACT_APP_WS_HOST != undefined) {
+    if (process.env.REACT_APP_WS_HOST !== undefined) {
         wsBackendURL = process.env.REACT_APP_WS_HOST;
     }
     const url = createUrl(wsBackendURL + '/environment/p4basic/languageserver/p4')
