@@ -21,7 +21,7 @@ RUN cp -a frontend/build/* backend/static/
 RUN echo '#!/bin/bash\n' \
          'if [ ! $# -eq 5 ]\n' \
          'then\n' \
-         '  echo "You need to specify a host used to run the P4 assignments.\nThis can be done, e.g., by running \"docker run -it --rm -p 3001:3001 prona/learn-sdn-hub <BACKEND_HTTP_PORT> <VBOX_IP_ADDRESS> <VBOX_SSH_PORT> <SSH_USERNAME> <SSH_PASSWORD>\"\n(see also VBOX_IP_ADDRESSES, VBOX_SSH_PORTS, SSH_USERNAME and SSH_PASSWORD in learn-sdn-hub documentation)"\n' \
+         '  echo "You need to specify a host used to run the P4 assignments.\nThis can be done, e.g., by running \"docker run -it --rm -p 3001:3001 prona/learn-sdn-hub <BACKEND_HTTP_PORT> <VBOX_IP_ADDRESS> <VBOX_SSH_PORT> <SSH_USERNAME> <SSH_PASSWORD>\"\n(see also VBOX_IP_ADDRESSES configuration etc. in learn-sdn-hub documentation)"\n' \
          '  exit 1\n' \
          'fi\n' \
          'export BACKEND_HTTP_PORT=$1\n' \
