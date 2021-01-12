@@ -18,6 +18,11 @@ const protocol = window && window.location && window.location.protocol;
 const hostname = window && window.location && window.location.hostname;
 const port = window && window.location && window.location.port;
 
+var backendURL = protocol + "//" + hostname + ":" + port;
+if (process.env.REACT_APP_API_HOST != undefined) {
+  backendURL = process.env.REACT_APP_API_HOST;
+}
+
 interface AssignmentOverviewProps {
 };
 
@@ -29,13 +34,13 @@ export default function AssignmentOverview(props: AssignmentOverviewProps) {
 
   useEffect(() => {
     setLoad(false)
-    fetch(protocol+"//"+hostname+":"+port+"/api/user/assignments", {   headers:{  authorization: localStorage.getItem("token") || ""}})
+    fetch(backendURL+"/api/user/assignments", {   headers:{  authorization: localStorage.getItem("token") || ""}})
       .then(res => res.json())
       .then(setAssignments)
   },[load])
 
   const createEnvironment = useCallback(async (assignment: string) => {
-    await fetch(`${protocol}//${hostname}:${port}/api/environment/create?environment=${assignment}`, {
+    await fetch(`${backendURL}/api/environment/create?environment=${assignment}`, {
       method: 'POST', 
       headers: {'Content-Type': 'application/json', authorization: localStorage.getItem("token") || ""} 
     })
