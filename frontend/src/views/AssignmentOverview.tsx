@@ -7,7 +7,7 @@ import { ListItemSecondaryAction } from '@material-ui/core';
 import List from '@material-ui/core/List';
 import ListItem from '@material-ui/core/ListItem';
 import ListItemText from '@material-ui/core/ListItemText';
-import { getBackendURL } from '../components/BackendEndpointSetup'
+import { getBackendURL } from '../components/BackendEndpoint'
 
 const useStyles = makeStyles((theme) => ({
   button: {

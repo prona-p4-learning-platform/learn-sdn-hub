@@ -9,20 +9,10 @@ import { ReactNode } from "react";
 import ReactMarkdown from 'react-markdown'
 import mermaid from 'mermaid'
 import TabControl from '../components/TabControl'
+import { getBackendURL, getWsBackendURL } from '../components/BackendEndpoint'
 
-const protocol = window?.location?.protocol ?? "http";
-const hostname = window?.location?.hostname ?? "localhost";
-const port = window?.location?.port ?? "3001";
-
-var backendURL = protocol + "//" + hostname + ":" + port;
-var wsBackendURL = "ws://" + hostname + ":" + port;
-
-if (process.env.REACT_APP_API_HOST !== undefined) {
-  backendURL = process.env.REACT_APP_API_HOST;
-}
-if (process.env.REACT_APP_WS_HOST !== undefined) {
-  wsBackendURL = process.env.REACT_APP_WS_HOST;
-}
+let backendURL = getBackendURL();
+let wsBackendURL = getWsBackendURL();
 
 type PathParamsType = {
   environment: string;

@@ -6,7 +6,7 @@ import { Grid } from "@material-ui/core";
 import Snackbar from '@material-ui/core/Snackbar';
 import { useHistory } from "react-router-dom";
 import MuiAlert, { AlertProps } from '@material-ui/lab/Alert';
-import BackendEndpointSetup, { getBackendURL } from '../components/BackendEndpointSetup'
+import { getBackendURL } from './BackendEndpoint'
 
 type Severity = "error" | "success" | "info" | "warning" | undefined;
 
