@@ -26,7 +26,9 @@ export const LSAugmentation =  (editor: monaco.editor.IStandaloneCodeEditor) : m
     // install Monaco language client services
     // @ts-ignore
     MonacoServices.install(editor,{rootUri: "file://tmp"});
-    const url = createUrl('ws://localhost:3001/environment/p4basic/languageserver/p4')
+    const hostname = window && window.location && window.location.hostname;
+    const port = window && window.location && window.location.port;
+        const url = createUrl('ws://' + hostname + ':' + port + '/environment/p4basic/languageserver/p4')
     const webSocket = createWebSocket(url);
     // listen when the web socket is opened
     listen({

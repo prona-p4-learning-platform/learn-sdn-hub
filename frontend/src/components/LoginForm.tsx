@@ -13,7 +13,15 @@ function Alert(props: JSX.IntrinsicAttributes & AlertProps) {
   return <MuiAlert elevation={6} variant="filled" {...props} />;
 }
 
-const hostname = process.env.REACT_APP_API_HOST || ''
+const protocol = window && window.location && window.location.protocol;
+const hostname = window && window.location && window.location.hostname;
+const port = window && window.location && window.location.port;
+
+var backendURL = protocol + "//" + hostname + ":" + port;
+
+if (process.env.REACT_APP_API_HOST != undefined) {
+  backendURL = process.env.REACT_APP_API_HOST;
+}
 
 export interface LoginFormProps{
     onSuccessfulAuthentication: (token: string, username: string) => void
@@ -55,7 +63,7 @@ export default function(props: LoginFormProps) {
 
     const loginRequest = useCallback(async () => {
         // Api request here
-        const result = await fetch(`${hostname}/api/user/login`, {method: 'POST', body: JSON.stringify(state), headers: {'Content-Type': 'application/json'} })
+        const result = await fetch(`${backendURL}/api/user/login`, {method: 'POST', body: JSON.stringify(state), headers: {'Content-Type': 'application/json'} })
         if (result.status === 200){
             setLoginResult("Auth successful!")
             setLoginSeverity("success")

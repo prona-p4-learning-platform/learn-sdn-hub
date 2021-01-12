@@ -14,7 +14,9 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const hostname = process.env.REACT_APP_API_HOST || ''
+const protocol = window && window.location && window.location.protocol;
+const hostname = window && window.location && window.location.hostname;
+const port = window && window.location && window.location.port;
 
 interface AssignmentOverviewProps {
 };
@@ -27,13 +29,13 @@ export default function AssignmentOverview(props: AssignmentOverviewProps) {
 
   useEffect(() => {
     setLoad(false)
-    fetch(hostname+"/api/user/assignments", {   headers:{  authorization: localStorage.getItem("token") || ""}})
+    fetch(protocol+"//"+hostname+":"+port+"/api/user/assignments", {   headers:{  authorization: localStorage.getItem("token") || ""}})
       .then(res => res.json())
       .then(setAssignments)
   },[load])
 
   const createEnvironment = useCallback(async (assignment: string) => {
-    await fetch(`${hostname}/api/environment/create?environment=${assignment}`, {
+    await fetch(`${protocol}//${hostname}:${port}/api/environment/create?environment=${assignment}`, {
       method: 'POST', 
       headers: {'Content-Type': 'application/json', authorization: localStorage.getItem("token") || ""} 
     })
