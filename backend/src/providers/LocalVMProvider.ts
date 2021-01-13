@@ -56,9 +56,9 @@ export default class LocalVMProvider implements InstanceProvider {
         if (usermap.has(userid)) {
           console.log(
             "Mapped user " +
-            userid +
-            " to instance number " +
-            usermap.get(userid)
+              userid +
+              " to instance number " +
+              usermap.get(userid)
           );
           if (this.availableInstances.has(`vm-${usermap.get(userid)}`)) {
             return this.availableInstances.get(`vm-${usermap.get(userid)}`);
