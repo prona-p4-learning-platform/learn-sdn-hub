@@ -97,7 +97,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
         })
         .catch((err: Error) => {
           console.log(err);
-          res.status(501).json({ status: "error", message: err.message });
+          res.status(500).json({ status: "error", message: err.message });
         });
     }
   );
@@ -159,7 +159,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
             .json({ status: "finished", message: "Restart complete" });
         })
         .catch((err) =>
-          res.status(400).json({ status: "error", message: err.message })
+          res.status(500).json({ status: "error", message: err.message })
         );
     }
   );

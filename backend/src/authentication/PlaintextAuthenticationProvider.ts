@@ -10,23 +10,20 @@ export default class PlaintextAuthenticationProvider
     password: string
   ): Promise<AuthenticationResult> {
     if (process.env.BACKEND_USERS != undefined) {
-      let usersConfig = process.env.BACKEND_USERS.split(",");
-      let users: Map<string, string> = new Map();
-      usersConfig.forEach(user => {
-        let login = user.split(":")[0];
-        let password = user.split(":")[1];
+      const usersConfig = process.env.BACKEND_USERS.split(",");
+      const users: Map<string, string> = new Map();
+      usersConfig.forEach((user) => {
+        const login = user.split(":")[0];
+        const password = user.split(":")[1];
         users.set(login, password);
       });
 
-      if (users.has(username))
-      {
+      if (users.has(username)) {
         if (password === users.get(username)) {
           return { username: username, userid: username, type: "plain" };
         }
       }
-    }
-    else
-    {
+    } else {
       if (password === "p4") {
         return { username: username, userid: username, type: "plain" };
       }
