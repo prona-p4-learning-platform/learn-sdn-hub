@@ -7,6 +7,14 @@ import { ListItemSecondaryAction } from '@material-ui/core';
 import List from '@material-ui/core/List';
 import ListItem from '@material-ui/core/ListItem';
 import ListItemText from '@material-ui/core/ListItemText';
+import Snackbar from '@material-ui/core/Snackbar';
+import MuiAlert, { AlertProps } from '@material-ui/lab/Alert';
+
+type Severity = "error" | "success" | "info" | "warning" | undefined;
+
+function Alert(props: JSX.IntrinsicAttributes & AlertProps) {
+  return <MuiAlert elevation={6} variant="filled" {...props} />;
+}
 
 const useStyles = makeStyles((theme) => ({
   button: {
@@ -24,6 +32,7 @@ export default function AssignmentOverview(props: AssignmentOverviewProps) {
   const [ assignments, setAssignments ] = useState([])
   const [ deployedAssignment, setDeployedAssignment ] = useState("")
   const [load, setLoad] = useState(true)  
+  const [deploymentNotificationOpen, setDeploymentNotificationOpen] = React.useState(false);
 
   useEffect(() => {
     setLoad(false)
@@ -33,14 +42,29 @@ export default function AssignmentOverview(props: AssignmentOverviewProps) {
   },[load])
 
   const createEnvironment = useCallback(async (assignment: string) => {
-    await fetch(`${hostname}/api/environment/create?environment=${assignment}`, {
+    const result = await fetch(`${hostname}/api/environment/create?environment=${assignment}`, {
       method: 'POST', 
       headers: {'Content-Type': 'application/json', authorization: localStorage.getItem("token") || ""} 
     })
-    setDeployedAssignment(assignment)
-    
+    if (result.status === 200){
+      setDeploymentResult("Deployment successful!")
+      setDeploymentSeverity("success")
+      setDeploymentNotificationOpen(true)
+      setDeployedAssignment(assignment)
+    } else {
+      const a = await result.json()
+      setDeploymentResult("Deployment failed! (" + a.message + ")")
+      setDeploymentSeverity("error")
+      setDeploymentNotificationOpen(true)
+    }
   },[]);
 
+  const [deploymentResult , setDeploymentResult] = useState("")
+  const [deploymentSeverity , setDeploymentSeverity] = useState("error")
+
+  const handleDeploymentNotificationClose = () => {
+    setDeploymentNotificationOpen(false);
+  };
 
     return (
         <List component="nav" aria-label="assignment list" style={{width: 800}}>
@@ -59,7 +83,11 @@ export default function AssignmentOverview(props: AssignmentOverviewProps) {
               </ListItem>
             </>
           ))}
+          <Snackbar open={deploymentNotificationOpen} autoHideDuration={6000} onClose={handleDeploymentNotificationClose}>
+          <Alert onClose={handleDeploymentNotificationClose} severity={deploymentSeverity as Severity}>
+            {deploymentResult}
+          </Alert>
+          </Snackbar>
         </List>
-    
-    );
+);
   }

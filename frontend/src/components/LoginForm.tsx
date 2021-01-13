@@ -64,7 +64,7 @@ export default function(props: LoginFormProps) {
             onSuccessfulAuthentication(a.token, a.username)
             history.push("/assignments")
         } else if (result.status===401){
-            setLoginResult("Auth failed")
+            setLoginResult("Auth failed!")
             setLoginSeverity("error")
             setNotificationOpen(true)
         }

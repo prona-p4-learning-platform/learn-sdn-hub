@@ -97,7 +97,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
         })
         .catch((err: Error) => {
           console.log(err);
-          res.status(200).json({ status: "error", message: err.message });
+          res.status(501).json({ status: "error", message: err.message });
         });
     }
   );

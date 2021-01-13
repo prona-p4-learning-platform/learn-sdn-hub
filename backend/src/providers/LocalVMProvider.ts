@@ -53,17 +53,20 @@ export default class LocalVMProvider implements InstanceProvider {
           usermap.set(login, parseInt(instanceNumber));
         });
 
-        if (usermap.has(userid))
-        {
-          return this.availableInstances.get(`vm-${usermap.get(userid)}`);
+        if (usermap.has(userid)) {
+          console.log("Mapped user " + userid + " to instance number " + usermap.get(userid))
+          if ( this.availableInstances.has(`vm-${usermap.get(userid)}`) ) {
+            return this.availableInstances.get(`vm-${usermap.get(userid)}`);
+          }
+          else {
+            throw new Error("Instance " + usermap.get(userid) + " is not defined.");
+          }
         }
-        else
-        {
-          throw new Error("User mapping defined but cannot find instance mapping for userid.");
+        else {
+          throw new Error("No mapping defined to map user " + userid + " to an instance.");
         }
       }
-      else
-      {
+      else {
         return this.availableInstances.get(this.availableInstancesList.pop());
       }
     }
