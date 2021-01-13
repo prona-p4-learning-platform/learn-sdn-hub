@@ -6,6 +6,7 @@ import { Grid } from "@material-ui/core";
 import Snackbar from '@material-ui/core/Snackbar';
 import { useHistory } from "react-router-dom";
 import MuiAlert, { AlertProps } from '@material-ui/lab/Alert';
+import { getBackendURL } from './BackendEndpoint'
 
 type Severity = "error" | "success" | "info" | "warning" | undefined;
 
@@ -13,7 +14,7 @@ function Alert(props: JSX.IntrinsicAttributes & AlertProps) {
   return <MuiAlert elevation={6} variant="filled" {...props} />;
 }
 
-const hostname = process.env.REACT_APP_API_HOST || ''
+let backendURL = getBackendURL();
 
 export interface LoginFormProps{
     onSuccessfulAuthentication: (token: string, username: string) => void
@@ -55,7 +56,7 @@ export default function(props: LoginFormProps) {
 
     const loginRequest = useCallback(async () => {
         // Api request here
-        const result = await fetch(`${hostname}/api/user/login`, {method: 'POST', body: JSON.stringify(state), headers: {'Content-Type': 'application/json'} })
+        const result = await fetch(`${backendURL}/api/user/login`, {method: 'POST', body: JSON.stringify(state), headers: {'Content-Type': 'application/json'} })
         if (result.status === 200){
             setLoginResult("Auth successful!")
             setLoginSeverity("success")

@@ -22,7 +22,7 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const hostname = process.env.REACT_APP_API_HOST || ''
+let backendURL = getBackendURL();
 
 interface AssignmentOverviewProps {
 };
@@ -36,7 +36,7 @@ export default function AssignmentOverview(props: AssignmentOverviewProps) {
 
   useEffect(() => {
     setLoad(false)
-    fetch(hostname+"/api/user/assignments", {   headers:{  authorization: localStorage.getItem("token") || ""}})
+    fetch(backendURL+"/api/user/assignments", {   headers:{  authorization: localStorage.getItem("token") || ""}})
       .then(res => res.json())
       .then(setAssignments)
   },[load])
