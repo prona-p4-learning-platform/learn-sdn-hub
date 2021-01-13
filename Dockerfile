@@ -3,7 +3,7 @@ LABEL de.hs-fulda.netlab.name="prona/learn-sdn-hub" \
       de.hs-fulda.netlab.description="P4 and SDN learning environment" \
       de.hs-fulda.netlab.url="https://github.com/prona-p4-learning-platform/learn-sdn-hub" \
       de.hs-fulda.netlab.vcs-url="https://github.com/prona-p4-learning-platform/learn-sdn-hub" \
-      de.hs-fulda.netlab.docker.cmd="docker run -it --rm -p 3001:3001 prona/learn-sdn-hub 3001 127.0.0.1 22 p4 p4"
+      de.hs-fulda.netlab.docker.cmd="docker run -it --rm -p 3001:3001 prona/learn-sdn-hub 3001 127.0.0.1 22 p4 p4 gruppe1:p4,gruppe2,p4 gruppe1:0,gruppe2:1"
 
 EXPOSE 3001/tcp
 
@@ -19,9 +19,9 @@ RUN cd frontend && npm install && npm run build
 RUN cp -a frontend/build/* backend/static/
 
 RUN echo '#!/bin/bash\n' \
-         'if [ ! $# -eq 5 ]\n' \
+         'if [ ! $# -eq 7 ]\n' \
          'then\n' \
-         '  echo "You need to specify a host used to run the P4 assignments.\nThis can be done, e.g., by running \"docker run -it --rm -p 3001:3001 prona/learn-sdn-hub <BACKEND_HTTP_PORT> <VBOX_IP_ADDRESS> <VBOX_SSH_PORT> <SSH_USERNAME> <SSH_PASSWORD>\"\n(see also VBOX_IP_ADDRESSES configuration etc. in learn-sdn-hub documentation)"\n' \
+         '  echo "You need to specify a host used to run the P4 assignments.\nThis can be done, e.g., by running \"docker run -it --rm -p 3001:3001 prona/learn-sdn-hub <BACKEND_HTTP_PORT> <VBOX_IP_ADDRESS> <VBOX_SSH_PORT> <SSH_USERNAME> <SSH_PASSWORD> <BACKEND_USERS> <BACKEND_USER_MAPPING>\"\n(see also VBOX_IP_ADDRESSES configuration etc. in learn-sdn-hub documentation)"\n' \
          '  exit 1\n' \
          'fi\n' \
          'export BACKEND_HTTP_PORT=$1\n' \
@@ -29,6 +29,8 @@ RUN echo '#!/bin/bash\n' \
          'export VBOX_SSH_PORTS=$3\n' \
          'export SSH_USERNAME=$4\n' \
          'export SSH_PASSWORD=$5\n' \
+         'export BACKEND_USERS=$6\n' \
+         'export BACKEND_USER_MAPPING=$7\n' \
          'cd backend && npm run start:localvm\n' >start-learn-sdn-hub.sh
 RUN chmod +x start-learn-sdn-hub.sh
 
