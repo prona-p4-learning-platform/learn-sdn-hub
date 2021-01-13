@@ -9,6 +9,7 @@ import ListItem from '@material-ui/core/ListItem';
 import ListItemText from '@material-ui/core/ListItemText';
 import Snackbar from '@material-ui/core/Snackbar';
 import MuiAlert, { AlertProps } from '@material-ui/lab/Alert';
+import { getBackendURL } from '../components/BackendEndpoint'
 
 type Severity = "error" | "success" | "info" | "warning" | undefined;
 
@@ -42,7 +43,7 @@ export default function AssignmentOverview(props: AssignmentOverviewProps) {
   },[load])
 
   const createEnvironment = useCallback(async (assignment: string) => {
-    const result = await fetch(`${hostname}/api/environment/create?environment=${assignment}`, {
+    const result = await fetch(`${backendURL}/api/environment/create?environment=${assignment}`, {
       method: 'POST', 
       headers: {'Content-Type': 'application/json', authorization: localStorage.getItem("token") || ""} 
     })
