@@ -7,6 +7,7 @@ import { ListItemSecondaryAction } from '@material-ui/core';
 import List from '@material-ui/core/List';
 import ListItem from '@material-ui/core/ListItem';
 import ListItemText from '@material-ui/core/ListItemText';
+import { getBackendURL } from '../components/BackendEndpoint'
 
 const useStyles = makeStyles((theme) => ({
   button: {
@@ -14,7 +15,7 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const hostname = process.env.REACT_APP_API_HOST || ''
+let backendURL = getBackendURL();
 
 interface AssignmentOverviewProps {
 };
@@ -27,13 +28,13 @@ export default function AssignmentOverview(props: AssignmentOverviewProps) {
 
   useEffect(() => {
     setLoad(false)
-    fetch(hostname+"/api/user/assignments", {   headers:{  authorization: localStorage.getItem("token") || ""}})
+    fetch(backendURL+"/api/user/assignments", {   headers:{  authorization: localStorage.getItem("token") || ""}})
       .then(res => res.json())
       .then(setAssignments)
   },[load])
 
   const createEnvironment = useCallback(async (assignment: string) => {
-    await fetch(`${hostname}/api/environment/create?environment=${assignment}`, {
+    await fetch(`${backendURL}/api/environment/create?environment=${assignment}`, {
       method: 'POST', 
       headers: {'Content-Type': 'application/json', authorization: localStorage.getItem("token") || ""} 
     })
