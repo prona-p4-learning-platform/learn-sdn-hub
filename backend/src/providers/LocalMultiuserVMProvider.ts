@@ -9,8 +9,8 @@ export default class LocalMultiuserVMProvider implements InstanceProvider {
       ipAddresses = process.env.VBOX_IP_ADDRESSES.split(",");
     } else {
       throw new Error(
-          "No VBOX_IP_ADDRESSES environment variable set. LocalMultiuserVMProvider can not provide instances."
-        );
+        "No VBOX_IP_ADDRESSES environment variable set. LocalMultiuserVMProvider can not provide instances."
+      );
     }
     if (process.env.VBOX_SSH_PORTS != undefined) {
       sshPorts = process.env.VBOX_SSH_PORTS.split(",").map((port) =>
@@ -47,7 +47,7 @@ export default class LocalMultiuserVMProvider implements InstanceProvider {
 
   async createServer(identifier: string): Promise<VMEndpoint> {
     if (this.availableInstancesList.length > 0) {
-      // this should maybe be improved later, userids with "-" will not work otherwise, 
+      // this should maybe be improved later, userids with "-" will not work otherwise,
       // due to "-" being used as the delimiter in `${this.userId}-${this.configuration.description}`
       // for the identifier argument
       const userid = identifier.split("-")[0];
@@ -82,7 +82,7 @@ export default class LocalMultiuserVMProvider implements InstanceProvider {
         }
       } else {
         console.log(
-            "No BACKEND_USER_MAPPING environment variable set. Mapping user to first instance."
+          "No BACKEND_USER_MAPPING environment variable set. Mapping user to first instance."
         );
         return this.availableInstances.values().next().value;
       }
