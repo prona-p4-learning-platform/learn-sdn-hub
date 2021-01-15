@@ -7,7 +7,9 @@ export default class PlaintextMultiuserAuthenticationProvider
   implements AuthenticationProvider {
   constructor() {
     if (process.env.BACKEND_USERS === undefined) {
-      throw new Error("No BACKEND_USERS environment variable set. Cannot support multiple users.");
+      throw new Error(
+        "No BACKEND_USERS environment variable set. Cannot support multiple users."
+      );
     }
   }
 

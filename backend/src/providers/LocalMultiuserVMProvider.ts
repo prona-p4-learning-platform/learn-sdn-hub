@@ -8,7 +8,9 @@ export default class LocalMultiuserVMProvider implements InstanceProvider {
     if (process.env.VBOX_IP_ADDRESSES != undefined) {
       ipAddresses = process.env.VBOX_IP_ADDRESSES.split(",");
     } else {
-      throw new Error("No VBOX_IP_ADDRESSES environment variable set. LocalMultiuserVMProvider can not provide instances.");
+      throw new Error(
+          "No VBOX_IP_ADDRESSES environment variable set. LocalMultiuserVMProvider can not provide instances."
+        );
     }
     if (process.env.VBOX_SSH_PORTS != undefined) {
       sshPorts = process.env.VBOX_SSH_PORTS.split(",").map((port) =>
@@ -33,7 +35,9 @@ export default class LocalMultiuserVMProvider implements InstanceProvider {
       this.availableInstancesList.push(`vm-${index}`);
     });
     if (process.env.BACKEND_USER_MAPPING === undefined) {
-      console.log("No BACKEND_USER_MAPPING environment variable set. Cannot differentiate mapping for users. Mapping all users to first instance.");
+      console.log(
+        "No BACKEND_USER_MAPPING environment variable set. Cannot differentiate mapping for users. Mapping all users to first instance."
+      );
     }
   }
 
@@ -43,7 +47,6 @@ export default class LocalMultiuserVMProvider implements InstanceProvider {
 
   async createServer(identifier: string): Promise<VMEndpoint> {
     if (this.availableInstancesList.length > 0) {
-
       // this should maybe be improved later, userids with "-" will not work otherwise, 
       // due to "-" being used as the delimiter in `${this.userId}-${this.configuration.description}`
       // for the identifier argument
@@ -61,9 +64,9 @@ export default class LocalMultiuserVMProvider implements InstanceProvider {
         if (usermap.has(userid)) {
           console.log(
             "Mapped user " +
-            userid +
-            " to instance number " +
-            usermap.get(userid)
+              userid +
+              " to instance number " +
+              usermap.get(userid)
           );
           if (this.availableInstances.has(`vm-${usermap.get(userid)}`)) {
             return this.availableInstances.get(`vm-${usermap.get(userid)}`);
@@ -78,7 +81,9 @@ export default class LocalMultiuserVMProvider implements InstanceProvider {
           );
         }
       } else {
-        console.log("No BACKEND_USER_MAPPING environment variable set. Mapping user to first instance.");
+        console.log(
+            "No BACKEND_USER_MAPPING environment variable set. Mapping user to first instance."
+        );
         return this.availableInstances.values().next().value;
       }
     }

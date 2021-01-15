@@ -13,5 +13,5 @@ serverCreator(
     persister,
     [new PlaintextMultiuserAuthenticationProvider()],
     new LocalMultiuserVMProvider()
-    )
+  )
 );
