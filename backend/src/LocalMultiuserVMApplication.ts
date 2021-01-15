@@ -9,5 +9,9 @@ console.log(
 );
 const persister = new MemoryPersister();
 serverCreator(
-  api(persister, [new PlaintextMultiuserAuthenticationProvider()], new LocalMultiuserVMProvider())
+  api(
+    persister,
+    [new PlaintextMultiuserAuthenticationProvider()],
+    new LocalMultiuserVMProvider()
+    )
 );
