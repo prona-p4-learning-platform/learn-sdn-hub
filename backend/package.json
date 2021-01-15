@@ -8,6 +8,7 @@
     "test:integration": "jest --config test/integration/jest.config.js --runInBand",
     "start": "ts-node src/OpenStackApplication.ts",
     "start:localvm": "ts-node src/LocalVMApplication.ts",
+    "start:localmultiuservm": "ts-node src/LocalMultiuserVMApplication.ts",
     "lint": "eslint src/**/**/*.{js,ts,tsx}",
     "compile": "tsc --noEmit"
   },
