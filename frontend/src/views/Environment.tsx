@@ -9,10 +9,7 @@ import { ReactNode } from "react";
 import ReactMarkdown from 'react-markdown'
 import mermaid from 'mermaid'
 import TabControl from '../components/TabControl'
-import { getBackendURL, getWsBackendURL } from '../components/BackendEndpoint'
-
-let backendURL = getBackendURL();
-let wsBackendURL = getWsBackendURL();
+import APIRequest from '../api/Request'
 
 type PathParamsType = {
   environment: string;
@@ -42,10 +39,10 @@ export class EnvironmentView extends React.Component<PropsType> {
 
   restartEnvironment(): void {
     this.setState({ environmentStatus: "restarting" });
-    fetch(`${backendURL}/api/environment/${this.props.match.params.environment}/restart`, {
+    fetch(APIRequest(`/api/environment/${this.props.match.params.environment}/restart`, {
       method: "post",
       headers: { 'Content-Type': 'application/json', authorization: localStorage.getItem("token") || "" }
-    })
+    }))
       .then((response) => response.json())
       .then((data) => {
         if (data.error === true) {
@@ -57,8 +54,8 @@ export class EnvironmentView extends React.Component<PropsType> {
   }
 
   loadEnvironmentConfig(): void {
-    fetch(`${backendURL}/api/environment/${this.props.match.params.environment}/configuration`,
-      { headers: { 'Content-Type': 'application/json', authorization: localStorage.getItem("token") || "" } })
+    fetch(APIRequest(`/api/environment/${this.props.match.params.environment}/configuration`,
+      { headers: { 'Content-Type': 'application/json', authorization: localStorage.getItem("token") || "" } }))
       .then((response) => response.json())
       .then((data) => {
         if (data.error !== true) {
@@ -68,8 +65,8 @@ export class EnvironmentView extends React.Component<PropsType> {
   }
 
   loadAssignment() {
-    fetch(`${backendURL}/api/environment/${this.props.match.params.environment}/assignment`,
-      { headers: { 'Content-Type': 'application/json', authorization: localStorage.getItem("token") || "" } })
+    fetch(APIRequest(`/api/environment/${this.props.match.params.environment}/assignment`,
+      { headers: { 'Content-Type': 'application/json', authorization: localStorage.getItem("token") || "" } }))
       .then((response) => response.text())
       .then((data) => {
           this.setState({ assignment: data });
@@ -82,7 +79,7 @@ export class EnvironmentView extends React.Component<PropsType> {
 
   render(): ReactNode {
     const terminals = this.state.ttys.map((alias: string) => <Terminal
-      wsEndpoint={`${wsBackendURL}/environment/${this.props.match.params.environment}/type/${alias}`}
+      wsEndpoint={`/environment/${this.props.match.params.environment}/type/${alias}`}
     />)
     return (
       <Grid container spacing={3}>
@@ -112,7 +109,7 @@ export class EnvironmentView extends React.Component<PropsType> {
           <div style={{ height: "500px" }}>
             <EditorTabs
               endpoints={this.state.files.map(fileAlias =>
-                `${backendURL}/api/environment/${this.props.match.params.environment}/file/${fileAlias}`,
+                `/api/environment/${this.props.match.params.environment}/file/${fileAlias}`,
               )}
             />
           </div>

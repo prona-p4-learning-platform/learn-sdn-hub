@@ -2,7 +2,7 @@ import * as React from "react";
 import Button from "@material-ui/core/Button";
 import P4LanguageServiceEditor from './P4LanguageServiceEditor'
 import * as monaco from 'monaco-editor';
-
+import APIRequest from '../api/Request'
 interface State {
   code: string
 }
@@ -26,7 +26,7 @@ export default class P4Editor extends React.Component<P4EditorProps> {
   editorDidMount(editor: monaco.editor.IStandaloneCodeEditor){
     editor.focus();
     this.editor = editor;
-    fetch(`${this.props.endpoint}`, {headers: {'Content-Type': 'application/json', authorization: localStorage.getItem("token") || ""} })
+    fetch(APIRequest(`${this.props.endpoint}`, {headers: {'Content-Type': 'application/json', authorization: localStorage.getItem("token") || ""} }))
       .then((response) => response.text())
       .then((data) => {
         this.setState({ code: data });
@@ -39,10 +39,10 @@ export default class P4Editor extends React.Component<P4EditorProps> {
   };
 
   save(): void {
-    fetch(this.props.endpoint, {
+    fetch(APIRequest(this.props.endpoint, {
       method: "post", 
     body: this.editor.getModel()?.getValue(),headers: {'Content-Type': 'text/plain', 
-    authorization: localStorage.getItem("token") || ""}  })
+    authorization: localStorage.getItem("token") || ""}  }))
       .then((response) => response.text())
       .catch((error) => {
         console.error(error);

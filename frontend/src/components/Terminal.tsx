@@ -1,7 +1,7 @@
 import React from "react";
 import { AttachAddon } from "xterm-addon-attach";
 import { XTerm } from 'xterm-for-react'
-
+import createWebSocket from '../api/WebSocket'
 interface TerminalProps {
   wsEndpoint: string;
 }
@@ -12,7 +12,7 @@ export default class XTerminal extends React.Component<TerminalProps> {
   constructor(props: TerminalProps) {
     super(props);
     this.handleTermRef = this.handleTermRef.bind(this)
-    this.websocket = new WebSocket(this.props.wsEndpoint);
+    this.websocket = createWebSocket(this.props.wsEndpoint);
   }
 
   handleTermRef(instance: XTerm |null):void{
