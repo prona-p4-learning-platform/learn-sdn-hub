@@ -9,6 +9,7 @@ import ListItem from '@material-ui/core/ListItem';
 import ListItemText from '@material-ui/core/ListItemText';
 import Snackbar from '@material-ui/core/Snackbar';
 import MuiAlert, { AlertProps } from '@material-ui/lab/Alert';
+import APIRequest from '../api/Request'
 
 type Severity = "error" | "success" | "info" | "warning" | undefined;
 
@@ -22,8 +23,6 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const hostname = process.env.REACT_APP_API_HOST || ''
-
 interface AssignmentOverviewProps {
 };
 
@@ -36,16 +35,16 @@ export default function AssignmentOverview(props: AssignmentOverviewProps) {
 
   useEffect(() => {
     setLoad(false)
-    fetch(hostname+"/api/user/assignments", {   headers:{  authorization: localStorage.getItem("token") || ""}})
+    fetch(APIRequest("/api/user/assignments", {   headers:{  authorization: localStorage.getItem("token") || ""}}))
       .then(res => res.json())
       .then(setAssignments)
   },[load])
 
   const createEnvironment = useCallback(async (assignment: string) => {
-    const result = await fetch(`${hostname}/api/environment/create?environment=${assignment}`, {
+    const result = await fetch(APIRequest(`/api/environment/create?environment=${assignment}`, {
       method: 'POST', 
       headers: {'Content-Type': 'application/json', authorization: localStorage.getItem("token") || ""} 
-    })
+    }))
     if (result.status === 200){
       setDeploymentResult("Deployment successful!")
       setDeploymentSeverity("success")

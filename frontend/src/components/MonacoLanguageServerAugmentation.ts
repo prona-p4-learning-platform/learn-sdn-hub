@@ -3,9 +3,8 @@ import {
     MonacoLanguageClient, CloseAction, ErrorAction,
     MonacoServices, createConnection
 } from 'monaco-languageclient';
-import ReconnectingWebSocket  from 'reconnecting-websocket'
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.api'
-const normalizeUrl = require('normalize-url');
+import createWebSocket from '../api/WebSocket'
 
 // register Monaco languages
 monaco.languages.register({
@@ -26,8 +25,7 @@ export const LSAugmentation =  (editor: monaco.editor.IStandaloneCodeEditor) : m
     // install Monaco language client services
     // @ts-ignore
     MonacoServices.install(editor,{rootUri: "file://tmp"});
-    const url = createUrl('ws://localhost:3001/environment/p4basic/languageserver/p4')
-    const webSocket = createWebSocket(url);
+    const webSocket = createWebSocket('/environment/p4basic/languageserver/p4');
     // listen when the web socket is opened
     listen({
         webSocket,
@@ -60,23 +58,6 @@ export const LSAugmentation =  (editor: monaco.editor.IStandaloneCodeEditor) : m
                 }
             }
         });
-    }
-
-    function createUrl(path: string): string {
-        return normalizeUrl(path);
-    }
-
-    function createWebSocket(url: string): WebSocket {
-        const socketOptions = {
-            maxReconnectionDelay: 10000,
-            minReconnectionDelay: 1000,
-            reconnectionDelayGrowFactor: 1.3,
-            connectionTimeout: 10000,
-            maxRetries: Infinity,
-            debug: false,
-            automaticOpen: false
-        };
-        return new ReconnectingWebSocket(url, [], socketOptions) as WebSocket;
     }
     return editor
 }
