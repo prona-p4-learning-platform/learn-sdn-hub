@@ -29,6 +29,7 @@ export default (authProviders: AuthenticationProvider[]): Router => {
           { username: result.username, id: result.userid },
           "some-secret"
         );
+        console.log(result, token);
         return res.status(200).json({ token, username });
       } catch (err) {
         console.log("error!", err);
