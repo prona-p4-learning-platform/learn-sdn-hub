@@ -1,0 +1,12 @@
+#!/bin/bash
+SESSION="Ex1-bash"
+WORKDIR="/home/p4/p4-boilerplate/Example1-Repeater"
+COMMAND="make clean && make"
+
+tmux start-server
+tmux has-session -t $SESSION 2>/dev/null
+if [ $? != 0 ]; then
+  tmux new-session -d -n $SESSION -s $SESSION
+  tmux send-keys -t $SESSION "cd $WORKDIR" Enter "$COMMAND" Enter
+fi
+tmux attach-session -t $SESSION

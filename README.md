@@ -2,23 +2,30 @@
 
 ## Installation and configuration using provided Docker image
 
-For test deployments a provided docker image can be used for installation and configuration. To run learn-sdn-hub using contained default configuration and assignments.
+For test deployments a provided docker image can be used for installation and configuration. To run learn-sdn-hub using the image with contained default configuration and assignments:
 
 ```
+export BACKEND_TYPE="localvm"
 export VBOX_IP_ADDRESSES="127.0.0.1"
 export VBOX_SSH_PORTS="22"
 export SSH_USERNAME="p4"
 export SSH_PASSWORD="p4"
-docker run -it --rm -p 3001:3001 prona/learn-sdn-hub $VBOX_IP_ADDRESSES $VBOX_SSH_PORTS $SSH_USERNAME $SSH_PASSWORD
+docker run -it --rm -p 3001:3001 prona/learn-sdn-hub -t $BACKEND_TYPE -a $VBOX_IP_ADDRESSES -s $VBOX_SSH_PORTS -u $SSH_USERNAME -w $SSH_PASSWORD
 ```
 
-The container images runs the backend using the localvm provider. Therefore, VBOX_IP_ADDRESSES is expected to lead to a host that can be reached using SSH (on the port specified by VBOX_SSH_PORTS, and login using SSH_USERNAME, SSH_PASSWORD). The host needs to contain all necessary P4 tools. See next [section](#Ppepare-a-p4-host) for details, if you do not already have a host containing P4 toolchain (like P4 tutorials VM, p4-learning VM etc.)
+The container image runs the backend using the provider specified by "-t". Possible providers are localvm, localmultiuservm and openstack. You can get further help regarding the options by running ```docker run -it --rm prona/learn-sdn-hub -h```. In the case of localvm or localmultiuservm backend type, VBOX_IP_ADDRESSES is expected to lead to a host or a list of hosts that can be reached using SSH (on the port specified by VBOX_SSH_PORTS, and login using SSH_USERNAME, SSH_PASSWORD). For P4 assignments, the host needs to contain all necessary P4 tools, p4c, bmv2, mininet etc. See next [section](#Ppepare-a-p4-host) for details, if you do not already have a host containing P4 toolchain (like P4 tutorials VM, p4-learning VM etc.)
 
 Configuration of assignments, editable files, lab sheets, SSH consoles etc. needs to be done in backend/src/Configuration.ts. Assignment lab sheets need to be stored in backend/src/assigments. You can mount a local Configuration.ts file and a local assignments directory in the container using:
 
 ```
-docker run -it --mount type=bind,source="$(pwd)"/assignments,target=/home/p4/learn-sdn-hub/backend/src/assignments --mount type=bind,source="$(pwd)"/Configuration.ts,target=/home/p4/learn-sdn-hub/backend/src/Configuration.ts --rm -p 3001:3001 prona/learn-sdn-hub $VBOX_IP_ADDRESSES $VBOX_SSH_PORTS $SSH_USERNAME $SSH_PASSWORD
+docker run -it --mount type=bind,source="$(pwd)"/assignments,target=/home/p4/learn-sdn-hub/backend/src/assignments --mount type=bind,source="$(pwd)"/Configuration.ts,target=/home/p4/learn-sdn-hub/backend/src/Configuration.ts --rm -p 3001:3001 prona/learn-sdn-hub -t $BACKEND_TYPE -a $VBOX_IP_ADDRESSES
 ```
+
+Examples for the Configuration.ts file and the assignments directory are provided in [examples](https://github.com/prona-p4-learning-platform/learn-sdn-hub/tree/master/examples).
+
+More sophisticated examples to run learn-sdn-hub in production environments are provided in [docker-container-scripts](https://github.com/prona-p4-learning-platform/learn-sdn-hub/tree/master/examples/docker-container-scripts). 
+
+The startup script [start-learn-sdn-hub.sh](https://github.com/prona-p4-learning-platform/learn-sdn-hub/tree/master/examples/start-learn-sdn-hub.sh) for the container image entrypoint can be used as a reference.
 
 ## Prepare a P4 host
 
@@ -116,20 +123,47 @@ npm install
 npm run build
 ```
 
+You can copy the production build of the frontend to the static directory of the backend. This way, the frontend is included and served in the backend. See [Dockerfile](https://github.com/prona-p4-learning-platform/learn-sdn-hub/tree/master/Dockerfile)
+
 ### Run the backend using a local VM
 (using [LocalVMProvider.ts](https://github.com/prona-p4-learning-platform/learn-sdn-hub/blob/master/backend/src/providers/LocalVMProvider.ts))
 
 You can use a virtual machine or a physical or even your local machine and specify the IP address to be used by the backend to run P4 code and assignments. The machine must contain p4 tool chain (esp. [p4c](https://github.com/p4lang/p4c)) and needs to be reachable using SSH. Also, it should run the LSP load balancer, as described above. Start the backend:
 
 ```
-export VBOX_IP_ADDRESSES=<IP address of the host to execute P4 on>
-export VBOX_SSH_PORTS=<SSH port of the host to execute P4 on>
+export VBOX_IP_ADDRESSES=<IP addresses of the hosts to execute P4 on>
+export VBOX_SSH_PORTS=<SSH ports of the hosts to execute P4 on>
 export SSH_USERNAME=<Username to be used for the ssh connection, e.g., "p4">
 export SSH_PASSWORD=<Password to be used for the ssh connection>
 cd backend
 npm run start:localvm
 ```
+
 Optionally you can also ```export SSH_PRIVATE_KEY_PATH=<SSH keyfile>``` to use an SSH keyfile for the connections to the host running your P4 assignments.
+
+*CAUTION:* VBOX_IP_ADDRESSES is a list of possible instances. Everytime you deploy an assignment, an entry of the list is consumed (disposable instances). Therefore localvm should be used primarily for test and development. If you plan to use the specified hosts permanently to serve as instances to run the assignments, you should use localmultiuservm provider as described in the next section.
+
+[start-learn-sdn-hub.sh](https://github.com/prona-p4-learning-platform/learn-sdn-hub/tree/master/examples/start-learn-sdn-hub.sh) can be used as a reference to create a startup script.
+
+### Run the backend using a local multiuser VM
+(using [LocalMultiuserVMProvider.ts](https://github.com/prona-p4-learning-platform/learn-sdn-hub/blob/master/backend/src/providers/LocalMultiuserVMProvider.ts))
+
+You can use multiple virtual machines or physical hosts as host instances the backend will run assignments on. Again, these hosts must contain p4 tool chain (esp. [p4c](https://github.com/p4lang/p4c)) and need to be reachable using SSH. Also, they should run the LSP load balancer, as described above. Start the backend:
+
+```
+export VBOX_IP_ADDRESSES=<IP addresses of the hosts to execute P4 on>
+export VBOX_SSH_PORTS=<SSH ports of the hosts to execute P4 on>
+export SSH_USERNAME=<Username to be used for the ssh connection, e.g., "p4">
+export SSH_PASSWORD=<Password to be used for the ssh connection>
+export BACKEND_USERS=<Comma-separated list of username:password to be used to connect to the backend, e.g., "group0:p4,group1:passwordX,group2:passwortY">
+export BACKEND_USER_MAPPING=<Comma-separated list of username:instance allowing to map users to specific instances, e.g., to deploy all assignments of group0 to the first instance specified in the list VBOX_IP_ADDRESSES, and all assignments of group1 to the second, "group0:0,group1:1">
+
+cd backend
+npm run start:localmultiuservm
+```
+Optionally you can also ```export SSH_PRIVATE_KEY_PATH=<SSH keyfile>``` to use an SSH keyfile for the connections to the host running your P4 assignments.
+
+[start-learn-sdn-hub.sh](https://github.com/prona-p4-learning-platform/learn-sdn-hub/tree/master/examples/start-learn-sdn-hub.sh) can be used as a reference to create a startup script.
 
 ### Run the backend using OpenStack
 (using [OpenStackProvider.ts](https://github.com/prona-p4-learning-platform/learn-sdn-hub/blob/master/backend/src/providers/OpenStackProvider.ts))
@@ -150,9 +184,11 @@ npm run start
 ```
 Optionally you can also ```export SSH_PRIVATE_KEY_PATH=<SSH keyfile>``` to use an SSH keyfile for the connections to the host running your P4 assignments.
 
-### Run the frontend
+[start-learn-sdn-hub.sh](https://github.com/prona-p4-learning-platform/learn-sdn-hub/tree/master/examples/start-learn-sdn-hub.sh) can be used as a reference to create a startup script.
 
-To run the frontend, you need to create frontend config file as ".env.local" file in the frontend directory:
+### Run the frontend separatly (only recommended for development and debugging purposes)
+
+To run the frontend in development mode (we recommend to rather copy the production build of the frontend to the backend as described in the Installation section and let the backend contain and serve the frontend), you need to create frontend config file as ".env.local" file in the frontend directory:
 
 ```
 REACT_APP_API_HOST=http://localhost:3001

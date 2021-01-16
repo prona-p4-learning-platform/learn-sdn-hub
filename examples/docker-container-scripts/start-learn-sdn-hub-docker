@@ -1,0 +1,68 @@
+#!/bin/bash
+
+# example using LocalMultiuserVM provider:
+
+export BACKEND_HTTP_PORT="16000"
+export BACKEND_TYPE="localmultiuservm"
+export VBOX_IP_ADDRESSES="172.20.9.1,172.20.11.1,172.20.12.1,172.20.13.1,172.20.14.1,172.20.15.1,172.20.16.1,172.20.17.1,172.20.18.1"
+export VBOX_SSH_PORTS="22,22,22,22,22,22,22,22,22"
+export SSH_USERNAME="p4"
+export SSH_PASSWORD="p4"
+export BACKEND_USERS="group00:p4,group01:password,group02:password,group03:password,group04:password,group05:password,group06:password,group07:password,group08:password"
+export BACKEND_USER_MAPPING="group00:0,group01:1,group02:2,group03:3,group04:4,group05:5,group06:6,group07:7,group08:8"
+
+docker run --restart=always -itd --name learn-sdn-hub \
+  --mount type=bind,source="$(pwd)"/assignments,target=/home/p4/learn-sdn-hub/backend/src/assignments \
+  --mount type=bind,source="$(pwd)"/Configuration.ts,target=/home/p4/learn-sdn-hub/backend/src/Configuration.ts \
+  -p 16000:16000 prona/learn-sdn-hub \
+  -p $BACKEND_HTTP_PORT \
+  -t $BACKEND_TYPE \
+  -a $VBOX_IP_ADDRESSES \
+  -s $VBOX_SSH_PORTS \
+  -u $SSH_USERNAME \
+  -w $SSH_PASSWORD \
+  -b $BACKEND_USERS \
+  -m $BACKEND_USER_MAPPING
+
+# example using LocalVM provider:
+#
+#export BACKEND_HTTP_PORT="16000"
+#export BACKEND_TYPE="localvm"
+#export VBOX_IP_ADDRESSES="172.20.9.1,172.20.11.1,172.20.12.1"
+#export VBOX_SSH_PORTS="22,22,22"
+#export SSH_USERNAME="p4"
+#export SSH_PASSWORD="p4"
+#
+#docker run --restart=always -itd --name learn-sdn-hub \
+#  --mount type=bind,source="$(pwd)"/assignments,target=/home/p4/learn-sdn-hub/backend/src/assignments \
+#  --mount type=bind,source="$(pwd)"/Configuration.ts,target=/home/p4/learn-sdn-hub/backend/src/Configuration.ts \
+#  -p 16000:16000 prona/learn-sdn-hub \
+#  -p $BACKEND_HTTP_PORT \
+#  -t $BACKEND_TYPE \
+#  -a $VBOX_IP_ADDRESSES \
+#  -s $VBOX_SSH_PORTS \
+#  -u $SSH_USERNAME \
+#  -w $SSH_PASSWORD \
+
+# example using OpenStack provider:
+#
+#export BACKEND_HTTP_PORT="16000"
+#export BACKEND_TYPE="openstack"
+#export SSH_USERNAME="p4"
+#export SSH_PASSWORD="p4"
+#
+#docker run --restart=always -itd --name learn-sdn-hub \
+#  --mount type=bind,source="$(pwd)"/assignments,target=/home/p4/learn-sdn-hub/backend/src/assignments \
+#  --mount type=bind,source="$(pwd)"/Configuration.ts,target=/home/p4/learn-sdn-hub/backend/src/Configuration.ts \
+#  -p 16000:16000 prona/learn-sdn-hub \
+#  -p $BACKEND_HTTP_PORT \
+#  -t $BACKEND_TYPE \
+#  -u $SSH_USERNAME \
+#  -w $SSH_PASSWORD \
+
+#run container without start script for learn-sdn-hub:
+#
+#docker run --restart=always -itd --name learn-sdn-hub --entrypoint bash \
+#  --mount type=bind,source="$(pwd)"/assignments,target=/home/p4/learn-sdn-hub/backend/src/assignments \
+#  --mount type=bind,source="$(pwd)"/Configuration.ts,target=/home/p4/learn-sdn-hub/backend/src/Configuration.ts \
+#  -p 16000:16000 prona/learn-sdn-hub
