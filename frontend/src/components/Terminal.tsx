@@ -40,9 +40,7 @@ export default class XTerminal extends React.Component<TerminalProps> {
 
     const attachAddon = new AttachAddon(this.websocket);
     return (
-      <div style={{width:200, height: 200}}>
-        <XTerm ref={this.handleTermRef} addons={[attachAddon]}  />
-      </div>
+      <XTerm ref={this.handleTermRef} addons={[attachAddon]}  />
     );
   }
 }
