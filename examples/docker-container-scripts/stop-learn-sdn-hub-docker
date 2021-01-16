@@ -1,0 +1,3 @@
+#!/bin/bash
+docker kill learn-sdn-hub
+docker rm learn-sdn-hub

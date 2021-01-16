@@ -1,0 +1,3 @@
+#!/bin/bash
+./stop-learn-sdn-hub-docker
+./start-learn-sdn-hub-docker
