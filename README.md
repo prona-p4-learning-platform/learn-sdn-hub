@@ -33,7 +33,7 @@ docker run -it --mount type=bind,source="$(pwd)"/assignments,target=/home/p4/lea
 
 Examples for the Configuration.ts file and the assignments directory are provided in [examples](https://github.com/prona-p4-learning-platform/learn-sdn-hub/tree/master/examples).
 
-More sophisticated examples to run learn-sdn-hub in production environments are provided in [docker-container-scripts](https://github.com/prona-p4-learning-platform/learn-sdn-hub/tree/master/examples/docker-container-scripts). 
+More sophisticated examples to run learn-sdn-hub in production environments are provided in [docker-container-scripts](https://github.com/prona-p4-learning-platform/learn-sdn-hub/tree/master/examples/docker-container-scripts).
 
 The startup script [start-learn-sdn-hub.sh](https://github.com/prona-p4-learning-platform/learn-sdn-hub/tree/master/examples/start-learn-sdn-hub.sh) for the container image entrypoint can be used as a reference.
 
@@ -41,8 +41,8 @@ The startup script [start-learn-sdn-hub.sh](https://github.com/prona-p4-learning
 
 (e.g. virtual machine/image/host) to be used by the backend to run P4 code and the language server for the monaco editor
 
-Best way to get started and install a host that can be used to run P$ exercises is using the [p4 tutorials VM](https://github.com/p4lang/tutorials) 
-and run it in VirtualBox or another hypervisor. You also need to give the machine an IP address that can be reached from the backend (see providers in next steps). 
+Best way to get started and install a host that can be used to run P4 exercises is using the [p4 tutorials VM](https://github.com/p4lang/tutorials) 
+and run it in VirtualBox or another hypervisor. You also need to give the machine an IP address that can be reached from the backend (see providers in next steps).
 You can also prepare a Ubuntu VM by using the [installation scripts](https://github.com/jafingerhut/p4-guide/blob/master/bin/install-p4dev-v2.sh) from the p4 guide
 repo. By default and for the following example configuration, we assume the VM to have a user p4 with password p4 (as the default for the p4 tutorial vms).
 
@@ -66,7 +66,7 @@ langservers:
 ```
 
 You can add further LSP so support additional languages in the LSP load balancer.
-Install the p4 vscode extension in the VM (make sure that it will be in the location you specified in servers.yml file above, in 
+Install the p4 vscode extension in the VM (make sure that it will be in the location you specified in servers.yml file above, in
 this case ```/home/p4/p4-vscode-extension/server/build/server.js```):
 
 ```
@@ -213,7 +213,7 @@ cd frontend
 npm run start
 ```
 
-A web browser will open automatically leading you to the login in the frontend. If you use the demo authentication provider, you can use default user "p4" and password "p4". 
+A web browser will open automatically leading you to the login in the frontend. If you use the demo authentication provider, you can use default user "p4" and password "p4".
 
 If you run the backend on a custom port other than the default TCP port 3001, you can also specify this port in the .env.local file to be used by the frontend to connect to the backend:
 
