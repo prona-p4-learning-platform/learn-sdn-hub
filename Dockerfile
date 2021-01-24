@@ -33,4 +33,4 @@ RUN cp -a frontend/build/* backend/static/
 COPY examples/start-learn-sdn-hub.sh start-learn-sdn-hub.sh
 RUN chmod +x start-learn-sdn-hub.sh
 
-ENTRYPOINT ["./start-learn-sdn-hub.sh"]
+ENTRYPOINT ["/home/p4/learn-sdn-hub/start-learn-sdn-hub.sh"]

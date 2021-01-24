@@ -2,7 +2,17 @@
 
 ## Installation and configuration using provided Docker image
 
-For test deployments a provided docker image can be used for installation and configuration. To run learn-sdn-hub using the image with contained default configuration and assignments:
+For test deployments you can use our p4-container based on the p4lang/p4app docker image. This is not intended for production use cases. However to get a self-contained environment that can be used to test learn-sdn-hub right away,
+you can use our provided docker-compose file. After cloning out this repo, you can simply run
+
+```
+docker-compose up
+```
+
+This should get you a fully functional learn-sdn-hub deployment together with a p4-container that is used to test the assignments. You can use the typical docker-compose setup, e.g., ```docker-compose up -d``` and ```docker-compose down``` to start and stop the entire environment in the background. Configuration of required environment variables can be done using provided .env file. The contained parameters can also be overridden by setting env vars with the same name. You can use ```source examples/sample-config-env.sh``` as a starting point to set the environment variables.
+Again, this is not intended to be used for production setups. Proper setup for production environments is described below.
+
+For test deployments a docker image for learn-sdn-hub can be used. To run learn-sdn-hub using the image with contained default configuration and assignments:
 
 ```
 export BACKEND_TYPE="localvm"
@@ -13,7 +23,7 @@ export SSH_PASSWORD="p4"
 docker run -it --rm -p 3001:3001 prona/learn-sdn-hub -t $BACKEND_TYPE -a $VBOX_IP_ADDRESSES -s $VBOX_SSH_PORTS -u $SSH_USERNAME -w $SSH_PASSWORD
 ```
 
-The container image runs the backend using the provider specified by "-t". Possible providers are localvm, localmultiuservm and openstack. You can get further help regarding the options by running ```docker run -it --rm prona/learn-sdn-hub -h```. In the case of localvm or localmultiuservm backend type, VBOX_IP_ADDRESSES is expected to lead to a host or a list of hosts that can be reached using SSH (on the port specified by VBOX_SSH_PORTS, and login using SSH_USERNAME, SSH_PASSWORD). For P4 assignments, the host needs to contain all necessary P4 tools, p4c, bmv2, mininet etc. See next [section](#Ppepare-a-p4-host) for details, if you do not already have a host containing P4 toolchain (like P4 tutorials VM, p4-learning VM etc.)
+The container image runs the backend using the provider specified by "-t". Possible providers are localvm, localmultiuservm and openstack. You can get further help regarding the options by running ```docker run -it --rm prona/learn-sdn-hub -h```. In the case of localvm or localmultiuservm backend type, VBOX_IP_ADDRESSES is expected to lead to a host or a list of hosts that can be reached using SSH (on the port specified by VBOX_SSH_PORTS, and login using SSH_USERNAME, SSH_PASSWORD). For P4 assignments, the host needs to contain all necessary P4 tools, p4c, bmv2, mininet etc. See next [section](#prepare-a-p4-host) for details, if you do not already have a host containing P4 toolchain (like P4 tutorials VM, p4-learning VM etc.)
 
 Configuration of assignments, editable files, lab sheets, SSH consoles etc. needs to be done in backend/src/Configuration.ts. Assignment lab sheets need to be stored in backend/src/assigments. You can mount a local Configuration.ts file and a local assignments directory in the container using:
 
@@ -31,9 +41,9 @@ The startup script [start-learn-sdn-hub.sh](https://github.com/prona-p4-learning
 
 (e.g. virtual machine/image/host) to be used by the backend to run P4 code and the language server for the monaco editor
 
-Easiest way to get started is using the [p4 tutorials VM](https://github.com/p4lang/tutorials) and run it in VirtualBox or another hypervisor. You also need to give the
-machine an IP address that can be reached from the backend (see providers in next steps). You can also prepare a Ubuntu VM by using the 
-[installation scripts](https://github.com/jafingerhut/p4-guide/blob/master/bin/install-p4dev-v2.sh) from the p4 guide
+Best way to get started and install a host that can be used to run P$ exercises is using the [p4 tutorials VM](https://github.com/p4lang/tutorials) 
+and run it in VirtualBox or another hypervisor. You also need to give the machine an IP address that can be reached from the backend (see providers in next steps). 
+You can also prepare a Ubuntu VM by using the [installation scripts](https://github.com/jafingerhut/p4-guide/blob/master/bin/install-p4dev-v2.sh) from the p4 guide
 repo. By default and for the following example configuration, we assume the VM to have a user p4 with password p4 (as the default for the p4 tutorial vms).
 
 To install the LSP and the LSP load balancer in the VM, run the following in the VM (currently using latest feature version of node, hence 15):
@@ -203,7 +213,13 @@ cd frontend
 npm run start
 ```
 
-A web browser will open automatically leading you to the login in the frontend. If you use the demo authentication provider, you can use user "p4" and password "p4". 
+A web browser will open automatically leading you to the login in the frontend. If you use the demo authentication provider, you can use default user "p4" and password "p4". 
+
+If you run the backend on a custom port other than the default TCP port 3001, you can also specify this port in the .env.local file to be used by the frontend to connect to the backend:
+
+```
+REACT_APP_BACKEND_HTTP_PORT=16000
+```
 
 ### Configuration
 
