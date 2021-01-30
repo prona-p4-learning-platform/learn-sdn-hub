@@ -1,18 +1,40 @@
 # learn-sdn-hub
 
-## Installation and configuration using provided Docker image
+learn-sdn-hub offers an environment to experiment with SDN technologies and especially P4. Though the use-case for learn-sdn-hub is not limited to teaching and learning P4, allowing an easy entry to programmable data plane solutions was one of the main goals the tool was designed for. It is used for masters' and bachelors' courses in the area of network programmability at Darmstadt University of Applied Sciences and Fulda University of Applied Sciences. learn-sdn-hub can also be used for different lab environments, esp. as long as terminal-based access to a lab environment, web-based configuration and programming tools and a provided lab exercise should be made available. Therefore, it could also be used for other teaching and exploratory learning approaches including Dev, Ops as well as DevOps area.
 
-For test deployments you can use our p4-container based on the p4lang/p4app docker image. This is not intended for production use cases. However to get a self-contained environment that can be used to test learn-sdn-hub right away,
-you can use our provided docker-compose file. After cloning out this repo, you can simply run
+## Features
+
+* Web-based lab environment based on React and TypeScript
+* Multiple assignments can be provided for users and deployed to hosts running the exercises' tasks
+* Web-based access to terminals for each assigment based on xterm.js (esp. using SSH)
+* Editing of SDN- or P4-related files, as well as other configuration or source code files used by the assignments, using web-based monaco editor
+* Augmentation of monaco to support SDN and P4 languages and facilitating development tasks by supporting features like auto completion, syntax highlighting, error feedback etc.
+* Modular authentication backend (included are a simple single user, simple multi user and a MongoDB based authentication backend)
+* Modular assignment host backend (included is an SSH backend for single user, multi user (using hosts, VMs, containers to run the assignments) and an OpenStack provider starting and configuring instances to run the assignments)
+
+The following figures show screenshots of the environment, used to teach the basic functions of a P4-based Layer 2 "learning" (flooding & filtering) switch:
+
+![learn-sdn hub used for exploratory learning of the basic functions of a P4-based L2 switch](https://raw.githubusercontent.com/prona-p4-learning-platform/learn-sdn-hub/master/examples/screenshots/learn-sdn-hub-screenshot1-small.png "web-based environment with markdown lab sheet incl. mermaid figures/diagrams and monaco editor incl. code completion")
+
+![gns3 proxy setup figure including external clients, backend servers and the proxy in the middle as well as its functions](https://raw.githubusercontent.com/prona-p4-learning-platform/learn-sdn-hub/master/examples/screenshots/learn-sdn-hub-screenshot2-small.png "terminal access to mininet and editing of Python code of the controller app in monaco editor")
+
+The assignment shown in the screenshots was based on the [p4-boilerplate](https://github.com/prona-p4-learning-platform/p4-boilerplate). You can find the code and lab exercises in [Example3-LearningSwitch](https://github.com/prona-p4-learning-platform/p4-boilerplate/tree/main/Example3-LearningSwitch). [p4-container](https://github.com/prona-p4-learning-platform/p4-container) can be used as a host to run the tasks of the assignment.
+
+## Quick start installation and configuration using provided Docker image
+
+For test deployments you can use our provided docker image. It is not intended for production use cases. However, to get a self-contained environment that can be used to test learn-sdn-hub right away,
+we provide a docker-compose file. Clone or download this repository and simply run
 
 ```
 docker-compose up
 ```
 
-This should get you a fully functional learn-sdn-hub deployment together with a p4-container that is used to test the assignments. You can use the typical docker-compose setup, e.g., ```docker-compose up -d``` and ```docker-compose down``` to start and stop the entire environment in the background. Configuration of required environment variables can be done using provided .env file. The contained parameters can also be overridden by setting env vars with the same name. You can use ```source examples/sample-config-env.sh``` as a starting point to set the environment variables.
-Again, this is not intended to be used for production setups. Proper setup for production environments is described below.
+This should get you a fully functional learn-sdn-hub deployment together with a [p4-container](https://github.com/prona-p4-learning-platform/p4-container) (based on [p4lang/p4app](https://github.com/p4lang/p4app) image) that can be used to test the assignments. You can use the typical docker-compose setup, e.g., ```docker-compose up -d``` and ```docker-compose down``` to start and stop the entire environment in the background. Configuration of required environment variables can be done using provided [.env](https://github.com/prona-p4-learning-platform/learn-sdn-hub/blob/master/.env) file. The contained parameters can also be overridden by setting env vars with the same name. You can use ```source examples/sample-config-env.sh``` as a starting point to set the environment variables.
+Again, this is not intended to be used in production environments. Proper setup for production environments is described below.
 
-For test deployments a docker image for learn-sdn-hub can be used. To run learn-sdn-hub using the image with contained default configuration and assignments:
+If you change the IP address used for VBOX_IP_ADDRESSES in .env file for docker-compose, you can login using a user defined in BACKEND_USERS, e.g., user: user1 and password: password1, login to learn-sdn-hub and deploy assignments to the started p4-container or other hosts capable of compiling and running P4, you specified in the .env file.
+
+To run learn-sdn-hub alone (without p4-container) using the docker image with contained default configuration and assignments, run for example:
 
 ```
 export BACKEND_TYPE="localvm"
