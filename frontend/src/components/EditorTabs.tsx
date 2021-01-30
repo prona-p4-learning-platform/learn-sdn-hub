@@ -22,7 +22,7 @@ function TabPanel(props: EditorTabsProps) {
       {...other}
     >
       {value === index && (
-        <Box p={3}>
+        <Box p={1}>
           <Typography>{children}</Typography>
         </Box>
       )}
@@ -52,7 +52,7 @@ export default function SimpleTabs(props: P4EditorTabsProps) {
         ))}
       </Tabs>
       {props.endpoints.map((endpoint, index) => (
-        <TabPanel value={value} index={index}>
+        <TabPanel value={value} index={index} key={index}>
           <P4Editor endpoint={endpoint} />
         </TabPanel>
       ))}

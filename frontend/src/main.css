@@ -4,3 +4,8 @@
 .myContentClass {
 	background: lightblue;
 }
+
+.myXtermClass {
+	padding: '0px';
+	height: '100%';
+}
