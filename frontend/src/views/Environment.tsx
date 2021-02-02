@@ -66,34 +66,42 @@ export class EnvironmentView extends React.Component<PropsType> {
   }
 
   async restartEnvironment(): Promise<void> {
-    this.setState({ terminalResult: "Restarting environment..." })
-    this.setState({ terminalSeverity: "info" })
-    this.setState({ terminalNotificationOpen: true })
-    this.setState({ environmentStatus: "restarting" });
+    this.setState({
+      terminalResult: "Restarting environment...",
+      terminalSeverity: "info",
+      terminalNotificationOpen: true,
+      environmentStatus: "restarting"
+    });
     try {
       const result = await fetch(APIRequest(`/api/environment/${this.props.match.params.environment}/restart`, {
         method: "post",
         headers: { 'Content-Type': 'application/json', authorization: localStorage.getItem("token") || "" }
       }))
       if (result.status === 200) {
-        this.setState({ terminalResult: "Restart successful..." })
-        this.setState({ terminalSeverity: "success" })
-        this.setState({ terminalNotificationOpen: true })
-        this.setState({ environmentStatus: "running" });
+        this.setState({
+          terminalResult: "Restart successful...",
+          terminalSeverity: "success",
+          terminalNotificationOpen: true,
+          environmentStatus: "running"
+        });
       }
       else {
         const message = await result.json()
-        this.setState({ terminalResult: "Restart failed! (" + message.message + ")" })
-        this.setState({ terminalSeverity: "error" })
-        this.setState({ terminalNotificationOpen: true })
-        this.setState({ environmentStatus: "error", error: message.message })
+        this.setState({
+          terminalResult: "Restart failed! (" + message.message + ")",
+          terminalSeverity: "error",
+          terminalNotificationOpen: true,
+          environmentStatus: "error", error: message.message
+        });
       }
     }
     catch (error) {
-      this.setState({ terminalResult: "Restart failed! (" + error + ")" })
-      this.setState({ terminalSeverity: "error" })
-      this.setState({ terminalNotificationOpen: true })
-      this.setState({ environmentStatus: "error", error: error })
+      this.setState({
+        terminalResult: "Restart failed! (" + error + ")",
+        terminalSeverity: "error",
+        terminalNotificationOpen: true,
+        environmentStatus: "error", error: error
+      });
     }
   }
 

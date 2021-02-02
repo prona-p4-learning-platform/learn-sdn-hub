@@ -60,8 +60,8 @@ export default function(props: LoginFormProps) {
             setLoginResult("Auth successful!")
             setLoginSeverity("success")
             setNotificationOpen(true)
-            const a = await result.json()
-            onSuccessfulAuthentication(a.token, a.username)
+            const message = await result.json()
+            onSuccessfulAuthentication(message.token, message.username)
             history.push("/assignments")
         } else if (result.status===401){
             setLoginResult("Auth failed!")

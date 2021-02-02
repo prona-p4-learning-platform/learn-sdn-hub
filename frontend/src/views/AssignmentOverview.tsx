@@ -31,7 +31,11 @@ export default function AssignmentOverview(props: AssignmentOverviewProps) {
   const [assignments, setAssignments] = useState([])
   const [deployedAssignment, setDeployedAssignment] = useState("")
   const [load, setLoad] = useState(true)
-  const [deploymentNotificationOpen, setDeploymentNotificationOpen] = React.useState(false);
+  const [deploymentNotification, setDeploymentNotification] = useState({ result: "", severity: "", open: false })
+
+  const handleDeploymentNotificationClose = () => {
+    setDeploymentNotification({ result: "", severity: "", open: false });
+  };
 
   useEffect(() => {
     setLoad(false)
@@ -41,39 +45,24 @@ export default function AssignmentOverview(props: AssignmentOverviewProps) {
   }, [load])
 
   const createEnvironment = useCallback(async (assignment: string) => {
-    setDeploymentResult("Starting deployment...")
-    setDeploymentSeverity("info")
-    setDeploymentNotificationOpen(true)
+    setDeploymentNotification({ result: "Starting deployment...", severity: "info", open: true})
     try {
       const result = await fetch(APIRequest(`/api/environment/create?environment=${assignment}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', authorization: localStorage.getItem("token") || "" }
       }))
       if (result.status === 200) {
-        setDeploymentResult("Deployment successful!")
-        setDeploymentSeverity("success")
-        setDeploymentNotificationOpen(true)
+        setDeploymentNotification({ result: "Deployment successful!", severity: "success", open: true })
         setDeployedAssignment(assignment)
       } else {
         const message = await result.json()
-        setDeploymentResult("Deployment failed! (" + message.message + ")")
-        setDeploymentSeverity("error")
-        setDeploymentNotificationOpen(true)
+        setDeploymentNotification({ result: "Deployment failed! (" + message.message + ")", severity: "error", open: true })
       }
     }
     catch (error) {
-      setDeploymentResult("Deployment error while connecting to backend!")
-      setDeploymentSeverity("error")
-      setDeploymentNotificationOpen(true)
+      setDeploymentNotification({ result: "Deployment error while connecting to backend!", severity: "error", open: true })
     }
   }, []);
-
-  const [deploymentResult, setDeploymentResult] = useState("")
-  const [deploymentSeverity, setDeploymentSeverity] = useState("error")
-
-  const handleDeploymentNotificationClose = () => {
-    setDeploymentNotificationOpen(false);
-  };
 
   return (
     <List component="nav" aria-label="assignment list" style={{ width: 800 }}>
@@ -90,9 +79,9 @@ export default function AssignmentOverview(props: AssignmentOverviewProps) {
           </ListItemSecondaryAction>
         </ListItem>
       ))}
-      <Snackbar open={deploymentNotificationOpen} autoHideDuration={6000} onClose={handleDeploymentNotificationClose}>
-        <Alert onClose={handleDeploymentNotificationClose} severity={deploymentSeverity as Severity}>
-          {deploymentResult}
+      <Snackbar open={deploymentNotification.open} autoHideDuration={6000} onClose={handleDeploymentNotificationClose}>
+        <Alert onClose={handleDeploymentNotificationClose} severity={deploymentNotification.severity as Severity}>
+          {deploymentNotification.result}
         </Alert>
       </Snackbar>
     </List>

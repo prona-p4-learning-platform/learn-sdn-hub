@@ -62,15 +62,19 @@ export default class P4Editor extends React.Component<P4EditorProps> {
   };
 
   onChange(newValue: string) {
-    this.setState({ code: newValue })
-    this.setState({ fileChanged: true })
+    this.setState({
+      code: newValue,
+      fileChanged: true
+    })
   };
 
   async save(): Promise<void> {
-    this.setState({ fileChanged: false })
-    this.setState({ editorResult: "Saving file..." })
-    this.setState({ editorSeverity: "info" })
-    this.setState({ editorNotificationOpen: true })
+    this.setState({
+      fileChanged: false,
+      editorResult: "Saving file...",
+      editorSeverity: "info",
+      editorNotificationOpen: true
+    })
     try {
       const result = await fetch(APIRequest(this.props.endpoint, {
         method: "post",
@@ -80,33 +84,41 @@ export default class P4Editor extends React.Component<P4EditorProps> {
         }
       }))
       if (result.status === 200) {
-        this.setState({ editorResult: "Deploy successful!" })
-        this.setState({ editorSeverity: "success" })
-        this.setState({ editorNotificationOpen: true })
-        this.setState({ fileChanged: false })
+        this.setState({
+          fileChanged: false,
+          editorResult: "Deploy successful!",
+          editorSeverity: "success",
+          editorNotificationOpen: true
+        })
       }
       else {
-        const a = await result.json()
-        this.setState({ editorResult: "Deploy failed! (" + a.message + ")" })
-        this.setState({ editorSeverity: "error" })
-        this.setState({ editorNotificationOpen: true })
-        this.setState({ fileChanged: true })
+        const message = await result.json()
+        this.setState({
+          fileChanged: true,
+          editorResult: "Deploy failed! (" + message.message + ")",
+          editorSeverity: "error",
+          editorNotificationOpen: true
+        })
       }
     }
     catch (error) {
-      this.setState({ editorResult: "Deploy failed! (" + error + ")" })
-      this.setState({ editorSeverity: "error" })
-      this.setState({ editorNotificationOpen: true })
-      this.setState({ fileChanged: true })
+      this.setState({
+        fileChanged: true,
+        editorResult: "Deploy failed! (" + error + ")",
+        editorSeverity: "error",
+        editorNotificationOpen: true
+      })
     }
   }
 
   async load(): Promise<void> {
-    this.setState({ editorConfirmationDialogOpen: true })
-    this.setState({ fileChanged: false })
-    this.setState({ editorResult: "Loading file..." })
-    this.setState({ editorSeverity: "info" })
-    this.setState({ editorNotificationOpen: true })
+    this.setState({
+      editorConfirmationDialogOpen: true,
+      fileChanged: false,
+      editorResult: "Loading file...",
+      editorSeverity: "info",
+      editorNotificationOpen: true
+    })
     try {
       const result = await fetch(APIRequest(`${this.props.endpoint}`, {
         headers: {
@@ -116,25 +128,31 @@ export default class P4Editor extends React.Component<P4EditorProps> {
       }))
       if (result.status === 200) {
         const content = await result.text()
-        this.setState({ code: content })
-        this.setState({ editorResult: "Retrieve successful!" })
-        this.setState({ editorSeverity: "success" })
-        this.setState({ editorNotificationOpen: true })
-        this.setState({ fileChanged: false })
+        this.setState({
+          code: content,
+          editorResult: "Retrieve successful!",
+          editorSeverity: "success",
+          editorNotificationOpen: true,
+          fileChanged: false
+        })
       }
       else {
         const content = await result.json()
-        this.setState({ editorResult: "Retrieve failed! (" + content.message + ")" })
-        this.setState({ editorSeverity: "error" })
-        this.setState({ editorNotificationOpen: true })
-        this.setState({ fileChanged: true })
+        this.setState({
+          editorResult: "Retrieve failed! (" + content.message + ")",
+          editorSeverity: "error",
+          editorNotificationOpen: true,
+          fileChanged: true
+        })
       }
     }
     catch (error) {
-      this.setState({ editorResult: "Retrieve failed! (" + error + ")" })
-      this.setState({ editorSeverity: "error" })
-      this.setState({ editorNotificationOpen: true })
-      this.setState({ fileChanged: true })
+      this.setState({
+        editorResult: "Retrieve failed! (" + error + ")",
+        editorSeverity: "error",
+        editorNotificationOpen: true,
+        fileChanged: true
+      })
     }
   }
 
