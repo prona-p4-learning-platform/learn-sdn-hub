@@ -1,4 +1,5 @@
-import * as React from "react";
+//import React as React from "react";
+import React from "react";
 import Grid from "@material-ui/core/Grid";
 import Terminal from "../components/Terminal";
 import EditorTabs from "../components/EditorTabs";
@@ -10,6 +11,15 @@ import ReactMarkdown from 'react-markdown'
 import mermaid from 'mermaid'
 import TabControl from '../components/TabControl'
 import APIRequest from '../api/Request'
+import { Box, Typography } from "@material-ui/core";
+import Snackbar from '@material-ui/core/Snackbar';
+import MuiAlert, { AlertProps } from '@material-ui/lab/Alert';
+import Dialog from '@material-ui/core/Dialog';
+import DialogActions from '@material-ui/core/DialogActions';
+import DialogContent from '@material-ui/core/DialogContent';
+import DialogContentText from '@material-ui/core/DialogContentText';
+
+type Severity = "error" | "success" | "info" | "warning" | undefined;
 
 type PathParamsType = {
   environment: string;
@@ -22,6 +32,14 @@ interface State {
   ttys: string[];
   files: string[];
   assignment: ""
+  terminalResult: string
+  terminalSeverity: Severity
+  terminalNotificationOpen: boolean
+  confirmationDialogOpen: boolean
+}
+
+function Alert(props: JSX.IntrinsicAttributes & AlertProps) {
+  return <MuiAlert elevation={6} variant="filled" {...props} />;
 }
 
 export class EnvironmentView extends React.Component<PropsType> {
@@ -29,7 +47,17 @@ export class EnvironmentView extends React.Component<PropsType> {
 
   constructor(props: PropsType) {
     super(props);
-    this.state = { environmentStatus: "running", ttys: [], files: [], assignment: "" };
+    this.state = {
+      environmentStatus: "running",
+      ttys: [],
+      files: [],
+      assignment: "",
+      terminalResult: "",
+      terminalSeverity: "error",
+      terminalNotificationOpen: false,
+      confirmationDialogOpen: false
+    };
+    this.restartEnvironment = this.restartEnvironment.bind(this)
   }
 
   componentDidMount(): void {
@@ -37,20 +65,44 @@ export class EnvironmentView extends React.Component<PropsType> {
     this.loadAssignment()
   }
 
-  restartEnvironment(): void {
-    this.setState({ environmentStatus: "restarting" });
-    fetch(APIRequest(`/api/environment/${this.props.match.params.environment}/restart`, {
-      method: "post",
-      headers: { 'Content-Type': 'application/json', authorization: localStorage.getItem("token") || "" }
-    }))
-      .then((response) => response.json())
-      .then((data) => {
-        if (data.error === true) {
-          this.setState({ environmentStatus: "error", error: data.message });
-        } else {
-          this.setState({ environmentStatus: "running" });
-        }
+  async restartEnvironment(): Promise<void> {
+    this.setState({
+      terminalResult: "Restarting environment...",
+      terminalSeverity: "info",
+      terminalNotificationOpen: true,
+      environmentStatus: "restarting"
+    });
+    try {
+      const result = await fetch(APIRequest(`/api/environment/${this.props.match.params.environment}/restart`, {
+        method: "post",
+        headers: { 'Content-Type': 'application/json', authorization: localStorage.getItem("token") || "" }
+      }))
+      if (result.status === 200) {
+        this.setState({
+          terminalResult: "Restart successful...",
+          terminalSeverity: "success",
+          terminalNotificationOpen: true,
+          environmentStatus: "running"
+        });
+      }
+      else {
+        const message = await result.json()
+        this.setState({
+          terminalResult: "Restart failed! (" + message.message + ")",
+          terminalSeverity: "error",
+          terminalNotificationOpen: true,
+          environmentStatus: "error", error: message.message
+        });
+      }
+    }
+    catch (error) {
+      this.setState({
+        terminalResult: "Restart failed! (" + error + ")",
+        terminalSeverity: "error",
+        terminalNotificationOpen: true,
+        environmentStatus: "error", error: error
       });
+    }
   }
 
   loadEnvironmentConfig(): void {
@@ -69,7 +121,7 @@ export class EnvironmentView extends React.Component<PropsType> {
       { headers: { 'Content-Type': 'application/json', authorization: localStorage.getItem("token") || "" } }))
       .then((response) => response.text())
       .then((data) => {
-          this.setState({ assignment: data });
+        this.setState({ assignment: data });
       });
   }
 
@@ -78,9 +130,26 @@ export class EnvironmentView extends React.Component<PropsType> {
   }
 
   render(): ReactNode {
-    const terminals = this.state.ttys.map((alias: string) => <Terminal
-      wsEndpoint={`/environment/${this.props.match.params.environment}/type/${alias}`}
+    const terminals = this.state.ttys.map((alias: string) => <Terminal wsEndpoint={`/environment/${this.props.match.params.environment}/type/${alias}`}
     />)
+
+    const handleTerminalNotificationClose = () => {
+      this.setState({ terminalNotificationOpen: false })
+    };
+
+    const handleConfirmationDialogOpen = () => {
+      this.setState({ confirmationDialogOpen: true });
+    };
+
+    const handleConfirmationDialogClose = () => {
+      this.setState({ confirmationDialogOpen: false });
+    };
+
+    const handleConfirmationDialogConfirm = () => {
+      this.restartEnvironment();
+      this.setState({ confirmationDialogOpen: false });
+    };
+
     return (
       <Grid container spacing={3}>
         <Grid item xs={6}>
@@ -89,31 +158,62 @@ export class EnvironmentView extends React.Component<PropsType> {
               source={this.state.assignment}
             />
             <Grid item xs={12}>
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={(): void => this.restartEnvironment()}
-            >
-              Reload environment and apply changes
-            </Button>
-            <h5>Environment status: {this.state.environmentStatus}</h5>
-            {this.state.environmentStatus === "running" && (
-              <TabControl tabNames={this.state.ttys}>{terminals}</TabControl>
-            )}            
-          </Grid>
-        </TabControl>/
-          <Grid item xs={12}>    
+              <Grid container direction="row" justify="flex-start" alignItems="center" spacing={3}>
+                <Grid item>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    onClick={handleConfirmationDialogOpen}
+                  >
+                    Restart terminal environment
+                </Button>
+                </Grid>
+                <Grid>
+                  <Typography>Status: {this.state.environmentStatus}</Typography>
+                </Grid>
+              </Grid>
+              {this.state.environmentStatus === "running" && (
+                <TabControl tabNames={this.state.ttys}>{terminals}</TabControl>
+              )}
+            </Grid>
+          </TabControl>/
+          <Grid item xs={12}>
           </Grid>
         </Grid>
         <Grid item xs={6}>
-          <div style={{ height: "500px" }}>
+          <Box>
             <EditorTabs
               endpoints={this.state.files.map(fileAlias =>
                 `/api/environment/${this.props.match.params.environment}/file/${fileAlias}`,
               )}
             />
-          </div>
+          </Box>
         </Grid>
+        <Snackbar open={this.state.terminalNotificationOpen} autoHideDuration={6000} onClose={handleTerminalNotificationClose}>
+          <Alert onClose={handleTerminalNotificationClose} severity={this.state.terminalSeverity as Severity}>
+            {this.state.terminalResult}
+          </Alert>
+        </Snackbar>
+        <Dialog
+          open={this.state.confirmationDialogOpen}
+          onClose={handleConfirmationDialogClose}
+          aria-describedby="alert-dialog-description"
+        >
+          <DialogContent>
+            <DialogContentText id="alert-dialog-description">
+              Restart environment?
+              All processes in terminals will be killed.
+          </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleConfirmationDialogClose} color="primary" autoFocus>
+              No
+          </Button>
+            <Button onClick={handleConfirmationDialogConfirm} color="primary">
+              Yes
+          </Button>
+          </DialogActions>
+        </Dialog>
       </Grid>
     );
   }

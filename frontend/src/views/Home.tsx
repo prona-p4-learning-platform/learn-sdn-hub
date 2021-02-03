@@ -1,4 +1,4 @@
-import * as React from "react";
+import React from "react";
 import Loginform from "../components/LoginForm";
 interface HomeProps {
   onUserLogin: (token: string, username: string) => void;

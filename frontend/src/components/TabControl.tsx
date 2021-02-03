@@ -17,13 +17,16 @@ function TabPanel(props: EditorTabsProps) {
       role="tabpanel"
       hidden={value !== index}
       id={`simple-tabpanel-${index}`}
+      key={`simple-tabpanel-${index}`}
+      style={{ height: (window.innerHeight) + 'px' }}
       aria-labelledby={`simple-tab-${index}`}
       {...other}
     >
-        <Box  p={3}>
+      {value === index && (
+        <Box p={1}>
           <Typography>{children}</Typography>
         </Box>
-      
+      )}
     </div>
   );
 }
@@ -47,14 +50,14 @@ export default function SimpleTabs(props: TabControlProps) {
         aria-label="simple tabs example"
       >
         {props.tabNames && props.tabNames.map((name) => (
-          <Tab label={name} />
+          <Tab label={name} key={name} />
         ))}
       </Tabs>
 
-      {Array.isArray(props.children) && props.children.map((child, index) => 
-        <><TabPanel value={value} index={index}>
+      {Array.isArray(props.children) && props.children.map((child, index) =>
+        <TabPanel value={value} index={index} key={index}>
           {child}
-        </TabPanel></>
+        </TabPanel>
       )}
     </>
   );
