@@ -2,7 +2,6 @@ import SSHConsole, { Console } from "./consoles/SSHConsole";
 import FileHandler from "./filehandler/SSHFileHandler";
 import { InstanceProvider, VMEndpoint } from "./providers/Provider";
 import { Persister } from "./database/Persister";
-import { CompilationError } from "./CompilationResultExtractor";
 
 interface AliasedFile {
   absFilePath: string;
