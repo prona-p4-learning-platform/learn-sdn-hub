@@ -53,11 +53,11 @@ export default class P4Environment {
 
   public static getActiveEnvironmentList(userid: string): Array<string> {
     const activeEnvironmentsForUser: Array<string> = new Array<string>();
-    P4Environment.activeEnvironments.forEach((value: P4Environment, key: string) => {
-      if (value.userId === userid) {
-        activeEnvironmentsForUser.push(key.split("-").slice(1).join("-"))
+    P4Environment.activeEnvironments.forEach(
+      (value: P4Environment, key: string) => {
+        if (value.userId === userid) activeEnvironmentsForUser.push(key.split("-").slice(1).join("-"));
       }
-    });
+    );
     return activeEnvironmentsForUser;
   }
 
@@ -102,13 +102,11 @@ export default class P4Environment {
 
   static async deleteEnvironment(
     userId: string,
-    identifier: string,
+    identifier: string
   ): Promise<boolean> {
-    const environment = this.getActiveEnvironment(identifier, userId)
+    const environment = this.getActiveEnvironment(identifier, userId);
     environment.stop();
-    P4Environment.activeEnvironments.delete(
-      `${userId}-${identifier}`
-    );
+    P4Environment.activeEnvironments.delete(`${userId}-${identifier}`);
     return true;
   }
 
@@ -228,9 +226,9 @@ export default class P4Environment {
         console.on("close", () => resolve(undefined));
       });
       await cc;
-      console.close()
+      console.close();
     }
-    this.filehandler.close()
+    this.filehandler.close();
     await this.persister.RemoveUserEnvironment(
       this.userId,
       endpoint.identifier

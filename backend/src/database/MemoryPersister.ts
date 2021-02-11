@@ -27,7 +27,9 @@ export default class MemoryPersister implements Persister {
       userEnvironments.has(username) &&
       userEnvironments.get(username).has(identifier)
     ) {
-      userEnvironments.get(username).set(identifier, { identifier, description });
+      userEnvironments
+        .get(username)
+        .set(identifier, { identifier, description });
     }
   }
 
