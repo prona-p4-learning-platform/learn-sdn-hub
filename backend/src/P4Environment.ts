@@ -9,10 +9,6 @@ interface AliasedFile {
   alias: string;
 }
 
-interface CompilationResult {
-  errors: Array<CompilationError>;
-}
-
 interface Task {
   executable: string;
   cwd: string;
@@ -55,7 +51,8 @@ export default class P4Environment {
     const activeEnvironmentsForUser: Array<string> = new Array<string>();
     P4Environment.activeEnvironments.forEach(
       (value: P4Environment, key: string) => {
-        if (value.userId === userid) activeEnvironmentsForUser.push(key.split("-").slice(1).join("-"));
+        if (value.userId === userid)
+          activeEnvironmentsForUser.push(key.split("-").slice(1).join("-"));
       }
     );
     return activeEnvironmentsForUser;

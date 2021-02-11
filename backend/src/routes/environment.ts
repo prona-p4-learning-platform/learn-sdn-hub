@@ -193,8 +193,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
     (req: RequestWithUser, res) => {
       const activeEnvList = P4Environment.getActiveEnvironmentList(req.user.id);
       if (activeEnvList === undefined) {
-        return res.status(500)
-          .json({
+        return res.status(500).json({
           error: true,
           message: "Could not get active environments for user.",
         });
