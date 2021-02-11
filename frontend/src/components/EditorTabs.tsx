@@ -23,7 +23,7 @@ function TabPanel(props: EditorTabsProps) {
     >
       {value === index && (
         <Box p={1}>
-          <Typography>{children}</Typography>
+          <Typography component="span">{children}</Typography>
         </Box>
       )}
     </div>
@@ -48,7 +48,7 @@ export default function SimpleTabs(props: P4EditorTabsProps) {
         aria-label="simple tabs example"
       >
         {props.endpoints.map((endpoint) => (
-          <Tab label={endpoint.split("/").slice(-1)} />
+          <Tab key={endpoint} label={endpoint.split("/").slice(-1)} />
         ))}
       </Tabs>
       {props.endpoints.map((endpoint, index) => (

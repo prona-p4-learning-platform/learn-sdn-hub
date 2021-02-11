@@ -102,6 +102,33 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
     }
   );
 
+  router.post(
+    "/delete",
+    authenticationMiddleware,
+    queryValidator,
+    (req: RequestWithUser, res) => {
+      const environment = req.query.environment;
+      const targetEnv = environments.get(String(environment));
+      if (targetEnv === undefined) {
+        return res
+          .status(404)
+          .json({ error: true, message: "Environment not found" });
+      }
+      P4Environment.deleteEnvironment(
+        req.user.username,
+        String(environment)
+      )
+        .then(() => {
+          res
+            .status(200).json();
+        })
+        .catch((err: Error) => {
+          console.log(err);
+          res.status(500).json({ status: "error", message: err.message });
+        });
+    }
+  );
+
   router.get(
     "/:environment/file/:alias",
     authenticationMiddleware,
@@ -161,6 +188,22 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
         .catch((err) =>
           res.status(500).json({ status: "error", message: err.message })
         );
+    }
+  );
+
+  router.get(
+    "/active",
+    authenticationMiddleware,
+    (req: RequestWithUser, res) => {
+      const activeEnvList = P4Environment.getActiveEnvironmentList(req.user.id);
+      if (activeEnvList === undefined) {
+        return res
+          .status(500)
+          .json({ error: true, message: "Could not get active environments for user." });
+      }
+      return res
+        .status(200)
+        .json(Array.from(activeEnvList));
     }
   );
 

@@ -9,6 +9,8 @@ import { Persister } from "./database/Persister";
 import extractCompilationResult, {
   CompilationError,
 } from "./CompilationResultExtractor";
+import environments from "./Configuration";
+import user from "./routes/user";
 
 interface AliasedFile {
   absFilePath: string;
@@ -57,6 +59,18 @@ export default class P4Environment {
     return P4Environment.activeEnvironments.get(`${userid}-${alias}`);
   }
 
+  public static getActiveEnvironmentList(
+    userid: string
+  ): Array<string> {
+    let activeEnvironmentsForUser: Array<string> = new Array<string>();
+    P4Environment.activeEnvironments.forEach((value: P4Environment, key: string) => {
+      if (value.userId === userid) {
+        activeEnvironmentsForUser.push(key.split("-").slice(1).join("-"))
+      }
+    });
+    return activeEnvironmentsForUser;
+  }
+
   private constructor(
     userId: string,
     configuration: EnvironmentDescription,
@@ -94,6 +108,18 @@ export default class P4Environment {
       environment
     );
     return environment;
+  }
+
+  static async deleteEnvironment(
+    userId: string,
+    identifier: string,
+  ): Promise<boolean> {
+    const environment = this.getActiveEnvironment(identifier, userId)
+    environment.stop();
+    P4Environment.activeEnvironments.delete(
+      `${userId}-${identifier}`
+    );
+    return true;
   }
 
   async getLanguageServerPort(): Promise<number> {
@@ -216,7 +242,13 @@ export default class P4Environment {
         console.on("close", () => resolve(undefined));
       });
       await cc;
+      console.close()
     }
+    this.filehandler.close()
+    await this.persister.RemoveUserEnvironment(
+      this.userId,
+      endpoint.identifier
+    );
   }
 
   async restart(): Promise<void> {

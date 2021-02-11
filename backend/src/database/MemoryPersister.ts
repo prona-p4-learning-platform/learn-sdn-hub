@@ -1,3 +1,4 @@
+import user from "../routes/user";
 import { Persister, UserEnvironment, UserAccount } from "./Persister";
 
 const userEnvironments: Map<string, Map<string, UserEnvironment>> = new Map();
@@ -33,8 +34,18 @@ export default class MemoryPersister implements Persister {
     }
   }
 
-  async RemoveUserEnvironment(): Promise<void> {
-    return undefined;
+  async RemoveUserEnvironment(
+    username: string,
+    identifier: string
+  ): Promise<void> {
+    if (
+      userEnvironments.has(username) &&
+      userEnvironments.get(username).has(identifier)
+    ) {
+      userEnvironments
+        .get(username)
+        .delete(identifier);
+    }
   }
 
   async close(): Promise<void> {
