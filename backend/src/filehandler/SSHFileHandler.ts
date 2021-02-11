@@ -38,7 +38,7 @@ export default class SSHFileHandler {
         sftp.readFile(absolutePath, (err: Error, content: Buffer) => {
           if (err) return reject(err);
           console.log("retrieved file.", content);
-          sftp.end()
+          sftp.end();
           resolve(content.toString("utf-8"));
         });
       });
@@ -57,11 +57,11 @@ export default class SSHFileHandler {
         writeStream.write(content);
         writeStream.on("close", () => {
           console.log("stream closed 1");
-          sftp.end()
+          sftp.end();
           resolve();
         });
         writeStream.on("finish", () => {
-          sftp.end()
+          sftp.end();
           console.log("stream closed 2");
         });
         writeStream.end();
@@ -74,8 +74,8 @@ export default class SSHFileHandler {
       return Promise.reject(new Error("SSHFileHandler: SSH connection error."));
     }
     return new Promise((resolve) => {
-      this.client.end()
-      resolve()
+      this.client.end();
+      resolve();
     });
   }
 }

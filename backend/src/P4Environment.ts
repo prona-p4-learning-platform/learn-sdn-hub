@@ -1,16 +1,8 @@
-import { exec } from "child_process";
-import path from "path";
-import fs from "fs";
-import os from "os";
 import SSHConsole, { Console } from "./consoles/SSHConsole";
 import FileHandler from "./filehandler/SSHFileHandler";
 import { InstanceProvider, VMEndpoint } from "./providers/Provider";
 import { Persister } from "./database/Persister";
-import extractCompilationResult, {
-  CompilationError,
-} from "./CompilationResultExtractor";
-import environments from "./Configuration";
-import user from "./routes/user";
+import { CompilationError } from "./CompilationResultExtractor";
 
 interface AliasedFile {
   absFilePath: string;
@@ -59,10 +51,8 @@ export default class P4Environment {
     return P4Environment.activeEnvironments.get(`${userid}-${alias}`);
   }
 
-  public static getActiveEnvironmentList(
-    userid: string
-  ): Array<string> {
-    let activeEnvironmentsForUser: Array<string> = new Array<string>();
+  public static getActiveEnvironmentList(userid: string): Array<string> {
+    const activeEnvironmentsForUser: Array<string> = new Array<string>();
     P4Environment.activeEnvironments.forEach((value: P4Environment, key: string) => {
       if (value.userId === userid) {
         activeEnvironmentsForUser.push(key.split("-").slice(1).join("-"))
@@ -150,16 +140,12 @@ export default class P4Environment {
             this.userId,
             filtered[0].identifier
           );
-          return this.environmentProvider.createServer(
-            `${this.userId}-${this.configuration.description}`
-          );
+          return this.environmentProvider.createServer();
         }
         throw err;
       }
     } else {
-      return this.environmentProvider.createServer(
-        `${this.userId}-${this.configuration.description}`
-      );
+      return this.environmentProvider.createServer();
     }
   }
 

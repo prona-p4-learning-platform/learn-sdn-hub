@@ -114,13 +114,9 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
           .status(404)
           .json({ error: true, message: "Environment not found" });
       }
-      P4Environment.deleteEnvironment(
-        req.user.username,
-        String(environment)
-      )
+      P4Environment.deleteEnvironment(req.user.username, String(environment))
         .then(() => {
-          res
-            .status(200).json();
+          res.status(200).json();
         })
         .catch((err: Error) => {
           console.log(err);
@@ -199,11 +195,12 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
       if (activeEnvList === undefined) {
         return res
           .status(500)
-          .json({ error: true, message: "Could not get active environments for user." });
+          .json({
+            error: true,
+            message: "Could not get active environments for user.",
+          });
       }
-      return res
-        .status(200)
-        .json(Array.from(activeEnvList));
+      return res.status(200).json(Array.from(activeEnvList));
     }
   );
 

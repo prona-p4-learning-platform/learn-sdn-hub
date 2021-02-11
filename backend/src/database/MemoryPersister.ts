@@ -1,4 +1,3 @@
-import user from "../routes/user";
 import { Persister, UserEnvironment, UserAccount } from "./Persister";
 
 const userEnvironments: Map<string, Map<string, UserEnvironment>> = new Map();
@@ -28,9 +27,7 @@ export default class MemoryPersister implements Persister {
       userEnvironments.has(username) &&
       userEnvironments.get(username).has(identifier)
     ) {
-      userEnvironments
-        .get(username)
-        .set(identifier, { identifier, description });
+      userEnvironments.get(username).set(identifier, { identifier, description });
     }
   }
 
@@ -42,9 +39,7 @@ export default class MemoryPersister implements Persister {
       userEnvironments.has(username) &&
       userEnvironments.get(username).has(identifier)
     ) {
-      userEnvironments
-        .get(username)
-        .delete(identifier);
+      userEnvironments.get(username).delete(identifier);
     }
   }
 
