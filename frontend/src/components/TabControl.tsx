@@ -18,13 +18,13 @@ function TabPanel(props: EditorTabsProps) {
       hidden={value !== index}
       id={`simple-tabpanel-${index}`}
       key={`simple-tabpanel-${index}`}
-      style={{ height: (window.innerHeight) + 'px' }}
+      style={{ height: (window.innerHeight-80) + 'px' }}
       aria-labelledby={`simple-tab-${index}`}
       {...other}
     >
       {value === index && (
-        <Box p={1}>
-          <Typography>{children}</Typography>
+        <Box p={1} style={{ height: '100%' }}>
+          <Typography component="span" style={{ height: '100%' }}>{children}</Typography>
         </Box>
       )}
     </div>

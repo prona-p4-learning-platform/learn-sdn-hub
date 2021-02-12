@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { makeStyles } from '@material-ui/core/styles';
 import CloudUploadIcon from '@material-ui/icons/CloudUpload';
+import CloudOffIcon from '@material-ui/icons/CloudOff';
 import PlayCircleFilledWhiteIcon from '@material-ui/icons/PlayCircleFilledWhite';
 import Button from "@material-ui/core/Button";
 import { ListItemSecondaryAction } from '@material-ui/core';
@@ -29,23 +30,30 @@ interface AssignmentOverviewProps {
 export default function AssignmentOverview(props: AssignmentOverviewProps) {
   const classes = useStyles();
   const [assignments, setAssignments] = useState([])
-  const [deployedAssignment, setDeployedAssignment] = useState("")
+  const [deployedAssignments, setDeployedAssignments] = useState([])
   const [load, setLoad] = useState(true)
-  const [deploymentNotification, setDeploymentNotification] = useState({ result: "", severity: "", open: false })
+  const [deploymentNotification, setDeploymentNotification] = useState({ result: "", severity: "info" as Severity, open: false })
 
   const handleDeploymentNotificationClose = () => {
-    setDeploymentNotification({ result: "", severity: "", open: false });
+    setDeploymentNotification({ result: "", severity: "info", open: false });
   };
+
+  const isActiveDeployment = (assignment: string) => {
+    return Array.from(deployedAssignments).some(element => element === assignment)
+  }
 
   useEffect(() => {
     setLoad(false)
     fetch(APIRequest("/api/user/assignments", { headers: { authorization: localStorage.getItem("token") || "" } }))
       .then(res => res.json())
       .then(setAssignments)
+    fetch(APIRequest("/api/environment/active", { headers: { authorization: localStorage.getItem("token") || "" } }))
+      .then(res => res.json())
+      .then(setDeployedAssignments)
   }, [load])
 
   const createEnvironment = useCallback(async (assignment: string) => {
-    setDeploymentNotification({ result: "Starting deployment...", severity: "info", open: true})
+    setDeploymentNotification({ result: "Starting deployment...", severity: "info", open: true })
     try {
       const result = await fetch(APIRequest(`/api/environment/create?environment=${assignment}`, {
         method: 'POST',
@@ -53,7 +61,9 @@ export default function AssignmentOverview(props: AssignmentOverviewProps) {
       }))
       if (result.status === 200) {
         setDeploymentNotification({ result: "Deployment successful!", severity: "success", open: true })
-        setDeployedAssignment(assignment)
+        fetch(APIRequest("/api/environment/active", { headers: { authorization: localStorage.getItem("token") || "" } }))
+          .then(res => res.json())
+          .then(setDeployedAssignments)
       } else {
         const message = await result.json()
         setDeploymentNotification({ result: "Deployment failed! (" + message.message + ")", severity: "error", open: true })
@@ -64,17 +74,50 @@ export default function AssignmentOverview(props: AssignmentOverviewProps) {
     }
   }, []);
 
+  const deleteEnvironment = useCallback(async (assignment: string) => {
+    setDeploymentNotification({ result: "Deleting deployment...", severity: "info", open: true })
+    try {
+      const result = await fetch(APIRequest(`/api/environment/delete?environment=${assignment}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', authorization: localStorage.getItem("token") || "" }
+      }))
+      if (result.status === 200) {
+        setDeploymentNotification({ result: "Deployment deletion successful!", severity: "success", open: true })
+        fetch(APIRequest("/api/environment/active", { headers: { authorization: localStorage.getItem("token") || "" } }))
+          .then(res => res.json())
+          .then(setDeployedAssignments)
+      } else {
+        const message = await result.json()
+        setDeploymentNotification({ result: "Deployment deletion failed! (" + message.message + ")", severity: "error", open: true })
+      }
+    }
+    catch (error) {
+      setDeploymentNotification({ result: "Deployment deletion error while connecting to backend!", severity: "error", open: true })
+    }
+  }, []);
+
+
   return (
     <List component="nav" aria-label="assignment list" style={{ width: 800 }}>
       {assignments.map(assignment => (
         <ListItem key={assignment}>
           <ListItemText primary={assignment} />
           <ListItemSecondaryAction>
-            <Button variant="contained" color="primary" className={classes.button} startIcon={<CloudUploadIcon />} onClick={() => createEnvironment(assignment)}>
+            {/* Maybe we need to add an option that allows only one active deployment, e.g., mininet on the same host can only run once anyway? Frontend solution would be to disable all Deploy buttons, 
+                as soon as an environment was create:
+
+                <Button variant="contained" color="primary" className={classes.button} startIcon={<CloudUploadIcon />} disabled={Array.from(deployedAssignments).length > 0} onClick={() => createEnvironment(assignment)}>
+                  Deploy
+                    </Button>
+            */}
+            <Button variant="contained" color="primary" className={classes.button} startIcon={<CloudUploadIcon />} disabled={isActiveDeployment(assignment)} onClick={() => createEnvironment(assignment)}>
               Deploy
                 </Button>
-            <Button variant="contained" color="secondary" className={classes.button} startIcon={<PlayCircleFilledWhiteIcon />} disabled={assignment !== deployedAssignment} href={`/environment/${assignment}`}>
+            <Button variant="contained" color="secondary" className={classes.button} startIcon={<PlayCircleFilledWhiteIcon />} disabled={!isActiveDeployment(assignment)} href={`/environment/${assignment}`}>
               Start Assignment
+                </Button>
+            <Button variant="contained" color="primary" className={classes.button} startIcon={<CloudOffIcon />} disabled={!isActiveDeployment(assignment)} onClick={() => deleteEnvironment(assignment)}>
+              Undeploy
                 </Button>
           </ListItemSecondaryAction>
         </ListItem>

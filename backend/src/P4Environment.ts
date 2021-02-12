@@ -1,22 +1,11 @@
-import { exec } from "child_process";
-import path from "path";
-import fs from "fs";
-import os from "os";
 import SSHConsole, { Console } from "./consoles/SSHConsole";
 import FileHandler from "./filehandler/SSHFileHandler";
 import { InstanceProvider, VMEndpoint } from "./providers/Provider";
 import { Persister } from "./database/Persister";
-import extractCompilationResult, {
-  CompilationError,
-} from "./CompilationResultExtractor";
 
 interface AliasedFile {
   absFilePath: string;
   alias: string;
-}
-
-interface CompilationResult {
-  errors: Array<CompilationError>;
 }
 
 interface Task {
@@ -55,6 +44,17 @@ export default class P4Environment {
     userid: string
   ): P4Environment {
     return P4Environment.activeEnvironments.get(`${userid}-${alias}`);
+  }
+
+  public static getActiveEnvironmentList(userid: string): Array<string> {
+    const activeEnvironmentsForUser: Array<string> = new Array<string>();
+    P4Environment.activeEnvironments.forEach(
+      (value: P4Environment, key: string) => {
+        if (value.userId === userid)
+          activeEnvironmentsForUser.push(key.split("-").slice(1).join("-"));
+      }
+    );
+    return activeEnvironmentsForUser;
   }
 
   private constructor(
@@ -96,6 +96,16 @@ export default class P4Environment {
     return environment;
   }
 
+  static async deleteEnvironment(
+    userId: string,
+    identifier: string
+  ): Promise<boolean> {
+    const environment = this.getActiveEnvironment(identifier, userId);
+    environment.stop();
+    P4Environment.activeEnvironments.delete(`${userId}-${identifier}`);
+    return true;
+  }
+
   async getLanguageServerPort(): Promise<number> {
     const endpoint = await this.makeSureInstanceExists();
     return endpoint.LanguageServerPort;
@@ -124,16 +134,12 @@ export default class P4Environment {
             this.userId,
             filtered[0].identifier
           );
-          return this.environmentProvider.createServer(
-            `${this.userId}-${this.configuration.description}`
-          );
+          return this.environmentProvider.createServer();
         }
         throw err;
       }
     } else {
-      return this.environmentProvider.createServer(
-        `${this.userId}-${this.configuration.description}`
-      );
+      return this.environmentProvider.createServer();
     }
   }
 
@@ -216,7 +222,13 @@ export default class P4Environment {
         console.on("close", () => resolve(undefined));
       });
       await cc;
+      console.close();
     }
+    this.filehandler.close();
+    await this.persister.RemoveUserEnvironment(
+      this.userId,
+      endpoint.identifier
+    );
   }
 
   async restart(): Promise<void> {

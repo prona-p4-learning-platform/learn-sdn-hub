@@ -56,18 +56,23 @@ export default class SSHConsole extends EventEmitter implements Console {
       sshConsole.on("error", (err) => {
         console.log(err);
       });
-
       sshConsole.on("close", () => {
         console.log("SSH connection closed.");
+        sshConsole.end();
         SSHConsole.sshSessions.delete(consoleIdentifier);
       });
       console.log("Establishing SSH connection " + ipaddress + ":" + port);
       sshConsole
         .on("ready", function () {
-          console.log("Client :: ready");
+          console.log("SSH Client :: ready");
         })
         .on("error", (err) => {
-          console.log("Error handler!", err);
+          console.log("SSH console error: ", err);
+        })
+        .on("close", () => {
+          console.log("SSH connection closed.");
+          sshConsole.end();
+          SSHConsole.sshSessions.delete(consoleIdentifier);
         })
         .connect({
           host: ipaddress,
@@ -90,8 +95,13 @@ export default class SSHConsole extends EventEmitter implements Console {
       this.stream = stream;
       stream
         .on("close", () => {
-          console.log("Stream :: close");
+          console.log("SSH Stream :: close");
+          stream.end();
+          sshConsole.end();
           this.emit("close");
+        })
+        .on("error", (err: Error) => {
+          console.log("SSH shell error: ", err);
         })
         .on("data", (data: string) => {
           this.emit("data", data);

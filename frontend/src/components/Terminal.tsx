@@ -44,6 +44,7 @@ export default class XTerminal extends React.Component<TerminalProps> {
     if (this.resizeTimer) {
       clearTimeout(this.resizeTimer)
     }
+    this.websocket.close()
   }
 
   render() {
