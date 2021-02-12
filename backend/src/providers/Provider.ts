@@ -6,5 +6,5 @@ export interface VMEndpoint {
 }
 export interface InstanceProvider {
   getServer(identifier: string): Promise<VMEndpoint>;
-  createServer(): Promise<VMEndpoint>;
+  createServer(identifier: string): Promise<VMEndpoint>;
 }
