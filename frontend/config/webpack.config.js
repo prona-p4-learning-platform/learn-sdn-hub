@@ -508,7 +508,7 @@ module.exports = function(webpackEnv) {
     },
     plugins: [
       new MonacoWebpackPlugin({
-        languages: ['javascript', 'cpp', 'typescript']
+        languages: ['javascript', 'cpp', 'typescript', 'python', 'json', 'shell', 'go', 'rust', 'java', 'html', 'ini', 'markdown', 'yaml', 'xml', 'dockerfile']
       }),
       // Generates an `index.html` file with the <script> injected.
       new HtmlWebpackPlugin(
