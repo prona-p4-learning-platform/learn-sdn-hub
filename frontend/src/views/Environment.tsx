@@ -53,7 +53,7 @@ export class EnvironmentView extends React.Component<PropsType> {
       files: [],
       assignment: "",
       terminalResult: "",
-      terminalSeverity: "error",
+      terminalSeverity: "info",
       terminalNotificationOpen: false,
       confirmationDialogOpen: false
     };
@@ -130,7 +130,7 @@ export class EnvironmentView extends React.Component<PropsType> {
   }
 
   render(): ReactNode {
-    const terminals = this.state.ttys.map((alias: string) => <Terminal wsEndpoint={`/environment/${this.props.match.params.environment}/type/${alias}`}
+    const terminals = this.state.ttys.map((alias: string) => <Terminal key={alias} wsEndpoint={`/environment/${this.props.match.params.environment}/type/${alias}`}
     />)
 
     const handleTerminalNotificationClose = () => {
@@ -176,7 +176,7 @@ export class EnvironmentView extends React.Component<PropsType> {
                 <TabControl tabNames={this.state.ttys}>{terminals}</TabControl>
               )}
             </Grid>
-          </TabControl>/
+          </TabControl>
           <Grid item xs={12}>
           </Grid>
         </Grid>
