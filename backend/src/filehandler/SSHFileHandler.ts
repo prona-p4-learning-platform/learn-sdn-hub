@@ -73,9 +73,6 @@ export default class SSHFileHandler {
     if (this.hasClosedOrErrored) {
       return Promise.reject(new Error("SSHFileHandler: SSH connection error."));
     }
-    return new Promise((resolve) => {
-      this.client.end();
-      resolve();
-    });
+    this.client.end();
   }
 }
