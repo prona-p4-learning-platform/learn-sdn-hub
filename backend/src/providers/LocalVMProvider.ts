@@ -41,7 +41,7 @@ export default class LocalVMProvider implements InstanceProvider {
     return this.availableInstances.get(identifier);
   }
 
-  async createServer(): Promise<VMEndpoint> {
+  async createServer(identifier: string): Promise<VMEndpoint> {
     if (this.availableInstancesList.length > 0) {
       return this.availableInstances.get(this.availableInstancesList.pop());
     }
