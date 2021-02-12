@@ -1,5 +1,5 @@
 import { listen } from '@codingame/monaco-jsonrpc';
-import * as monaco from 'monaco-editor-core'
+import * as monaco from 'monaco-editor';
 import {
     MonacoLanguageClient, CloseAction, ErrorAction,
     MonacoServices, createConnection, MessageConnection
@@ -49,10 +49,9 @@ monaco.editor.create(document.getElementById("container")!, {
  */
 
 //export default (editor: monaco.editor.IStandaloneCodeEditor, path: string) : monaco.editor.IStandaloneCodeEditor=> editor
-//export default (editor: monaco.editor.IStandaloneCodeEditor, path: string) : monaco.editor.IStandaloneCodeEditor=> editor
 
-export const LSAugmentation =  (editor: monaco.editor.IStandaloneCodeEditor, path: string) : monaco.editor.IStandaloneCodeEditor=> {
-//export default (editor: monaco.editor.IStandaloneCodeEditor, path: string) : monaco.editor.IStandaloneCodeEditor=> {
+//export const LSAugmentation =  (editor: monaco.editor.IStandaloneCodeEditor, path: string) : monaco.editor.IStandaloneCodeEditor=> {
+export default (editor: monaco.editor.IStandaloneCodeEditor, path: string) : monaco.editor.IStandaloneCodeEditor=> {
     // get lsp to be used for the language based on endpoint's fileExtension
     const environment = path.split("/").slice(-3,-2)
     const language = selectLanguageForEndpoint(path).lspLanguage

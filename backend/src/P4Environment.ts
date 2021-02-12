@@ -134,12 +134,16 @@ export default class P4Environment {
             this.userId,
             filtered[0].identifier
           );
-          return this.environmentProvider.createServer();
+          return this.environmentProvider.createServer(
+            `${this.userId}-${this.configuration.description}`
+          );
         }
         throw err;
       }
     } else {
-      return this.environmentProvider.createServer();
+      return this.environmentProvider.createServer(
+        `${this.userId}-${this.configuration.description}`
+      );
     }
   }
 
