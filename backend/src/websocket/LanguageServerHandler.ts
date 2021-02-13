@@ -19,7 +19,7 @@ export default function (
           "ws://" + ipAddress + ":" + port + "/" + language
         );
         client.on("open", () => {
-          ws.send("backend websocket ready")
+          //ws.send("backend websocket ready");
           ws.on("message", (data) => {
             console.log(data);
             client.send(data);
@@ -34,12 +34,12 @@ export default function (
           ws.close();
         });
         client.on("close", () => {
-          console.log("LanguageServer Client closed...")
-          ws.close()
+          console.log("LanguageServer Client closed...");
+          ws.close();
         });
-        ws.on("close", () => { 
-          console.log("LanguageServer WebSocket closed...")
-          client.close()
+        ws.on("close", () => {
+          console.log("LanguageServer WebSocket closed...");
+          client.close();
         });
       })
       .catch((err) => {

@@ -4,6 +4,7 @@ import {
     MonacoLanguageClient, CloseAction, ErrorAction,
     MonacoServices, createConnection, MessageConnection
 } from 'monaco-languageclient';
+import createWebSocket from '../api/WebSocket';
 import selectLanguageForEndpoint from './MonacoLanguageSelector'
 //import ReconnectingWebSocket from 'reconnectingwebsocket'
 
@@ -50,8 +51,8 @@ export default (editor: monaco.editor.IStandaloneCodeEditor, path: string) : mon
         MonacoServices.install(monaco);
 
         console.log('Creating websocket to /environment/' + environment + '/languageserver/' + language)
-        const webSocket = new WebSocket("ws://192.168.56.105:3005/p4")
         //let backendWebSocketReady = false
+        const webSocket = new WebSocket("ws://192.168.56.105:3005/python")
         //const webSocket = createWebSocket('/environment/' + environment + '/languageserver/' + language);
         //webSocket.onopen = () => {
         //    console.log("Sending auth...")
@@ -86,6 +87,9 @@ export default (editor: monaco.editor.IStandaloneCodeEditor, path: string) : mon
                 //     throw new Error("Timeout while waiting for backend ws connection to language server to get ready")
                 // }
                 // create and start the language client
+
+                // sending auth token to backend
+                //webSocket.send(`auth ${localStorage.getItem("token")}`)
                 console.log("Creating Language Client...")
                 const languageClient = createLanguageClient(connection);
                 const disposable = languageClient.start();
