@@ -34,20 +34,6 @@ monaco.languages.register({
     mimetypes: ['application/json'],
 });
 
-// create Monaco editor
-/* const value = `{
-    "$schema": "http://json.schemastore.org/coffeelint",
-    "line_endings": "unix"
-}`;
-monaco.editor.create(document.getElementById("container")!, {
-    model: monaco.editor.createModel(value, 'json', monaco.Uri.parse('inmemory://model.json')),
-    glyphMargin: true,
-    lightbulb: {
-        enabled: true
-    }
-});
- */
-
 //export default (editor: monaco.editor.IStandaloneCodeEditor, path: string) : monaco.editor.IStandaloneCodeEditor=> editor
 
 //export const LSAugmentation =  (editor: monaco.editor.IStandaloneCodeEditor, path: string) : monaco.editor.IStandaloneCodeEditor=> {
@@ -106,11 +92,11 @@ export default (editor: monaco.editor.IStandaloneCodeEditor, path: string) : mon
                 //console.log(languageClient.trace)
                 //languageClient.info("bla","blub",true);
                 //console.log(languageClient.initializeResult)
-                //console.log(languageClient.needsStart())
-                //connection.onClose(() => {
-                //    console.log("Disposing languageClient")
-                //    disposable.dispose()
-                //});
+                console.log(languageClient.needsStart())
+                connection.onClose(() => {
+                    console.log("Disposing languageClient")
+                    disposable.dispose()
+                });
             }
         });
 

@@ -34,7 +34,7 @@ export default class P4LanguageServiceEditor extends React.Component<P4LanguageS
 //  }
 
   editorDidMount(editor: any, monaco: any) {
-    editor = editorCreator(this._editor, this.props.path)
+    this._editor = editorCreator(editor, this.props.path)
     //editor = new monaco.editor.IStandaloneCodeEditor()
     this.props.onMounted(editor)
   }
