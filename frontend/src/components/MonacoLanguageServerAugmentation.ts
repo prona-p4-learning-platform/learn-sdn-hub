@@ -6,7 +6,6 @@ import {
 } from 'monaco-languageclient';
 import createWebSocket from '../api/WebSocket';
 import selectLanguageForEndpoint from './MonacoLanguageSelector'
-//import ReconnectingWebSocket from 'reconnectingwebsocket'
 
 // register Monaco languages
 monaco.languages.register({
@@ -36,8 +35,8 @@ monaco.languages.register({
 });
 
 //export default (editor: monaco.editor.IStandaloneCodeEditor, path: string) : monaco.editor.IStandaloneCodeEditor=> editor
-
 //export const LSAugmentation =  (editor: monaco.editor.IStandaloneCodeEditor, path: string) : monaco.editor.IStandaloneCodeEditor=> {
+
 export default (editor: monaco.editor.IStandaloneCodeEditor, path: string) : monaco.editor.IStandaloneCodeEditor=> {
     // get lsp to be used for the language based on endpoint's fileExtension
     const environment = path.split("/").slice(-3,-2)
@@ -50,69 +49,53 @@ export default (editor: monaco.editor.IStandaloneCodeEditor, path: string) : mon
         //MonacoServices.install(editor,{rootUri: "file://tmp"});
         MonacoServices.install(monaco);
 
+        //static/direct connection to lsp:
+        //const webSocket = new WebSocket("ws://192.168.56.105:3005/" + language)
+
         console.log('Creating websocket to /environment/' + environment + '/languageserver/' + language)
-        //let backendWebSocketReady = false
-        const webSocket = new WebSocket("ws://192.168.56.105:3005/python")
-        //const webSocket = createWebSocket('/environment/' + environment + '/languageserver/' + language);
-        //webSocket.onopen = () => {
-        //    console.log("Sending auth...")
-        //    webSocket.send(`auth ${localStorage.getItem("token")}`)
-        //}
-
-        // Waiting for backend to setup ws connection to language server...
-        //webSocket.onmessage = event => {
-        //    const message = event.data
-        //    console.log(message)
-        //    if (message === "backend websocket ready") {
-        //        console.log(message)
-        //        backendWebSocketReady = true
-        //    }
-        //}
-
+        const webSocket = createWebSocket('/environment/' + environment + '/languageserver/' + language);
         //const logger = new ConsoleLogger()
 
         // listen when the web socket is opened
         listen({
             webSocket,
             onConnection: connection => {
-                // Waiting for backend to setup ws connection to language server...
-                // let timeout = 10000;
-                // while (timeout > 0 && !backendWebSocketReady) {
-                //     sleep(200).then(() => {
-                //     })
-                //     timeout-=1
-                //     console.log(timeout)
-                // }
-                // if (!backendWebSocketReady) {
-                //     throw new Error("Timeout while waiting for backend ws connection to language server to get ready")
-                // }
                 // create and start the language client
 
                 // sending auth token to backend
-                //webSocket.send(`auth ${localStorage.getItem("token")}`)
-                console.log("Creating Language Client...")
-                const languageClient = createLanguageClient(connection);
-                const disposable = languageClient.start();
-                //console.log(languageClient.trace)
-                //languageClient.info("bla","blub",true);
-                //console.log(languageClient.initializeResult)
-                console.log(languageClient.needsStart())
-                connection.onClose(() => {
-                    console.log("Disposing languageClient")
-                    disposable.dispose()
-                });
+                webSocket.send(`auth ${localStorage.getItem("token")}`)
+
+                // backend seems to need some time to process auth token and initiate ws conn from backend to lsp, hence,
+                // wait for backend response, otherwise language client initialization msg will be sent to early and ignored
+
+                // save onmessage fn
+                const defaultOnMessage = webSocket.onmessage
+                webSocket.onmessage = (e) => {
+                    if (e.data === "backend websocket ready") {
+                        // restore onmessage fn
+                        webSocket.onmessage = defaultOnMessage;
+
+                        console.log("Creating Language Client...")
+                        const languageClient = createLanguageClient(connection);
+                        const disposable = languageClient.start();
+                        //console.log(languageClient.trace)
+                        //languageClient.info("bla","blub",true);
+                        //console.log(languageClient.initializeResult)
+                        //console.log(languageClient.needsStart())
+                        connection.onClose(() => {
+                            console.log("Disposing languageClient")
+                            disposable.dispose()
+                        });
+                    }
+                }
             }
         });
 
-        //editor.onDidDispose(() => {
-        //    console.log("Closing lsp websocket...")
-        //    webSocket.close()
-        //})
+        editor.onDidDispose(() => {
+            console.log("Closing lsp websocket...")
+            webSocket.close()
+        })
     }
-
-    //function sleep(ms: number) {
-    //    return new Promise(resolve => setTimeout(resolve, ms));
-    //}
 
     function createLanguageClient(connection: MessageConnection): MonacoLanguageClient {
         const model = editor.getModel()
@@ -139,4 +122,3 @@ export default (editor: monaco.editor.IStandaloneCodeEditor, path: string) : mon
 
     return editor
 }
-

@@ -19,7 +19,7 @@ export default function (
           "ws://" + ipAddress + ":" + port + "/" + language
         );
         client.on("open", () => {
-          //ws.send("backend websocket ready");
+          ws.send("backend websocket ready");
           ws.on("message", (data) => {
             console.log(data);
             client.send(data);
