@@ -34,9 +34,6 @@ monaco.languages.register({
     mimetypes: ['application/json'],
 });
 
-//export default (editor: monaco.editor.IStandaloneCodeEditor, path: string) : monaco.editor.IStandaloneCodeEditor=> editor
-//export const LSAugmentation =  (editor: monaco.editor.IStandaloneCodeEditor, path: string) : monaco.editor.IStandaloneCodeEditor=> {
-
 export default (editor: monaco.editor.IStandaloneCodeEditor, path: string) : monaco.editor.IStandaloneCodeEditor=> {
     // get lsp to be used for the language based on endpoint's fileExtension
     const environment = path.split("/").slice(-3,-2)
@@ -46,15 +43,10 @@ export default (editor: monaco.editor.IStandaloneCodeEditor, path: string) : mon
     if (language !== "") {
         // install Monaco language client services
         // @ts-ignore
-        //MonacoServices.install(editor,{rootUri: "file://tmp"});
         MonacoServices.install(monaco);
-
-        //static/direct connection to lsp:
-        //const webSocket = new WebSocket("ws://192.168.56.105:3005/" + language)
 
         console.log('Creating websocket to /environment/' + environment + '/languageserver/' + language)
         const webSocket = createWebSocket('/environment/' + environment + '/languageserver/' + language);
-        //const logger = new ConsoleLogger()
 
         // listen when the web socket is opened
         listen({
@@ -65,8 +57,10 @@ export default (editor: monaco.editor.IStandaloneCodeEditor, path: string) : mon
                 // sending auth token to backend
                 webSocket.send(`auth ${localStorage.getItem("token")}`)
 
-                // backend seems to need some time to process auth token and initiate ws conn from backend to lsp, hence,
-                // wait for backend response, otherwise language client initialization msg will be sent to early and ignored
+                // backend needs some time to process auth token and initiate
+                // ws conn from backend to lsp, hence, wait for backend
+                // response, otherwise language client initialization msg will
+                // be sent to early and ignored
 
                 // save onmessage fn
                 const defaultOnMessage = webSocket.onmessage
@@ -78,10 +72,6 @@ export default (editor: monaco.editor.IStandaloneCodeEditor, path: string) : mon
                         console.log("Creating Language Client...")
                         const languageClient = createLanguageClient(connection);
                         const disposable = languageClient.start();
-                        //console.log(languageClient.trace)
-                        //languageClient.info("bla","blub",true);
-                        //console.log(languageClient.initializeResult)
-                        //console.log(languageClient.needsStart())
                         connection.onClose(() => {
                             console.log("Disposing languageClient")
                             disposable.dispose()

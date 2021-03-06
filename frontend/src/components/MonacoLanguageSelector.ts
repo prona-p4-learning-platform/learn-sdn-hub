@@ -7,8 +7,8 @@ export default function selectLanguageForEndpoint(endpoint: string) : MonacoLang
 {
   const fileExtension = endpoint.split(".").slice(-1)
 
-  var editorLanguage: string
-  var lspLanguage: string
+  let editorLanguage: string
+  let lspLanguage: string
   switch(fileExtension.join()) {
     case 'p4': {
         editorLanguage = "c";
@@ -30,6 +30,5 @@ export default function selectLanguageForEndpoint(endpoint: string) : MonacoLang
       break;
     }
   }
-  //console.log("ext: " + fileExtension.join() + " lsp: " + lspLanguage + " editor: " + editorLanguage)
   return { 'editorLanguage': editorLanguage, 'lspLanguage': lspLanguage} as MonacoLanguageSelectionType
 }
