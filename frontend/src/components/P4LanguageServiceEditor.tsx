@@ -1,19 +1,20 @@
-import * as React from 'react';
+import React from 'react';
 import * as monaco from 'monaco-editor';
 import editorCreator from './MonacoLanguageServerAugmentation';
-import MonacoReact from 'react-monaco-editor'
-interface MonacoEditorProps extends monaco.editor.IStandaloneEditorConstructionOptions{
+import MonacoEditor from 'react-monaco-editor';
+
+interface P4LanguageServiceEditorProps extends monaco.editor.IStandaloneEditorConstructionOptions{
     path: string;
     value: string;
     language: string;
     onMounted: (editor: monaco.editor.IStandaloneCodeEditor) => void;
     onChange: (value: string) => void;
 }
-export default class MonacoEditor extends React.Component<MonacoEditorProps> {
-  private _node: HTMLElement | undefined;
-  private _editor : monaco.editor.IStandaloneCodeEditor | undefined;
 
-  constructor(props: MonacoEditorProps ){
+export default class P4LanguageServiceEditor extends React.Component<P4LanguageServiceEditorProps> {
+  private _editor!: monaco.editor.IStandaloneCodeEditor;
+
+  constructor(props: P4LanguageServiceEditorProps ){
       super(props)
       this.editorDidMount = this.editorDidMount.bind(this)
       this.onChange = this.onChange.bind(this)
@@ -23,18 +24,22 @@ export default class MonacoEditor extends React.Component<MonacoEditorProps> {
     this.props.onChange(content)
   }
 
-  editorDidMount(editor: monaco.editor.IStandaloneCodeEditor):void{
-    this._editor = editorCreator(editor)
-    this.props.onMounted(this._editor) 
+  editorDidMount(editor: any, monaco: any) {
+    this._editor = editorCreator(editor, this.props.path)
+    this.props.onMounted(editor)
   }
 
   componentWillUnmount() {
+    console.log("Will unmount editor")
     this._editor && this._editor.dispose();
   }
 
   render() {
-    return <MonacoReact 
-        language="c"
+    return <MonacoEditor
+        width="100%"
+        height="100%"
+        theme="vs-dark"
+        language={this.props.language}
         value={this.props.value}
         onChange={this.onChange}
         editorDidMount={this.editorDidMount}

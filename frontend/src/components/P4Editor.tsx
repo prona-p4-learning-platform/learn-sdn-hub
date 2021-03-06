@@ -12,6 +12,7 @@ import Dialog from '@material-ui/core/Dialog';
 import DialogActions from '@material-ui/core/DialogActions';
 import DialogContent from '@material-ui/core/DialogContent';
 import DialogContentText from '@material-ui/core/DialogContentText';
+import selectLanguageForEndpoint from "./MonacoLanguageSelector";
 
 type Severity = "error" | "success" | "info" | "warning" | undefined;
 
@@ -22,6 +23,7 @@ interface State {
   editorNotificationOpen: boolean
   fileChanged: boolean
   editorConfirmationDialogOpen: boolean
+  language: string
 }
 
 interface P4EditorProps {
@@ -41,10 +43,11 @@ export default class P4Editor extends React.Component<P4EditorProps> {
     this.state = {
       code: "",
       editorResult: "",
-      editorSeverity: "error",
+      editorSeverity: "info",
       editorNotificationOpen: false,
       fileChanged: false,
-      editorConfirmationDialogOpen: false
+      editorConfirmationDialogOpen: false,
+      language: "p4"
     };
     this.save = this.save.bind(this);
     this.load = this.load.bind(this);
@@ -184,9 +187,10 @@ export default class P4Editor extends React.Component<P4EditorProps> {
             Retrieve
           </Button>
         </ButtonGroup>
+        <Box id="monacoEditor"></Box>
         <P4LanguageServiceEditor onMounted={(editor: monaco.editor.IStandaloneCodeEditor) => this.editorDidMount(editor)}
           value={this.state.code}
-          language="p4"
+          language={selectLanguageForEndpoint(this.props.endpoint).editorLanguage}
           path={this.props.endpoint}
           onChange={(value: string) => this.onChange(value)} />
         <Snackbar open={this.state.editorNotificationOpen} autoHideDuration={6000} onClose={handleEditorNotificationClose}>
