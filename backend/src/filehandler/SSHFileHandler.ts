@@ -5,6 +5,7 @@ export default class SSHFileHandler {
   private client: Client;
   private hasClosedOrErrored = false;
   constructor(ipaddress: string, port: number) {
+    console.log("Establishing SFTP connection " + ipaddress + ":" + port);
     this.client = new Client();
     this.client
       .on("error", (err) => {
@@ -61,10 +62,12 @@ export default class SSHFileHandler {
           resolve();
         });
         writeStream.on("finish", () => {
-          sftp.end();
           console.log("stream closed 2");
+          sftp.end();
+          resolve();
         });
         writeStream.end();
+        resolve();
       });
     });
   }

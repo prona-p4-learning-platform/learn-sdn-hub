@@ -1,8 +1,8 @@
-//import React as React from "react";
 import React from "react";
 import Grid from "@material-ui/core/Grid";
 import Terminal from "../components/Terminal";
 import EditorTabs from "../components/EditorTabs";
+import TerminalTabs from "../components/TerminalTabs";
 import { withRouter } from "react-router-dom";
 import { RouteComponentProps } from "react-router";
 import Button from "@material-ui/core/Button";
@@ -27,15 +27,22 @@ type PathParamsType = {
 
 type PropsType = RouteComponentProps<PathParamsType> & {};
 
+type TerminalStateType = {
+  endpoint: string;
+  state: string;
+}
+
 interface State {
   environmentStatus: string;
-  ttys: string[];
+  ttyTabs: string[];
+  ttys: string[][];
   files: string[];
   assignment: ""
   terminalResult: string
   terminalSeverity: Severity
   terminalNotificationOpen: boolean
   confirmationDialogOpen: boolean
+  terminalState: TerminalStateType[]
 }
 
 function Alert(props: JSX.IntrinsicAttributes & AlertProps) {
@@ -49,15 +56,18 @@ export class EnvironmentView extends React.Component<PropsType> {
     super(props);
     this.state = {
       environmentStatus: "running",
+      ttyTabs: [],
       ttys: [],
       files: [],
       assignment: "",
+      terminalState: [],
       terminalResult: "",
       terminalSeverity: "info",
       terminalNotificationOpen: false,
       confirmationDialogOpen: false
     };
     this.restartEnvironment = this.restartEnvironment.bind(this)
+    this.storeTerminalState = this.storeTerminalState.bind(this)
   }
 
   componentDidMount(): void {
@@ -111,7 +121,7 @@ export class EnvironmentView extends React.Component<PropsType> {
       .then((response) => response.json())
       .then((data) => {
         if (data.error !== true) {
-          this.setState({ ttys: data.ttys, files: data.files });
+          this.setState({ ttyTabs: data.ttyTabs, ttys: data.ttys, files: data.files });
         }
       });
   }
@@ -125,13 +135,37 @@ export class EnvironmentView extends React.Component<PropsType> {
       });
   }
 
+  storeTerminalState(endpoint: string, state: string) {
+    let copyTerminalState = this.state.terminalState.slice();
+    const newTerminalState: TerminalStateType = {
+      endpoint: endpoint,
+      state: state
+    };
+    let endpointIndex = copyTerminalState.findIndex(element => element.endpoint === endpoint);
+    if ( endpointIndex === -1 ) {
+      this.setState( { terminalState: copyTerminalState.concat([newTerminalState]) } );
+    }
+    else {
+      copyTerminalState[endpointIndex] = newTerminalState;
+      this.setState( {terminalState: copyTerminalState} );
+    }
+  }
+
+  getTerminalState(endpoint: string): string | undefined {
+    return this.state.terminalState.find(element => element.endpoint === endpoint)?.state;
+  }
+
   componentDidUpdate() {
     mermaid.init(document.querySelectorAll('code.language-mermaid'))
   }
 
   render(): ReactNode {
-    const terminals = this.state.ttys.map((alias: string) => <Terminal key={alias} wsEndpoint={`/environment/${this.props.match.params.environment}/type/${alias}`}
-    />)
+    const terminals = this.state.ttys.map((tasks: string[], index: number) => 
+      tasks.map((alias: string) =>
+          <Terminal key={alias} wsEndpoint={`/environment/${this.props.match.params.environment}/type/${alias}`}
+            terminalState={this.getTerminalState(`/environment/${this.props.match.params.environment}/type/${alias}`)} onTerminalSerialization={this.storeTerminalState} />
+      )
+    );
 
     const handleTerminalNotificationClose = () => {
       this.setState({ terminalNotificationOpen: false })
@@ -151,14 +185,14 @@ export class EnvironmentView extends React.Component<PropsType> {
     };
 
     return (
-      <Grid container spacing={3}>
-        <Grid item xs={6}>
-          <TabControl tabNames={["Assignment", "Terminals"]}>
-            <ReactMarkdown
-              source={this.state.assignment}
-            />
-            <Grid item xs={12}>
-              <Grid container direction="row" justify="flex-start" alignItems="center" spacing={3}>
+      <>
+        <Grid container spacing={0}>
+          <Grid item xs={6}>
+            <TabControl tabNames={["Assignment", "Terminals"]}>
+              <ReactMarkdown
+                source={this.state.assignment} className="myMarkdownContainer"
+              />
+              <Grid container direction="row" justify="flex-start" alignItems="center" spacing={1}>
                 <Grid item>
                   <Button
                     variant="contained"
@@ -168,26 +202,26 @@ export class EnvironmentView extends React.Component<PropsType> {
                     Restart terminal environment
                 </Button>
                 </Grid>
-                <Grid>
+                <Grid item>
                   <Typography>Status: {this.state.environmentStatus}</Typography>
                 </Grid>
+                <Grid item>
+                  <Box className="myScrollContainer">
+                    {this.state.environmentStatus === "running" && (
+                      <TerminalTabs tabNames={this.state.ttyTabs}>{terminals}</TerminalTabs>
+                    )}
+                  </Box>
+                </Grid>
               </Grid>
-              {this.state.environmentStatus === "running" && (
-                <TabControl tabNames={this.state.ttys}>{terminals}</TabControl>
-              )}
-            </Grid>
-          </TabControl>
-          <Grid item xs={12}>
+            </TabControl>
           </Grid>
-        </Grid>
-        <Grid item xs={6}>
-          <Box>
+          <Grid item xs={6}>
             <EditorTabs
               endpoints={this.state.files.map(fileAlias =>
                 `/api/environment/${this.props.match.params.environment}/file/${fileAlias}`,
               )}
             />
-          </Box>
+          </Grid>
         </Grid>
         <Snackbar open={this.state.terminalNotificationOpen} autoHideDuration={6000} onClose={handleTerminalNotificationClose}>
           <Alert onClose={handleTerminalNotificationClose} severity={this.state.terminalSeverity as Severity}>
@@ -214,7 +248,7 @@ export class EnvironmentView extends React.Component<PropsType> {
           </Button>
           </DialogActions>
         </Dialog>
-      </Grid>
+      </>
     );
   }
 }

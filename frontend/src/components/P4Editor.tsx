@@ -178,8 +178,8 @@ export default class P4Editor extends React.Component<P4EditorProps> {
     };
 
     return (
-      <Box style={{ height: (window.innerHeight - 220) + 'px' }}>
-        <ButtonGroup variant="contained" color="primary" style={{ margin: "5px" }}>
+      <Box className="myMonacoClass">
+        <ButtonGroup variant="contained" color="primary" style={{ margin: "2px" }}>
           <Button variant="contained" color="primary" disabled={!this.state.fileChanged} startIcon={<CloudUploadIcon />} onClick={this.save}>
             Deploy
           </Button>

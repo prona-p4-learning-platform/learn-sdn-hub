@@ -1,13 +1,12 @@
 import React from "react";
 import Tabs from "@material-ui/core/Tabs";
 import Tab from "@material-ui/core/Tab";
-import Typography from "@material-ui/core/Typography";
-import Box from "@material-ui/core/Box";
+import Grid from "@material-ui/core/Grid";
 
 interface TabsProps {
   index: any;
   value: any;
-  children?: React.ReactChild | React.ReactChildren;
+  children?: JSX.Element[];
 }
 
 function TabPanel(props: TabsProps) {
@@ -16,16 +15,18 @@ function TabPanel(props: TabsProps) {
     <div
       role="tabpanel"
       hidden={value !== index}
-      id={`tabpanel-${index}`}
-      key={`tabpanel-${index}`}
-      style={{ height: (window.innerHeight - 120) + 'px' }}
-      aria-labelledby={`tab-${index}`}
+      id={`terminal-tabpanel-${index}`}
+      key={`terminal-tabpanel-${index}`}
+      className="myTerminalTabContainer"
+      aria-labelledby={`terminal-tab-${index}`}
       {...other}
     >
       {value === index && (
-        <Box p={1}>
-          <Typography component="span">{children}</Typography>
-        </Box>
+        <Grid container direction="column" spacing={1}>
+          {Array.isArray(children) && children.map((child, index) =>
+            <Grid item xs={12} key={index}>{child}</Grid>
+          )}
+        </Grid>
       )}
     </div>
   );
@@ -33,10 +34,10 @@ function TabPanel(props: TabsProps) {
 
 interface TabControlProps {
   tabNames: string[];
-  children?: React.ReactChild | React.ReactChild[];
+  children?: JSX.Element[][];
 }
 
-export default function TabControl(props: TabControlProps) {
+export default function TerminalTabs(props: TabControlProps) {
   const [value, setValue] = React.useState(0);
 
   const handleChange = (event: React.ChangeEvent<{}>, newValue: number) => {
@@ -48,7 +49,7 @@ export default function TabControl(props: TabControlProps) {
       <Tabs
         value={value}
         onChange={handleChange}
-        aria-label="tabs"
+        aria-label="terminal tabs"
       >
         {props.tabNames && props.tabNames.map((name) => (
           <Tab label={name} key={name} />
