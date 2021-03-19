@@ -8,7 +8,7 @@ import createWebSocket from '../api/WebSocket'
 interface TerminalProps {
   wsEndpoint: string;
   terminalState: string | undefined;
-  onTerminalSerialization: Function;
+  onTerminalUnmount: Function;
 }
 
 export default class XTerminal extends React.Component<TerminalProps> {
@@ -55,7 +55,7 @@ export default class XTerminal extends React.Component<TerminalProps> {
       clearTimeout(this.resizeTimer)
     }
     const serializedState = this.serializeAddon.serialize()
-    this.props.onTerminalSerialization(this.props.wsEndpoint, serializedState);
+    this.props.onTerminalUnmount(this.props.wsEndpoint, serializedState);
     this.websocket.close()
   }
 

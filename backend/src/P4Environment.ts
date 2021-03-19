@@ -78,6 +78,10 @@ export default class P4Environment {
     this.editableFiles.set(alias, path);
   }
 
+  public getFilePathByAlias(alias: string): string {
+    return this.editableFiles.get(alias);
+  }
+
   public getConsoleByAlias(alias: string): Console {
     return this.activeConsoles.get(alias);
   }

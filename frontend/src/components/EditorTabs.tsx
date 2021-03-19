@@ -32,10 +32,11 @@ function TabPanel(props: EditorTabsProps) {
   );
 }
 interface P4EditorTabsProps {
-  endpoints: Array<string>;
+  tabNames: string[];
+  children?: JSX.Element[];
 }
 
-export default function SimpleTabs(props: P4EditorTabsProps) {
+export default function EditorTabs(props: P4EditorTabsProps) {
   const [value, setValue] = React.useState(0);
 
   const handleChange = (event: React.ChangeEvent<{}>, newValue: number) => {
@@ -49,15 +50,16 @@ export default function SimpleTabs(props: P4EditorTabsProps) {
         onChange={handleChange}
         aria-label="editor tabs"
       >
-        {props.endpoints.map((endpoint) => (
-          <Tab key={endpoint} label={endpoint.split("/").slice(-1)} />
+        {props.tabNames && props.tabNames.map((name) => (
+          <Tab label={name} key={name} />
         ))}
       </Tabs>
-      {props.endpoints.map((endpoint, index) => (
+
+      {Array.isArray(props.children) && props.children.map((child, index) =>
         <TabPanel value={value} index={index} key={index}>
-          <P4Editor endpoint={endpoint} />
+          {child}
         </TabPanel>
-      ))}
+      )}
     </>
   );
 }

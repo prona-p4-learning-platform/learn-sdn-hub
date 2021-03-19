@@ -143,7 +143,11 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
       env
         .readFile(req.params.alias)
         .then((content: string) => {
-          res.status(200).end(content);
+          res
+            .set("Content-Location", env.getFilePathByAlias(req.params.alias))
+            .set("Access-Control-Expose-Headers", "Content-Location")
+            .status(200)
+            .end(content);
         })
         .catch((err) => {
           console.log(err);

@@ -18,6 +18,8 @@ import Dialog from '@material-ui/core/Dialog';
 import DialogActions from '@material-ui/core/DialogActions';
 import DialogContent from '@material-ui/core/DialogContent';
 import DialogContentText from '@material-ui/core/DialogContentText';
+import P4Editor from "../components/P4Editor";
+import { Position } from "monaco-editor";
 
 type Severity = "error" | "success" | "info" | "warning" | undefined;
 
@@ -32,6 +34,14 @@ type TerminalStateType = {
   state: string;
 }
 
+type EditorStateType = {
+  endpoint: string;
+  code: string;
+  fileChanged: boolean;
+  filePath: string;
+  position: Position;
+}
+
 interface State {
   environmentStatus: string;
   ttyTabs: string[];
@@ -43,6 +53,7 @@ interface State {
   terminalNotificationOpen: boolean
   confirmationDialogOpen: boolean
   terminalState: TerminalStateType[]
+  editorState: EditorStateType[]
 }
 
 function Alert(props: JSX.IntrinsicAttributes & AlertProps) {
@@ -61,6 +72,7 @@ export class EnvironmentView extends React.Component<PropsType> {
       files: [],
       assignment: "",
       terminalState: [],
+      editorState: [],
       terminalResult: "",
       terminalSeverity: "info",
       terminalNotificationOpen: false,
@@ -68,6 +80,7 @@ export class EnvironmentView extends React.Component<PropsType> {
     };
     this.restartEnvironment = this.restartEnvironment.bind(this)
     this.storeTerminalState = this.storeTerminalState.bind(this)
+    this.storeEditorState = this.storeEditorState.bind(this)
   }
 
   componentDidMount(): void {
@@ -147,12 +160,38 @@ export class EnvironmentView extends React.Component<PropsType> {
     }
     else {
       copyTerminalState[endpointIndex] = newTerminalState;
-      this.setState( {terminalState: copyTerminalState} );
+      this.setState( { terminalState: copyTerminalState} );
     }
   }
 
   getTerminalState(endpoint: string): string | undefined {
     return this.state.terminalState.find(element => element.endpoint === endpoint)?.state;
+  }
+
+  storeEditorState(endpoint: string, code: string, fileChanged: boolean, filePath: string, position: Position) {
+    // currently monaco does not support serialization, so only file content, change statue, file path and cursor/scroll position is preserved on changing file tabs, 
+    // when reloading the entire page, changes will be lost however, this maybe also needs to be fixed for terminals, but it seams like a proper multi-session
+    // and/or collaboration handling for terminals and editors will address this/would be more appropriate
+    let copyEditorState = this.state.editorState.slice();
+    const newEditorState: EditorStateType = {
+      endpoint: endpoint,
+      code: code,
+      fileChanged: fileChanged,
+      filePath: filePath,
+      position: position
+    };
+    let endpointIndex = copyEditorState.findIndex(element => element.endpoint === endpoint);
+    if ( endpointIndex === -1 ) {
+      this.setState( { editorState: copyEditorState.concat([newEditorState]) } );
+    }
+    else {
+      copyEditorState[endpointIndex] = newEditorState;
+      this.setState( { editorState: copyEditorState} );
+    }
+  }
+
+  getEditorState(endpoint: string): EditorStateType | undefined {
+    return this.state.editorState.find(element => element.endpoint === endpoint);
   }
 
   componentDidUpdate() {
@@ -163,8 +202,13 @@ export class EnvironmentView extends React.Component<PropsType> {
     const terminals = this.state.ttys.map((tasks: string[], index: number) => 
       tasks.map((alias: string) =>
           <Terminal key={alias} wsEndpoint={`/environment/${this.props.match.params.environment}/type/${alias}`}
-            terminalState={this.getTerminalState(`/environment/${this.props.match.params.environment}/type/${alias}`)} onTerminalSerialization={this.storeTerminalState} />
+            terminalState={this.getTerminalState(`/environment/${this.props.match.params.environment}/type/${alias}`)} onTerminalUnmount={this.storeTerminalState} />
       )
+    );
+
+    const editors = this.state.files.map((fileAlias: string) =>
+      <P4Editor key={fileAlias} endpoint={`/api/environment/${this.props.match.params.environment}/file/${fileAlias}`} 
+        editorState={this.getEditorState(`/api/environment/${this.props.match.params.environment}/file/${fileAlias}`)} onEditorUnmount={this.storeEditorState} />
     );
 
     const handleTerminalNotificationClose = () => {
@@ -216,11 +260,7 @@ export class EnvironmentView extends React.Component<PropsType> {
             </TabControl>
           </Grid>
           <Grid item xs={6}>
-            <EditorTabs
-              endpoints={this.state.files.map(fileAlias =>
-                `/api/environment/${this.props.match.params.environment}/file/${fileAlias}`,
-              )}
-            />
+            <EditorTabs tabNames={this.state.files}>{editors}</EditorTabs>
           </Grid>
         </Grid>
         <Snackbar open={this.state.terminalNotificationOpen} autoHideDuration={6000} onClose={handleTerminalNotificationClose}>
