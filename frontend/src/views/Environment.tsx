@@ -11,7 +11,7 @@ import ReactMarkdown from 'react-markdown'
 import mermaid from 'mermaid'
 import TabControl from '../components/TabControl'
 import APIRequest from '../api/Request'
-import { Box, Typography } from "@material-ui/core";
+import { Typography } from "@material-ui/core";
 import Snackbar from '@material-ui/core/Snackbar';
 import MuiAlert, { AlertProps } from '@material-ui/lab/Alert';
 import Dialog from '@material-ui/core/Dialog';
@@ -42,31 +42,33 @@ type EditorStateType = {
   position: Position;
 }
 
-interface State {
+type StateType = {
   environmentStatus: string;
+  errorMessage: string;
   ttyTabs: string[];
   ttys: string[][];
   files: string[];
-  assignment: ""
-  terminalResult: string
-  terminalSeverity: Severity
-  terminalNotificationOpen: boolean
-  confirmationDialogOpen: boolean
-  terminalState: TerminalStateType[]
-  editorState: EditorStateType[]
+  assignment: string;
+  terminalResult: string;
+  terminalSeverity: Severity;
+  terminalNotificationOpen: boolean;
+  confirmationDialogOpen: boolean;
+  terminalState: TerminalStateType[];
+  editorState: EditorStateType[];
 }
 
 function Alert(props: JSX.IntrinsicAttributes & AlertProps) {
   return <MuiAlert elevation={6} variant="filled" {...props} />;
 }
 
-export class EnvironmentView extends React.Component<PropsType> {
-  public state: State;
+export class EnvironmentView extends React.Component<PropsType,StateType> {
+  public state: StateType;
 
   constructor(props: PropsType) {
     super(props);
     this.state = {
       environmentStatus: "running",
+      errorMessage: "",
       ttyTabs: [],
       ttys: [],
       files: [],
@@ -114,7 +116,8 @@ export class EnvironmentView extends React.Component<PropsType> {
           terminalResult: "Restart failed! (" + message.message + ")",
           terminalSeverity: "error",
           terminalNotificationOpen: true,
-          environmentStatus: "error", error: message.message
+          environmentStatus: "error", 
+          errorMessage: message.message
         });
       }
     }
@@ -123,7 +126,8 @@ export class EnvironmentView extends React.Component<PropsType> {
         terminalResult: "Restart failed! (" + error + ")",
         terminalSeverity: "error",
         terminalNotificationOpen: true,
-        environmentStatus: "error", error: error
+        environmentStatus: "error", 
+        errorMessage: error
       });
     }
   }
@@ -149,19 +153,25 @@ export class EnvironmentView extends React.Component<PropsType> {
   }
 
   storeTerminalState(endpoint: string, state: string) {
-    let copyTerminalState = this.state.terminalState.slice();
-    const newTerminalState: TerminalStateType = {
-      endpoint: endpoint,
-      state: state
-    };
-    let endpointIndex = copyTerminalState.findIndex(element => element.endpoint === endpoint);
-    if ( endpointIndex === -1 ) {
-      this.setState( { terminalState: copyTerminalState.concat([newTerminalState]) } );
-    }
-    else {
-      copyTerminalState[endpointIndex] = newTerminalState;
-      this.setState( { terminalState: copyTerminalState} );
-    }
+    this.setState((prevState) => {
+      const newTerminalState: TerminalStateType = {
+        endpoint: endpoint,
+        state: state
+      };
+      const endpointIndex = prevState.terminalState.findIndex(element => element.endpoint === endpoint);
+      if ( endpointIndex === -1 ) {
+        const addedTerminalState = [...prevState.terminalState, newTerminalState];
+        return {
+          terminalState: addedTerminalState
+        }
+      } else {
+        let changedTerminalState = [...prevState.terminalState]
+        changedTerminalState[endpointIndex] = newTerminalState;
+        return {
+          terminalState: changedTerminalState
+        }
+      }
+    })
   }
 
   getTerminalState(endpoint: string): string | undefined {
@@ -172,22 +182,28 @@ export class EnvironmentView extends React.Component<PropsType> {
     // currently monaco does not support serialization, so only file content, change statue, file path and cursor/scroll position is preserved on changing file tabs, 
     // when reloading the entire page, changes will be lost however, this maybe also needs to be fixed for terminals, but it seams like a proper multi-session
     // and/or collaboration handling for terminals and editors will address this/would be more appropriate
-    let copyEditorState = this.state.editorState.slice();
-    const newEditorState: EditorStateType = {
-      endpoint: endpoint,
-      code: code,
-      fileChanged: fileChanged,
-      filePath: filePath,
-      position: position
-    };
-    let endpointIndex = copyEditorState.findIndex(element => element.endpoint === endpoint);
-    if ( endpointIndex === -1 ) {
-      this.setState( { editorState: copyEditorState.concat([newEditorState]) } );
-    }
-    else {
-      copyEditorState[endpointIndex] = newEditorState;
-      this.setState( { editorState: copyEditorState} );
-    }
+    this.setState((prevState) => {
+      const newEditorState: EditorStateType = {
+        endpoint: endpoint,
+        code: code,
+        fileChanged: fileChanged,
+        filePath: filePath,
+        position: position
+      };
+      const endpointIndex = prevState.editorState.findIndex(element => element.endpoint === endpoint);
+      if ( endpointIndex === -1 ) {
+        const addedEditorState = [...prevState.editorState, newEditorState];
+        return {
+          editorState: addedEditorState
+        }
+      } else {
+        let changedEditorState = [...prevState.editorState]
+        changedEditorState[endpointIndex] = newEditorState;
+        return {
+          editorState: changedEditorState
+        }
+      }
+    })
   }
 
   getEditorState(endpoint: string): EditorStateType | undefined {
@@ -236,25 +252,25 @@ export class EnvironmentView extends React.Component<PropsType> {
               <ReactMarkdown
                 source={this.state.assignment} className="myMarkdownContainer"
               />
-              <Grid container direction="row" justify="flex-start" alignItems="center" spacing={1}>
-                <Grid item>
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    onClick={handleConfirmationDialogOpen}
-                  >
-                    Restart terminal environment
-                </Button>
+              <Grid container direction="column" justify="flex-start" alignItems="center" spacing={1}>
+                <Grid container direction="row" justify="flex-start" alignItems="center" spacing={1}>
+                  <Grid item>
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      onClick={handleConfirmationDialogOpen}
+                    >
+                      Restart terminal environment
+                  </Button>
+                  </Grid>
+                  <Grid item>
+                    <Typography>Status: {this.state.environmentStatus}</Typography>
+                  </Grid>
                 </Grid>
                 <Grid item>
-                  <Typography>Status: {this.state.environmentStatus}</Typography>
-                </Grid>
-                <Grid item>
-                  <Box className="myScrollContainer">
-                    {this.state.environmentStatus === "running" && (
-                      <TerminalTabs tabNames={this.state.ttyTabs}>{terminals}</TerminalTabs>
-                    )}
-                  </Box>
+                  {this.state.environmentStatus === "running" && (
+                    <TerminalTabs tabNames={this.state.ttyTabs}>{terminals}</TerminalTabs>
+                  )}
                 </Grid>
               </Grid>
             </TabControl>

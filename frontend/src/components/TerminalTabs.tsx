@@ -1,7 +1,6 @@
 import React from "react";
 import Tabs from "@material-ui/core/Tabs";
 import Tab from "@material-ui/core/Tab";
-import Grid from "@material-ui/core/Grid";
 
 interface TabsProps {
   index: any;
@@ -17,17 +16,17 @@ function TabPanel(props: TabsProps) {
       hidden={value !== index}
       id={`terminal-tabpanel-${index}`}
       key={`terminal-tabpanel-${index}`}
-      className="myTerminalTabContainer"
+      className="myTerminalTab"
       aria-labelledby={`terminal-tab-${index}`}
       {...other}
     >
-      {value === index && (
-        <Grid container direction="column" spacing={1}>
-          {Array.isArray(children) && children.map((child, index) =>
-            <Grid item xs={12} key={index}>{child}</Grid>
-          )}
-        </Grid>
-      )}
+      <div className="myTerminalContainer">
+      {value === index &&
+        Array.isArray(children) && children.map((child, id) =>
+          <div key={id} className="myTerminal">{child}</div>
+        )
+      }
+      </div>
     </div>
   );
 }

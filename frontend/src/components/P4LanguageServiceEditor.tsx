@@ -30,7 +30,6 @@ export default class P4LanguageServiceEditor extends React.Component<P4LanguageS
   }
 
   componentWillUnmount() {
-    console.log("Will unmount editor")
     this._editor && this._editor.dispose();
   }
 

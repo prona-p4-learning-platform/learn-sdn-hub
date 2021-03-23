@@ -304,6 +304,8 @@ environments.set("Example3-LearningSwitch", {
         params: [],
         provideTty: true,
       },
+    ],
+    [
       {
         name: "bash3",
         cwd: "/home/p4/p4-boilerplate/Example3-LearningSwitch/tmux/",

@@ -45,7 +45,6 @@ export default (editor: monaco.editor.IStandaloneCodeEditor, path: string) : mon
         // @ts-ignore
         MonacoServices.install(monaco);
 
-        console.log('Creating websocket to /environment/' + environment + '/languageserver/' + language)
         const webSocket = createWebSocket('/environment/' + environment + '/languageserver/' + language);
 
         // listen when the web socket is opened
@@ -82,7 +81,6 @@ export default (editor: monaco.editor.IStandaloneCodeEditor, path: string) : mon
         });
 
         editor.onDidDispose(() => {
-            console.log("Closing lsp websocket...")
             webSocket.close()
         })
     }

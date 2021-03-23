@@ -32,22 +32,28 @@ export default class XTerminal extends React.Component<TerminalProps> {
     if ( instance !== null ) this.xterm = instance;
     this.resizeTimer = setInterval(() => {
       this.fitAddon.fit()
-
-      //maybe we need to find a way to also resize ncurses apps etc., 
-      //bash resizes perfectly using fit however, e.g., using SIGWINCH?
-      //this.websocket.send("\x1B[8;30;120t");
-      //running "resize" manually in the shell also fixes ncurses, tmux, screen etc. dimensions for now
-    }, 200)
+    }, 1000)
   }
 
   componentDidMount() {
     this.websocket.onopen = (e) => {
       if ((e.target as WebSocket).readyState !== WebSocket.OPEN) return;
-      this.websocket.send(`auth ${localStorage.getItem("token")}`)
+      this.websocket.send(`auth ${localStorage.getItem("token")}`);
+      //signal initial window resize to ssh using SIGWINCH (\x1B[8;25;80t)
+      //running "resize" manually in the shell also fixes ncurses, tmux, screen etc. dimensions
+      this.websocket.send("\x1B[8;"+this.fitAddon.proposeDimensions().rows+";"+this.fitAddon.proposeDimensions().cols+"t");
     }
+    this.xterm?.terminal.onResize((size) => {
+      this.fitAddon.fit();
+      if (this.websocket?.readyState === 1) {
+        //signal window resize to ssh using SIGWINCH (\x1B[8;25;80t)
+        //running "resize" manually in the shell also fixes ncurses, tmux, screen etc. dimensions
+        this.websocket?.send("\x1B[8;"+this.fitAddon.proposeDimensions().rows+";"+this.fitAddon.proposeDimensions().cols+"t");
+      }
+    })
     this.xterm?.terminal.write( this.props?.terminalState ?? "" );
-    console.log("proposed terminal size cols: " + this.fitAddon.proposeDimensions().cols + " rows:" + this.fitAddon.proposeDimensions().rows)
-    this.fitAddon.fit()
+    this.xterm?.terminal.focus();
+    this.fitAddon.fit();
   }
 
   componentWillUnmount() {

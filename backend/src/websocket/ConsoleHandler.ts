@@ -23,8 +23,22 @@ export default function (
       ws.close();
     });
     ws.on("message", function (message) {
-      envConsole.write(message.toString());
-      console.log(`Received message ${message}`);
+      if (message.toString().match(/^\x1B\[8;(.*);(.*)t$/)) {
+        const size = message.toString().match(/^\x1B\[8;(.*);(.*)t$/);
+        const lines = parseInt(size[1]);
+        const columns = parseInt(size[2]);
+        console.log(
+          "received SIGWINCH resize event (lines: " +
+            lines +
+            ", columns: " +
+            columns +
+            ")"
+        );
+        envConsole.resize(columns, lines);
+      } else {
+        envConsole.write(message.toString());
+        console.log(`Received message ${message}`);
+      }
     });
 
     ws.on("close", function () {

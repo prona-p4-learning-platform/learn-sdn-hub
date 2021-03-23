@@ -13,6 +13,7 @@ export interface Console {
   write(data: string): void;
   writeLine(data: string): void;
   close(environmentId: string): void;
+  resize(columns: number, lines: number): void;
 }
 
 type CustomizedSSHClient = Client & {
@@ -173,5 +174,9 @@ export default class SSHConsole extends EventEmitter implements Console {
       }
     });
     this.stream.end();
+  }
+
+  resize(columns: number, lines: number): void {
+    this.stream.setWindow(lines, columns, 0, 0);
   }
 }

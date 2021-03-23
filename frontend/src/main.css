@@ -8,19 +8,30 @@
 
 .myMarkdownContainer {
 	overflow-y: scroll;
-	height: calc(100vh - 130px);
+	height: calc(100vh - 150px);
 	width: calc(50vw - 20px);
 }
 
-.myTerminalTabContainer {
+.myTerminalTab {
 	overflow-y: auto;
-	height: calc(100vh - 222px);
+	overflow-x: hidden;
+	height: calc(100vh - 230px);
 	width: calc(50vw - 20px);
+}
+
+.myTerminalContainer {
+	display: flex;
+	flex-direction: column;
+	height: inherit;
+}
+
+.myTerminal {
+	flex: 1;
+	height: inherit;
 }
 
 .myXtermClass {
-	width: calc(50vw - 40px);
-	height: calc(100vh - 240px);
+	height: 100%;
 	padding: 2px;
 }
 
