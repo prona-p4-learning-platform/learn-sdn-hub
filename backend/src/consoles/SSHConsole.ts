@@ -14,6 +14,7 @@ export interface Console {
   writeLine(data: string): void;
   close(environmentId: string): void;
   resize(columns: number, lines: number): void;
+  consumeInitialConsoleBuffer(): string;
 }
 
 type CustomizedSSHClient = Client & {
@@ -27,6 +28,8 @@ export default class SSHConsole extends EventEmitter implements Console {
   private provideTty: boolean;
   private args: Array<string>;
   private stream: ClientChannel;
+  private initialConsoleBuffer: Array<string>;
+  private initialConsoleBufferConsumed = false;
   private static sshConnections: Map<string, CustomizedSSHClient> = new Map();
   public stdout = "";
   public stderr = "";
@@ -47,6 +50,7 @@ export default class SSHConsole extends EventEmitter implements Console {
     this.args = args;
     this.cwd = cwd;
     this.provideTty = provideTty;
+    this.initialConsoleBuffer = new Array<string>();
     let sshConsole: CustomizedSSHClient;
     const consoleIdentifier = `${ipaddress}:${port}:${environmentId}`;
     if (SSHConsole.sshConnections.has(consoleIdentifier)) {
@@ -124,6 +128,12 @@ export default class SSHConsole extends EventEmitter implements Console {
             console.log("SSH shell error: ", err);
           })
           .on("data", (data: string) => {
+            if (!this.initialConsoleBufferConsumed) {
+              this.initialConsoleBuffer.push(data);
+              while (this.initialConsoleBuffer.length > 1000) {
+                this.initialConsoleBuffer.shift();
+              }
+            }
             this.emit("data", data);
           });
         // write command to console
@@ -178,5 +188,16 @@ export default class SSHConsole extends EventEmitter implements Console {
 
   resize(columns: number, lines: number): void {
     this.stream.setWindow(lines, columns, 0, 0);
+  }
+
+  consumeInitialConsoleBuffer(): string {
+    if (this.initialConsoleBufferConsumed) {
+      return "";
+    } else {
+      const initialConsoleBufferContent = this.initialConsoleBuffer.join("");
+      this.initialConsoleBuffer = [];
+      this.initialConsoleBufferConsumed = true;
+      return initialConsoleBufferContent;
+    }
   }
 }

@@ -68,13 +68,16 @@ export default (editor: monaco.editor.IStandaloneCodeEditor, path: string) : mon
                         // restore onmessage fn
                         webSocket.onmessage = defaultOnMessage;
 
-                        console.log("Creating Language Client...")
                         const languageClient = createLanguageClient(connection);
                         const disposable = languageClient.start();
                         connection.onClose(() => {
-                            console.log("Disposing languageClient")
-                            disposable.dispose()
+                          disposable.dispose()
                         });
+                        // when changing tabs, warning "Language Client services have been overridden" can occur,
+                        // websocket is closed too late
+                        webSocket.onclose = (e) => {
+                          disposable.dispose();
+                        }
                     }
                 }
             }

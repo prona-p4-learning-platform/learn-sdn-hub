@@ -15,6 +15,10 @@ export default function (
       ws.close();
       return;
     }
+    const initialConsoleBuffer = envConsole.consumeInitialConsoleBuffer();
+    if (initialConsoleBuffer.length > 0) {
+      ws.send(initialConsoleBuffer);
+    }
     envConsole.on("data", (data: string) => {
       ws.send(data.toString());
     });

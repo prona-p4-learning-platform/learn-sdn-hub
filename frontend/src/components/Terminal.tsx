@@ -52,6 +52,8 @@ export default class XTerminal extends React.Component<TerminalProps> {
       }
     })
     this.xterm?.terminal.write( this.props?.terminalState ?? "" );
+    // make sure background and foreground color are reset to default after restoring terminal state
+    this.xterm?.terminal.write( "\x1B[0m" );
     this.xterm?.terminal.focus();
     this.fitAddon.fit();
   }
@@ -60,7 +62,8 @@ export default class XTerminal extends React.Component<TerminalProps> {
     if (this.resizeTimer) {
       clearTimeout(this.resizeTimer)
     }
-    const serializedState = this.serializeAddon.serialize()
+    // limit serialized scrollback to 1000 lines
+    const serializedState = this.serializeAddon.serialize(1000)
     this.props.onTerminalUnmount(this.props.wsEndpoint, serializedState);
     this.websocket.close()
   }
