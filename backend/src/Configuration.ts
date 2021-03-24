@@ -4,20 +4,24 @@ const environments = new Map<string, EnvironmentDescription>();
 
 environments.set("p4basic", {
   tasks: [
-    {
-      name: "bash",
-      cwd: "/home/p4/tutorials/exercises/basic/",
-      executable: "make",
-      params: [" stop && make && exit && exit"],
-      provideTty: true,
-    },
-    {
-      name: "bash2",
-      cwd: "/home/p4/tutorials/exercises/basic/",
-      executable: "ls -al",
-      params: [],
-      provideTty: true,
-    },
+    [
+      {
+        name: "bash",
+        cwd: "/home/p4/tutorials/exercises/basic/",
+        executable: "make",
+        params: [" stop && make && exit && exit"],
+        provideTty: true,
+      },
+    ],
+    [
+      {
+        name: "bash2",
+        cwd: "/home/p4/tutorials/exercises/basic/",
+        executable: "ls -al",
+        params: [],
+        provideTty: true,
+      },
+    ],
   ],
   editableFiles: [
     {
@@ -34,26 +38,30 @@ environments.set("p4basic", {
       provideTty: false,
     },
   ],
-  description: "MininetUebung1",
+  description: "p4basic description",
   assignmentLabSheet: "../assignments/p4basic.md",
 });
 
 environments.set("l2_learning_switch", {
   tasks: [
-    {
-      name: "bash",
-      cwd: "/home/p4/tutorials/exercises/basic/",
-      executable: "make",
-      params: [""],
-      provideTty: true,
-    },
-    {
-      name: "bash2",
-      cwd: "/home/p4/tutorials/exercises/basic/",
-      executable: "bash",
-      params: [""],
-      provideTty: true,
-    },
+    [
+      {
+        name: "bash",
+        cwd: "/home/p4/tutorials/exercises/basic/",
+        executable: "make",
+        params: [""],
+        provideTty: true,
+      },
+    ],
+    [
+      {
+        name: "bash2",
+        cwd: "/home/p4/tutorials/exercises/basic/",
+        executable: "bash",
+        params: [""],
+        provideTty: true,
+      },
+    ],
   ],
   editableFiles: [
     {
@@ -81,19 +89,21 @@ environments.set("l2_learning_switch", {
       provideTty: false,
     },
   ],
-  description: "MininetUebung1",
+  description: "l2_learning_switch description",
   assignmentLabSheet: "../assignments/p4basic2.md",
 });
 
 environments.set("p4calc", {
   tasks: [
-    {
-      name: "bash",
-      cwd: "/home/ubuntu/tutorials/exercises/calc/",
-      executable: "make",
-      params: ["&& exit && exit"],
-      provideTty: true,
-    },
+    [
+      {
+        name: "bash",
+        cwd: "/home/ubuntu/tutorials/exercises/calc/",
+        executable: "make",
+        params: ["&& exit && exit"],
+        provideTty: true,
+      },
+    ],
   ],
   editableFiles: [],
   stopCommands: [
@@ -105,19 +115,21 @@ environments.set("p4calc", {
       provideTty: false,
     },
   ],
-  description: "MininetUebung1",
+  description: "p4calc description",
   assignmentLabSheet: "../assignments/p4basic.md",
 });
 
 environments.set("python-test", {
   tasks: [
-    {
-      name: "bash",
-      cwd: "/home/p4/tmux/example3/",
-      executable: "./start-tmux-example3-bash",
-      params: [],
-      provideTty: true,
-    },
+    [
+      {
+        name: "bash",
+        cwd: "/home/p4/tmux/example3/",
+        executable: "./start-tmux-example3-bash",
+        params: [],
+        provideTty: true,
+      },
+    ],
   ],
   editableFiles: [
     {
@@ -145,26 +157,28 @@ environments.set("python-test", {
       provideTty: false,
     },
   ],
-  description: "Example3-LearningSwitch",
+  description: "python-test description",
   assignmentLabSheet: "../assignments/prona-learningswitch.md",
 });
 
 environments.set("Example1-Repeater", {
   tasks: [
-    {
-      name: "bash",
-      cwd: "/home/p4/tmux/example1/",
-      executable: "./start-tmux-example1-bash",
-      params: [],
-      provideTty: true,
-    },
-    {
-      name: "bash2",
-      cwd: "/home/p4/tmux/example1/",
-      executable: "./start-tmux-example1-bash2",
-      params: [],
-      provideTty: true,
-    },
+    [
+      {
+        name: "bash",
+        cwd: "/home/p4/p4-boilerplate/Example1-Repeater/tmux/",
+        executable: "./start-tmux-example1-bash",
+        params: [],
+        provideTty: true,
+      },
+      {
+        name: "bash2",
+        cwd: "/home/p4/p4-boilerplate/Example1-Repeater/tmux/",
+        executable: "./start-tmux-example1-bash2",
+        params: [],
+        provideTty: true,
+      },
+    ],
   ],
   editableFiles: [
     {
@@ -190,39 +204,41 @@ environments.set("Example1-Repeater", {
   stopCommands: [
     {
       name: "bash",
-      cwd: "/home/p4/",
-      executable: "exit",
+      cwd: "/home/p4/p4-boilerplate/Example1-Repeater/tmux/",
+      executable: "./stop-tmux-example1-bash",
       params: [],
       provideTty: false,
     },
     {
       name: "bash2",
-      cwd: "/home/p4/",
-      executable: "exit",
+      cwd: "/home/p4/p4-boilerplate/Example1-Repeater/tmux/",
+      executable: "./stop-tmux-example1-bash2",
       params: [],
       provideTty: false,
     },
   ],
-  description: "Example1-Repeater",
+  description: "Example1-Repeater description",
   assignmentLabSheet: "../assignments/prona-repeater.md",
 });
 
 environments.set("Example2-MinimalisticSwitch", {
   tasks: [
-    {
-      name: "bash",
-      cwd: "/home/p4/tmux/example2/",
-      executable: "./start-tmux-example2-bash",
-      params: [],
-      provideTty: true,
-    },
-    {
-      name: "bash2",
-      cwd: "/home/p4/tmux/example2/",
-      executable: "./start-tmux-example2-bash2",
-      params: [],
-      provideTty: true,
-    },
+    [
+      {
+        name: "bash",
+        cwd: "/home/p4/p4-boilerplate/Example2-MinimalisticSwitch/tmux/",
+        executable: "./start-tmux-example2-bash",
+        params: [],
+        provideTty: true,
+      },
+      {
+        name: "bash2",
+        cwd: "/home/p4/p4-boilerplate/Example2-MinimalisticSwitch/tmux/",
+        executable: "./start-tmux-example2-bash2",
+        params: [],
+        provideTty: true,
+      },
+    ],
   ],
   editableFiles: [
     {
@@ -254,46 +270,50 @@ environments.set("Example2-MinimalisticSwitch", {
   stopCommands: [
     {
       name: "bash",
-      cwd: "/home/p4/",
-      executable: "exit",
+      cwd: "/home/p4/p4-boilerplate/Example2-MinimalisticSwitch/tmux/",
+      executable: "./stop-tmux-example2-bash",
       params: [],
       provideTty: false,
     },
     {
       name: "bash2",
-      cwd: "/home/p4/",
-      executable: "exit",
+      cwd: "/home/p4/p4-boilerplate/Example2-MinimalisticSwitch/tmux/",
+      executable: "./stop-tmux-example2-bash2",
       params: [],
       provideTty: false,
     },
   ],
-  description: "Example2-MinimalisticSwitch",
+  description: "Example2-MinimalisticSwitch description",
   assignmentLabSheet: "../assignments/prona-minimalisticswitch.md",
 });
 
 environments.set("Example3-LearningSwitch", {
   tasks: [
-    {
-      name: "bash",
-      cwd: "/home/p4/tmux/example3/",
-      executable: "./start-tmux-example3-bash",
-      params: [],
-      provideTty: true,
-    },
-    {
-      name: "bash2",
-      cwd: "/home/p4/tmux/example3/",
-      executable: "./start-tmux-example3-bash2",
-      params: [],
-      provideTty: true,
-    },
-    {
-      name: "bash3",
-      cwd: "/home/p4/tmux/example3/",
-      executable: "./start-tmux-example3-bash3",
-      params: [],
-      provideTty: true,
-    },
+    [
+      {
+        name: "bash",
+        cwd: "/home/p4/p4-boilerplate/Example3-LearningSwitch/tmux/",
+        executable: "./start-tmux-example3-bash",
+        params: [],
+        provideTty: true,
+      },
+      {
+        name: "bash2",
+        cwd: "/home/p4/p4-boilerplate/Example3-LearningSwitch/tmux/",
+        executable: "./start-tmux-example3-bash2",
+        params: [],
+        provideTty: true,
+      },
+    ],
+    [
+      {
+        name: "bash3",
+        cwd: "/home/p4/p4-boilerplate/Example3-LearningSwitch/tmux/",
+        executable: "./start-tmux-example3-bash3",
+        params: [],
+        provideTty: true,
+      },
+    ],
   ],
   editableFiles: [
     {
@@ -314,46 +334,48 @@ environments.set("Example3-LearningSwitch", {
   stopCommands: [
     {
       name: "bash",
-      cwd: "/home/p4/",
-      executable: "exit",
+      cwd: "/home/p4/p4-boilerplate/Example3-LearningSwitch/tmux/",
+      executable: "./stop-tmux-example3-bash",
       params: [],
       provideTty: false,
     },
     {
       name: "bash2",
-      cwd: "/home/p4/",
-      executable: "exit",
+      cwd: "/home/p4/p4-boilerplate/Example3-LearningSwitch/tmux/",
+      executable: "./stop-tmux-example3-bash2",
       params: [],
       provideTty: false,
     },
     {
       name: "bash3",
-      cwd: "/home/p4/",
-      executable: "exit",
+      cwd: "/home/p4/p4-boilerplate/Example3-LearningSwitch/tmux/",
+      executable: "./stop-tmux-example3-bash3",
       params: [],
       provideTty: false,
     },
   ],
-  description: "Example3-LearningSwitch",
+  description: "Example3-LearningSwitch description",
   assignmentLabSheet: "../assignments/prona-learningswitch.md",
 });
 
 environments.set("Example-p4env", {
   tasks: [
-    {
-      name: "bash",
-      cwd: "/home/p4/tmux/example4/",
-      executable: "./start-tmux-example4-bash",
-      params: [],
-      provideTty: true,
-    },
-    {
-      name: "bash2",
-      cwd: "/home/p4/tmux/example4/",
-      executable: "./start-tmux-example4-bash2",
-      params: [],
-      provideTty: true,
-    },
+    [
+      {
+        name: "bash",
+        cwd: "/home/p4/p4-boilerplate/Example-p4env/tmux/",
+        executable: "./start-tmux-example4-bash",
+        params: [],
+        provideTty: true,
+      },
+      {
+        name: "bash2",
+        cwd: "/home/p4/p4-boilerplate/Example-p4env/tmux/",
+        executable: "./start-tmux-example4-bash2",
+        params: [],
+        provideTty: true,
+      },
+    ],
   ],
   editableFiles: [
     {
@@ -369,20 +391,20 @@ environments.set("Example-p4env", {
   stopCommands: [
     {
       name: "bash",
-      cwd: "/home/p4/",
-      executable: "exit",
+      cwd: "/home/p4/p4-boilerplate/Example-p4env/tmux/",
+      executable: "./stop-tmux-example4-bash",
       params: [],
       provideTty: false,
     },
     {
       name: "bash2",
-      cwd: "/home/p4/",
-      executable: "exit",
+      cwd: "/home/p4/p4-boilerplate/Example-p4env/tmux/",
+      executable: "./stop-tmux-example4-bash2",
       params: [],
       provideTty: false,
     },
   ],
-  description: "Example-p4env",
+  description: "Example-p4env description",
   assignmentLabSheet: "../assignments/p4env.md",
 });
 

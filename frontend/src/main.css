@@ -1,11 +1,47 @@
 .myGlyphMarginClass {
 	background: red;
 }
+
 .myContentClass {
 	background: lightblue;
 }
 
+.myMarkdownContainer {
+	overflow-y: scroll;
+	height: calc(100vh - 150px);
+	width: calc(50vw - 20px);
+}
+
+.myTerminalTab {
+	overflow-y: auto;
+	overflow-x: hidden;
+	height: calc(100vh - 230px);
+	width: calc(50vw - 20px);
+}
+
+.myTerminalContainer {
+	display: flex;
+	flex-direction: column;
+	height: inherit;
+}
+
+.myTerminal {
+	flex: 1;
+	height: inherit;
+}
+
 .myXtermClass {
-	padding: 4px;
-	height: 80%;
+	height: 100%;
+	padding: 2px;
+}
+
+.myEditorTabContainer {
+	height: calc(100vh - 220px);
+	width: calc(50vw - 20px);
+}
+
+.myMonacoClass {
+	width: calc(50vw - 20px);
+	height: calc(100vh - 190px);
+	padding: 2px;
 }

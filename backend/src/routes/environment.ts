@@ -46,9 +46,15 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
       }
       return res.status(200).json({
         files: targetEnv.editableFiles.map((file) => file.alias),
+        // first task in array of tasks will define the tab
+        ttyTabs: targetEnv.tasks
+          .filter((subtasks) => subtasks[0].provideTty === true)
+          .map((subtask) => subtask[0].name),
         ttys: targetEnv.tasks
-          .filter((task) => task.provideTty === true)
-          .map((task) => task.name),
+          .filter((subtasks) =>
+            subtasks.filter((task) => task.provideTty === true)
+          )
+          .map((subtasks) => subtasks.map((subtask) => subtask.name)),
       });
     }
   );
@@ -137,7 +143,11 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
       env
         .readFile(req.params.alias)
         .then((content: string) => {
-          res.status(200).end(content);
+          res
+            .set("Content-Location", env.getFilePathByAlias(req.params.alias))
+            .set("Access-Control-Expose-Headers", "Content-Location")
+            .status(200)
+            .end(content);
         })
         .catch((err) => {
           console.log(err);

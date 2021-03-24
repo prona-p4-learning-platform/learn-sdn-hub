@@ -3,7 +3,6 @@ import Tabs from "@material-ui/core/Tabs";
 import Tab from "@material-ui/core/Tab";
 import Typography from "@material-ui/core/Typography";
 import Box from "@material-ui/core/Box";
-import P4Editor from "./P4Editor";
 
 interface EditorTabsProps {
   children?: React.ReactNode;
@@ -17,8 +16,10 @@ function TabPanel(props: EditorTabsProps) {
     <div
       role="tabpanel"
       hidden={value !== index}
-      id={`simple-tabpanel-${index}`}
-      aria-labelledby={`simple-tab-${index}`}
+      id={`editor-tabpanel-${index}`}
+      key={`editor-tabpanel-${index}`}
+      className="myEditorContainer"
+      aria-labelledby={`editor-tab-${index}`}
       {...other}
     >
       {value === index && (
@@ -30,10 +31,11 @@ function TabPanel(props: EditorTabsProps) {
   );
 }
 interface P4EditorTabsProps {
-  endpoints: Array<string>;
+  tabNames: string[];
+  children?: JSX.Element[];
 }
 
-export default function SimpleTabs(props: P4EditorTabsProps) {
+export default function EditorTabs(props: P4EditorTabsProps) {
   const [value, setValue] = React.useState(0);
 
   const handleChange = (event: React.ChangeEvent<{}>, newValue: number) => {
@@ -45,17 +47,18 @@ export default function SimpleTabs(props: P4EditorTabsProps) {
       <Tabs
         value={value}
         onChange={handleChange}
-        aria-label="simple tabs example"
+        aria-label="editor tabs"
       >
-        {props.endpoints.map((endpoint) => (
-          <Tab key={endpoint} label={endpoint.split("/").slice(-1)} />
+        {props.tabNames && props.tabNames.map((name) => (
+          <Tab label={name} key={name} />
         ))}
       </Tabs>
-      {props.endpoints.map((endpoint, index) => (
+
+      {Array.isArray(props.children) && props.children.map((child, index) =>
         <TabPanel value={value} index={index} key={index}>
-          <P4Editor endpoint={endpoint} />
+          {child}
         </TabPanel>
-      ))}
+      )}
     </>
   );
 }

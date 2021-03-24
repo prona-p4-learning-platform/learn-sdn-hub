@@ -5,7 +5,7 @@ import * as monaco from 'monaco-editor';
 import APIRequest from '../api/Request'
 import Snackbar from '@material-ui/core/Snackbar';
 import MuiAlert, { AlertProps } from '@material-ui/lab/Alert';
-import { Box, ButtonGroup } from "@material-ui/core";
+import { Box, ButtonGroup, Grid, Typography } from "@material-ui/core";
 import CloudUploadIcon from '@material-ui/icons/CloudUpload';
 import CloudDownloadIcon from '@material-ui/icons/CloudDownload';
 import Dialog from '@material-ui/core/Dialog';
@@ -16,6 +16,14 @@ import selectLanguageForEndpoint from "./MonacoLanguageSelector";
 
 type Severity = "error" | "success" | "info" | "warning" | undefined;
 
+type EditorStateType = {
+  endpoint: string;
+  code: string;
+  fileChanged: boolean;
+  filePath: string;
+  position: monaco.Position;
+}
+
 interface State {
   code: string
   editorResult: string
@@ -24,10 +32,13 @@ interface State {
   fileChanged: boolean
   editorConfirmationDialogOpen: boolean
   language: string
+  filePath: string
 }
 
 interface P4EditorProps {
   endpoint: string;
+  editorState: EditorStateType | undefined;
+  onEditorUnmount: Function;
 }
 
 function Alert(props: JSX.IntrinsicAttributes & AlertProps) {
@@ -41,13 +52,14 @@ export default class P4Editor extends React.Component<P4EditorProps> {
   constructor(props: P4EditorProps) {
     super(props);
     this.state = {
-      code: "",
+      code: props?.editorState?.code ?? "",
+      fileChanged: props?.editorState?.fileChanged ?? false,
+      filePath: props?.editorState?.filePath ?? "",
       editorResult: "",
       editorSeverity: "info",
       editorNotificationOpen: false,
-      fileChanged: false,
       editorConfirmationDialogOpen: false,
-      language: "p4"
+      language: "p4",
     };
     this.save = this.save.bind(this);
     this.load = this.load.bind(this);
@@ -55,14 +67,26 @@ export default class P4Editor extends React.Component<P4EditorProps> {
 
   editorDidMount(editor: monaco.editor.IStandaloneCodeEditor) {
     editor.focus();
+    editor.setPosition({lineNumber: this.props.editorState?.position?.lineNumber as number ?? 0, column: this.props.editorState?.position?.column as number ?? 0});
+    editor.revealLine(this.props.editorState?.position?.lineNumber as number ?? 0);
     this.editor = editor;
-    fetch(APIRequest(`${this.props.endpoint}`, { headers: { 'Content-Type': 'application/json', authorization: localStorage.getItem("token") || "" } }))
-      .then((response) => response.text())
+    if ( this.state.code === "" ) {
+      fetch(APIRequest(`${this.props.endpoint}`, { headers: { 'Content-Type': 'application/json', authorization: localStorage.getItem("token") || "" } }))
+      .then((response) => {
+        const contentLocation = response.headers.get('Content-Location');
+        this.setState({ filePath: contentLocation });
+        return response.text();
+      })
       .then((data) => {
         this.setState({ code: data });
       })
       .catch((err) => console.error(err));
+    }
   };
+
+  componentWillUnmount() {
+    this?.props.onEditorUnmount(this.props.endpoint, this.state.code, this.state.fileChanged, this.state.filePath, this.editor.getPosition());
+  }
 
   onChange(newValue: string) {
     this.setState({
@@ -178,16 +202,22 @@ export default class P4Editor extends React.Component<P4EditorProps> {
     };
 
     return (
-      <Box style={{ height: (window.innerHeight - 220) + 'px' }}>
-        <ButtonGroup variant="contained" color="primary" style={{ margin: "5px" }}>
-          <Button variant="contained" color="primary" disabled={!this.state.fileChanged} startIcon={<CloudUploadIcon />} onClick={this.save}>
-            Deploy
-          </Button>
-          <Button variant="contained" color="primary" disabled={!this.state.fileChanged} startIcon={<CloudDownloadIcon />} onClick={handleEditorConfirmationDialogOpen}>
-            Retrieve
-          </Button>
-        </ButtonGroup>
-        <Box id="monacoEditor"></Box>
+      <Box className="myMonacoClass">
+        <Grid container direction="row" justify="flex-start" alignItems="center" spacing={1}>
+          <Grid item>
+            <ButtonGroup variant="contained" color="primary" style={{ margin: "2px" }}>
+              <Button variant="contained" color="primary" disabled={!this.state.fileChanged} startIcon={<CloudUploadIcon />} onClick={this.save}>
+                Deploy
+              </Button>
+              <Button variant="contained" color="primary" disabled={!this.state.fileChanged} startIcon={<CloudDownloadIcon />} onClick={handleEditorConfirmationDialogOpen}>
+                Retrieve
+              </Button>
+            </ButtonGroup>
+          </Grid>
+          <Grid item>
+            <Typography variant="caption">{this.state.filePath}</Typography>
+          </Grid>
+        </Grid>
         <P4LanguageServiceEditor onMounted={(editor: monaco.editor.IStandaloneCodeEditor) => this.editorDidMount(editor)}
           value={this.state.code}
           language={selectLanguageForEndpoint(this.props.endpoint).editorLanguage}

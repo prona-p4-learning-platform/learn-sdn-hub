@@ -30,11 +30,20 @@ export default class P4LanguageServiceEditor extends React.Component<P4LanguageS
   }
 
   componentWillUnmount() {
-    console.log("Will unmount editor")
     this._editor && this._editor.dispose();
   }
 
   render() {
+    // also options like glyphMargin: true, lightbulb: true might be an option
+    //
+    //   glyphMargin: true, 
+    //   lightbulb: { 
+    //     enabled: true 
+    //   }       
+    const options = {
+      automaticLayout: true,
+    };
+    
     return <MonacoEditor
         width="100%"
         height="100%"
@@ -42,6 +51,7 @@ export default class P4LanguageServiceEditor extends React.Component<P4LanguageS
         language={this.props.language}
         value={this.props.value}
         onChange={this.onChange}
+        options={options}
         editorDidMount={this.editorDidMount}
     />
   }
