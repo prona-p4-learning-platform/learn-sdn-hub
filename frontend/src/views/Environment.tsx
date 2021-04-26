@@ -20,6 +20,9 @@ import DialogContent from '@material-ui/core/DialogContent';
 import DialogContentText from '@material-ui/core/DialogContentText';
 import P4Editor from "../components/P4Editor";
 import { Position } from "monaco-editor";
+import Stepper from '@material-ui/core/Stepper';
+import Step from '@material-ui/core/Step';
+import StepButton from '@material-ui/core/StepButton';
 
 type Severity = "error" | "success" | "info" | "warning" | undefined;
 
@@ -53,6 +56,9 @@ type StateType = {
   terminalSeverity: Severity;
   terminalNotificationOpen: boolean;
   confirmationDialogOpen: boolean;
+  stepNames: string[];
+  stepLabels: string[];
+  activeStep: number;
   terminalState: TerminalStateType[];
   editorState: EditorStateType[];
 }
@@ -78,7 +84,10 @@ export class EnvironmentView extends React.Component<PropsType,StateType> {
       terminalResult: "",
       terminalSeverity: "info",
       terminalNotificationOpen: false,
-      confirmationDialogOpen: false
+      confirmationDialogOpen: false,
+      stepNames: [],
+      stepLabels: [],
+      activeStep: 0
     };
     this.restartEnvironment = this.restartEnvironment.bind(this)
     this.storeTerminalState = this.storeTerminalState.bind(this)
@@ -138,7 +147,7 @@ export class EnvironmentView extends React.Component<PropsType,StateType> {
       .then((response) => response.json())
       .then((data) => {
         if (data.error !== true) {
-          this.setState({ ttyTabs: data.ttyTabs, ttys: data.ttys, files: data.files });
+          this.setState({ ttyTabs: data.ttyTabs, ttys: data.ttys, files: data.files, stepNames: data.stepNames, stepLabels: data.stepLabels });
         }
       });
   }
@@ -244,15 +253,50 @@ export class EnvironmentView extends React.Component<PropsType,StateType> {
       this.setState({ confirmationDialogOpen: false });
     };
 
+    const handleStepClick = () => {
+      // mockup dummy
+      
+      // should send terminalState (maybe even editorState) if needed to backend and wait for result of test
+      this.setState({
+        // demo that steps through instead of running real tests
+        // maybe refactor terminalResult to environment result etc.?
+        terminalResult: "Test successful!",
+        terminalSeverity: "success",
+        terminalNotificationOpen: true,
+        activeStep: this.state.activeStep + 1
+      });
+    }
+
     return (
       <>
         <Grid container spacing={0}>
           <Grid item xs={6}>
             <TabControl tabNames={["Assignment", "Terminals"]}>
-              <ReactMarkdown
-                source={this.state.assignment} className="myMarkdownContainer"
-              />
-              <Grid container direction="column" justify="flex-start" alignItems="center" spacing={1}>
+              <Grid container direction="row" justify="flex-start" alignItems="center" spacing={1}>
+                <Grid item xs={12}>
+                  <ReactMarkdown
+                    source={this.state.assignment} className="myMarkdownContainer"
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  {/*dummy example, should get a loop over configured steps and lables*/}
+                  <Stepper activeStep={this.state.activeStep}>
+                    <Step>
+                      <StepButton onClick={handleStepClick}>Make "h1 ping h2" work</StepButton>
+                    </Step>
+                    <Step>
+                      <StepButton onClick={handleStepClick}>Implement x</StepButton>
+                    </Step>
+                    <Step>
+                      <StepButton onClick={handleStepClick}>Check y</StepButton>
+                    </Step>
+                    <Step>
+                      <StepButton onClick={handleStepClick}>Finish / Submit</StepButton>
+                    </Step>
+                  </Stepper>
+                </Grid>
+              </Grid>
+              <Grid container direction="row" justify="flex-start" alignItems="center" spacing={1}>
                 <Grid container direction="row" justify="flex-start" alignItems="center" spacing={1}>
                   <Grid item>
                     <Button

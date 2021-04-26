@@ -55,6 +55,8 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
             subtasks.filter((task) => task.provideTty === true)
           )
           .map((subtasks) => subtasks.map((subtask) => subtask.name)),
+        stepNames: targetEnv.steps?.map((step) => step.name),
+        stepLabels: targetEnv.steps?.map((step) => step.label),
       });
     }
   );

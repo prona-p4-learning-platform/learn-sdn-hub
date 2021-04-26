@@ -38,6 +38,29 @@ environments.set("p4basic", {
       provideTty: false,
     },
   ],
+  steps: [
+    {
+      name: "1",
+      label: "make h1 ping h2 work",
+      tests: [
+        {
+          testType: "sshCommand",
+          testItem: "mx h1 ping -c 2 h2",
+          match: "(.*)",
+          successMessage: "ping from h1 to h2 worked!",
+          errorHint:
+            "ping from h1 to h2 did not work. Check arp and ip rules between h1 and h2",
+        },
+        {
+          testType: "terminalBufferSearch",
+          testItem: "terminalName",
+          match: "(.*)bla(.*)",
+          successMessage: "terminalBufferSearch criterion found",
+          errorHint: "terminalBufferSearch criterion not found",
+        },
+      ],
+    },
+  ],
   description: "p4basic description",
   assignmentLabSheet: "../assignments/p4basic.md",
 });

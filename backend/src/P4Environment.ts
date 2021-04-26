@@ -16,8 +16,25 @@ interface Task {
   name: string;
 }
 
+interface AssignmentStep {
+  name: string;
+  label: string;
+  tests: Array<AssignmentStepTest>;
+}
+
+type AssignmentStepTestType = "sshCommand" | "terminalBufferSearch";
+
+interface AssignmentStepTest {
+  testType: AssignmentStepTestType;
+  testItem: string;
+  match: string;
+  successMessage: string;
+  errorHint: string;
+}
+
 export interface EnvironmentDescription {
   tasks: Array<Array<Task>>;
+  steps?: Array<AssignmentStep>;
   description: string;
   editableFiles: Array<AliasedFile>;
   stopCommands: Array<Task>;
