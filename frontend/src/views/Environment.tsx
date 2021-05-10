@@ -59,6 +59,7 @@ type StateType = {
   stepNames: string[];
   stepLabels: string[];
   activeStep: number;
+  stepsCompleted: boolean;
   terminalState: TerminalStateType[];
   editorState: EditorStateType[];
 }
@@ -87,7 +88,8 @@ export class EnvironmentView extends React.Component<PropsType,StateType> {
       confirmationDialogOpen: false,
       stepNames: [],
       stepLabels: [],
-      activeStep: 0
+      activeStep: 0,
+      stepsCompleted: false
     };
     this.restartEnvironment = this.restartEnvironment.bind(this)
     this.storeTerminalState = this.storeTerminalState.bind(this)
@@ -141,6 +143,60 @@ export class EnvironmentView extends React.Component<PropsType,StateType> {
     }
   }
 
+  async checkStepTest(): Promise<void> {
+    this.setState({
+      terminalResult: "Testing step result...",
+      terminalSeverity: "info",
+      terminalNotificationOpen: true,
+    });
+    try {
+      const result = await fetch(APIRequest(`/api/environment/${this.props.match.params.environment}/test`, {
+        method: "post",
+        headers: { 'Content-Type': 'application/json', authorization: localStorage.getItem("token") || "" },
+        body: JSON.stringify({activeStep: this.state.activeStep, terminalState: this.state.terminalState})
+      }))
+      if (result.status === 200) {
+        // should send terminalState (maybe even editorState) if needed to backend and wait for result of test
+        this.setState({
+          // demo that steps through instead of running real tests
+          // maybe refactor terminalResult to environment result etc.?
+          terminalResult: "Test successful!",
+          terminalSeverity: "success",
+          terminalNotificationOpen: true,
+        });
+
+        if (this.state.activeStep < this.state.stepLabels.length) {
+          this.setState({
+            activeStep: this.state.activeStep + 1
+          });
+        }
+        // if this was the last step, steps are completed and finish / submission of assignment can be enabled
+        if (this.state.activeStep == this.state.stepLabels.length) {
+          this.setState({
+            stepsCompleted: true
+          });
+        }
+      }
+      else {
+        const message = await result.json()
+        this.setState({
+          terminalResult: "Test failed! (" + message.message + ")",
+          terminalSeverity: "error",
+          terminalNotificationOpen: true,
+          errorMessage: message.message
+        });
+      }
+    }
+    catch (error) {
+      this.setState({
+        terminalResult: "Test failed! (" + error + ")",
+        terminalSeverity: "error",
+        terminalNotificationOpen: true,
+        errorMessage: error
+      });
+    }
+  }
+
   loadEnvironmentConfig(): void {
     fetch(APIRequest(`/api/environment/${this.props.match.params.environment}/configuration`,
       { headers: { 'Content-Type': 'application/json', authorization: localStorage.getItem("token") || "" } }))
@@ -148,6 +204,9 @@ export class EnvironmentView extends React.Component<PropsType,StateType> {
       .then((data) => {
         if (data.error !== true) {
           this.setState({ ttyTabs: data.ttyTabs, ttys: data.ttys, files: data.files, stepNames: data.stepNames, stepLabels: data.stepLabels });
+        }
+        if (this.state.stepLabels.length < 1) {
+          this.setState({ stepsCompleted: true })
         }
       });
   }
@@ -254,17 +313,14 @@ export class EnvironmentView extends React.Component<PropsType,StateType> {
     };
 
     const handleStepClick = () => {
-      // mockup dummy
-      
-      // should send terminalState (maybe even editorState) if needed to backend and wait for result of test
-      this.setState({
-        // demo that steps through instead of running real tests
-        // maybe refactor terminalResult to environment result etc.?
-        terminalResult: "Test successful!",
-        terminalSeverity: "success",
-        terminalNotificationOpen: true,
-        activeStep: this.state.activeStep + 1
-      });
+      this.checkStepTest();
+    }
+
+    const handleFinishAssignment = () => {
+      // dummy
+
+      // open confirmation to finish and submit assignment
+      // send state of assignment to backend and store/persist result of assignment (for user) there
     }
 
     return (
@@ -279,21 +335,29 @@ export class EnvironmentView extends React.Component<PropsType,StateType> {
                   />
                 </Grid>
                 <Grid item xs={12}>
-                  {/*dummy example, should get a loop over configured steps and lables*/}
-                  <Stepper activeStep={this.state.activeStep}>
-                    <Step>
-                      <StepButton onClick={handleStepClick}>Make "h1 ping h2" work</StepButton>
-                    </Step>
-                    <Step>
-                      <StepButton onClick={handleStepClick}>Implement x</StepButton>
-                    </Step>
-                    <Step>
-                      <StepButton onClick={handleStepClick}>Check y</StepButton>
-                    </Step>
-                    <Step>
-                      <StepButton onClick={handleStepClick}>Finish / Submit</StepButton>
-                    </Step>
-                  </Stepper>
+                  <Grid container direction="row" justify="flex-start" alignItems="center" spacing={1}>
+                    {this.state.stepLabels.length > 0 && (
+                      <Grid item>
+                        <Stepper activeStep={this.state.activeStep}>
+                        {Array.isArray(this.state.stepLabels) && this.state.stepLabels.length > 0 && this.state.stepLabels.map((stepLabel, index) =>
+                          <Step>
+                            <StepButton disabled={index!=this.state.activeStep} key={index} onClick={handleStepClick}>{stepLabel}</StepButton>
+                          </Step>
+                        )}
+                        </Stepper>
+                      </Grid>
+                    )}
+                    <Grid item>
+                      <Button
+                        variant="contained"
+                        color="primary"
+                        onClick={handleFinishAssignment}
+                        disabled={!this.state.stepsCompleted}
+                      >
+                        Finish & submit
+                      </Button>
+                    </Grid>
+                  </Grid>
                 </Grid>
               </Grid>
               <Grid container direction="row" justify="flex-start" alignItems="center" spacing={1}>

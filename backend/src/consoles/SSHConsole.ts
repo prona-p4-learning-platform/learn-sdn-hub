@@ -53,7 +53,7 @@ export default class SSHConsole extends EventEmitter implements Console {
     this.initialConsoleBuffer = new Array<string>();
     let sshConsole: CustomizedSSHClient;
     const consoleIdentifier = `${ipaddress}:${port}:${environmentId}`;
-    if (SSHConsole.sshConnections.has(consoleIdentifier)) {
+    if (provideTty && SSHConsole.sshConnections.has(consoleIdentifier)) {
       sshConsole = SSHConsole.sshConnections.get(consoleIdentifier);
       if (sshConsole.ready === false) {
         sshConsole.on("ready", () => {

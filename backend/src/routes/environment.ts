@@ -55,8 +55,8 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
             subtasks.filter((task) => task.provideTty === true)
           )
           .map((subtasks) => subtasks.map((subtask) => subtask.name)),
-        stepNames: targetEnv.steps?.map((step) => step.name),
-        stepLabels: targetEnv.steps?.map((step) => step.label),
+        stepNames: targetEnv.steps?.map((step) => step.name) ?? [],
+        stepLabels: targetEnv.steps?.map((step) => step.label) ?? [],
       });
     }
   );
@@ -195,6 +195,29 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
         })
         .catch((err) =>
           res.status(500).json({ status: "error", message: err.message })
+        );
+    }
+  );
+
+  router.post(
+    "/:environment/test",
+    bodyParser.json({ type: "application/json" }),
+    authenticationMiddleware,
+    environmentPathParamValidator,
+    (req: RequestWithUser, res) => {
+      const env = P4Environment.getActiveEnvironment(
+        req.params.environment,
+        req.user.id
+      );
+      env
+        .test(req.body.activeStep, req.body.terminalState)
+        .then(() => {
+          res
+            .status(200)
+            .json({ status: "finished", message: "Test successfull" });
+        })
+        .catch((err) =>
+          res.status(500).json({ status: "error", message: err })
         );
     }
   );

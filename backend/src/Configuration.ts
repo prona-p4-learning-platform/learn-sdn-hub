@@ -45,6 +45,27 @@ environments.set("p4basic", {
       tests: [
         {
           testType: "sshCommand",
+          testItem: "mx h1 ping -c 2 10.0.2.2",
+          match: "(.*)",
+          successMessage: "ping from h1 to h2 worked!",
+          errorHint:
+            "ping from h1 to h2 did not work. Check arp and ip rules between h1 and h2",
+        },
+        {
+          testType: "terminalBufferSearch",
+          testItem: "terminalName",
+          match: "(.*)bla(.*)",
+          successMessage: "terminalBufferSearch criterion found",
+          errorHint: "terminalBufferSearch criterion not found",
+        },
+      ],
+    },
+    {
+      name: "2",
+      label: "check x",
+      tests: [
+        {
+          testType: "sshCommand",
           testItem: "mx h1 ping -c 2 h2",
           match: "(.*)",
           successMessage: "ping from h1 to h2 worked!",
