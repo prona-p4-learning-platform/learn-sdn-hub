@@ -305,7 +305,7 @@ export default class P4Environment {
   ): Promise<void> {
     const endpoint = await this.makeSureInstanceExists();
 
-    // TODO give proper feedback when tests fail, e.g., using hints in configuration
+    // TODO give proper feedback when tests fail, e.g., using hints in configuration (successMessage, errorHint)
     return new Promise((resolve, reject) => {
       if (this.configuration.steps?.length > 0) {
         const activeStep = this.configuration.steps[parseInt(stepIndex)];
@@ -313,6 +313,7 @@ export default class P4Environment {
           if (test.testType == "terminalBufferSearch") {
             // search in terminalBuffer for match
             for (const terminalState of terminalStates) {
+              // TODO additional condition: if endpoind matches testItem: "terminalName"
               if (terminalState.state.match(test.match)) {
                 resolve();
               }

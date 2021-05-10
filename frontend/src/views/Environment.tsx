@@ -171,7 +171,7 @@ export class EnvironmentView extends React.Component<PropsType,StateType> {
           });
         }
         // if this was the last step, steps are completed and finish / submission of assignment can be enabled
-        if (this.state.activeStep == this.state.stepLabels.length) {
+        if (this.state.activeStep === this.state.stepLabels.length) {
           this.setState({
             stepsCompleted: true
           });
@@ -317,7 +317,7 @@ export class EnvironmentView extends React.Component<PropsType,StateType> {
     }
 
     const handleFinishAssignment = () => {
-      // dummy
+      // TODO dummy
 
       // open confirmation to finish and submit assignment
       // send state of assignment to backend and store/persist result of assignment (for user) there
@@ -341,7 +341,7 @@ export class EnvironmentView extends React.Component<PropsType,StateType> {
                         <Stepper activeStep={this.state.activeStep}>
                         {Array.isArray(this.state.stepLabels) && this.state.stepLabels.length > 0 && this.state.stepLabels.map((stepLabel, index) =>
                           <Step>
-                            <StepButton disabled={index!=this.state.activeStep} key={index} onClick={handleStepClick}>{stepLabel}</StepButton>
+                            <StepButton disabled={index !== this.state.activeStep} key={index} onClick={handleStepClick}>{stepLabel}</StepButton>
                           </Step>
                         )}
                         </Stepper>
