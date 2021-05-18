@@ -1,3 +1,9 @@
+// TODO: place type in separate file and import it from there, where needed?
+type TerminalStateType = {
+  endpoint: string;
+  state: string;
+};
+
 export interface UserAccount {
   username: string;
   _id: string;
@@ -20,5 +26,10 @@ export interface Persister {
   RemoveUserEnvironment: (
     username: string,
     identifier: string
+  ) => Promise<void>;
+  SubmitUserEnvironment: (
+    username: string,
+    identifier: string,
+    terminalStates: TerminalStateType[]
   ) => Promise<void>;
 }

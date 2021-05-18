@@ -1,5 +1,14 @@
 import { MongoClient } from "mongodb";
 import { Persister, UserEnvironment, UserAccount } from "./Persister";
+import fs from "fs";
+import path from "path";
+
+// TODO: place type in separate file and import it from there, where needed?
+type TerminalStateType = {
+  endpoint: string;
+  state: string;
+};
+
 export default class MongoDBPersister implements Persister {
   private mongoClient: MongoClient = null;
   private connectURL: string;
@@ -73,6 +82,37 @@ export default class MongoDBPersister implements Persister {
         }
       )
       .then(() => undefined);
+  }
+
+  async SubmitUserEnvironment(
+    username: string,
+    identifier: string,
+    terminalStates: TerminalStateType[]
+  ): Promise<void> {
+    // TODO: currently stores files locally, maybe also store them in mongodb?
+    console.log(
+      "Storing assignment result for user: " +
+        username +
+        " assignment identifitier: " +
+        identifier +
+        " terminalStates: " +
+        terminalStates
+    );
+    const resultPathRoot = path.resolve("src", "assignments", "results");
+    !fs.existsSync(resultPathRoot) && fs.mkdirSync(resultPathRoot);
+
+    const resultDirName = username + "-" + identifier;
+    const resultPath = path.resolve(resultPathRoot, resultDirName);
+    !fs.existsSync(resultPath) && fs.mkdirSync(resultPath);
+    for (const terminalState of terminalStates) {
+      fs.writeFileSync(
+        path.resolve(
+          resultPath,
+          terminalState.endpoint.split("/").slice(-1) + "-output.txt"
+        ),
+        terminalState.state
+      );
+    }
   }
 
   async close(): Promise<void> {

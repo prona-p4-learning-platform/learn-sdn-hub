@@ -32,6 +32,7 @@ interface AssignmentStepTest {
   errorHint: string;
 }
 
+// TODO: place type in separate file and import it from there, where needed?
 type TerminalStateType = {
   endpoint: string;
   state: string;
@@ -299,61 +300,94 @@ export default class P4Environment {
     await this.start();
   }
 
-  async executeTest(
+  async testSSHCommand(testItem: string, match: string): Promise<void> {
+    const endpoint = await this.makeSureInstanceExists();
+    let resolved = false;
+
+    return new Promise((resolve, reject) => {
+      // run sshCommand
+      // TODO check that ssh conns and streams are cleaned up, seams like the following does not work correctly:
+      //      open assignment, open terminals, run a test, undeploy and deploy assignment -> terminals do not work, undeploy/deploy again: things work fine
+      const console = new SSHConsole(
+        this.identifier,
+        endpoint.IPAddress,
+        endpoint.SSHPort,
+        testItem,
+        [""],
+        "/",
+        false
+      );
+      console.on("finished", (code: string, signal: string) => {
+        global.console.log(
+          "STDOUT: " +
+            console.stdout +
+            "STDERR: " +
+            console.stderr +
+            "(exit code: " +
+            code +
+            ", signal: " +
+            signal +
+            ")"
+        );
+        if (code == "0" && console.stdout.match(match)) {
+          // command was run successfully (exit code 0) and stdout matched regexp defined in test
+          resolved = true;
+        } else {
+          resolved = false;
+        }
+      });
+      console.on("closed", () => {
+        if (resolved === true) resolve();
+        else reject();
+      });
+    });
+  }
+
+  async test(
     stepIndex: string,
     terminalStates: TerminalStateType[]
-  ): Promise<void> {
-    const endpoint = await this.makeSureInstanceExists();
+  ): Promise<string> {
+    console.log("TESTING step " + stepIndex);
 
-    // TODO give proper feedback when tests fail, e.g., using hints in configuration (successMessage, errorHint)
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
       if (this.configuration.steps?.length > 0) {
         const activeStep = this.configuration.steps[parseInt(stepIndex)];
+        let testOutput = "";
+        let someTestsFailed = undefined as boolean;
         for (const test of activeStep.tests) {
+          let testPassed = false;
+          // per default test result is false
           if (test.testType == "terminalBufferSearch") {
             // search in terminalBuffer for match
-            for (const terminalState of terminalStates) {
-              // TODO additional condition: if endpoind matches testItem: "terminalName"
-              if (terminalState.state.match(test.match)) {
-                resolve();
-              }
-            }
-            reject();
-          } else if (test.testType == "sshCommand") {
-            // run sshCommand
-            // TODO check that ssh conns and streams are cleaned up, seams like the following does not work corretly:
-            //      open assignment, open terminals, run a test, undeploy and deploy assignment -> terminals do not work, undeploy/deploy again: things work fine
-            let resolved = false;
-            const console = new SSHConsole(
-              this.identifier,
-              endpoint.IPAddress,
-              endpoint.SSHPort,
-              test.testItem,
-              [""],
-              "/",
-              false
-            );
-            console.on("finished", (code: string, signal: string) => {
-              global.console.log(
-                "STDOUT: " +
-                  console.stdout +
-                  "STDERR: " +
-                  console.stderr +
-                  "(exit code: " +
-                  code +
-                  ", signal: " +
-                  signal +
-                  ")"
+            if (terminalStates.length === 0) {
+              reject(
+                new Error(
+                  "No terminal states available. Please use the terminals to run the steps given in the assignment and check again."
+                )
               );
-              if (code == "0" && console.stdout.match(test.match)) {
-                // command was run successfully (exit code 0) and stdout matched regexp defined in test
-                resolved = true;
+            } else {
+              for (const terminalState of terminalStates) {
+                if (
+                  terminalState.endpoint.split("/").pop().match(test.testItem)
+                ) {
+                  if (terminalState.state.match(test.match)) {
+                    testOutput += "PASSED: " + test.successMessage + " ";
+                    testPassed = true;
+                  }
+                }
               }
-            });
-            console.on("closed", () => {
-              if (resolved === true) resolve();
-              else reject();
-            });
+              if (testPassed !== true)
+                testOutput += "FAILED: " + test.errorHint + " ";
+            }
+          } else if (test.testType == "sshCommand") {
+            await this.testSSHCommand(test.testItem, test.match)
+              .then(() => {
+                testOutput += "PASSED: " + test.successMessage + " ";
+                testPassed = true;
+              })
+              .catch(() => {
+                testOutput += "FAILED: " + test.errorHint + " ";
+              });
           } else {
             // unhandled/unknown test type
             global.console.log(
@@ -361,26 +395,48 @@ export default class P4Environment {
                 test.testType +
                 " is an unknown test type."
             );
-            reject();
+            reject(
+              new Error(
+                "Cannot execute test. " +
+                  test.testType +
+                  " is an unknown test type." +
+                  testOutput
+              )
+            );
           }
+          // if any of the terminalStates matched
+          if (testPassed === true && someTestsFailed !== true)
+            someTestsFailed = false;
+          else someTestsFailed = true;
         }
+        if (someTestsFailed !== undefined && someTestsFailed === false)
+          resolve("All tests passed! " + testOutput);
+        else reject(new Error("Some Tests failed! " + testOutput));
       } else {
         // no tests defined
         global.console.log(
           "Cannot execute test. No steps defined in tasks for assignment."
         );
-        reject();
+        reject(
+          new Error(
+            "Cannot execute test. No steps defined in tasks for assignment."
+          )
+        );
       }
-      reject();
     });
   }
 
-  async test(
+  async submit(
     stepIndex: string,
-    terminalState: TerminalStateType[]
+    terminalStates: TerminalStateType[]
   ): Promise<void> {
-    console.log("TESTING step " + stepIndex);
-    await this.executeTest(stepIndex, terminalState);
+    console.log("SUBMITTING assignment (step " + stepIndex + ")");
+    const result = await this.persister.SubmitUserEnvironment(
+      this.userId,
+      this.identifier,
+      terminalStates
+    );
+    return result;
   }
 
   public async readFile(alias: string): Promise<string> {
