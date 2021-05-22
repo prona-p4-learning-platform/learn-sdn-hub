@@ -40,10 +40,13 @@ type TerminalStateType = {
 
 export interface EnvironmentDescription {
   tasks: Array<Array<Task>>;
-  steps?: Array<AssignmentStep>;
-  description: string;
   editableFiles: Array<AliasedFile>;
   stopCommands: Array<Task>;
+  steps?: Array<AssignmentStep>;
+  submissionPrepareCommand?: string;
+  submissionSupplementalFiles?: Array<string>;
+  submissionCleanupCommand?: string;
+  description: string;
   assignmentLabSheet: string;
 }
 
@@ -300,7 +303,10 @@ export default class P4Environment {
     await this.start();
   }
 
-  async testSSHCommand(testItem: string, match: string): Promise<void> {
+  async runSSHCommand(
+    command: string,
+    stdoutSuccessMatch?: string
+  ): Promise<string> {
     const endpoint = await this.makeSureInstanceExists();
     let resolved = false;
 
@@ -312,7 +318,7 @@ export default class P4Environment {
         this.identifier,
         endpoint.IPAddress,
         endpoint.SSHPort,
-        testItem,
+        command,
         [""],
         "/",
         false
@@ -329,15 +335,25 @@ export default class P4Environment {
             signal +
             ")"
         );
-        if (code == "0" && console.stdout.match(match)) {
-          // command was run successfully (exit code 0) and stdout matched regexp defined in test
-          resolved = true;
+        if (code == "0") {
+          // if stdoutSuccessMatch was supplied, try to match stdout against it, to detect whether cmd was successfull
+          if (stdoutSuccessMatch) {
+            if (console.stdout.match(stdoutSuccessMatch)) {
+              // command was run successfully (exit code 0) and stdout matched regexp defined in test
+              resolved = true;
+            } else {
+              resolved = false;
+            }
+          } else {
+            // command was run successfully (exit code 0)
+            resolved = true;
+          }
         } else {
           resolved = false;
         }
       });
       console.on("closed", () => {
-        if (resolved === true) resolve();
+        if (resolved === true) resolve(console.stdout);
         else reject();
       });
     });
@@ -380,7 +396,7 @@ export default class P4Environment {
                 testOutput += "FAILED: " + test.errorHint + " ";
             }
           } else if (test.testType == "sshCommand") {
-            await this.testSSHCommand(test.testItem, test.match)
+            await this.runSSHCommand(test.testItem, test.match)
               .then(() => {
                 testOutput += "PASSED: " + test.successMessage + " ";
                 testPassed = true;
@@ -431,12 +447,80 @@ export default class P4Environment {
     terminalStates: TerminalStateType[]
   ): Promise<void> {
     console.log("SUBMITTING assignment (step " + stepIndex + ")");
-    const result = await this.persister.SubmitUserEnvironment(
+    const submittedFiles = new Map<string, string>();
+    for (const [alias] of this.editableFiles.entries()) {
+      await this.readFile(alias).then((fileContent: string) => {
+        submittedFiles.set(alias, fileContent);
+      });
+    }
+
+    // if submissionPrepareCommand is defined in config, run it and include its output
+    if (this.configuration.submissionPrepareCommand) {
+      let submissionPrepareResult = "";
+      const cmdWithExpanededVars = this.configuration.submissionPrepareCommand
+        .replace("$user", this.userId)
+        .replace("$identifier", this.identifier);
+      await this.runSSHCommand(cmdWithExpanededVars)
+        .then((result) => {
+          submissionPrepareResult = result;
+        })
+        .catch((error) => {
+          submissionPrepareResult = error;
+        });
+      if (submissionPrepareResult) {
+        submittedFiles.set(
+          "sumissionPrepareResult-output.log",
+          submissionPrepareResult
+        );
+      }
+    }
+
+    // if submissionSupplementalFiles are defined in config, include them in the submission
+    // TODO: content of binary files is broken?
+    if (this.configuration.submissionSupplementalFiles) {
+      for (const supplementalFile of this.configuration
+        .submissionSupplementalFiles) {
+        const fileNameWithExpanededVars = supplementalFile
+          .replace("$user", this.userId)
+          .replace("$identifier", this.identifier);
+        const fileContent = await this.filehandler.readFile(
+          fileNameWithExpanededVars
+        );
+        const flattenedFilePathName = fileNameWithExpanededVars
+          .replace(/\//g, "_")
+          .replace(/\\/g, "_");
+        submittedFiles.set(flattenedFilePathName, fileContent);
+      }
+    }
+
+    // if submissionCleanupCommand is defined in config, run it and include its output
+    // TODO: cleanup output correct?
+    if (this.configuration.submissionCleanupCommand) {
+      let submissionCleanupResult = "";
+      const cmdWithExpanededVars = this.configuration.submissionCleanupCommand
+        .replace("$user", this.userId)
+        .replace("$identifier", this.identifier);
+      await this.runSSHCommand(cmdWithExpanededVars)
+        .then((result) => {
+          submissionCleanupResult = result;
+        })
+        .catch((error) => {
+          submissionCleanupResult = error;
+        });
+      if (submissionCleanupResult) {
+        submittedFiles.set(
+          "submissionCleanupResult-output.log",
+          submissionCleanupResult
+        );
+      }
+    }
+
+    await this.persister.SubmitUserEnvironment(
       this.userId,
       this.identifier,
-      terminalStates
+      terminalStates,
+      submittedFiles
     );
-    return result;
   }
 
   public async readFile(alias: string): Promise<string> {

@@ -56,7 +56,8 @@ export default class MemoryPersister implements Persister {
   async SubmitUserEnvironment(
     username: string,
     identifier: string,
-    terminalStates: TerminalStateType[]
+    terminalStates: TerminalStateType[],
+    submittedFiles: Map<string, string>
   ): Promise<void> {
     console.log(
       "Storing assignment result for user: " +
@@ -72,6 +73,7 @@ export default class MemoryPersister implements Persister {
     const resultDirName = username + "-" + identifier;
     const resultPath = path.resolve(resultPathRoot, resultDirName);
     !fs.existsSync(resultPath) && fs.mkdirSync(resultPath);
+
     for (const terminalState of terminalStates) {
       fs.writeFileSync(
         path.resolve(
@@ -80,6 +82,10 @@ export default class MemoryPersister implements Persister {
         ),
         terminalState.state
       );
+    }
+
+    for (const [alias, fileContent] of submittedFiles) {
+      fs.writeFileSync(path.resolve(resultPath, alias), fileContent);
     }
   }
 

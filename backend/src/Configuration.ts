@@ -52,7 +52,7 @@ environments.set("p4basic", {
         },
         {
           testType: "sshCommand",
-          testItem: "mx h1 ping 10.0.2.2",
+          testItem: "echo mx h1 ping -c 10.0.2.2",
           match: "(.*)",
           successMessage: "ping from h1 to h2 worked!",
           errorHint:
@@ -81,6 +81,10 @@ environments.set("p4basic", {
       ],
     },
   ],
+  submissionPrepareCommand:
+    "tar zcvf /tmp/$user-$identifier.tar.gz /home/p4/tutorials/exercises/basic/ && touch /tmp/test",
+  submissionSupplementalFiles: ["/tmp/$user-$identifier.tar.gz", "/tmp/test"],
+  submissionCleanupCommand: "rm /tmp/$user-$identifier.tar.gz && rm /tmp/test",
   description: "p4basic description",
   assignmentLabSheet: "../assignments/p4basic.md",
 });

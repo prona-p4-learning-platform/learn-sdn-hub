@@ -30,6 +30,7 @@ export interface Persister {
   SubmitUserEnvironment: (
     username: string,
     identifier: string,
-    terminalStates: TerminalStateType[]
+    terminalStates: TerminalStateType[],
+    submittedFiles: Map<string, string>
   ) => Promise<void>;
 }
