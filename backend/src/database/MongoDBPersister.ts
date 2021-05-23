@@ -84,12 +84,13 @@ export default class MongoDBPersister implements Persister {
       .then(() => undefined);
   }
 
+  // TODO: currently stores files locally, maybe also store them in mongodb? or otherwise use shared function for a all persisters for that?
   async SubmitUserEnvironment(
     username: string,
     identifier: string,
-    terminalStates: TerminalStateType[]
+    terminalStates: TerminalStateType[],
+    submittedFiles: Map<string, string>
   ): Promise<void> {
-    // TODO: currently stores files locally, maybe also store them in mongodb?
     console.log(
       "Storing assignment result for user: " +
         username +
@@ -104,14 +105,20 @@ export default class MongoDBPersister implements Persister {
     const resultDirName = username + "-" + identifier;
     const resultPath = path.resolve(resultPathRoot, resultDirName);
     !fs.existsSync(resultPath) && fs.mkdirSync(resultPath);
+
     for (const terminalState of terminalStates) {
       fs.writeFileSync(
         path.resolve(
           resultPath,
           terminalState.endpoint.split("/").slice(-1) + "-output.txt"
         ),
-        terminalState.state
+        terminalState.state,
+        "binary"
       );
+    }
+
+    for (const [alias, fileContent] of submittedFiles) {
+      fs.writeFileSync(path.resolve(resultPath, alias), fileContent, "binary");
     }
   }
 

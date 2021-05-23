@@ -476,7 +476,6 @@ export default class P4Environment {
     }
 
     // if submissionSupplementalFiles are defined in config, include them in the submission
-    // TODO: content of binary files is broken?
     if (this.configuration.submissionSupplementalFiles) {
       for (const supplementalFile of this.configuration
         .submissionSupplementalFiles) {
@@ -484,7 +483,8 @@ export default class P4Environment {
           .replace("$user", this.userId)
           .replace("$identifier", this.identifier);
         const fileContent = await this.filehandler.readFile(
-          fileNameWithExpanededVars
+          fileNameWithExpanededVars,
+          "binary"
         );
         const flattenedFilePathName = fileNameWithExpanededVars
           .replace(/\//g, "_")
@@ -494,7 +494,6 @@ export default class P4Environment {
     }
 
     // if submissionCleanupCommand is defined in config, run it and include its output
-    // TODO: cleanup output correct?
     if (this.configuration.submissionCleanupCommand) {
       let submissionCleanupResult = "";
       const cmdWithExpanededVars = this.configuration.submissionCleanupCommand

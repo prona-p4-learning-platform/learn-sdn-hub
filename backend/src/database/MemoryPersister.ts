@@ -80,12 +80,13 @@ export default class MemoryPersister implements Persister {
           resultPath,
           terminalState.endpoint.split("/").slice(-1) + "-output.txt"
         ),
-        terminalState.state
+        terminalState.state,
+        "binary"
       );
     }
 
     for (const [alias, fileContent] of submittedFiles) {
-      fs.writeFileSync(path.resolve(resultPath, alias), fileContent);
+      fs.writeFileSync(path.resolve(resultPath, alias), fileContent, "binary");
     }
   }
 
