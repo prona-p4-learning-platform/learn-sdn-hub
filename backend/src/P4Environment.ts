@@ -312,8 +312,6 @@ export default class P4Environment {
 
     return new Promise((resolve, reject) => {
       // run sshCommand
-      // TODO check that ssh conns and streams are cleaned up, seams like the following does not work correctly:
-      //      open assignment, open terminals, run a test, undeploy and deploy assignment -> terminals do not work, undeploy/deploy again: things work fine
       const console = new SSHConsole(
         this.identifier,
         endpoint.IPAddress,
