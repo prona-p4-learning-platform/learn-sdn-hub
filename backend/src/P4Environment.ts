@@ -351,6 +351,7 @@ export default class P4Environment {
         } else {
           resolved = false;
         }
+        console.emit("closed");
       });
       console.on("closed", () => {
         if (resolved === true) resolve(console.stdout);

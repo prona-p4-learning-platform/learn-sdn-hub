@@ -67,7 +67,9 @@ export default class SSHConsole extends EventEmitter implements Console {
       sshConsole = new Client() as CustomizedSSHClient;
       sshConsole.ready = false;
       sshConsole.environmentId = environmentId;
-      SSHConsole.sshConnections.set(consoleIdentifier, sshConsole);
+      if (this.provideTty) {
+        SSHConsole.sshConnections.set(consoleIdentifier, sshConsole);
+      }
       sshConsole.on("ready", () => {
         sshConsole.ready = true;
         this.setupShellStream(sshConsole);
@@ -79,7 +81,9 @@ export default class SSHConsole extends EventEmitter implements Console {
         console.log("SSH connection closed.");
         sshConsole.end();
         this.emit("closed");
-        SSHConsole.sshConnections.delete(consoleIdentifier);
+        if (this.provideTty) {
+          SSHConsole.sshConnections.delete(consoleIdentifier);
+        }
       });
       sshConsole.on("stdout", (data: string) => {
         this.stdout += data;
@@ -151,7 +155,6 @@ export default class SSHConsole extends EventEmitter implements Console {
                 "Stream :: close :: code: " + code + ", signal: " + signal
               );
               sshConsole.emit("finished", code, signal);
-              stream.end();
               sshConsole.end();
             })
             .on("data", function (data: string) {
