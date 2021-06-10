@@ -19,21 +19,30 @@ interface Task {
 interface AssignmentStep {
   name: string;
   label: string;
-  tests: Array<AssignmentStepTest>;
+  tests: Array<AssignmentStepTestType>;
 }
 
-type AssignmentStepTestType = "sshCommand" | "terminalBufferSearch";
+interface AssignmentStepTestSSHCommand {
+  type: "SSHCommand";
+  command: string;
+  stdOutMatch: string;
+  successMessage: string;
+  errorHint: string;
+}
 
-interface AssignmentStepTest {
-  testType: AssignmentStepTestType;
-  testItem: string;
+interface AssignmentStepTestTerminalBufferSearch {
+  type: "TerminalBufferSearch";
+  terminal: string;
   match: string;
   successMessage: string;
   errorHint: string;
 }
 
-// TODO: place type in separate file and import it from there, where needed?
-type TerminalStateType = {
+type AssignmentStepTestType =
+  | AssignmentStepTestSSHCommand
+  | AssignmentStepTestTerminalBufferSearch;
+
+export type TerminalStateType = {
   endpoint: string;
   state: string;
 };
@@ -372,7 +381,7 @@ export default class P4Environment {
         for (const test of activeStep.tests) {
           let testPassed = false;
           // per default test result is false
-          if (test.testType == "terminalBufferSearch") {
+          if (test.type == "TerminalBufferSearch") {
             // search in terminalBuffer for match
             if (terminalStates.length === 0) {
               reject(
@@ -383,7 +392,7 @@ export default class P4Environment {
             } else {
               for (const terminalState of terminalStates) {
                 if (
-                  terminalState.endpoint.split("/").pop().match(test.testItem)
+                  terminalState.endpoint.split("/").pop().match(test.terminal)
                 ) {
                   if (terminalState.state.match(test.match)) {
                     testOutput += "PASSED: " + test.successMessage + " ";
@@ -394,8 +403,8 @@ export default class P4Environment {
               if (testPassed !== true)
                 testOutput += "FAILED: " + test.errorHint + " ";
             }
-          } else if (test.testType == "sshCommand") {
-            await this.runSSHCommand(test.testItem, test.match)
+          } else if (test.type == "SSHCommand") {
+            await this.runSSHCommand(test.command, test.stdOutMatch)
               .then(() => {
                 testOutput += "PASSED: " + test.successMessage + " ";
                 testPassed = true;
@@ -403,21 +412,6 @@ export default class P4Environment {
               .catch(() => {
                 testOutput += "FAILED: " + test.errorHint + " ";
               });
-          } else {
-            // unhandled/unknown test type
-            global.console.log(
-              "Cannot execute test. " +
-                test.testType +
-                " is an unknown test type."
-            );
-            reject(
-              new Error(
-                "Cannot execute test. " +
-                  test.testType +
-                  " is an unknown test type." +
-                  testOutput
-              )
-            );
           }
           // if any of the terminalStates matched
           if (testPassed === true && someTestsFailed !== true)

@@ -1,8 +1,4 @@
-// TODO: place type in separate file and import it from there, where needed?
-type TerminalStateType = {
-  endpoint: string;
-  state: string;
-};
+import { TerminalStateType } from "../P4Environment";
 
 export interface UserAccount {
   username: string;

@@ -44,16 +44,16 @@ environments.set("p4basic", {
       label: "make h1 ping h2 work",
       tests: [
         {
-          testType: "sshCommand",
-          testItem: "mx h1 ls",
-          match: "(.*)",
+          type: "SSHCommand",
+          command: "mx h1 ls",
+          stdOutMatch: "(.*)",
           successMessage: "h1 ls worked!",
           errorHint: "could not run ls on h1",
         },
         {
-          testType: "sshCommand",
-          testItem: "echo mx h1 ping -c 10.0.2.2",
-          match: "(.*)",
+          type: "SSHCommand",
+          command: "echo mx h1 ping -c 10.0.2.2",
+          stdOutMatch: "(.*)",
           successMessage: "ping from h1 to h2 worked!",
           errorHint:
             "ping from h1 to h2 did not work. Check arp and ip rules between h1 and h2",
@@ -65,15 +65,15 @@ environments.set("p4basic", {
       label: "enter 'foo' in any terminal and 'bar' in terminal bash2",
       tests: [
         {
-          testType: "terminalBufferSearch",
-          testItem: "(.*)",
+          type: "TerminalBufferSearch",
+          terminal: "(.*)",
           match: "(.*)foo(.*)",
           successMessage: "foo found",
           errorHint: "foo not found",
         },
         {
-          testType: "terminalBufferSearch",
-          testItem: "bash2",
+          type: "TerminalBufferSearch",
+          terminal: "bash2",
           match: "(.*)bar(.*)",
           successMessage: "bar found",
           errorHint: "bar not found",

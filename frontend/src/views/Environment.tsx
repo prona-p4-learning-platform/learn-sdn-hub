@@ -32,7 +32,7 @@ type PathParamsType = {
 
 type PropsType = RouteComponentProps<PathParamsType> & {};
 
-type TerminalStateType = {
+export type TerminalStateType = {
   endpoint: string;
   state: string;
 }

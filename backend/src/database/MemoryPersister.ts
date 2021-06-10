@@ -1,12 +1,7 @@
 import { Persister, UserEnvironment, UserAccount } from "./Persister";
 import fs from "fs";
 import path from "path";
-
-// TODO: place type in separate file and import it from there, where needed?
-type TerminalStateType = {
-  endpoint: string;
-  state: string;
-};
+import { TerminalStateType } from "../P4Environment";
 
 const userEnvironments: Map<string, Map<string, UserEnvironment>> = new Map();
 export default class MemoryPersister implements Persister {

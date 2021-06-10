@@ -78,11 +78,11 @@ export default class OpenStackProvider implements InstanceProvider {
       this.openstack.createServer(
         {
           name: identifier,
-          flavor: "2",
-          image: "e75337a9-28f4-4cc0-ac35-ec57b4215314",
-          networks: [{ uuid: "a4aa5b22-1c3e-4b0f-a443-3d837a4de3db" }],
+          flavor: "4",
+          image: "4f42d4a8-e541-4070-9890-0394bd75b41c",
+          networks: [{ uuid: "3bc2dda1-1c57-4cc8-9813-6f1b2e669375" }],
           // @ts-ignore
-          keyname: "P4 Template Machine",
+          keyname: "srieger-pub",
         },
         //@ts-ignore
         (err: Error, server: any) => {
@@ -91,6 +91,7 @@ export default class OpenStackProvider implements InstanceProvider {
 
           this.waitForServerRunning(server.id)
             .then(() => {
+              this.openstack.addFloatingIp(server.id, "abc");
               //@ts-ignore
               const callback = (err, addresses): void => {
                 if (err) {

@@ -2,12 +2,7 @@ import { MongoClient } from "mongodb";
 import { Persister, UserEnvironment, UserAccount } from "./Persister";
 import fs from "fs";
 import path from "path";
-
-// TODO: place type in separate file and import it from there, where needed?
-type TerminalStateType = {
-  endpoint: string;
-  state: string;
-};
+import { TerminalStateType } from "../P4Environment";
 
 export default class MongoDBPersister implements Persister {
   private mongoClient: MongoClient = null;
