@@ -29,11 +29,6 @@ declare module "pkgcloud" {
       callback: (err: Error | null, server: string) => void
     ): void;
     destroyServer(): null;
-    addFloatingIp(
-      server: string,
-      floatingIp: string,
-      callback: (err: Error | null, server: string) => void
-    ): void;
   }
 
   export namespace compute {
