@@ -16,11 +16,46 @@ interface Task {
   name: string;
 }
 
+interface AssignmentStep {
+  name: string;
+  label: string;
+  tests: Array<AssignmentStepTestType>;
+}
+
+interface AssignmentStepTestSSHCommand {
+  type: "SSHCommand";
+  command: string;
+  stdOutMatch: string;
+  successMessage: string;
+  errorHint: string;
+}
+
+interface AssignmentStepTestTerminalBufferSearch {
+  type: "TerminalBufferSearch";
+  terminal: string;
+  match: string;
+  successMessage: string;
+  errorHint: string;
+}
+
+type AssignmentStepTestType =
+  | AssignmentStepTestSSHCommand
+  | AssignmentStepTestTerminalBufferSearch;
+
+export type TerminalStateType = {
+  endpoint: string;
+  state: string;
+};
+
 export interface EnvironmentDescription {
   tasks: Array<Array<Task>>;
-  description: string;
   editableFiles: Array<AliasedFile>;
   stopCommands: Array<Task>;
+  steps?: Array<AssignmentStep>;
+  submissionPrepareCommand?: string;
+  submissionSupplementalFiles?: Array<string>;
+  submissionCleanupCommand?: string;
+  description: string;
   assignmentLabSheet: string;
 }
 
@@ -275,6 +310,209 @@ export default class P4Environment {
     await this.stop();
     console.log("STARTING");
     await this.start();
+  }
+
+  async runSSHCommand(
+    command: string,
+    stdoutSuccessMatch?: string
+  ): Promise<string> {
+    const endpoint = await this.makeSureInstanceExists();
+    let resolved = false;
+
+    return new Promise((resolve, reject) => {
+      // run sshCommand
+      const console = new SSHConsole(
+        this.identifier,
+        endpoint.IPAddress,
+        endpoint.SSHPort,
+        command,
+        [""],
+        "/",
+        false
+      );
+      console.on("finished", (code: string, signal: string) => {
+        global.console.log(
+          "STDOUT: " +
+            console.stdout +
+            "STDERR: " +
+            console.stderr +
+            "(exit code: " +
+            code +
+            ", signal: " +
+            signal +
+            ")"
+        );
+        if (code == "0") {
+          // if stdoutSuccessMatch was supplied, try to match stdout against it, to detect whether cmd was successfull
+          if (stdoutSuccessMatch) {
+            if (console.stdout.match(stdoutSuccessMatch)) {
+              // command was run successfully (exit code 0) and stdout matched regexp defined in test
+              resolved = true;
+            } else {
+              resolved = false;
+            }
+          } else {
+            // command was run successfully (exit code 0)
+            resolved = true;
+          }
+        } else {
+          resolved = false;
+        }
+        console.emit("closed");
+      });
+      console.on("closed", () => {
+        if (resolved === true) resolve(console.stdout);
+        else reject();
+      });
+    });
+  }
+
+  async test(
+    stepIndex: string,
+    terminalStates: TerminalStateType[]
+  ): Promise<string> {
+    console.log("TESTING step " + stepIndex);
+
+    return new Promise(async (resolve, reject) => {
+      if (this.configuration.steps?.length > 0) {
+        const activeStep = this.configuration.steps[parseInt(stepIndex)];
+        let testOutput = "";
+        let someTestsFailed = undefined as boolean;
+        for (const test of activeStep.tests) {
+          let testPassed = false;
+          // per default test result is false
+          if (test.type == "TerminalBufferSearch") {
+            // search in terminalBuffer for match
+            if (terminalStates.length === 0) {
+              reject(
+                new Error(
+                  "No terminal states available. Please use the terminals to run the steps given in the assignment and check again."
+                )
+              );
+            } else {
+              for (const terminalState of terminalStates) {
+                if (
+                  terminalState.endpoint.split("/").pop().match(test.terminal)
+                ) {
+                  if (terminalState.state.match(test.match)) {
+                    testOutput += "PASSED: " + test.successMessage + " ";
+                    testPassed = true;
+                  }
+                }
+              }
+              if (testPassed !== true)
+                testOutput += "FAILED: " + test.errorHint + " ";
+            }
+          } else if (test.type == "SSHCommand") {
+            await this.runSSHCommand(test.command, test.stdOutMatch)
+              .then(() => {
+                testOutput += "PASSED: " + test.successMessage + " ";
+                testPassed = true;
+              })
+              .catch(() => {
+                testOutput += "FAILED: " + test.errorHint + " ";
+              });
+          }
+          // if any of the terminalStates matched
+          if (testPassed === true && someTestsFailed !== true)
+            someTestsFailed = false;
+          else someTestsFailed = true;
+        }
+        if (someTestsFailed !== undefined && someTestsFailed === false)
+          resolve("All tests passed! " + testOutput);
+        else reject(new Error("Some Tests failed! " + testOutput));
+      } else {
+        // no tests defined
+        global.console.log(
+          "Cannot execute test. No steps defined in tasks for assignment."
+        );
+        reject(
+          new Error(
+            "Cannot execute test. No steps defined in tasks for assignment."
+          )
+        );
+      }
+    });
+  }
+
+  async submit(
+    stepIndex: string,
+    terminalStates: TerminalStateType[]
+  ): Promise<void> {
+    console.log("SUBMITTING assignment (step " + stepIndex + ")");
+    const submittedFiles = new Map<string, string>();
+    for (const [alias] of this.editableFiles.entries()) {
+      await this.readFile(alias).then((fileContent: string) => {
+        submittedFiles.set(alias, fileContent);
+      });
+    }
+
+    // if submissionPrepareCommand is defined in config, run it and include its output
+    if (this.configuration.submissionPrepareCommand) {
+      let submissionPrepareResult = "";
+      const cmdWithExpanededVars = this.configuration.submissionPrepareCommand
+        .replace("$user", this.userId)
+        .replace("$identifier", this.identifier);
+      await this.runSSHCommand(cmdWithExpanededVars)
+        .then((result) => {
+          submissionPrepareResult = result;
+        })
+        .catch((error) => {
+          submissionPrepareResult = error;
+        });
+      if (submissionPrepareResult) {
+        submittedFiles.set(
+          "sumissionPrepareResult-output.log",
+          submissionPrepareResult
+        );
+      }
+    }
+
+    // if submissionSupplementalFiles are defined in config, include them in the submission
+    if (this.configuration.submissionSupplementalFiles) {
+      for (const supplementalFile of this.configuration
+        .submissionSupplementalFiles) {
+        const fileNameWithExpanededVars = supplementalFile
+          .replace("$user", this.userId)
+          .replace("$identifier", this.identifier);
+        const fileContent = await this.filehandler.readFile(
+          fileNameWithExpanededVars,
+          "binary"
+        );
+        const flattenedFilePathName = fileNameWithExpanededVars
+          .replace(/\//g, "_")
+          .replace(/\\/g, "_");
+        submittedFiles.set(flattenedFilePathName, fileContent);
+      }
+    }
+
+    // if submissionCleanupCommand is defined in config, run it and include its output
+    if (this.configuration.submissionCleanupCommand) {
+      let submissionCleanupResult = "";
+      const cmdWithExpanededVars = this.configuration.submissionCleanupCommand
+        .replace("$user", this.userId)
+        .replace("$identifier", this.identifier);
+      await this.runSSHCommand(cmdWithExpanededVars)
+        .then((result) => {
+          submissionCleanupResult = result;
+        })
+        .catch((error) => {
+          submissionCleanupResult = error;
+        });
+      if (submissionCleanupResult) {
+        submittedFiles.set(
+          "submissionCleanupResult-output.log",
+          submissionCleanupResult
+        );
+      }
+    }
+
+    await this.persister.SubmitUserEnvironment(
+      this.userId,
+      this.identifier,
+      terminalStates,
+      submittedFiles
+    );
   }
 
   public async readFile(alias: string): Promise<string> {

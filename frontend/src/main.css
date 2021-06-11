@@ -8,7 +8,7 @@
 
 .myMarkdownContainer {
 	overflow-y: scroll;
-	height: calc(100vh - 150px);
+	height: calc(100vh - 210px);
 	width: calc(50vw - 20px);
 }
 

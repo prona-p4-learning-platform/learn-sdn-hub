@@ -28,7 +28,10 @@ export default class SSHFileHandler {
       });
   }
 
-  async readFile(absolutePath: string): Promise<string> {
+  async readFile(
+    absolutePath: string,
+    encoding?: BufferEncoding
+  ): Promise<string> {
     if (this.hasClosedOrErrored) {
       return Promise.reject(new Error("SSHFileHandler: SSH connection error."));
     }
@@ -40,7 +43,11 @@ export default class SSHFileHandler {
           if (err) return reject(err);
           console.log("retrieved file.", content);
           sftp.end();
-          resolve(content.toString("utf-8"));
+          if (encoding) {
+            resolve(content.toString(encoding));
+          } else {
+            resolve(content.toString("utf-8"));
+          }
         });
       });
     });

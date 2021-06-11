@@ -1,6 +1,4 @@
 /// <reference types="../typings/pkgcloud" />
-/* eslint-disable @typescript-eslint/ban-ts-comment */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import pkgcloud, { OpenStackClient } from "pkgcloud";
 import { InstanceProvider, VMEndpoint } from "./Provider";
 
@@ -27,10 +25,12 @@ export default class OpenStackProvider implements InstanceProvider {
         if (err) {
           return reject(err);
         }
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         //@ts-ignore
         server.client.getServer(server, (err, server) => {
           if (err) return reject(err);
           console.log(err, server);
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
           //@ts-ignore
           server.client.getServerAddresses(server, (err, addresses) => {
             if (err) {
@@ -39,6 +39,7 @@ export default class OpenStackProvider implements InstanceProvider {
             console.log(server);
             if (Object.keys(addresses).length > 0) {
               resolve({
+                // eslint-disable-next-line @typescript-eslint/ban-ts-comment
                 //@ts-ignore
                 identifier,
                 IPAddress: addresses[Object.keys(addresses)[0]][0].addr,
@@ -67,6 +68,7 @@ export default class OpenStackProvider implements InstanceProvider {
           resolve();
         }
       };
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       this.openstack.getServer(server, callback);
     });
@@ -81,16 +83,21 @@ export default class OpenStackProvider implements InstanceProvider {
           flavor: "2",
           image: "e75337a9-28f4-4cc0-ac35-ec57b4215314",
           networks: [{ uuid: "a4aa5b22-1c3e-4b0f-a443-3d837a4de3db" }],
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
           // @ts-ignore
           keyname: "P4 Template Machine",
         },
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         //@ts-ignore
-        (err: Error, server: any) => {
+        // eslint-disable-next-line @typescript-eslint/ban-types
+        (err: Error, server: object) => {
           if (err) return reject(err);
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
           //@ts-ignore
 
           this.waitForServerRunning(server.id)
             .then(() => {
+              // eslint-disable-next-line @typescript-eslint/ban-ts-comment
               //@ts-ignore
               const callback = (err, addresses): void => {
                 if (err) {
@@ -98,6 +105,7 @@ export default class OpenStackProvider implements InstanceProvider {
                 }
                 if (Object.keys(addresses).length > 0) {
                   resolve({
+                    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
                     //@ts-ignore
                     identifier: server.id,
                     IPAddress: addresses[Object.keys(addresses)[0]][0].addr,
@@ -106,6 +114,7 @@ export default class OpenStackProvider implements InstanceProvider {
                   });
                 } else {
                   setTimeout(
+                    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
                     //@ts-ignore
                     () => server.client.getServerAddresses(server, callback),
                     2000
@@ -113,6 +122,7 @@ export default class OpenStackProvider implements InstanceProvider {
                 }
               };
               console.log(server);
+              // eslint-disable-next-line @typescript-eslint/ban-ts-comment
               //@ts-ignore
               server.client.getServerAddresses(server, callback);
             })

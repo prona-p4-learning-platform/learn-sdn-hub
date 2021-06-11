@@ -38,6 +38,53 @@ environments.set("p4basic", {
       provideTty: false,
     },
   ],
+  steps: [
+    {
+      name: "1",
+      label: "make h1 ping h2 work",
+      tests: [
+        {
+          type: "SSHCommand",
+          command: "mx h1 ls",
+          stdOutMatch: "(.*)",
+          successMessage: "h1 ls worked!",
+          errorHint: "could not run ls on h1",
+        },
+        {
+          type: "SSHCommand",
+          command: "echo mx h1 ping -c 10.0.2.2",
+          stdOutMatch: "(.*)",
+          successMessage: "ping from h1 to h2 worked!",
+          errorHint:
+            "ping from h1 to h2 did not work. Check arp and ip rules between h1 and h2",
+        },
+      ],
+    },
+    {
+      name: "2",
+      label: "enter 'foo' in any terminal and 'bar' in terminal bash2",
+      tests: [
+        {
+          type: "TerminalBufferSearch",
+          terminal: "(.*)",
+          match: "(.*)foo(.*)",
+          successMessage: "foo found",
+          errorHint: "foo not found",
+        },
+        {
+          type: "TerminalBufferSearch",
+          terminal: "bash2",
+          match: "(.*)bar(.*)",
+          successMessage: "bar found",
+          errorHint: "bar not found",
+        },
+      ],
+    },
+  ],
+  submissionPrepareCommand:
+    "tar zcvf /tmp/$user-$identifier.tar.gz /home/p4/tutorials/exercises/basic/ && touch /tmp/test",
+  submissionSupplementalFiles: ["/tmp/$user-$identifier.tar.gz", "/tmp/test"],
+  submissionCleanupCommand: "rm /tmp/$user-$identifier.tar.gz && rm /tmp/test",
   description: "p4basic description",
   assignmentLabSheet: "../assignments/p4basic.md",
 });

@@ -1,5 +1,9 @@
 import { MongoClient } from "mongodb";
 import { Persister, UserEnvironment, UserAccount } from "./Persister";
+import fs from "fs";
+import path from "path";
+import { TerminalStateType } from "../P4Environment";
+
 export default class MongoDBPersister implements Persister {
   private mongoClient: MongoClient = null;
   private connectURL: string;
@@ -73,6 +77,44 @@ export default class MongoDBPersister implements Persister {
         }
       )
       .then(() => undefined);
+  }
+
+  // TODO: currently stores files locally, maybe also store them in mongodb? or otherwise use shared function for a all persisters for that?
+  async SubmitUserEnvironment(
+    username: string,
+    identifier: string,
+    terminalStates: TerminalStateType[],
+    submittedFiles: Map<string, string>
+  ): Promise<void> {
+    console.log(
+      "Storing assignment result for user: " +
+        username +
+        " assignment identifitier: " +
+        identifier +
+        " terminalStates: " +
+        terminalStates
+    );
+    const resultPathRoot = path.resolve("src", "assignments", "results");
+    !fs.existsSync(resultPathRoot) && fs.mkdirSync(resultPathRoot);
+
+    const resultDirName = username + "-" + identifier;
+    const resultPath = path.resolve(resultPathRoot, resultDirName);
+    !fs.existsSync(resultPath) && fs.mkdirSync(resultPath);
+
+    for (const terminalState of terminalStates) {
+      fs.writeFileSync(
+        path.resolve(
+          resultPath,
+          terminalState.endpoint.split("/").slice(-1) + "-output.txt"
+        ),
+        terminalState.state,
+        "binary"
+      );
+    }
+
+    for (const [alias, fileContent] of submittedFiles) {
+      fs.writeFileSync(path.resolve(resultPath, alias), fileContent, "binary");
+    }
   }
 
   async close(): Promise<void> {

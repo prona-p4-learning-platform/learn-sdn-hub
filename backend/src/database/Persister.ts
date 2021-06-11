@@ -1,3 +1,5 @@
+import { TerminalStateType } from "../P4Environment";
+
 export interface UserAccount {
   username: string;
   _id: string;
@@ -20,5 +22,11 @@ export interface Persister {
   RemoveUserEnvironment: (
     username: string,
     identifier: string
+  ) => Promise<void>;
+  SubmitUserEnvironment: (
+    username: string,
+    identifier: string,
+    terminalStates: TerminalStateType[],
+    submittedFiles: Map<string, string>
   ) => Promise<void>;
 }
