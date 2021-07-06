@@ -4,6 +4,9 @@ import { AuthenticationProvider } from "../authentication/AuthenticationProvider
 import environments from "../Configuration";
 import jwt from "jsonwebtoken";
 import { celebrate, Joi, Segments } from "celebrate";
+import authenticationMiddleware, {
+  RequestWithUser,
+} from "../authentication/AuthenticationMiddleware";
 
 const loginValidator = celebrate({
   [Segments.BODY]: Joi.object().keys({
@@ -15,9 +18,21 @@ const loginValidator = celebrate({
 export default (authProviders: AuthenticationProvider[]): Router => {
   const router = Router();
 
-  router.get("/assignments", async (req, res) => {
-    return res.status(200).json(Array.from(environments.keys()));
-  });
+  router.get(
+    "/assignments",
+    authenticationMiddleware,
+    async (req: RequestWithUser, res) => {
+      const loggedInUser = req.user.id;
+      let tempAssignmentMap = new Map(environments);
+      for (const authProvider of authProviders) {
+        tempAssignmentMap = await authProvider.filterAssignmentList(
+          loggedInUser,
+          tempAssignmentMap
+        );
+      }
+      return res.status(200).json(Array.from(tempAssignmentMap.keys()));
+    }
+  );
 
   router.post("/login", bodyParser.json(), loginValidator, async (req, res) => {
     const username = req.body.username;

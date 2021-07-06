@@ -1,3 +1,5 @@
+import { EnvironmentDescription } from "../P4Environment";
+
 export interface AuthenticationResult {
   type: string;
   username: string;
@@ -9,4 +11,8 @@ export interface AuthenticationProvider {
     username: string,
     password: string
   ): Promise<AuthenticationResult>;
+  filterAssignmentList(
+    username: string,
+    assignmentMap: Map<string, EnvironmentDescription>
+  ): Promise<Map<string, EnvironmentDescription>>;
 }
