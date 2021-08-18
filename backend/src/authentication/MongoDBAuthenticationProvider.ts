@@ -3,6 +3,7 @@ import {
   AuthenticationResult,
 } from "./AuthenticationProvider";
 import MongoDBPersister from "../database/MongoDBPersister";
+import { EnvironmentDescription } from "../P4Environment";
 
 export default class MongoDBAuthenticationProvider
   implements AuthenticationProvider {
@@ -22,5 +23,13 @@ export default class MongoDBAuthenticationProvider
       return { username: user.username, userid: user._id, type: "mongodb" };
     }
     throw new Error("AuthenticationError");
+  }
+
+  //TODO: currently does not filter anything, needs to get a field in mongodb
+  async filterAssignmentList(
+    username: string,
+    assignmentList: Map<string, EnvironmentDescription>
+  ): Promise<Map<string, EnvironmentDescription>> {
+    return assignmentList;
   }
 }
