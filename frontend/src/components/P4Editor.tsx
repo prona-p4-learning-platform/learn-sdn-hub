@@ -209,7 +209,7 @@ export default class P4Editor extends React.Component<P4EditorProps> {
               <Button variant="contained" color="primary" disabled={!this.state.fileChanged} startIcon={<CloudUploadIcon />} onClick={this.save}>
                 Deploy
               </Button>
-              <Button variant="contained" color="primary" disabled={!this.state.fileChanged} startIcon={<CloudDownloadIcon />} onClick={handleEditorConfirmationDialogOpen}>
+              <Button variant="contained" color="primary" startIcon={<CloudDownloadIcon />} onClick={handleEditorConfirmationDialogOpen}>
                 Retrieve
               </Button>
             </ButtonGroup>
@@ -235,9 +235,9 @@ export default class P4Editor extends React.Component<P4EditorProps> {
         >
           <DialogContent>
             <DialogContentText id="alert-dialog-description">
-              Reload file contents?
-              Unsaved changes will be lost.
-          </DialogContentText>
+              Retrieve file content from host?
+              Undeployed changes will be lost.
+            </DialogContentText>
           </DialogContent>
           <DialogActions>
             <Button onClick={handleEditorConfirmationDialogClose} color="primary" autoFocus>
