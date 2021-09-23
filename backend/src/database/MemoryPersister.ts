@@ -85,6 +85,36 @@ export default class MemoryPersister implements Persister {
     }
   }
 
+  async GetUserSubmissions(username: string): Promise<Map<string, Date>> {
+    console.log("Getting submissions for user: " + username);
+    const resultPathRoot = path.resolve("src", "assignments", "results");
+    if (fs.existsSync(resultPathRoot)) {
+      fs.readdir(resultPathRoot, (err, submissionDirs) => {
+        const submissions = new Map<string, string | Date>();
+        submissionDirs.forEach((submissionDir) => {
+          fs.readdir(submissionDir, (err, files) => {
+            if (submissionDir.match("^" + username + "-(.*)")) {
+              let lastMTime: Date;
+              files.forEach((file) => {
+                if (file.match("(.*)-output(.*)$")) {
+                  fs.stat(file, (err, stats) => {
+                    lastMTime = stats.mtime;
+                  });
+                  console.log(
+                    "candidate: " + file + " last modified: " + lastMTime
+                  );
+                }
+              });
+              submissions.set(submissionDir, lastMTime);
+            }
+          });
+        });
+      });
+    } else {
+      return new Map<string, Date>();
+    }
+  }
+
   async close(): Promise<void> {
     return undefined;
   }

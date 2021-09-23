@@ -257,5 +257,14 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
     }
   );
 
+  router.get(
+    "/submissions",
+    authenticationMiddleware,
+    (req: RequestWithUser, res) => {
+      const activeEnvList = P4Environment.getActiveEnvironmentList(req.user.id);
+      return res.status(200).json(Array.from(activeEnvList));
+    }
+  );
+
   return router;
 };

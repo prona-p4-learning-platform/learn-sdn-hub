@@ -515,6 +515,15 @@ export default class P4Environment {
     );
   }
 
+  public async getUserSubmissions(
+    userId: string
+  ): Promise<Map<string, string | Date>> {
+    await this.persister.GetUserEnvironments(userId).then((result) => {
+      return result;
+    });
+    throw new Error("Could not get user submissions.");
+  }
+
   public async readFile(alias: string): Promise<string> {
     const resolvedPath = this.editableFiles.get(alias);
     if (resolvedPath === undefined) {

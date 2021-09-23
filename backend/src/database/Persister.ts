@@ -29,4 +29,5 @@ export interface Persister {
     terminalStates: TerminalStateType[],
     submittedFiles: Map<string, string>
   ) => Promise<void>;
+  GetUserSubmissions: (username: string) => Promise<Map<string, string | Date>>;
 }

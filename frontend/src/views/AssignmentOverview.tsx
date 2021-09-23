@@ -31,6 +31,7 @@ export default function AssignmentOverview(props: AssignmentOverviewProps) {
   const classes = useStyles();
   const [assignments, setAssignments] = useState([])
   const [deployedAssignments, setDeployedAssignments] = useState([])
+  const [submittedAssignments, setSubmittedAssignments] = useState(new Map<string, string | Date>())
   const [load, setLoad] = useState(true)
   const [deploymentNotification, setDeploymentNotification] = useState({ result: "", severity: "info" as Severity, open: false })
 
@@ -50,6 +51,9 @@ export default function AssignmentOverview(props: AssignmentOverviewProps) {
     fetch(APIRequest("/api/environment/active", { headers: { authorization: localStorage.getItem("token") || "" } }))
       .then(res => res.json())
       .then(setDeployedAssignments)
+    fetch(APIRequest("/api/environment/submissions", { headers: { authorization: localStorage.getItem("token") || "" } }))
+      .then(res => res.json())
+      .then(setSubmittedAssignments)
   }, [load])
 
   const createEnvironment = useCallback(async (assignment: string) => {
@@ -110,15 +114,18 @@ export default function AssignmentOverview(props: AssignmentOverviewProps) {
                   Deploy
                     </Button>
             */}
+            {/*
+            <ListItemText primary={submittedAssignments.get(assignment)} />
+            */}
             <Button variant="contained" color="primary" className={classes.button} startIcon={<CloudUploadIcon />} disabled={isActiveDeployment(assignment)} onClick={() => createEnvironment(assignment)}>
               Deploy
-                </Button>
+            </Button>
             <Button variant="contained" color="secondary" className={classes.button} startIcon={<PlayCircleFilledWhiteIcon />} disabled={!isActiveDeployment(assignment)} href={`/environment/${assignment}`}>
               Start Assignment
-                </Button>
+            </Button>
             <Button variant="contained" color="primary" className={classes.button} startIcon={<CloudOffIcon />} disabled={!isActiveDeployment(assignment)} onClick={() => deleteEnvironment(assignment)}>
               Undeploy
-                </Button>
+            </Button>
           </ListItemSecondaryAction>
         </ListItem>
       ))}
