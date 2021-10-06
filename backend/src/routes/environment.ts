@@ -95,6 +95,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
       }
       P4Environment.createEnvironment(
         req.user.username,
+        req.user.groupNumber,
         String(environment),
         targetEnv,
         provider,
@@ -214,7 +215,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
         .then((testResult) => {
           res.status(200).json({
             status: "finished",
-            message: "Test successfull! " + testResult,
+            message: testResult,
           });
         })
         .catch((err) =>
@@ -249,11 +250,24 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
   );
 
   router.get(
-    "/active",
+    "/deployed-user-environments",
     authenticationMiddleware,
     (req: RequestWithUser, res) => {
-      const activeEnvList = P4Environment.getActiveEnvironmentList(req.user.id);
-      return res.status(200).json(Array.from(activeEnvList));
+      const deployedEnvList = P4Environment.getDeployedUserEnvironmentList(
+        req.user.id
+      );
+      return res.status(200).json(Array.from(deployedEnvList));
+    }
+  );
+
+  router.get(
+    "/deployed-group-environments",
+    authenticationMiddleware,
+    (req: RequestWithUser, res) => {
+      const deployedEndpList = P4Environment.getDeployedGroupEnvironmentList(
+        req.user.groupNumber
+      );
+      return res.status(200).json(Array.from(deployedEndpList));
     }
   );
 

@@ -41,7 +41,11 @@ export default (authProviders: AuthenticationProvider[]): Router => {
       try {
         const result = await authProvider.authenticateUser(username, password);
         const token = jwt.sign(
-          { username: result.username, id: result.userid },
+          {
+            username: result.username,
+            id: result.userid,
+            groupNumber: result.groupNumber,
+          },
           "some-secret"
         );
         console.log(result, token);

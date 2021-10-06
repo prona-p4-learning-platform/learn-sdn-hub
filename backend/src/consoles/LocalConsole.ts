@@ -39,7 +39,7 @@ export class SimpleConsole extends EventEmitter implements Console {
   }
 
   write(data: string): void {
-    console.log(`${this.command}${this.args} writing: `, data);
+    //console.log(`${this.command}${this.args} writing: `, data);
     this.console.write(data);
   }
 

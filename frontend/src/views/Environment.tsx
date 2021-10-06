@@ -146,7 +146,7 @@ export class EnvironmentView extends React.Component<PropsType,StateType> {
         environmentNotificationOpen: true,
         environmentNotificationAutoHideDuration: 6000,
         environmentStatus: "error", 
-        errorMessage: error
+        errorMessage: String(error)
       });
     }
   }
@@ -168,7 +168,7 @@ export class EnvironmentView extends React.Component<PropsType,StateType> {
       if (result.status === 200) {
         const message = await result.json()
         this.setState({
-          environmentNotificationResult: "Test successful!" + message.message,
+          environmentNotificationResult: message.message,
           environmentNotificationSeverity: "success",
           environmentNotificationAutoHideDuration: 60000,
           environmentNotificationOpen: true,
@@ -203,7 +203,7 @@ export class EnvironmentView extends React.Component<PropsType,StateType> {
         environmentNotificationSeverity: "error",
         environmentNotificationOpen: true,
         environmentNotificationAutoHideDuration: 60000,
-        errorMessage: error
+        errorMessage: String(error)
       });
     }
   }
@@ -248,7 +248,7 @@ export class EnvironmentView extends React.Component<PropsType,StateType> {
           environmentNotificationSeverity: "error",
           environmentNotificationOpen: true,
           environmentNotificationAutoHideDuration: 60000,
-          errorMessage: error
+          errorMessage: String(error)
         });
       }
   }

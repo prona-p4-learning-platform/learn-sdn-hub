@@ -213,15 +213,15 @@ environments.set("Example1-Repeater", {
     [
       {
         name: "bash",
-        cwd: "/home/p4/p4-boilerplate/Example1-Repeater/tmux/",
-        executable: "./start-tmux-example1-bash",
+        cwd: "/home/p4/p4-boilerplate/Example1-Repeater/",
+        executable: "./start-terminal1.sh",
         params: [],
         provideTty: true,
       },
       {
         name: "bash2",
-        cwd: "/home/p4/p4-boilerplate/Example1-Repeater/tmux/",
-        executable: "./start-tmux-example1-bash2",
+        cwd: "/home/p4/p4-boilerplate/Example1-Repeater/",
+        executable: "./start-terminal2.sh",
         params: [],
         provideTty: true,
       },
@@ -251,19 +251,38 @@ environments.set("Example1-Repeater", {
   stopCommands: [
     {
       name: "bash",
-      cwd: "/home/p4/p4-boilerplate/Example1-Repeater/tmux/",
-      executable: "./stop-tmux-example1-bash",
+      cwd: "/home/p4/p4-boilerplate/Example1-Repeater/",
+      executable: "./stop-terminal1.sh",
       params: [],
       provideTty: false,
     },
     {
       name: "bash2",
-      cwd: "/home/p4/p4-boilerplate/Example1-Repeater/tmux/",
-      executable: "./stop-tmux-example1-bash2",
+      cwd: "/home/p4/p4-boilerplate/Example1-Repeater/",
+      executable: "./stop-terminal2.sh",
       params: [],
       provideTty: false,
     },
   ],
+  steps: [
+    {
+      name: "1",
+      label: "make h1 ping h3 work",
+      tests: [
+        {
+          type: "SSHCommand",
+          command: "mx h1 ping -c 3 10.0.10.3",
+          stdOutMatch: "(.*)",
+          successMessage: "ping from h1 to h3 worked!",
+          errorHint: "ping from h1 to h3 did not work. Check your P4 code.",
+        },
+      ],
+    },
+  ],
+  submissionPrepareCommand:
+    "tar zcvf /tmp/$user-$identifier.tar.gz /home/p4/p4-boilerplate/Example1-Repeater/",
+  submissionSupplementalFiles: ["/tmp/$user-$identifier.tar.gz"],
+  submissionCleanupCommand: "rm /tmp/$user-$identifier.tar.gz",
   description: "Example1-Repeater description",
   assignmentLabSheet: "../assignments/prona-repeater.md",
 });
@@ -273,15 +292,15 @@ environments.set("Example2-MinimalisticSwitch", {
     [
       {
         name: "bash",
-        cwd: "/home/p4/p4-boilerplate/Example2-MinimalisticSwitch/tmux/",
-        executable: "./start-tmux-example2-bash",
+        cwd: "/home/p4/p4-boilerplate/Example2-MinimalisticSwitch/",
+        executable: "./start-terminal1.sh",
         params: [],
         provideTty: true,
       },
       {
         name: "bash2",
-        cwd: "/home/p4/p4-boilerplate/Example2-MinimalisticSwitch/tmux/",
-        executable: "./start-tmux-example2-bash2",
+        cwd: "/home/p4/p4-boilerplate/Example2-MinimalisticSwitch/",
+        executable: "./start-terminal2.sh",
         params: [],
         provideTty: true,
       },
@@ -317,15 +336,15 @@ environments.set("Example2-MinimalisticSwitch", {
   stopCommands: [
     {
       name: "bash",
-      cwd: "/home/p4/p4-boilerplate/Example2-MinimalisticSwitch/tmux/",
-      executable: "./stop-tmux-example2-bash",
+      cwd: "/home/p4/p4-boilerplate/Example2-MinimalisticSwitch/",
+      executable: "./stop-terminal1.sh",
       params: [],
       provideTty: false,
     },
     {
       name: "bash2",
-      cwd: "/home/p4/p4-boilerplate/Example2-MinimalisticSwitch/tmux/",
-      executable: "./stop-tmux-example2-bash2",
+      cwd: "/home/p4/p4-boilerplate/Example2-MinimalisticSwitch/",
+      executable: "./stop-terminal2.sh",
       params: [],
       provideTty: false,
     },
@@ -339,15 +358,15 @@ environments.set("Example3-LearningSwitch", {
     [
       {
         name: "bash",
-        cwd: "/home/p4/p4-boilerplate/Example3-LearningSwitch/tmux/",
-        executable: "./start-tmux-example3-bash",
+        cwd: "/home/p4/p4-boilerplate/Example3-LearningSwitch/",
+        executable: "./start-terminal1.sh",
         params: [],
         provideTty: true,
       },
       {
         name: "bash2",
-        cwd: "/home/p4/p4-boilerplate/Example3-LearningSwitch/tmux/",
-        executable: "./start-tmux-example3-bash2",
+        cwd: "/home/p4/p4-boilerplate/Example3-LearningSwitch/",
+        executable: "./start-terminal2.sh",
         params: [],
         provideTty: true,
       },
@@ -355,8 +374,8 @@ environments.set("Example3-LearningSwitch", {
     [
       {
         name: "bash3",
-        cwd: "/home/p4/p4-boilerplate/Example3-LearningSwitch/tmux/",
-        executable: "./start-tmux-example3-bash3",
+        cwd: "/home/p4/p4-boilerplate/Example3-LearningSwitch/",
+        executable: "./start-terminal3.sh",
         params: [],
         provideTty: true,
       },
@@ -381,22 +400,22 @@ environments.set("Example3-LearningSwitch", {
   stopCommands: [
     {
       name: "bash",
-      cwd: "/home/p4/p4-boilerplate/Example3-LearningSwitch/tmux/",
-      executable: "./stop-tmux-example3-bash",
+      cwd: "/home/p4/p4-boilerplate/Example3-LearningSwitch/",
+      executable: "./stop-terminal1.sh",
       params: [],
       provideTty: false,
     },
     {
       name: "bash2",
-      cwd: "/home/p4/p4-boilerplate/Example3-LearningSwitch/tmux/",
-      executable: "./stop-tmux-example3-bash2",
+      cwd: "/home/p4/p4-boilerplate/Example3-LearningSwitch/",
+      executable: "./stop-terminal2.sh",
       params: [],
       provideTty: false,
     },
     {
       name: "bash3",
-      cwd: "/home/p4/p4-boilerplate/Example3-LearningSwitch/tmux/",
-      executable: "./stop-tmux-example3-bash3",
+      cwd: "/home/p4/p4-boilerplate/Example3-LearningSwitch/",
+      executable: "./stop-terminal3.sh",
       params: [],
       provideTty: false,
     },
@@ -410,15 +429,15 @@ environments.set("Example-p4env", {
     [
       {
         name: "bash",
-        cwd: "/home/p4/p4-boilerplate/Example-p4env/tmux/",
-        executable: "./start-tmux-example4-bash",
+        cwd: "/home/p4/p4-boilerplate/Example-p4env/",
+        executable: "./start-terminal1.sh",
         params: [],
         provideTty: true,
       },
       {
         name: "bash2",
-        cwd: "/home/p4/p4-boilerplate/Example-p4env/tmux/",
-        executable: "./start-tmux-example4-bash2",
+        cwd: "/home/p4/p4-boilerplate/Example-p4env/",
+        executable: "./start-terminal2.sh",
         params: [],
         provideTty: true,
       },
@@ -438,15 +457,15 @@ environments.set("Example-p4env", {
   stopCommands: [
     {
       name: "bash",
-      cwd: "/home/p4/p4-boilerplate/Example-p4env/tmux/",
-      executable: "./stop-tmux-example4-bash",
+      cwd: "/home/p4/p4-boilerplate/Example-p4env/",
+      executable: "./stop-terminal1.sh",
       params: [],
       provideTty: false,
     },
     {
       name: "bash2",
-      cwd: "/home/p4/p4-boilerplate/Example-p4env/tmux/",
-      executable: "./stop-tmux-example4-bash2",
+      cwd: "/home/p4/p4-boilerplate/Example-p4env/",
+      executable: "./stop-terminal2.sh",
       params: [],
       provideTty: false,
     },

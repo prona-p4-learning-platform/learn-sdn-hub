@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 export type TokenPayload = {
   username: string;
   id: string;
+  groupNumber: number;
 };
 
 export type RequestWithUser = Request & {

@@ -28,7 +28,12 @@ export default class PlaintextMultiuserAuthenticationProvider
 
     if (users.has(username)) {
       if (password === users.get(username)) {
-        return { username: username, userid: username, type: "plain" };
+        return {
+          username: username,
+          userid: username,
+          groupNumber: await this.getUserMapping(username),
+          type: "plain",
+        };
       }
     }
     throw new Error("AuthenticationError");
@@ -61,6 +66,34 @@ export default class PlaintextMultiuserAuthenticationProvider
         assignmentList.clear();
         return assignmentList;
       }
+    }
+  }
+
+  async getUserMapping(userid: string): Promise<number> {
+    if (process.env.BACKEND_USER_MAPPING != undefined) {
+      const userMappingConfig = process.env.BACKEND_USER_MAPPING.split(",");
+      const usermap: Map<string, number> = new Map();
+      userMappingConfig.forEach((userMappingConfigEntry) => {
+        const login = userMappingConfigEntry.split(":")[0];
+        const instanceNumber = userMappingConfigEntry.split(":")[1];
+        usermap.set(login, parseInt(instanceNumber));
+      });
+
+      if (usermap.has(userid)) {
+        console.log(
+          "Mapped user " + userid + " to group number " + usermap.get(userid)
+        );
+        return usermap.get(userid);
+      } else {
+        throw new Error(
+          "No mapping defined to map user " + userid + " to a group."
+        );
+      }
+    } else {
+      console.log(
+        "No BACKEND_USER_MAPPING environment variable set. Mapping user to group 0."
+      );
+      return 0;
     }
   }
 }
