@@ -52,6 +52,7 @@ export default class LocalMultiuserVMProvider implements InstanceProvider {
       // for the identifier argument
       const userid = identifier.split("-")[0];
 
+      //TODO: should leverage user group mapping from AuthenticationProvider
       if (process.env.BACKEND_USER_MAPPING != undefined) {
         const userMappingConfig = process.env.BACKEND_USER_MAPPING.split(",");
         const usermap: Map<string, number> = new Map();

@@ -12,24 +12,29 @@ export interface Console {
   on(event: "finished", listener: () => void): this;
   write(data: string): void;
   writeLine(data: string): void;
-  close(environmentId: string): void;
+  close(environmentId: string, userId: string, groupNumber: number): void;
   resize(columns: number, lines: number): void;
   consumeInitialConsoleBuffer(): string;
+  command: string;
+  args: Array<string>;
+  cwd: string;
 }
 
 type CustomizedSSHClient = Client & {
   ready: boolean;
   environmentId: string;
+  userId: string;
+  groupNumber: number;
 };
 
 export default class SSHConsole extends EventEmitter implements Console {
-  private command: string;
-  private cwd: string;
+  public command: string;
+  public args: Array<string>;
+  public cwd: string;
   private provideTty: boolean;
-  private args: Array<string>;
   private stream: ClientChannel;
-  private initialConsoleBuffer: Array<string>;
-  private initialConsoleBufferConsumed = false;
+  public initialConsoleBuffer: Array<string>;
+  public initialConsoleBufferConsumed = false;
   private static sshConnections: Map<string, CustomizedSSHClient> = new Map();
   public stdout = "";
   public stderr = "";
@@ -38,6 +43,8 @@ export default class SSHConsole extends EventEmitter implements Console {
 
   constructor(
     environmentId: string,
+    userId: string,
+    groupNumber: number,
     ipaddress: string,
     port: number,
     command: string,
@@ -52,7 +59,9 @@ export default class SSHConsole extends EventEmitter implements Console {
     this.provideTty = provideTty;
     this.initialConsoleBuffer = new Array<string>();
     let sshConsole: CustomizedSSHClient;
-    const consoleIdentifier = `${ipaddress}:${port}:${environmentId}`;
+    // sharing connections in the same group would be possible and multiple users can then use the same xterm.js together,
+    // however refresh/different console sizes (which is inevitable due to different browser window sizes) etc. will lead to console corruption
+    const consoleIdentifier = `${ipaddress}:${port}:${environmentId}:${userId}:${groupNumber}`;
     if (provideTty && SSHConsole.sshConnections.has(consoleIdentifier)) {
       sshConsole = SSHConsole.sshConnections.get(consoleIdentifier);
       if (sshConsole.ready === false) {
@@ -67,6 +76,8 @@ export default class SSHConsole extends EventEmitter implements Console {
       sshConsole = new Client() as CustomizedSSHClient;
       sshConsole.ready = false;
       sshConsole.environmentId = environmentId;
+      sshConsole.userId = userId;
+      sshConsole.groupNumber = groupNumber;
       if (this.provideTty) {
         SSHConsole.sshConnections.set(consoleIdentifier, sshConsole);
       }
@@ -76,6 +87,7 @@ export default class SSHConsole extends EventEmitter implements Console {
       });
       sshConsole.on("error", (err) => {
         console.log(err);
+        this.emit("error", err);
       });
       sshConsole.on("close", () => {
         console.log("SSH connection closed.");
@@ -158,9 +170,11 @@ export default class SSHConsole extends EventEmitter implements Console {
               sshConsole.end();
             })
             .on("data", function (data: string) {
+              //console.log("STDOUT: " + data);
               sshConsole.emit("stdout", data);
             })
             .stderr.on("data", function (data: string) {
+              //console.log("STDERR: " + data);
               sshConsole.emit("stderr", data);
             });
         }
@@ -169,19 +183,27 @@ export default class SSHConsole extends EventEmitter implements Console {
   }
 
   write(data: string): void {
-    console.log(`${this.command}${this.args} writing: `, data);
+    //console.log(`${this.command}${this.args} writing: `, data);
     this.stream.write(data);
   }
 
   writeLine(data: string): void {
-    console.log(`${this.command}${this.args}`, data);
+    //console.log(`${this.command}${this.args}`, data);
     this.stream.write(`${data}\n`);
   }
 
-  async close(environmentId: string): Promise<void> {
+  async close(
+    environmentId: string,
+    userId: string,
+    groupNumber: number
+  ): Promise<void> {
     console.log("SSH console close");
     SSHConsole.sshConnections.forEach((value, key, map) => {
-      if (value.environmentId === environmentId) {
+      if (
+        value.environmentId === environmentId &&
+        value.userId === userId &&
+        value.groupNumber === groupNumber
+      ) {
         value.emit("close");
         map.delete(key);
       }

@@ -4,6 +4,7 @@ export interface AuthenticationResult {
   type: string;
   username: string;
   userid: string;
+  groupNumber: number;
 }
 
 export interface AuthenticationProvider {
@@ -15,4 +16,5 @@ export interface AuthenticationProvider {
     username: string,
     assignmentMap: Map<string, EnvironmentDescription>
   ): Promise<Map<string, EnvironmentDescription>>;
+  getUserMapping(userid: string): Promise<number>;
 }

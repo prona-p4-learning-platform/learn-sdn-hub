@@ -11,7 +11,12 @@ export default class PlaintextAuthenticationProvider
     password: string
   ): Promise<AuthenticationResult> {
     if (password === "p4") {
-      return { username: username, userid: username, type: "plain" };
+      return {
+        username: username,
+        userid: username,
+        groupNumber: await this.getUserMapping(username),
+        type: "plain",
+      };
     }
     throw new Error("AuthenticationError");
   }
@@ -44,5 +49,9 @@ export default class PlaintextAuthenticationProvider
         return assignmentList;
       }
     }
+  }
+
+  async getUserMapping(userid: string): Promise<number> {
+    return 0;
   }
 }
