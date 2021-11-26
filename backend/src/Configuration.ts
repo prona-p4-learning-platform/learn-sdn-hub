@@ -208,6 +208,55 @@ environments.set("python-test", {
   assignmentLabSheet: "../assignments/prona-learningswitch.md",
 });
 
+environments.set("Example0-SDN-Intro", {
+  tasks: [
+    [
+      {
+        name: "bash",
+        cwd: "/home/p4/p4-boilerplate/Example0-SDN-Intro/",
+        executable: "./start-terminal1.sh",
+        params: [],
+        provideTty: true,
+      },
+      {
+        name: "bash2",
+        cwd: "/home/p4/p4-boilerplate/Example0-SDN-Intro/",
+        executable: "./start-terminal2.sh",
+        params: [],
+        provideTty: true,
+      },
+    ],
+  ],
+  editableFiles: [
+    {
+      absFilePath: "/home/p4/p4-boilerplate/Example0-SDN-Intro/OpenFlowTopo.py",
+      alias: "OpenFlowTopo.py",
+    },
+    {
+      absFilePath: "/home/p4/p4-boilerplate/Example0-SDN-Intro/OpenFlowApp.py",
+      alias: "OpenFlowApp.py",
+    },
+  ],
+  stopCommands: [
+    {
+      name: "bash",
+      cwd: "/home/p4/p4-boilerplate/Example0-SDN-Intro/",
+      executable: "./stop-terminal1.sh",
+      params: [],
+      provideTty: false,
+    },
+    {
+      name: "bash2",
+      cwd: "/home/p4/p4-boilerplate/Example0-SDN-Intro/",
+      executable: "./stop-terminal2.sh",
+      params: [],
+      provideTty: false,
+    },
+  ],
+  description: "Example0-SDN-Intro description",
+  assignmentLabSheet: "../assignments/prona-sdn-intro.md",
+});
+
 environments.set("Example1-Repeater", {
   tasks: [
     [
