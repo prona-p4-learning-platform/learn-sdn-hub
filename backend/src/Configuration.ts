@@ -218,6 +218,8 @@ environments.set("Example0-SDN-Intro", {
         params: [],
         provideTty: true,
       },
+    ],
+    [
       {
         name: "bash2",
         cwd: "/home/p4/p4-boilerplate/Example0-SDN-Intro/",
@@ -267,6 +269,8 @@ environments.set("Example1-Repeater", {
         params: [],
         provideTty: true,
       },
+    ],
+    [
       {
         name: "bash2",
         cwd: "/home/p4/p4-boilerplate/Example1-Repeater/",
