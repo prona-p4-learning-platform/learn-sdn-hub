@@ -271,5 +271,18 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
     }
   );
 
+  router.get(
+    "/submissions",
+    authenticationMiddleware,
+    async (req: RequestWithUser, res) => {
+      const submittedEnvList = await P4Environment.getUserSubmissions(
+        persister,
+        req.user.id,
+        req.user.groupNumber
+      );
+      return res.status(200).json(Array.from(submittedEnvList));
+    }
+  );
+
   return router;
 };

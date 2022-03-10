@@ -1,7 +1,7 @@
 import { Persister, UserEnvironment, UserAccount } from "./Persister";
 import fs from "fs";
 import path from "path";
-import { TerminalStateType } from "../P4Environment";
+import { TerminalStateType, Submission } from "../P4Environment";
 
 const userEnvironments: Map<string, Map<string, UserEnvironment>> = new Map();
 export default class MemoryPersister implements Persister {
@@ -82,6 +82,46 @@ export default class MemoryPersister implements Persister {
 
     for (const [alias, fileContent] of submittedFiles) {
       fs.writeFileSync(path.resolve(resultPath, alias), fileContent, "binary");
+    }
+  }
+
+  async GetUserSubmissions(
+    username: string,
+    groupNumber: number
+  ): Promise<Submission[]> {
+    const group = "group" + groupNumber;
+    console.log(
+      "Getting submissions for user: " + username + " in group: " + group
+    );
+    const submissions: Array<Submission> = [];
+    const resultPathRoot = path.resolve("src", "assignments", "results");
+    if (fs.existsSync(resultPathRoot)) {
+      const submissionDirs = fs.readdirSync(resultPathRoot);
+      submissionDirs.forEach(function (submissionDir) {
+        if (
+          submissionDir.match(username + "-(.*)") ||
+          submissionDir.match("(.*)-" + group + "-(.*)")
+        ) {
+          const files = fs.readdirSync(
+            path.resolve(resultPathRoot, submissionDir)
+          );
+          const lastMTime = fs.statSync(
+            path.resolve(resultPathRoot, submissionDir, files.pop())
+          ).mtime;
+          let assignmentName = submissionDir;
+          if (submissionDir.match(username + "-(.*)")) {
+            assignmentName = submissionDir.substring(username.length + 1);
+          } else if (submissionDir.match("(.*)-" + group + "-(.*)")) {
+            assignmentName = submissionDir.substring(username.length + 1);
+          }
+          const submission: Submission = {
+            assignmentName: assignmentName,
+            lastChanged: lastMTime,
+          };
+          submissions.push(submission);
+        }
+      });
+      return submissions;
     }
   }
 

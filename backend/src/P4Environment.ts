@@ -47,6 +47,11 @@ export type TerminalStateType = {
   state: string;
 };
 
+export interface Submission {
+  assignmentName: string;
+  lastChanged: Date;
+}
+
 export interface EnvironmentDescription {
   tasks: Array<Array<Task>>;
   editableFiles: Array<AliasedFile>;
@@ -641,6 +646,15 @@ export default class P4Environment {
       terminalStates,
       submittedFiles
     );
+  }
+
+  public static async getUserSubmissions(
+    persister: Persister,
+    userId: string,
+    groupNumber: number
+  ): Promise<Submission[]> {
+    const result = await persister.GetUserSubmissions(userId, groupNumber);
+    return result;
   }
 
   public async readFile(alias: string): Promise<string> {

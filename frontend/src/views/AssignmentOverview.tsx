@@ -4,7 +4,7 @@ import CloudUploadIcon from '@material-ui/icons/CloudUpload';
 import CloudOffIcon from '@material-ui/icons/CloudOff';
 import PlayCircleFilledWhiteIcon from '@material-ui/icons/PlayCircleFilledWhite';
 import Button from "@material-ui/core/Button";
-import { ListItemSecondaryAction, Typography } from '@material-ui/core';
+import { Checkbox, ListItemSecondaryAction, Tooltip, Typography } from '@material-ui/core';
 import List from '@material-ui/core/List';
 import ListItem from '@material-ui/core/ListItem';
 import ListItemText from '@material-ui/core/ListItemText';
@@ -31,9 +31,15 @@ const useStyles = makeStyles((theme) => ({
 interface AssignmentOverviewProps {
 };
 
+type SubmissionType = {
+  assignmentName: string,
+  lastChanged: Date
+}
+
 export default function AssignmentOverview(props: AssignmentOverviewProps) {
   const classes = useStyles();
   const [assignments, setAssignments] = useState([])
+  const [submittedAssignments, setSubmittedAssignments] = useState([] as SubmissionType[])
   const [deployedUserAssignments, setDeployedUserAssignments] = useState([])
   const [deployedGroupAssignments, setDeployedGroupAssignments] = useState([])
   const [load, setLoad] = useState(true)
@@ -61,6 +67,15 @@ export default function AssignmentOverview(props: AssignmentOverviewProps) {
     return Array.from(deployedUserAssignments).some(element => element === assignment)
   };
 
+  const showSubmissionStatus = (assignment: string) => {
+    const submission = submittedAssignments.find(element => element.assignmentName === assignment)
+    if (submission !== undefined) {
+      return "Finished. Last successful submission: " + submission.lastChanged.toLocaleString('de-DE')
+    } else {
+      return ""
+    }
+  };
+
   useEffect(() => {
     setLoad(false)
     fetch(APIRequest("/api/user/assignments", { headers: { authorization: localStorage.getItem("token") || "" } }))
@@ -72,6 +87,9 @@ export default function AssignmentOverview(props: AssignmentOverviewProps) {
     fetch(APIRequest("/api/environment/deployed-group-environments", { headers: { authorization: localStorage.getItem("token") || "" } }))
       .then(res => res.json())
       .then(setDeployedGroupAssignments)
+    fetch(APIRequest("/api/environment/submissions", { headers: { authorization: localStorage.getItem("token") || "" } }))
+      .then(res => res.json())
+      .then(setSubmittedAssignments)
   }, [load])
 
   const createEnvironment = useCallback(async (assignment: string) => {
@@ -131,10 +149,24 @@ export default function AssignmentOverview(props: AssignmentOverviewProps) {
       }
       <List component="nav" aria-label="assignment list" style={{ width: 800 }}>
         {assignments.map(assignment => (
-          <ListItem key={assignment}>
+            <ListItem key={assignment}>
             <ListItemText primary={assignment}/>
+            {/*
+            <ListItemText primary={assignment} secondary={showDescirption(assignment)}/>
+
+            maybe wrap all together in an assignment interface containing all information from: 
+
+              const [assignments, setAssignments] = useState([])
+              const [submittedAssignments, setSubmittedAssignments] = useState([] as SubmissionType[])
+              const [deployedUserAssignments, setDeployedUserAssignments] = useState([])
+              const [deployedGroupAssignments, setDeployedGroupAssignments] = useState([])
+
+            and therefore also reducing number of backend fetches in useEffect
+
+            maybe also allow resubmission? (e.g., by unticking submission state checkbox?)
+            */}
             <ListItemSecondaryAction>
-              <Button variant="contained" color="primary" className={classes.button} startIcon={<CloudUploadIcon />} disabled={deployedUserAssignments.length > 0 || (deployedGroupAssignments.length > 0 && deployedGroupAssignments.indexOf(assignment) === -1)} onClick={() => createEnvironment(assignment)}>
+              <Button variant="contained" color="primary" className={classes.button} startIcon={<CloudUploadIcon />} disabled={deployedUserAssignments.length > 0 || (deployedGroupAssignments.length > 0 && deployedGroupAssignments.indexOf(assignment) === -1) || submittedAssignments.findIndex(element => element.assignmentName === assignment) !== -1} onClick={() => createEnvironment(assignment)}>
                 Deploy
               </Button>
               <Button variant="contained" color="secondary" className={classes.button} startIcon={<PlayCircleFilledWhiteIcon />} disabled={!isActiveDeployment(assignment)} href={`/environment/${assignment}`}>
@@ -143,6 +175,13 @@ export default function AssignmentOverview(props: AssignmentOverviewProps) {
               <Button variant="contained" color="primary" className={classes.button} startIcon={<CloudOffIcon />} disabled={!isActiveDeployment(assignment)} onClick={() => handleConfirmationUndeployDialogOpen(assignment)}>
                 Undeploy
               </Button>
+              <Tooltip title={showSubmissionStatus(assignment)}>
+                <Checkbox
+                  edge="end"
+                  checked={submittedAssignments.findIndex(element => element.assignmentName === assignment) !== -1}
+                  color="primary"
+                />
+              </Tooltip>
             </ListItemSecondaryAction>
           </ListItem>
         ))}
