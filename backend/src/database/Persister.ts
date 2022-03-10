@@ -1,4 +1,4 @@
-import { TerminalStateType } from "../P4Environment";
+import { Submission, TerminalStateType } from "../P4Environment";
 
 export interface UserAccount {
   username: string;
@@ -29,5 +29,8 @@ export interface Persister {
     terminalStates: TerminalStateType[],
     submittedFiles: Map<string, string>
   ) => Promise<void>;
-  GetUserSubmissions: (username: string) => Promise<Map<string, string | Date>>;
+  GetUserSubmissions: (
+    username: string,
+    groupNumber: number
+  ) => Promise<Submission[]>;
 }
