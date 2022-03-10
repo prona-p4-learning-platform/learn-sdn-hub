@@ -28,6 +28,7 @@
 .myTerminal {
 	flex: 1;
 	height: inherit;
+	min-height: 0;
 }
 
 .myXtermClass {

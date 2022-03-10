@@ -41,7 +41,7 @@ export default function (
         envConsole.resize(columns, lines);
       } else {
         envConsole.write(message.toString());
-        console.log(`Received message ${message}`);
+        //console.log(`Received message ${message}`);
       }
     });
 

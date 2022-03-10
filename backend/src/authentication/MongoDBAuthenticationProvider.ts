@@ -20,7 +20,12 @@ export default class MongoDBAuthenticationProvider
     const user = await this.persister.GetUserAccount(username);
     console.log(user);
     if (user.password === password) {
-      return { username: user.username, userid: user._id, type: "mongodb" };
+      return {
+        username: user.username,
+        userid: user._id,
+        groupNumber: await this.getUserMapping(user.username),
+        type: "mongodb",
+      };
     }
     throw new Error("AuthenticationError");
   }
@@ -31,5 +36,10 @@ export default class MongoDBAuthenticationProvider
     assignmentList: Map<string, EnvironmentDescription>
   ): Promise<Map<string, EnvironmentDescription>> {
     return assignmentList;
+  }
+
+  //TODO: currently groups are not supported, needs to get a field in mongodb
+  async getUserMapping(userid: string): Promise<number> {
+    return 0;
   }
 }

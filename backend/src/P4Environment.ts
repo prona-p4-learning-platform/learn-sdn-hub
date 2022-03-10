@@ -74,6 +74,7 @@ export default class P4Environment {
   private persister: Persister;
   private userId: string;
   private filehandler: FileHandler;
+  private groupNumber: number;
 
   public static getActiveEnvironment(
     identifier: string,
@@ -82,19 +83,35 @@ export default class P4Environment {
     return P4Environment.activeEnvironments.get(`${userid}-${identifier}`);
   }
 
-  public static getActiveEnvironmentList(userid: string): Array<string> {
-    const activeEnvironmentsForUser: Array<string> = new Array<string>();
+  public static getDeployedUserEnvironmentList(userid: string): Array<string> {
+    const deployedEnvironmentsForUser: Array<string> = new Array<string>();
     P4Environment.activeEnvironments.forEach(
       (value: P4Environment, key: string) => {
         if (value.userId === userid)
-          activeEnvironmentsForUser.push(key.split("-").slice(1).join("-"));
+          deployedEnvironmentsForUser.push(key.split("-").slice(1).join("-"));
       }
     );
-    return activeEnvironmentsForUser;
+    return deployedEnvironmentsForUser;
+  }
+
+  public static getDeployedGroupEnvironmentList(
+    groupNumber: number
+  ): Array<string> {
+    //const endpoint = await this.makeSureInstanceExists();
+    const deployedEnvironmentsForGroup: Array<string> = new Array<string>();
+    P4Environment.activeEnvironments.forEach(
+      async (value: P4Environment, key: string) => {
+        if (value.groupNumber == groupNumber) {
+          deployedEnvironmentsForGroup.push(key.split("-").slice(1).join("-"));
+        }
+      }
+    );
+    return deployedEnvironmentsForGroup;
   }
 
   private constructor(
     userId: string,
+    groupNumber: number,
     identifier: string,
     configuration: EnvironmentDescription,
     environmentProvider: InstanceProvider,
@@ -106,6 +123,7 @@ export default class P4Environment {
     this.environmentProvider = environmentProvider;
     this.persister = persister;
     this.userId = userId;
+    this.groupNumber = groupNumber;
     this.identifier = identifier;
   }
 
@@ -121,8 +139,13 @@ export default class P4Environment {
     return this.activeConsoles.get(alias);
   }
 
+  public getConsoles(): Map<string, Console> {
+    return this.activeConsoles;
+  }
+
   static async createEnvironment(
     userId: string,
+    groupNumber: number,
     identifier: string,
     env: EnvironmentDescription,
     provider: InstanceProvider,
@@ -130,18 +153,30 @@ export default class P4Environment {
   ): Promise<P4Environment> {
     const environment = new P4Environment(
       userId,
+      groupNumber,
       identifier,
       env,
       provider,
       persister
     );
     console.log(`${userId}-${identifier}`);
-    await environment.start(env);
-    P4Environment.activeEnvironments.set(
-      `${userId}-${identifier}`,
-      environment
-    );
-    return environment;
+    let activeEnvironmentsForGroup = false;
+    P4Environment.activeEnvironments.forEach((value: P4Environment) => {
+      if (value.groupNumber === groupNumber && value.identifier != identifier)
+        activeEnvironmentsForGroup = true;
+    });
+    if (activeEnvironmentsForGroup) {
+      throw Error(
+        "Your group already deployed an environment. Please reload assignment list."
+      );
+    } else {
+      await environment.start(env);
+      P4Environment.activeEnvironments.set(
+        `${userId}-${identifier}`,
+        environment
+      );
+      return environment;
+    }
   }
 
   static async deleteEnvironment(
@@ -205,52 +240,75 @@ export default class P4Environment {
       this.configuration.description
     );
     console.log(endpoint);
-    this.filehandler = new FileHandler(endpoint.IPAddress, endpoint.SSHPort);
-    desc.editableFiles.forEach((val) =>
-      this.addEditableFile(val.alias, val.absFilePath)
-    );
     return new Promise((resolve, reject) => {
+      try {
+        this.filehandler = new FileHandler(
+          endpoint.IPAddress,
+          endpoint.SSHPort
+        );
+      } catch (err) {
+        reject(err);
+      }
+      desc.editableFiles.forEach((val) =>
+        this.addEditableFile(val.alias, val.absFilePath)
+      );
       let errorConsoleCounter = 0;
       let resolvedOrRejected = false;
       let readyConsoleCounter = 0;
       desc.tasks.forEach((subtasks) => {
         subtasks.forEach((task) => {
-          const console = new SSHConsole(
-            this.identifier,
-            endpoint.IPAddress,
-            endpoint.SSHPort,
-            task.executable,
-            task.params,
-            task.cwd,
-            task.provideTty
+          global.console.log(
+            "Opening console: ",
+            JSON.stringify(task),
+            JSON.stringify(endpoint)
           );
-          const setupCloseHandler = (): void => {
-            errorConsoleCounter++;
-            if (
-              resolvedOrRejected === false &&
-              errorConsoleCounter + readyConsoleCounter === desc.tasks.length
-            ) {
-              resolvedOrRejected = true;
-              reject(new Error("Unable to create environment"));
-            } else {
-              global.console.log("deleted the console");
-              this.activeConsoles.delete(task.name);
-            }
-          };
+          try {
+            const console = new SSHConsole(
+              this.identifier,
+              this.userId,
+              this.groupNumber,
+              endpoint.IPAddress,
+              endpoint.SSHPort,
+              task.executable,
+              task.params,
+              task.cwd,
+              task.provideTty
+            );
 
-          console.on("close", setupCloseHandler);
+            const setupCloseHandler = (): void => {
+              errorConsoleCounter++;
+              if (
+                resolvedOrRejected === false &&
+                errorConsoleCounter + readyConsoleCounter === desc.tasks.length
+              ) {
+                resolvedOrRejected = true;
+                reject(new Error("Unable to create environment"));
+              } else {
+                global.console.log("deleted the console");
+                this.activeConsoles.delete(task.name);
+              }
+            };
 
-          console.on("ready", () => {
-            readyConsoleCounter++;
-            this.activeConsoles.set(task.name, console);
-            if (
-              resolvedOrRejected === false &&
-              readyConsoleCounter === desc.tasks.length
-            ) {
-              resolvedOrRejected = true;
-              resolve();
-            }
-          });
+            console.on("close", setupCloseHandler);
+
+            console.on("error", (err) => {
+              reject(err);
+            });
+
+            console.on("ready", () => {
+              readyConsoleCounter++;
+              this.activeConsoles.set(task.name, console);
+              if (
+                resolvedOrRejected === false &&
+                readyConsoleCounter === desc.tasks.length
+              ) {
+                resolvedOrRejected = true;
+                resolve();
+              }
+            });
+          } catch (err) {
+            reject(err);
+          }
         });
       });
     });
@@ -265,12 +323,67 @@ export default class P4Environment {
     );
 
     for (const console of this.activeConsoles) {
-      console[1].close(this.identifier);
+      console[1].close(this.identifier, this.userId, this.groupNumber);
     }
     this.filehandler.close();
 
     return new Promise((resolve, reject) => {
-      for (const command of this.configuration.stopCommands) {
+      let isEnvironmentUsedByOtherUserInGroup = false;
+      P4Environment.activeEnvironments.forEach((value: P4Environment) => {
+        if (
+          value.groupNumber === this.groupNumber &&
+          value.userId != this.userId
+        )
+          isEnvironmentUsedByOtherUserInGroup = true;
+      });
+      if (!isEnvironmentUsedByOtherUserInGroup) {
+        for (const command of this.configuration.stopCommands) {
+          global.console.log(
+            "Executing stop command: ",
+            JSON.stringify(command),
+            JSON.stringify(endpoint)
+          );
+          const console = new SSHConsole(
+            this.identifier,
+            this.userId,
+            this.groupNumber,
+            endpoint.IPAddress,
+            endpoint.SSHPort,
+            command.executable,
+            command.params,
+            command.cwd,
+            command.provideTty
+          );
+          console.on("finished", (code: string, signal: string) => {
+            global.console.log(
+              "OUTPUT: " +
+                console.stdout +
+                "(exit code: " +
+                code +
+                ", signal: " +
+                signal +
+                ")"
+            );
+            resolved = true;
+          });
+          console.on("closed", () => {
+            if (resolved === true) resolve();
+            else reject();
+          });
+        }
+      } else {
+        console.log(
+          "Other users in the same group still use this environment. Skipping executing of stop commands."
+        );
+      }
+    });
+  }
+
+  async restart(): Promise<void> {
+    const endpoint = await this.makeSureInstanceExists();
+    for (const command of this.configuration.stopCommands) {
+      let resolved = false;
+      await new Promise<void>((resolve, reject) => {
         global.console.log(
           "Executing stop command: ",
           JSON.stringify(command),
@@ -278,12 +391,14 @@ export default class P4Environment {
         );
         const console = new SSHConsole(
           this.identifier,
+          this.userId,
+          this.groupNumber,
           endpoint.IPAddress,
           endpoint.SSHPort,
           command.executable,
           command.params,
           command.cwd,
-          command.provideTty
+          false
         );
         console.on("finished", (code: string, signal: string) => {
           global.console.log(
@@ -296,20 +411,31 @@ export default class P4Environment {
               ")"
           );
           resolved = true;
+          console.emit("closed");
         });
         console.on("closed", () => {
           if (resolved === true) resolve();
           else reject();
         });
+      });
+    }
+
+    console.log("Stop commands finished...");
+    P4Environment.activeEnvironments.forEach((value: P4Environment) => {
+      if (value.groupNumber === this.groupNumber) {
+        console.log("Found group env " + value.identifier + "...");
+        const terminal = value.getConsoles();
+        terminal.forEach((value: Console) => {
+          console.log("Found active console " + value + "...");
+          // write command to console
+          value.write("cd " + value.cwd + "\n");
+          console.log(
+            "Executing " + value.command + " " + value.args.join(" ") + "\n"
+          );
+          value.write(value.command + " " + value.args.join(" ") + "\n");
+        });
       }
     });
-  }
-
-  async restart(): Promise<void> {
-    console.log("STOPPING");
-    await this.stop();
-    console.log("STARTING");
-    await this.start();
   }
 
   async runSSHCommand(
@@ -323,6 +449,8 @@ export default class P4Environment {
       // run sshCommand
       const console = new SSHConsole(
         this.identifier,
+        this.userId,
+        this.groupNumber,
         endpoint.IPAddress,
         endpoint.SSHPort,
         command,
