@@ -16,5 +16,4 @@ export interface AuthenticationProvider {
     username: string,
     assignmentMap: Map<string, EnvironmentDescription>
   ): Promise<Map<string, EnvironmentDescription>>;
-  getUserMapping(userid: string): Promise<number>;
 }

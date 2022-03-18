@@ -43,12 +43,10 @@ export default function AssignmentOverview(props: AssignmentOverviewProps) {
   const [deployedUserAssignments, setDeployedUserAssignments] = useState([])
   const [deployedGroupAssignments, setDeployedGroupAssignments] = useState([])
   const [load, setLoad] = useState(true)
-  const [deploymentNotification, setDeploymentNotification] = useState({ result: "", severity: "info" as Severity, open: false })
+  const [deploymentNotification, setDeploymentNotification] = useState({ result: "", severity: undefined as Severity, open: false })
   const [confirmationUndeployDialogOpen, setConfirmationUndeployDialogOpen] = useState({ assignment: "", dialogOpen: false})
-
-  const handleDeploymentNotificationClose = () => {
-    setDeploymentNotification({ result: "", severity: "info", open: false });
-  };
+  const [confirmationResubmitDialogOpen, setConfirmationResubmitDialogOpen] = useState({ assignment: "", dialogOpen: false})
+  const [resubmitAssignment, setResubmitAssignment] = useState("");
 
   const handleConfirmationUndeployDialogOpen = (selectedAssignment: string) => {
     setConfirmationUndeployDialogOpen({ assignment: selectedAssignment, dialogOpen: true });
@@ -61,6 +59,19 @@ export default function AssignmentOverview(props: AssignmentOverviewProps) {
   const handleConfirmationUndeployDialogConfirm = () => {
     deleteEnvironment(confirmationUndeployDialogOpen.assignment)
     setConfirmationUndeployDialogOpen({ assignment: "", dialogOpen: false});
+  };
+
+  const handleConfirmationResubmitDialogOpen = (selectedAssignment: string) => {
+    setConfirmationResubmitDialogOpen({ assignment: selectedAssignment, dialogOpen: true });
+  };
+
+  const handleConfirmationResubmitDialogClose = () => {
+    setConfirmationResubmitDialogOpen({ assignment: "", dialogOpen: false});
+  };
+
+  const handleConfirmationResubmitDialogConfirm = () => {
+    setResubmitAssignment(confirmationResubmitDialogOpen.assignment);
+    setConfirmationResubmitDialogOpen({ assignment: "", dialogOpen: false});
   };
 
   const isActiveDeployment = (assignment: string) => {
@@ -93,7 +104,7 @@ export default function AssignmentOverview(props: AssignmentOverviewProps) {
   }, [load])
 
   const createEnvironment = useCallback(async (assignment: string) => {
-    setDeploymentNotification({ result: "Starting deployment...", severity: "info", open: true })
+    setDeploymentNotification({ result: "Creating virtual environment... please wait...", severity: "info", open: true })
     try {
       const result = await fetch(APIRequest(`/api/environment/create?environment=${assignment}`, {
         method: 'POST',
@@ -118,7 +129,7 @@ export default function AssignmentOverview(props: AssignmentOverviewProps) {
   }, []);
 
   const deleteEnvironment = useCallback(async (assignment: string) => {
-    setDeploymentNotification({ result: "Deleting deployment...", severity: "info", open: true })
+    setDeploymentNotification({ result: "Deleting virtual environment... please wait...", severity: "info", open: true })
     try {
       const result = await fetch(APIRequest(`/api/environment/delete?environment=${assignment}`, {
         method: 'POST',
@@ -145,7 +156,7 @@ export default function AssignmentOverview(props: AssignmentOverviewProps) {
   return (
     <>
       { (deployedUserAssignments.length === 0 && deployedGroupAssignments.length > 0) &&
-        <Typography>Your group is already working on {deployedGroupAssignments[0]}. You can join and open a connection by clicking deploy.</Typography>
+        <Typography>Your group is working on {deployedGroupAssignments[0]}. You can join and open a connection by clicking deploy.</Typography>
       }
       <List component="nav" aria-label="assignment list" style={{ width: 800 }}>
         {assignments.map(assignment => (
@@ -166,7 +177,7 @@ export default function AssignmentOverview(props: AssignmentOverviewProps) {
             maybe also allow resubmission? (e.g., by unticking submission state checkbox?)
             */}
             <ListItemSecondaryAction>
-              <Button variant="contained" color="primary" className={classes.button} startIcon={<CloudUploadIcon />} disabled={deployedUserAssignments.length > 0 || (deployedGroupAssignments.length > 0 && deployedGroupAssignments.indexOf(assignment) === -1) || submittedAssignments.findIndex(element => element.assignmentName === assignment) !== -1} onClick={() => createEnvironment(assignment)}>
+              <Button variant="contained" color="primary" className={classes.button} startIcon={<CloudUploadIcon />} disabled={deployedUserAssignments.length > 0 || (deployedGroupAssignments.length > 0 && deployedGroupAssignments.indexOf(assignment) === -1) || (submittedAssignments.findIndex(element => element.assignmentName === assignment) !== -1 && resubmitAssignment !== assignment)} onClick={() => createEnvironment(assignment)}>
                 Deploy
               </Button>
               <Button variant="contained" color="secondary" className={classes.button} startIcon={<PlayCircleFilledWhiteIcon />} disabled={!isActiveDeployment(assignment)} href={`/environment/${assignment}`}>
@@ -179,14 +190,16 @@ export default function AssignmentOverview(props: AssignmentOverviewProps) {
                 <Checkbox
                   edge="end"
                   checked={submittedAssignments.findIndex(element => element.assignmentName === assignment) !== -1}
+                  disabled={submittedAssignments.findIndex(element => element.assignmentName === assignment) === -1}
                   color="primary"
+                  onClick={() => handleConfirmationResubmitDialogOpen(assignment)}
                 />
               </Tooltip>
             </ListItemSecondaryAction>
           </ListItem>
         ))}
-        <Snackbar open={deploymentNotification.open} autoHideDuration={30000} onClose={handleDeploymentNotificationClose}>
-          <Alert onClose={handleDeploymentNotificationClose} severity={deploymentNotification.severity as Severity}>
+        <Snackbar open={deploymentNotification.open} anchorOrigin={{vertical: 'bottom', horizontal: 'left'}}>
+          <Alert severity={deploymentNotification.severity as Severity}>
             {deploymentNotification.result}
           </Alert>
         </Snackbar>
@@ -197,18 +210,38 @@ export default function AssignmentOverview(props: AssignmentOverviewProps) {
         >
           <DialogContent>
             <DialogContentText id="alert-dialog-undeploy-confirmation-description">
-              Undeploy environment?
-              All processes and unsubmitted changes will lost.
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleConfirmationUndeployDialogClose} color="primary" autoFocus>
-            No
-          </Button>
-          <Button onClick={handleConfirmationUndeployDialogConfirm} color="primary">
-            Yes
-          </Button>
-        </DialogActions>
+              <p>Undeploy environment?</p>
+              <p>All processes and unsubmitted changes will lost.</p>
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleConfirmationUndeployDialogClose} color="primary" autoFocus>
+              No
+            </Button>
+            <Button onClick={handleConfirmationUndeployDialogConfirm} color="primary">
+              Yes
+            </Button>
+          </DialogActions>
+        </Dialog>
+        <Dialog
+          open={confirmationResubmitDialogOpen.dialogOpen}
+          onClose={handleConfirmationResubmitDialogClose}
+          aria-describedby="alert-dialog-undeploy-confirmation-description"
+        >
+          <DialogContent>
+            <DialogContentText id="alert-dialog-undeploy-confirmation-description">
+              <p>You or your group already submitted a result for this assignment.</p>
+              <p>Do you really want to deploy this assignment again?</p>
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleConfirmationResubmitDialogClose} color="primary" autoFocus>
+              No
+            </Button>
+            <Button onClick={handleConfirmationResubmitDialogConfirm} color="primary">
+              Yes
+            </Button>
+          </DialogActions>
         </Dialog>
       </List>
     </>

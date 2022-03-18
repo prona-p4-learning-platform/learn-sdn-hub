@@ -1,8 +1,19 @@
 import { MongoClient } from "mongodb";
 import { Persister, UserEnvironment, UserAccount } from "./Persister";
-import fs from "fs";
-import path from "path";
-import { TerminalStateType } from "../P4Environment";
+import {
+  Submission,
+  SubmissionFileType,
+  TerminalStateType,
+} from "../P4Environment";
+
+interface SubmissionEntry {
+  username: string;
+  groupNumber: number;
+  environment: string;
+  submissionCreated: Date;
+  terminalStatus: TerminalStateType[];
+  submittedFiles: SubmissionFileType[];
+}
 
 export default class MongoDBPersister implements Persister {
   private mongoClient: MongoClient = null;
@@ -44,16 +55,17 @@ export default class MongoDBPersister implements Persister {
 
   async AddUserEnvironment(
     username: string,
-    identifier: string,
-    description: string
+    environment: string,
+    description: string,
+    instance: string
   ): Promise<void> {
     const client = await this.getClient();
     return client
       .db()
       .collection("users")
       .findOneAndUpdate(
-        { username, "environments.identifier": { $ne: identifier } },
-        { $push: { environments: { identifier, description } } },
+        { username, "environments.environment": { $ne: environment } },
+        { $push: { environments: { environment, description, instance } } },
         {
           projection: { environments: 1 },
         }
@@ -63,15 +75,15 @@ export default class MongoDBPersister implements Persister {
 
   async RemoveUserEnvironment(
     username: string,
-    identifier: string
+    environment: string
   ): Promise<void> {
     const client = await this.getClient();
     return client
       .db()
       .collection("users")
       .findOneAndUpdate(
-        { username, "environments.identifier": { $eq: identifier } },
-        { $pull: { environments: { identifier } } },
+        { username, "environments.environment": { $eq: environment } },
+        { $pull: { environments: { environment } } },
         {
           projection: { environments: 1 },
         }
@@ -82,39 +94,120 @@ export default class MongoDBPersister implements Persister {
   // TODO: currently stores files locally, maybe also store them in mongodb? or otherwise use shared function for a all persisters for that?
   async SubmitUserEnvironment(
     username: string,
-    identifier: string,
+    groupNumber: number,
+    environment: string,
     terminalStates: TerminalStateType[],
-    submittedFiles: Map<string, string>
+    submittedFiles: SubmissionFileType[]
   ): Promise<void> {
-    console.log(
-      "Storing assignment result for user: " +
-        username +
-        " assignment identifitier: " +
-        identifier +
-        " terminalStates: " +
-        terminalStates
-    );
-    const resultPathRoot = path.resolve("src", "assignments", "results");
-    !fs.existsSync(resultPathRoot) && fs.mkdirSync(resultPathRoot);
-
-    const resultDirName = username + "-" + identifier;
-    const resultPath = path.resolve(resultPathRoot, resultDirName);
-    !fs.existsSync(resultPath) && fs.mkdirSync(resultPath);
-
-    for (const terminalState of terminalStates) {
-      fs.writeFileSync(
-        path.resolve(
-          resultPath,
-          terminalState.endpoint.split("/").slice(-1) + "-output.txt"
-        ),
-        terminalState.state,
-        "binary"
+    return new Promise<void>(async (resolve, reject) => {
+      console.log(
+        "Storing assignment result for user: " +
+          username +
+          " assignment environment: " +
+          environment +
+          " terminalStates: " +
+          terminalStates
       );
-    }
 
-    for (const [alias, fileContent] of submittedFiles) {
-      fs.writeFileSync(path.resolve(resultPath, alias), fileContent, "binary");
-    }
+      const now = new Date();
+
+      const client = await this.getClient();
+
+      // delete previous submissions of user and group, to ensure that there is
+      // only one/most recent submission for the assignment
+
+      // delete all previous submissions of this environment for the current user
+      client
+        .db()
+        .collection("submissions")
+        .deleteMany({
+          username: username,
+          environment: environment,
+        })
+        .catch((err) => {
+          return reject(
+            new Error(
+              "Unable to delete previous submissions for this user." + err
+            )
+          );
+        });
+      // delete all previous submissions of this environment for the current group
+      client
+        .db()
+        .collection("submissions")
+        .deleteMany({
+          groupNumber: groupNumber,
+          environment: environment,
+        })
+        .catch((err) => {
+          return reject(
+            new Error(
+              "Unable to delete previous submissions for this group." + err
+            )
+          );
+        });
+
+      return client
+        .db()
+        .collection("submissions")
+        .insertOne({
+          username: username,
+          groupNumber: groupNumber,
+          environment: environment,
+          submissionCreated: now,
+          terminalStatus: terminalStates,
+          submittedFiles: submittedFiles,
+        })
+        .then(() => {
+          return resolve();
+        })
+        .catch((err) => {
+          return reject("Failed to store submissions in mongodb " + err);
+        });
+    });
+  }
+
+  // TODO: currently stores files locally, maybe also store them in mongodb? or otherwise use shared function for a all persisters for that?
+  async GetUserSubmissions(
+    username: string,
+    groupNumber: number
+  ): Promise<Submission[]> {
+    return new Promise<Submission[]>(async (resolve, reject) => {
+      const submissions: Array<Submission> = [];
+
+      const client = await this.getClient();
+
+      // retrieve all previous submissions the current user or group
+      client
+        .db()
+        .collection("submissions")
+        .find({
+          $or: [{ username: username }, { groupNumber: groupNumber }],
+        })
+        .toArray()
+        .then((submissionsFound) => {
+          for (const submission of submissionsFound as Array<SubmissionEntry>) {
+            submissions.push({
+              assignmentName: submission.environment,
+              lastChanged: submission.submissionCreated,
+            });
+          }
+          console.log(
+            "Retrieved submissions for user: " +
+              username +
+              " in group: " +
+              groupNumber +
+              " result: " +
+              JSON.stringify(submissions)
+          );
+          return resolve(submissions);
+        })
+        .catch((err) => {
+          return reject(
+            new Error("Unable to retrieve submissions of user or group.") + err
+          );
+        });
+    });
   }
 
   async close(): Promise<void> {

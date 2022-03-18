@@ -1,16 +1,52 @@
 import { Persister, UserEnvironment, UserAccount } from "./Persister";
 import fs from "fs";
 import path from "path";
-import { TerminalStateType, Submission } from "../P4Environment";
+import {
+  TerminalStateType,
+  Submission,
+  SubmissionFileType,
+} from "../P4Environment";
 
 const userEnvironments: Map<string, Map<string, UserEnvironment>> = new Map();
 export default class MemoryPersister implements Persister {
   async GetUserAccount(username: string): Promise<UserAccount> {
     return {
-      username,
       _id: username,
+      username,
+      groupNumber: await this.getUserMapping(username),
       password: "p4",
     };
+  }
+
+  async getUserMapping(username: string): Promise<number> {
+    if (process.env.BACKEND_USER_MAPPING != undefined) {
+      const userMappingConfig = process.env.BACKEND_USER_MAPPING.split(",");
+      const usermap: Map<string, number> = new Map();
+      userMappingConfig.forEach((userMappingConfigEntry) => {
+        const login = userMappingConfigEntry.split(":")[0];
+        const instanceNumber = userMappingConfigEntry.split(":")[1];
+        usermap.set(login, parseInt(instanceNumber));
+      });
+
+      if (usermap.has(username)) {
+        console.log(
+          "Mapped user " +
+            username +
+            " to group number " +
+            usermap.get(username)
+        );
+        return usermap.get(username);
+      } else {
+        throw new Error(
+          "No mapping defined to map user " + username + " to a group."
+        );
+      }
+    } else {
+      console.log(
+        "No BACKEND_USER_MAPPING environment variable set. Mapping user to group 0."
+      );
+      return 0;
+    }
   }
 
   async GetUserEnvironments(username: string): Promise<UserEnvironment[]> {
@@ -23,49 +59,51 @@ export default class MemoryPersister implements Persister {
 
   async AddUserEnvironment(
     username: string,
-    identifier: string,
-    description: string
+    environment: string,
+    description: string,
+    instance: string
   ): Promise<void> {
-    if (
-      userEnvironments.has(username) &&
-      userEnvironments.get(username).has(identifier)
-    ) {
-      userEnvironments
-        .get(username)
-        .set(identifier, { identifier, description });
+    if (!userEnvironments.has(username)) {
+      userEnvironments.set(username, new Map<string, UserEnvironment>());
     }
+    userEnvironments.get(username).set(environment, {
+      environment,
+      description,
+      instance,
+    });
   }
 
   async RemoveUserEnvironment(
     username: string,
-    identifier: string
+    environment: string
   ): Promise<void> {
     if (
       userEnvironments.has(username) &&
-      userEnvironments.get(username).has(identifier)
+      userEnvironments.get(username).has(environment)
     ) {
-      userEnvironments.get(username).delete(identifier);
+      userEnvironments.get(username).delete(environment);
     }
   }
 
   async SubmitUserEnvironment(
     username: string,
-    identifier: string,
+    groupNumber: number,
+    environment: string,
     terminalStates: TerminalStateType[],
-    submittedFiles: Map<string, string>
+    submittedFiles: SubmissionFileType[]
   ): Promise<void> {
     console.log(
       "Storing assignment result for user: " +
         username +
-        " assignment identifitier: " +
-        identifier +
+        " assignment environment: " +
+        environment +
         " terminalStates: " +
         terminalStates
     );
     const resultPathRoot = path.resolve("src", "assignments", "results");
     !fs.existsSync(resultPathRoot) && fs.mkdirSync(resultPathRoot);
 
-    const resultDirName = username + "-" + identifier;
+    const resultDirName = username + "-" + groupNumber + "-" + environment;
     const resultPath = path.resolve(resultPathRoot, resultDirName);
     !fs.existsSync(resultPath) && fs.mkdirSync(resultPath);
 
@@ -80,8 +118,12 @@ export default class MemoryPersister implements Persister {
       );
     }
 
-    for (const [alias, fileContent] of submittedFiles) {
-      fs.writeFileSync(path.resolve(resultPath, alias), fileContent, "binary");
+    for (const submissionFile of submittedFiles) {
+      fs.writeFileSync(
+        path.resolve(resultPath, submissionFile.fileName),
+        submissionFile.fileContent,
+        "binary"
+      );
     }
   }
 
@@ -90,9 +132,6 @@ export default class MemoryPersister implements Persister {
     groupNumber: number
   ): Promise<Submission[]> {
     const group = "group" + groupNumber;
-    console.log(
-      "Getting submissions for user: " + username + " in group: " + group
-    );
     const submissions: Array<Submission> = [];
     const resultPathRoot = path.resolve("src", "assignments", "results");
     if (fs.existsSync(resultPathRoot)) {
@@ -121,6 +160,14 @@ export default class MemoryPersister implements Persister {
           submissions.push(submission);
         }
       });
+      console.log(
+        "Retrieved submissions for user: " +
+          username +
+          " in group: " +
+          group +
+          " result: " +
+          JSON.stringify(submissions)
+      );
       return submissions;
     }
   }

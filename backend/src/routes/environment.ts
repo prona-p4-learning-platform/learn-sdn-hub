@@ -1,4 +1,4 @@
-import { Router, Request } from "express";
+import { Router, Request, RequestHandler } from "express";
 import P4Environment from "../P4Environment";
 import bodyParser from "body-parser";
 import environments from "../Configuration";
@@ -73,6 +73,8 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
           .status(404)
           .json({ error: true, message: "Environment not found" });
       }
+      // enhance by not only getting files from backend filesystem, but also
+      // via sftp:// from instance
       const markdown = fs
         .readFileSync(path.resolve(__dirname, targetEnv.assignmentLabSheet))
         .toString();
@@ -124,12 +126,22 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
           .json({ error: true, message: "Environment not found" });
       }
       P4Environment.deleteEnvironment(req.user.username, String(environment))
-        .then(() => {
-          res.status(200).json();
+        .then((deleted) => {
+          if (deleted === true) {
+            res.status(200).json();
+          } else {
+            res.status(500).json({
+              status: "error",
+              message: "Environment deletion failed",
+            });
+          }
         })
         .catch((err: Error) => {
-          console.log(err);
-          res.status(500).json({ status: "error", message: err.message });
+          console.log("Failed to delete environment " + err);
+          res.status(500).json({
+            status: "error",
+            message: "Failed to delete environment " + err.message,
+          });
         });
     }
   );
@@ -141,7 +153,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
     (req: RequestWithUser, res) => {
       const env = P4Environment.getActiveEnvironment(
         req.params.environment,
-        req.user.id
+        req.user.username
       );
       env
         .readFile(req.params.alias)
@@ -161,13 +173,13 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
 
   router.post(
     "/:environment/file/:alias",
-    bodyParser.text({ type: "text/plain" }),
+    bodyParser.text({ type: "text/plain" }) as RequestHandler,
     authenticationMiddleware,
     fileWithAliasValidator,
     (req: RequestWithUser, res) => {
       const env = P4Environment.getActiveEnvironment(
         req.params.environment,
-        req.user.id
+        req.user.username
       );
       env
         .writeFile(req.params.alias, req.body)
@@ -185,7 +197,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
     (req: RequestWithUser, res) => {
       const env = P4Environment.getActiveEnvironment(
         req.params.environment,
-        req.user.id
+        req.user.username
       );
       env
         .restart()
@@ -202,13 +214,13 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
 
   router.post(
     "/:environment/test",
-    bodyParser.json({ type: "application/json" }),
+    bodyParser.json({ type: "application/json" }) as RequestHandler,
     authenticationMiddleware,
     environmentPathParamValidator,
     (req: RequestWithUser, res) => {
       const env = P4Environment.getActiveEnvironment(
         req.params.environment,
-        req.user.id
+        req.user.username
       );
       env
         .test(req.body.activeStep, req.body.terminalState)
@@ -224,15 +236,16 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
     }
   );
 
+  // remove body-parser as it is included in express >=4.17
   router.post(
     "/:environment/submit",
-    bodyParser.json({ type: "application/json" }),
+    bodyParser.json({ type: "application/json" }) as RequestHandler,
     authenticationMiddleware,
     environmentPathParamValidator,
     (req: RequestWithUser, res) => {
       const env = P4Environment.getActiveEnvironment(
         req.params.environment,
-        req.user.id
+        req.user.username
       );
       env
         .submit(req.body.activeStep, req.body.terminalState)
@@ -254,7 +267,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
     authenticationMiddleware,
     (req: RequestWithUser, res) => {
       const deployedEnvList = P4Environment.getDeployedUserEnvironmentList(
-        req.user.id
+        req.user.username
       );
       return res.status(200).json(Array.from(deployedEnvList));
     }
@@ -277,10 +290,30 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
     async (req: RequestWithUser, res) => {
       const submittedEnvList = await P4Environment.getUserSubmissions(
         persister,
-        req.user.id,
+        req.user.username,
         req.user.groupNumber
       );
       return res.status(200).json(Array.from(submittedEnvList));
+    }
+  );
+
+  router.get(
+    "/:environment/provider-instance-status",
+    authenticationMiddleware,
+    environmentPathParamValidator,
+    (req: RequestWithUser, res) => {
+      const env = P4Environment.getActiveEnvironment(
+        req.params.environment,
+        req.user.username
+      );
+      env
+        .getProviderInstanceStatus()
+        .then((value) => {
+          return res.status(200).json({ status: value });
+        })
+        .catch(() => {
+          return res.status(200).json({ status: "" });
+        });
     }
   );
 
