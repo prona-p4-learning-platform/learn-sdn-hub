@@ -3,10 +3,14 @@ import {
   AuthenticationProvider,
   AuthenticationResult,
 } from "./AuthenticationProvider";
+import MemoryPersister from "../database/MemoryPersister";
 
 export default class PlaintextMultiuserAuthenticationProvider
   implements AuthenticationProvider {
-  constructor() {
+  private persister: MemoryPersister;
+
+  constructor(persister: MemoryPersister) {
+    this.persister = persister;
     if (process.env.BACKEND_USERS === undefined) {
       throw new Error(
         "No BACKEND_USERS environment variable set. Cannot support multiple users."
@@ -30,8 +34,9 @@ export default class PlaintextMultiuserAuthenticationProvider
       if (password === users.get(username)) {
         return {
           username: username,
+          // plaintext provider is simplistic and does not use ids, hence use username also as ID
           userid: username,
-          groupNumber: await this.getUserMapping(username),
+          groupNumber: await this.persister.getUserMapping(username),
           type: "plain",
         };
       }
@@ -39,6 +44,7 @@ export default class PlaintextMultiuserAuthenticationProvider
     throw new Error("AuthenticationError");
   }
 
+  // export and use filterAssignmentList from PlaintextAuthenticationProvider? Duplicate code
   async filterAssignmentList(
     username: string,
     assignmentList: Map<string, EnvironmentDescription>
@@ -66,34 +72,6 @@ export default class PlaintextMultiuserAuthenticationProvider
         assignmentList.clear();
         return assignmentList;
       }
-    }
-  }
-
-  async getUserMapping(userid: string): Promise<number> {
-    if (process.env.BACKEND_USER_MAPPING != undefined) {
-      const userMappingConfig = process.env.BACKEND_USER_MAPPING.split(",");
-      const usermap: Map<string, number> = new Map();
-      userMappingConfig.forEach((userMappingConfigEntry) => {
-        const login = userMappingConfigEntry.split(":")[0];
-        const instanceNumber = userMappingConfigEntry.split(":")[1];
-        usermap.set(login, parseInt(instanceNumber));
-      });
-
-      if (usermap.has(userid)) {
-        console.log(
-          "Mapped user " + userid + " to group number " + usermap.get(userid)
-        );
-        return usermap.get(userid);
-      } else {
-        throw new Error(
-          "No mapping defined to map user " + userid + " to a group."
-        );
-      }
-    } else {
-      console.log(
-        "No BACKEND_USER_MAPPING environment variable set. Mapping user to group 0."
-      );
-      return 0;
     }
   }
 }

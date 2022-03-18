@@ -82,9 +82,9 @@ environments.set("p4basic", {
     },
   ],
   submissionPrepareCommand:
-    "tar zcvf /tmp/$user-$identifier.tar.gz /home/p4/tutorials/exercises/basic/ && touch /tmp/test",
-  submissionSupplementalFiles: ["/tmp/$user-$identifier.tar.gz", "/tmp/test"],
-  submissionCleanupCommand: "rm /tmp/$user-$identifier.tar.gz && rm /tmp/test",
+    "tar zcvf /tmp/$user-$environment.tar.gz /home/p4/tutorials/exercises/basic/ && touch /tmp/test",
+  submissionSupplementalFiles: ["/tmp/$user-$environment.tar.gz", "/tmp/test"],
+  submissionCleanupCommand: "rm /tmp/$user-$environment.tar.gz && rm /tmp/test",
   description: "p4basic description",
   assignmentLabSheet: "../assignments/p4basic.md",
 });
@@ -333,9 +333,9 @@ environments.set("Example1-Repeater", {
     },
   ],
   submissionPrepareCommand:
-    "tar zcvf /tmp/$user-$identifier.tar.gz /home/p4/p4-boilerplate/Example1-Repeater/",
-  submissionSupplementalFiles: ["/tmp/$user-$identifier.tar.gz"],
-  submissionCleanupCommand: "rm /tmp/$user-$identifier.tar.gz",
+    "tar zcvf /tmp/$user-$environment.tar.gz /home/p4/p4-boilerplate/Example1-Repeater/",
+  submissionSupplementalFiles: ["/tmp/$user-$environment.tar.gz"],
+  submissionCleanupCommand: "rm /tmp/$user-$environment.tar.gz",
   description: "Example1-Repeater description",
   assignmentLabSheet: "../assignments/prona-repeater.md",
 });

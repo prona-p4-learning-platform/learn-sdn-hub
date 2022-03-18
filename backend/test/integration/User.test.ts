@@ -4,7 +4,7 @@ import express from "express";
 import { MongoClient } from "mongodb";
 import MongoDBPersister from "../../src/database/MongoDBPersister";
 import MongoDBAuthenticationProvider from "../../src/authentication/MongoDBAuthenticationProvider";
-import LocalVMProvider from '../../src/providers/LocalVMProvider'
+import LocalVMProvider from "../../src/providers/LocalVMProvider";
 const app = express();
 let connection: MongoClient = null;
 let instance: MongoDBPersister = null;
@@ -24,7 +24,13 @@ beforeAll(async () => {
     environments: [],
   });
   instance = new MongoDBPersister(process.env.MONGO_URL);
-  app.use(APIRoutes(instance, [new MongoDBAuthenticationProvider(instance)], new LocalVMProvider()));
+  app.use(
+    APIRoutes(
+      instance,
+      [new MongoDBAuthenticationProvider(instance)],
+      new LocalVMProvider()
+    )
+  );
 });
 
 describe("/api/user", () => {

@@ -64,6 +64,7 @@ type StateType = {
   stepsCompleted: boolean;
   terminalState: TerminalStateType[];
   editorState: EditorStateType[];
+  providerInstanceStatus: string;
 }
 
 function Alert(props: JSX.IntrinsicAttributes & AlertProps) {
@@ -93,7 +94,8 @@ export class EnvironmentView extends React.Component<PropsType,StateType> {
       stepNames: [],
       stepLabels: [],
       activeStep: 0,
-      stepsCompleted: false
+      stepsCompleted: false,
+      providerInstanceStatus: ""
     };
     this.restartEnvironment = this.restartEnvironment.bind(this)
     this.storeTerminalState = this.storeTerminalState.bind(this)
@@ -103,6 +105,7 @@ export class EnvironmentView extends React.Component<PropsType,StateType> {
   componentDidMount(): void {
     this.loadEnvironmentConfig()
     this.loadAssignment()
+    this.loadProviderInstanceStatus()
   }
 
   async restartEnvironment(): Promise<void> {
@@ -276,6 +279,15 @@ export class EnvironmentView extends React.Component<PropsType,StateType> {
       });
   }
 
+  loadProviderInstanceStatus() {
+    fetch(APIRequest(`/api/environment/${this.props.match.params.environment}/provider-instance-status`,
+      { headers: { 'Content-Type': 'application/json', authorization: localStorage.getItem("token") || "" } }))
+      .then((response) => response.json())
+      .then((data) => {
+        this.setState({ providerInstanceStatus: data.status });
+      });
+  }
+
   storeTerminalState(endpoint: string, state: string) {
     this.setState((prevState) => {
       const newTerminalState: TerminalStateType = {
@@ -402,7 +414,7 @@ export class EnvironmentView extends React.Component<PropsType,StateType> {
                       <Grid item>
                         <Stepper activeStep={this.state.activeStep}>
                         {Array.isArray(this.state.stepLabels) && this.state.stepLabels.length > 0 && this.state.stepLabels.map((stepLabel, index) =>
-                          <Step>
+                          <Step key={index}>
                             <StepButton disabled={index !== this.state.activeStep} key={index} onClick={handleStepClick}>{stepLabel}</StepButton>
                           </Step>
                         )}
@@ -410,6 +422,7 @@ export class EnvironmentView extends React.Component<PropsType,StateType> {
                       </Grid>
                     )}
                     <Grid item>
+                      <Typography>{this.state.providerInstanceStatus}</Typography>
                       <Button
                         variant="contained"
                         color="primary"

@@ -11,7 +11,7 @@ const persister = new MemoryPersister();
 serverCreator(
   api(
     persister,
-    [new PlaintextMultiuserAuthenticationProvider()],
+    [new PlaintextMultiuserAuthenticationProvider(persister)],
     new LocalMultiuserVMProvider()
   )
 );

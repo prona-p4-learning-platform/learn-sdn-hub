@@ -4,10 +4,10 @@ import P4Environment from "../P4Environment";
 export default function (
   ws: WebSocket,
   environment: string,
-  userid: string,
+  username: string,
   language: string
 ): void {
-  const envInstance = P4Environment.getActiveEnvironment(environment, userid);
+  const envInstance = P4Environment.getActiveEnvironment(environment, username);
   if (envInstance !== undefined) {
     Promise.all([
       envInstance.getLanguageServerPort(),

@@ -44,10 +44,10 @@ export default function wrapWSWithExpressApp(server: Server): void {
       const lspMatchResult = lsMatcher(path);
       if (envMatchResult !== false) {
         const { environment, type } = envMatchResult.params;
-        ConsoleHandler(ws, environment, user.id, type);
+        ConsoleHandler(ws, environment, user.username, type);
       } else if (lspMatchResult !== false) {
         const { environment, language } = lspMatchResult.params;
-        LanguageServerHandler(ws, environment, user.id, language);
+        LanguageServerHandler(ws, environment, user.username, language);
       } else {
         ws.send(`No route handler.`);
         ws.close();

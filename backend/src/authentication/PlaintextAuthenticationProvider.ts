@@ -13,8 +13,10 @@ export default class PlaintextAuthenticationProvider
     if (password === "p4") {
       return {
         username: username,
+        // plaintext provider is simplistic and does not use ids,
+        // use username also as ID and set group to be 0 always
         userid: username,
-        groupNumber: await this.getUserMapping(username),
+        groupNumber: 0,
         type: "plain",
       };
     }
@@ -49,9 +51,5 @@ export default class PlaintextAuthenticationProvider
         return assignmentList;
       }
     }
-  }
-
-  async getUserMapping(userid: string): Promise<number> {
-    return 0;
   }
 }

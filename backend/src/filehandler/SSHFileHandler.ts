@@ -3,18 +3,19 @@ import fs from "fs";
 
 export default class SSHFileHandler {
   private client: Client;
-  private hasClosedOrErrored = false;
+  private hasClosed = false;
+  private hasErrored = false;
   constructor(ipaddress: string, port: number) {
     console.log("Establishing SFTP connection " + ipaddress + ":" + port);
     this.client = new Client();
     this.client
       .on("error", (err) => {
         console.log(err);
-        this.hasClosedOrErrored = true;
+        this.hasErrored = true;
       })
       .on("close", () => {
         console.log("SSHFileHandler has been closed.");
-        this.hasClosedOrErrored = true;
+        this.hasClosed = true;
       })
       .connect({
         host: ipaddress,
@@ -32,7 +33,12 @@ export default class SSHFileHandler {
     absolutePath: string,
     encoding?: BufferEncoding
   ): Promise<string> {
-    if (this.hasClosedOrErrored) {
+    if (this.hasClosed) {
+      return Promise.reject(
+        new Error("SSHFileHandler: SSH connection closed.")
+      );
+    }
+    if (this.hasErrored) {
       return Promise.reject(new Error("SSHFileHandler: SSH connection error."));
     }
     return new Promise((resolve, reject) => {
@@ -44,9 +50,9 @@ export default class SSHFileHandler {
           console.log("retrieved file.", content);
           sftp.end();
           if (encoding) {
-            resolve(content.toString(encoding));
+            return resolve(content.toString(encoding));
           } else {
-            resolve(content.toString("utf-8"));
+            return resolve(content.toString("utf-8"));
           }
         });
       });
@@ -54,10 +60,13 @@ export default class SSHFileHandler {
   }
 
   async writeFile(absolutePath: string, content: string): Promise<void> {
-    if (this.hasClosedOrErrored) {
+    if (this.hasClosed) {
       return Promise.reject(
-        new Error("SSHFileHandler: SFTP connection error.")
+        new Error("SSHFileHandler: SSH connection closed.")
       );
+    }
+    if (this.hasErrored) {
+      return Promise.reject(new Error("SSHFileHandler: SSH connection error."));
     }
     return new Promise((resolve, reject) => {
       this.client.sftp((err, sftp) => {
@@ -67,7 +76,7 @@ export default class SSHFileHandler {
         writeStream.on("close", () => {
           console.log("stream closed");
           sftp.end();
-          resolve();
+          return resolve();
         });
         writeStream.on("finish", () => {
           console.log("stream finished");
@@ -75,7 +84,7 @@ export default class SSHFileHandler {
         writeStream.on("error", () => {
           console.log("stream error");
           sftp.end();
-          reject(new Error("SSHFileHandler: SFTP stream error."));
+          return reject(new Error("SSHFileHandler: SFTP stream error."));
         });
         writeStream.write(content);
         writeStream.end();
@@ -84,7 +93,11 @@ export default class SSHFileHandler {
   }
 
   async close(): Promise<void> {
-    if (this.hasClosedOrErrored) {
+    if (this.hasClosed) {
+      // already closed
+      return Promise.resolve();
+    }
+    if (this.hasErrored) {
       return Promise.reject(
         new Error("SSHFileHandler: SFTP connection error.")
       );
