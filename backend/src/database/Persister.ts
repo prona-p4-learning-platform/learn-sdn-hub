@@ -1,14 +1,20 @@
-import { Submission, TerminalStateType } from "../P4Environment";
+import {
+  Submission,
+  SubmissionFileType,
+  TerminalStateType,
+} from "../P4Environment";
 
 export interface UserAccount {
-  username: string;
   _id: string;
+  username: string;
+  groupNumber: number;
   password: string;
 }
 
 export interface UserEnvironment {
-  identifier: string;
+  environment: string;
   description: string;
+  instance: string;
 }
 
 export interface Persister {
@@ -16,18 +22,20 @@ export interface Persister {
   GetUserEnvironments: (username: string) => Promise<UserEnvironment[]>;
   AddUserEnvironment: (
     username: string,
-    identifier: string,
-    description: string
+    environment: string,
+    description: string,
+    instance: string
   ) => Promise<void>;
   RemoveUserEnvironment: (
     username: string,
-    identifier: string
+    environment: string
   ) => Promise<void>;
   SubmitUserEnvironment: (
     username: string,
-    identifier: string,
+    groupNumber: number,
+    environment: string,
     terminalStates: TerminalStateType[],
-    submittedFiles: Map<string, string>
+    submittedFiles: SubmissionFileType[]
   ) => Promise<void>;
   GetUserSubmissions: (
     username: string,

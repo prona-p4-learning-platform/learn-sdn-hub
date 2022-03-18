@@ -12,7 +12,7 @@ export interface Console {
   on(event: "finished", listener: () => void): this;
   write(data: string): void;
   writeLine(data: string): void;
-  close(environmentId: string, userId: string, groupNumber: number): void;
+  close(environmentId: string, username: string, groupNumber: number): void;
   resize(columns: number, lines: number): void;
   consumeInitialConsoleBuffer(): string;
   command: string;
@@ -23,7 +23,7 @@ export interface Console {
 type CustomizedSSHClient = Client & {
   ready: boolean;
   environmentId: string;
-  userId: string;
+  username: string;
   groupNumber: number;
 };
 
@@ -43,7 +43,7 @@ export default class SSHConsole extends EventEmitter implements Console {
 
   constructor(
     environmentId: string,
-    userId: string,
+    username: string,
     groupNumber: number,
     ipaddress: string,
     port: number,
@@ -61,7 +61,7 @@ export default class SSHConsole extends EventEmitter implements Console {
     let sshConsole: CustomizedSSHClient;
     // sharing connections in the same group would be possible and multiple users can then use the same xterm.js together,
     // however refresh/different console sizes (which is inevitable due to different browser window sizes) etc. will lead to console corruption
-    const consoleIdentifier = `${ipaddress}:${port}:${environmentId}:${userId}:${groupNumber}`;
+    const consoleIdentifier = `${ipaddress}:${port}:${environmentId}:${username}:${groupNumber}`;
     if (provideTty && SSHConsole.sshConnections.has(consoleIdentifier)) {
       sshConsole = SSHConsole.sshConnections.get(consoleIdentifier);
       if (sshConsole.ready === false) {
@@ -76,7 +76,7 @@ export default class SSHConsole extends EventEmitter implements Console {
       sshConsole = new Client() as CustomizedSSHClient;
       sshConsole.ready = false;
       sshConsole.environmentId = environmentId;
-      sshConsole.userId = userId;
+      sshConsole.username = username;
       sshConsole.groupNumber = groupNumber;
       if (this.provideTty) {
         SSHConsole.sshConnections.set(consoleIdentifier, sshConsole);
@@ -194,14 +194,14 @@ export default class SSHConsole extends EventEmitter implements Console {
 
   async close(
     environmentId: string,
-    userId: string,
+    username: string,
     groupNumber: number
   ): Promise<void> {
     console.log("SSH console close");
     SSHConsole.sshConnections.forEach((value, key, map) => {
       if (
         value.environmentId === environmentId &&
-        value.userId === userId &&
+        value.username === username &&
         value.groupNumber === groupNumber
       ) {
         value.emit("close");

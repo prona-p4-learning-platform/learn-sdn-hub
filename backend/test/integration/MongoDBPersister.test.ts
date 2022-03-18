@@ -40,7 +40,8 @@ it("successfully adds a new environment to a user's existing list of environment
   await instance.AddUserEnvironment(
     "testuser",
     "some-uuid",
-    "some-description"
+    "some-description",
+    "some-instance"
   );
   const result = await connection
     .db()

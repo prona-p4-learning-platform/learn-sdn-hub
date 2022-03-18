@@ -2,6 +2,7 @@ import SSHConsole, { Console } from "./consoles/SSHConsole";
 import FileHandler from "./filehandler/SSHFileHandler";
 import { InstanceProvider, VMEndpoint } from "./providers/Provider";
 import { Persister } from "./database/Persister";
+import { InstanceNotFoundErrorMessage } from "./providers/OpenStackProvider";
 
 interface AliasedFile {
   absFilePath: string;
@@ -52,6 +53,11 @@ export interface Submission {
   lastChanged: Date;
 }
 
+export type SubmissionFileType = {
+  fileName: string;
+  fileContent: string;
+};
+
 export interface EnvironmentDescription {
   tasks: Array<Array<Task>>;
   editableFiles: Array<AliasedFile>;
@@ -69,30 +75,33 @@ export interface P4EnvironmentResult {
   p4fileEndpoints: Array<string>;
 }
 
+// refactor class name? Not only focussing P4 anymore?
 export default class P4Environment {
   private activeConsoles: Map<string, Console>;
   private editableFiles: Map<string, string>;
   private configuration: EnvironmentDescription;
-  private identifier: string;
+  private environmentId: string;
   private static activeEnvironments = new Map<string, P4Environment>();
   private environmentProvider: InstanceProvider;
   private persister: Persister;
-  private userId: string;
+  private username: string;
   private filehandler: FileHandler;
   private groupNumber: number;
 
   public static getActiveEnvironment(
-    identifier: string,
-    userid: string
+    environmentId: string,
+    username: string
   ): P4Environment {
-    return P4Environment.activeEnvironments.get(`${userid}-${identifier}`);
+    return P4Environment.activeEnvironments.get(`${username}-${environmentId}`);
   }
 
-  public static getDeployedUserEnvironmentList(userid: string): Array<string> {
+  public static getDeployedUserEnvironmentList(
+    username: string
+  ): Array<string> {
     const deployedEnvironmentsForUser: Array<string> = new Array<string>();
     P4Environment.activeEnvironments.forEach(
       (value: P4Environment, key: string) => {
-        if (value.userId === userid)
+        if (value.username === username)
           deployedEnvironmentsForUser.push(key.split("-").slice(1).join("-"));
       }
     );
@@ -102,7 +111,6 @@ export default class P4Environment {
   public static getDeployedGroupEnvironmentList(
     groupNumber: number
   ): Array<string> {
-    //const endpoint = await this.makeSureInstanceExists();
     const deployedEnvironmentsForGroup: Array<string> = new Array<string>();
     P4Environment.activeEnvironments.forEach(
       async (value: P4Environment, key: string) => {
@@ -115,9 +123,9 @@ export default class P4Environment {
   }
 
   private constructor(
-    userId: string,
+    username: string,
     groupNumber: number,
-    identifier: string,
+    environmentId: string,
     configuration: EnvironmentDescription,
     environmentProvider: InstanceProvider,
     persister: Persister
@@ -127,9 +135,9 @@ export default class P4Environment {
     this.configuration = configuration;
     this.environmentProvider = environmentProvider;
     this.persister = persister;
-    this.userId = userId;
+    this.username = username;
     this.groupNumber = groupNumber;
-    this.identifier = identifier;
+    this.environmentId = environmentId;
   }
 
   private addEditableFile(alias: string, path: string): void {
@@ -149,49 +157,126 @@ export default class P4Environment {
   }
 
   static async createEnvironment(
-    userId: string,
+    username: string,
     groupNumber: number,
-    identifier: string,
+    environmentId: string,
     env: EnvironmentDescription,
     provider: InstanceProvider,
     persister: Persister
   ): Promise<P4Environment> {
-    const environment = new P4Environment(
-      userId,
-      groupNumber,
-      identifier,
-      env,
-      provider,
-      persister
-    );
-    console.log(`${userId}-${identifier}`);
-    let activeEnvironmentsForGroup = false;
-    P4Environment.activeEnvironments.forEach((value: P4Environment) => {
-      if (value.groupNumber === groupNumber && value.identifier != identifier)
-        activeEnvironmentsForGroup = true;
-    });
-    if (activeEnvironmentsForGroup) {
-      throw Error(
-        "Your group already deployed an environment. Please reload assignment list."
+    return new Promise<P4Environment>(async (resolve, reject) => {
+      const environment = new P4Environment(
+        username,
+        groupNumber,
+        environmentId,
+        env,
+        provider,
+        persister
       );
-    } else {
-      await environment.start(env);
-      P4Environment.activeEnvironments.set(
-        `${userId}-${identifier}`,
+      console.log(
+        "Creating new environment: " + environmentId + " for user: " + username
+      );
+      const activeEnvironmentsForGroup = Array<P4Environment>();
+      P4Environment.activeEnvironments.forEach((environment: P4Environment) => {
+        if (environment.groupNumber === groupNumber) {
+          if (environment.environmentId !== environmentId) {
+            throw Error(
+              "Your group already deployed another environment. Please reload assignment list."
+            );
+          } else {
+            activeEnvironmentsForGroup.push(environment);
+          }
+        }
+      });
+      if (activeEnvironmentsForGroup.length === 0) {
         environment
-      );
-      return environment;
-    }
+          .start(env, true)
+          .then(() => {
+            P4Environment.activeEnvironments.set(
+              `${username}-${environmentId}`,
+              environment
+            );
+            return resolve(environment);
+          })
+          .catch((err) => {
+            P4Environment.activeEnvironments.delete(
+              `${username}-${environmentId}`
+            );
+            return reject(new Error("Start of environment failed." + err));
+          });
+      } else {
+        // the group already runs an environment add this user to it
+        // and reuse instance
+        let groupEnvironmentInstance;
+        const userEnvironmentsOfOtherGroupUser = await persister.GetUserEnvironments(
+          activeEnvironmentsForGroup[0].username
+        );
+        for (const userEnvironmentOfOtherGroupUser of userEnvironmentsOfOtherGroupUser) {
+          if (
+            userEnvironmentOfOtherGroupUser.environment ===
+            activeEnvironmentsForGroup[0].environmentId
+          ) {
+            groupEnvironmentInstance = userEnvironmentOfOtherGroupUser.instance;
+          }
+        }
+        await persister.AddUserEnvironment(
+          username,
+          activeEnvironmentsForGroup[0].environmentId,
+          activeEnvironmentsForGroup[0].configuration.description,
+          groupEnvironmentInstance
+        );
+        console.log(
+          "Added existing environment: " +
+            environmentId +
+            " for user: " +
+            username +
+            " from user: " +
+            activeEnvironmentsForGroup[0].username +
+            " in group: " +
+            groupNumber +
+            " using instance: " +
+            groupEnvironmentInstance
+        );
+        environment
+          .start(env, false)
+          .then(() => {
+            P4Environment.activeEnvironments.set(
+              `${username}-${environmentId}`,
+              environment
+            );
+            return resolve(environment);
+          })
+          .catch((err) => {
+            P4Environment.activeEnvironments.delete(
+              `${username}-${environmentId}`
+            );
+            return reject(
+              new Error("Failed to join environment of your group." + err)
+            );
+          });
+      }
+    });
   }
 
   static async deleteEnvironment(
-    userId: string,
+    username: string,
     environmentId: string
   ): Promise<boolean> {
-    const environment = this.getActiveEnvironment(environmentId, userId);
-    environment.stop();
-    P4Environment.activeEnvironments.delete(`${userId}-${environmentId}`);
-    return true;
+    return new Promise<boolean>((resolve, reject) => {
+      const environment = this.getActiveEnvironment(environmentId, username);
+      environment
+        .stop()
+        .then(() => {
+          P4Environment.activeEnvironments.delete(
+            `${username}-${environmentId}`
+          );
+          return resolve(true);
+        })
+        .catch((err) => {
+          console.log("Failed to stop environment. " + JSON.stringify(err));
+          return reject(false);
+        });
+    });
   }
 
   async getLanguageServerPort(): Promise<number> {
@@ -204,47 +289,91 @@ export default class P4Environment {
     return endpoint.IPAddress;
   }
 
-  async makeSureInstanceExists(): Promise<VMEndpoint> {
-    const environments = await this.persister.GetUserEnvironments(this.userId);
-    console.log(environments);
-    const filtered = environments.filter(
-      (env) => env.identifier === this.identifier
-    );
-    if (filtered.length > 0) {
-      try {
-        const endpoint = await this.environmentProvider.getServer(
-          filtered[0].identifier
+  async makeSureInstanceExists(createIfMissing?: boolean): Promise<VMEndpoint> {
+    return new Promise<VMEndpoint>(async (resolve, reject) => {
+      const environments = await this.persister.GetUserEnvironments(
+        this.username
+      );
+      console.log("Current user environments: " + JSON.stringify(environments));
+      const filtered = environments.filter(
+        (env) => env.environment === this.environmentId
+      );
+      if (filtered.length === 1) {
+        console.log(
+          "Environment " +
+            this.environmentId +
+            " already deployed for user " +
+            this.username +
+            ", trying to reopen it..."
         );
-        return endpoint;
-      } catch (err) {
-        if (err.message === "openstack Error (404): Item not found") {
-          await this.persister.RemoveUserEnvironment(
-            this.userId,
-            filtered[0].identifier
+        this.environmentProvider
+          .getServer(filtered[0].instance)
+          .then((endpoint) => {
+            resolve(endpoint);
+          })
+          .catch(async (err) => {
+            if (err.message == InstanceNotFoundErrorMessage) {
+              // OpenStack instance is gone, remove environment
+              await this.persister.RemoveUserEnvironment(
+                this.username,
+                filtered[0].environment
+              );
+            }
+            return reject(err);
+          });
+      } else if (filtered.length === 0) {
+        if (createIfMissing === true) {
+          resolve(
+            this.environmentProvider.createServer(
+              this.username,
+              this.groupNumber,
+              this.environmentId
+            )
           );
-          return this.environmentProvider.createServer(
-            `${this.userId}-${this.identifier}`
+        } else {
+          return reject(
+            "Instance not found and explicitly told not to create a new instance."
           );
         }
-        throw err;
+      } else {
+        return reject(
+          new Error(
+            "More than 1 environments exist for user " +
+              this.username +
+              ". Remove duplicate environments from persister " +
+              this.persister +
+              " envs found: " +
+              filtered
+          )
+        );
       }
-    } else {
-      return this.environmentProvider.createServer(
-        `${this.userId}-${this.identifier}`
-      );
-    }
+    });
   }
 
   async start(
-    desc: EnvironmentDescription = this.configuration
+    desc: EnvironmentDescription = this.configuration,
+    createIfMissing: boolean
   ): Promise<void> {
-    const endpoint = await this.makeSureInstanceExists();
+    let endpoint: VMEndpoint;
+    try {
+      endpoint = await this.makeSureInstanceExists(createIfMissing);
+    } catch (err) {
+      throw err;
+    }
     await this.persister.AddUserEnvironment(
-      this.userId,
-      endpoint.identifier,
-      this.configuration.description
+      this.username,
+      this.environmentId,
+      this.configuration.description,
+      endpoint.instance
     );
-    console.log(endpoint);
+    console.log(
+      "Added new environment: " +
+        this.environmentId +
+        "for user: " +
+        this.username +
+        " using endpoint: " +
+        JSON.stringify(endpoint)
+    );
     return new Promise((resolve, reject) => {
       try {
         this.filehandler = new FileHandler(
@@ -252,7 +381,7 @@ export default class P4Environment {
           endpoint.SSHPort
         );
       } catch (err) {
-        reject(err);
+        return reject(err);
       }
       desc.editableFiles.forEach((val) =>
         this.addEditableFile(val.alias, val.absFilePath)
@@ -269,8 +398,8 @@ export default class P4Environment {
           );
           try {
             const console = new SSHConsole(
-              this.identifier,
-              this.userId,
+              this.environmentId,
+              this.username,
               this.groupNumber,
               endpoint.IPAddress,
               endpoint.SSHPort,
@@ -287,17 +416,17 @@ export default class P4Environment {
                 errorConsoleCounter + readyConsoleCounter === desc.tasks.length
               ) {
                 resolvedOrRejected = true;
-                reject(new Error("Unable to create environment"));
+                return reject(new Error("Unable to create environment"));
               } else {
-                global.console.log("deleted the console");
                 this.activeConsoles.delete(task.name);
+                global.console.log("deleted console for task: " + task.name);
               }
             };
 
             console.on("close", setupCloseHandler);
 
             console.on("error", (err) => {
-              reject(err);
+              return reject(err);
             });
 
             console.on("ready", () => {
@@ -308,11 +437,11 @@ export default class P4Environment {
                 readyConsoleCounter === desc.tasks.length
               ) {
                 resolvedOrRejected = true;
-                resolve();
+                return resolve();
               }
             });
           } catch (err) {
-            reject(err);
+            return reject(err);
           }
         });
       });
@@ -320,66 +449,96 @@ export default class P4Environment {
   }
 
   async stop(): Promise<void> {
-    let resolved = false;
-    const endpoint = await this.makeSureInstanceExists();
-    await this.persister.RemoveUserEnvironment(
-      this.userId,
-      endpoint.identifier
-    );
+    return new Promise(async (resolve, reject) => {
+      const endpoint = await this.makeSureInstanceExists();
 
-    for (const console of this.activeConsoles) {
-      console[1].close(this.identifier, this.userId, this.groupNumber);
-    }
-    this.filehandler.close();
+      for (const console of this.activeConsoles) {
+        console[1].close(this.environmentId, this.username, this.groupNumber);
+      }
+      this.filehandler.close();
 
-    return new Promise((resolve, reject) => {
       let isEnvironmentUsedByOtherUserInGroup = false;
       P4Environment.activeEnvironments.forEach((value: P4Environment) => {
         if (
           value.groupNumber === this.groupNumber &&
-          value.userId != this.userId
+          value.username != this.username
         )
           isEnvironmentUsedByOtherUserInGroup = true;
       });
       if (!isEnvironmentUsedByOtherUserInGroup) {
         for (const command of this.configuration.stopCommands) {
-          global.console.log(
-            "Executing stop command: ",
-            JSON.stringify(command),
-            JSON.stringify(endpoint)
-          );
-          const console = new SSHConsole(
-            this.identifier,
-            this.userId,
-            this.groupNumber,
-            endpoint.IPAddress,
-            endpoint.SSHPort,
-            command.executable,
-            command.params,
-            command.cwd,
-            command.provideTty
-          );
-          console.on("finished", (code: string, signal: string) => {
+          let stopCmdFinished = false;
+          await new Promise<void>((stopCmdSuccess, stopCmdFail) => {
             global.console.log(
-              "OUTPUT: " +
-                console.stdout +
-                "(exit code: " +
-                code +
-                ", signal: " +
-                signal +
-                ")"
+              "Executing stop command: ",
+              JSON.stringify(command),
+              JSON.stringify(endpoint)
             );
-            resolved = true;
-          });
-          console.on("closed", () => {
-            if (resolved === true) resolve();
-            else reject();
+            const console = new SSHConsole(
+              this.environmentId,
+              this.username,
+              this.groupNumber,
+              endpoint.IPAddress,
+              endpoint.SSHPort,
+              command.executable,
+              command.params,
+              command.cwd,
+              command.provideTty
+            );
+            console.on("finished", async (code: string, signal: string) => {
+              global.console.log(
+                "OUTPUT: " +
+                  console.stdout +
+                  "(exit code: " +
+                  code +
+                  ", signal: " +
+                  signal +
+                  ")"
+              );
+              stopCmdFinished = true;
+              console.emit("closed");
+            });
+            console.on("closed", () => {
+              if (stopCmdFinished === true) {
+                stopCmdSuccess();
+              } else {
+                global.console.log("Stop command failed.");
+                stopCmdFail();
+              }
+            });
           });
         }
+
+        this.environmentProvider
+          .deleteServer(endpoint.instance)
+          .then(() => {
+            this.persister
+              .RemoveUserEnvironment(this.username, this.environmentId)
+              .then(() => {
+                return resolve();
+              })
+              .catch((err) => {
+                return reject(
+                  new Error("Error: Unable to remove UserEnvironment." + err)
+                );
+              });
+          })
+          .catch((err) => {
+            if (err.message === InstanceNotFoundErrorMessage) {
+              // OpenStack instance already gone
+              global.console.log(
+                "Error: Server Instance not found during deletion?"
+              );
+            } else {
+              global.console.log(err);
+              return reject(new Error("Error: Unable to delete server." + err));
+            }
+          });
       } else {
         console.log(
           "Other users in the same group still use this environment. Skipping executing of stop commands."
         );
+        return resolve();
       }
     });
   }
@@ -395,8 +554,8 @@ export default class P4Environment {
           JSON.stringify(endpoint)
         );
         const console = new SSHConsole(
-          this.identifier,
-          this.userId,
+          this.environmentId,
+          this.username,
           this.groupNumber,
           endpoint.IPAddress,
           endpoint.SSHPort,
@@ -419,8 +578,11 @@ export default class P4Environment {
           console.emit("closed");
         });
         console.on("closed", () => {
-          if (resolved === true) resolve();
-          else reject();
+          if (resolved === true) return resolve();
+          else
+            return reject(
+              new Error("Unable to run stop command." + command.executable)
+            );
         });
       });
     }
@@ -428,10 +590,10 @@ export default class P4Environment {
     console.log("Stop commands finished...");
     P4Environment.activeEnvironments.forEach((value: P4Environment) => {
       if (value.groupNumber === this.groupNumber) {
-        console.log("Found group env " + value.identifier + "...");
+        console.log("Found group env " + value.environmentId + "...");
         const terminal = value.getConsoles();
         terminal.forEach((value: Console) => {
-          console.log("Found active console " + value + "...");
+          console.log("Found active console in " + value.cwd + "...");
           // write command to console
           value.write("cd " + value.cwd + "\n");
           console.log(
@@ -453,8 +615,8 @@ export default class P4Environment {
     return new Promise((resolve, reject) => {
       // run sshCommand
       const console = new SSHConsole(
-        this.identifier,
-        this.userId,
+        this.environmentId,
+        this.username,
         this.groupNumber,
         endpoint.IPAddress,
         endpoint.SSHPort,
@@ -494,8 +656,8 @@ export default class P4Environment {
         console.emit("closed");
       });
       console.on("closed", () => {
-        if (resolved === true) resolve(console.stdout);
-        else reject();
+        if (resolved === true) return resolve(console.stdout);
+        else return reject(new Error("Unable to run SSH command " + command));
       });
     });
   }
@@ -517,7 +679,7 @@ export default class P4Environment {
           if (test.type == "TerminalBufferSearch") {
             // search in terminalBuffer for match
             if (terminalStates.length === 0) {
-              reject(
+              return reject(
                 new Error(
                   "No terminal states available. Please use the terminals to run the steps given in the assignment and check again."
                 )
@@ -552,14 +714,14 @@ export default class P4Environment {
           else someTestsFailed = true;
         }
         if (someTestsFailed !== undefined && someTestsFailed === false)
-          resolve("All tests passed! " + testOutput);
-        else reject(new Error("Some Tests failed! " + testOutput));
+          return resolve("All tests passed! " + testOutput);
+        else return reject(new Error("Some Tests failed! " + testOutput));
       } else {
         // no tests defined
         global.console.log(
           "Cannot execute test. No steps defined in tasks for assignment."
         );
-        reject(
+        return reject(
           new Error(
             "Cannot execute test. No steps defined in tasks for assignment."
           )
@@ -573,10 +735,10 @@ export default class P4Environment {
     terminalStates: TerminalStateType[]
   ): Promise<void> {
     console.log("SUBMITTING assignment (step " + stepIndex + ")");
-    const submittedFiles = new Map<string, string>();
+    const submittedFiles = new Array<SubmissionFileType>();
     for (const [alias] of this.editableFiles.entries()) {
       await this.readFile(alias).then((fileContent: string) => {
-        submittedFiles.set(alias, fileContent);
+        submittedFiles.push({ fileName: alias, fileContent: fileContent });
       });
     }
 
@@ -584,8 +746,8 @@ export default class P4Environment {
     if (this.configuration.submissionPrepareCommand) {
       let submissionPrepareResult = "";
       const cmdWithExpanededVars = this.configuration.submissionPrepareCommand
-        .replace("$user", this.userId)
-        .replace("$identifier", this.identifier);
+        .replace("$user", this.username)
+        .replace("$environment", this.environmentId);
       await this.runSSHCommand(cmdWithExpanededVars)
         .then((result) => {
           submissionPrepareResult = result;
@@ -594,10 +756,10 @@ export default class P4Environment {
           submissionPrepareResult = error;
         });
       if (submissionPrepareResult) {
-        submittedFiles.set(
-          "sumissionPrepareResult-output.log",
-          submissionPrepareResult
-        );
+        submittedFiles.push({
+          fileName: "sumissionPrepareResult-output.log",
+          fileContent: submissionPrepareResult,
+        });
       }
     }
 
@@ -606,8 +768,8 @@ export default class P4Environment {
       for (const supplementalFile of this.configuration
         .submissionSupplementalFiles) {
         const fileNameWithExpanededVars = supplementalFile
-          .replace("$user", this.userId)
-          .replace("$identifier", this.identifier);
+          .replace("$user", this.username)
+          .replace("$environment", this.environmentId);
         const fileContent = await this.filehandler.readFile(
           fileNameWithExpanededVars,
           "binary"
@@ -615,7 +777,10 @@ export default class P4Environment {
         const flattenedFilePathName = fileNameWithExpanededVars
           .replace(/\//g, "_")
           .replace(/\\/g, "_");
-        submittedFiles.set(flattenedFilePathName, fileContent);
+        submittedFiles.push({
+          fileName: flattenedFilePathName,
+          fileContent: fileContent,
+        });
       }
     }
 
@@ -623,8 +788,8 @@ export default class P4Environment {
     if (this.configuration.submissionCleanupCommand) {
       let submissionCleanupResult = "";
       const cmdWithExpanededVars = this.configuration.submissionCleanupCommand
-        .replace("$user", this.userId)
-        .replace("$identifier", this.identifier);
+        .replace("$user", this.username)
+        .replace("$environment", this.environmentId);
       await this.runSSHCommand(cmdWithExpanededVars)
         .then((result) => {
           submissionCleanupResult = result;
@@ -633,16 +798,17 @@ export default class P4Environment {
           submissionCleanupResult = error;
         });
       if (submissionCleanupResult) {
-        submittedFiles.set(
-          "submissionCleanupResult-output.log",
-          submissionCleanupResult
-        );
+        submittedFiles.push({
+          fileName: "submissionCleanupResult-output.log",
+          fileContent: submissionCleanupResult,
+        });
       }
     }
 
     await this.persister.SubmitUserEnvironment(
-      this.userId,
-      this.identifier,
+      this.username,
+      this.groupNumber,
+      this.environmentId,
       terminalStates,
       submittedFiles
     );
@@ -650,10 +816,10 @@ export default class P4Environment {
 
   public static async getUserSubmissions(
     persister: Persister,
-    userId: string,
+    username: string,
     groupNumber: number
   ): Promise<Submission[]> {
-    const result = await persister.GetUserSubmissions(userId, groupNumber);
+    const result = await persister.GetUserSubmissions(username, groupNumber);
     return result;
   }
 
@@ -672,5 +838,10 @@ export default class P4Environment {
       throw new Error("Could not resolve alias.");
     }
     await this.filehandler.writeFile(resolvedPath, newContent);
+  }
+
+  async getProviderInstanceStatus(): Promise<string> {
+    const endpoint = await this.makeSureInstanceExists();
+    return endpoint.providerInstanceStatus;
   }
 }
