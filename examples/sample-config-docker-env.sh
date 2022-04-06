@@ -16,7 +16,7 @@ export DOCKER_CMD="-s"
 export DOCKER_MAX_INSTANCE_LIFETIME_MINUTES="120"
 
 # mongodb persister config
-export MONGODB_URL="mongodb+srv://admin:rAnBru5R62VPioLQhJyj@cluster0.tdnvj.mongodb.net/learn-sdn-hub?retryWrites=true&w=majority"
+export MONGODB_URL="mongodb+srv://admin:password-here@cluster0.tdnvj.mongodb.net/learn-sdn-hub?retryWrites=true&w=majority"
 
 # ssh instance credentials
 export SSH_USERNAME=p4
