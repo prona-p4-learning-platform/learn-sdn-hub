@@ -24,6 +24,7 @@ export default class LocalVMProvider implements InstanceProvider {
       console.log(
         "LocalVMProvider: No VBOX_SSH_PORTS environment variable set. LocalVMProvider uses Port 22 for all instances."
       );
+      // better use env var to allow configuration of port numbers?
       sshPorts = ipAddresses.map(() => 22);
     }
     ipAddresses.forEach((ipAddress, index) => {

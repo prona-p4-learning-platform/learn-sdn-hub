@@ -1,5 +1,6 @@
 import { InstanceProvider, VMEndpoint } from "./Provider";
 
+// better use env var to allow configuration of port numbers?
 const lsPort = 3005;
 
 export default class LocalMultiuserVMProvider implements InstanceProvider {
@@ -22,6 +23,7 @@ export default class LocalMultiuserVMProvider implements InstanceProvider {
       console.log(
         "LocalMultiUserVMProvider: No VBOX_SSH_PORTS environment variable set. LocalMultiuserVMProvider uses Port 22 for all instances."
       );
+      // better use env var to allow configuration of port numbers?
       sshPorts = ipAddresses.map(() => 22);
     }
     ipAddresses.forEach((ipAddress, index) => {

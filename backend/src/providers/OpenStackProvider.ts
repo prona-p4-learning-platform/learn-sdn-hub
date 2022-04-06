@@ -1,12 +1,14 @@
-import { InstanceProvider, VMEndpoint } from "./Provider";
+import {
+  InstanceProvider,
+  VMEndpoint,
+  InstanceNotFoundErrorMessage,
+} from "./Provider";
 import axios, { AxiosInstance } from "axios";
 import { Client } from "ssh2";
 import { ToadScheduler, SimpleIntervalJob, AsyncTask } from "toad-scheduler";
 
 const defaultAxiosTimeout = 30000;
-
-export const InstanceNotFoundErrorMessage =
-  "OpenStackProvider: Cannot get server. Instance not found.";
+const schedulerIntervalSeconds = 5 * 60;
 
 interface Service {
   endpoints: Endpoint[];
@@ -100,8 +102,8 @@ export default class OpenStackProvider implements InstanceProvider {
   private endpointPublicNetworkURL: string;
 
   // OpenStack Provider config
-  private os_associateFloatingIp: string;
-  private os_max_instance_lifetime_minutes: number;
+  private associateFloatingIP: string;
+  private maxInstanceLifetimeMinutes: number;
 
   // SSH and LanguageServer Port config
   private sshPort: number;
@@ -125,13 +127,14 @@ export default class OpenStackProvider implements InstanceProvider {
     this.os_secgroup = "default";
     this.os_floatingNetworkId = process.env.OPENSTACK_FLOATING_NETWORKID;
 
-    this.os_associateFloatingIp = process.env.OPENSTACK_ASSOCIATE_FLOATING_IP;
-    this.os_max_instance_lifetime_minutes = parseInt(
+    this.associateFloatingIP = process.env.OPENSTACK_ASSOCIATE_FLOATING_IP;
+    this.maxInstanceLifetimeMinutes = parseInt(
       process.env.OPENSTACK_MAX_INSTANCE_LIFETIME_MINUTES
     );
 
     this.providerInstance = this;
 
+    // better use env var to allow configuration of port numbers?
     this.sshPort = 22;
     this.lsPort = 3005;
 
@@ -157,7 +160,7 @@ export default class OpenStackProvider implements InstanceProvider {
       }
     );
     const job = new SimpleIntervalJob(
-      { seconds: 5 * 60, runImmediately: true },
+      { seconds: schedulerIntervalSeconds, runImmediately: true },
       task
     );
 
@@ -303,7 +306,7 @@ export default class OpenStackProvider implements InstanceProvider {
               const serverId = response.data.server.id as string;
               const expirationDate = new Date(
                 Date.now() +
-                  providerInstance.os_max_instance_lifetime_minutes * 60 * 1000
+                  providerInstance.maxInstanceLifetimeMinutes * 60 * 1000
               );
               providerInstance
                 .waitForServerAddresses(serverId, 60)
@@ -312,7 +315,7 @@ export default class OpenStackProvider implements InstanceProvider {
                   console.log("OpenStackProvider: Created server: " + serverId);
 
                   // if floating ip should be associated, allocate floating ip and associate it
-                  if (providerInstance.os_associateFloatingIp === "true") {
+                  if (providerInstance.associateFloatingIP === "true") {
                     const data_floatingIp = {
                       floatingip: {
                         project_id: providerInstance.os_projectId,
@@ -480,10 +483,12 @@ export default class OpenStackProvider implements InstanceProvider {
             .then(function (response) {
               const result = response.data.server;
               if (Object.keys(result.addresses).length > 0) {
+                // improve selection of array field?
+
                 // return first ip address
                 const firstAddress =
                   result.addresses[Object.keys(result.addresses)[0]];
-                if (providerInstance.os_associateFloatingIp === "true") {
+                if (providerInstance.associateFloatingIP === "true") {
                   // our instances only have one interface/network, so the second
                   // entry is the floating ip, sadly OpenStack does not returen a
                   // label, e.g., floatin/public in result
@@ -494,9 +499,7 @@ export default class OpenStackProvider implements InstanceProvider {
                 const createdDate = new Date(result.created as string);
                 const expirationDate = new Date(
                   createdDate.getTime() +
-                    providerInstance.os_max_instance_lifetime_minutes *
-                      60 *
-                      1000
+                    providerInstance.maxInstanceLifetimeMinutes * 60 * 1000
                 );
                 return resolve({
                   instance: instance,
@@ -545,7 +548,7 @@ export default class OpenStackProvider implements InstanceProvider {
               providerInstance.endpointPublicComputeURL + "/servers/" + instance
             )
             .then(() => {
-              if (providerInstance.os_associateFloatingIp === "true") {
+              if (providerInstance.associateFloatingIP === "true") {
                 providerInstance.axiosInstance
                   .get(
                     providerInstance.endpointPublicNetworkURL +
@@ -628,8 +631,7 @@ export default class OpenStackProvider implements InstanceProvider {
         .then(() => {
           // get servers older than timestamp
           const deadline = new Date(
-            Date.now() -
-              providerInstance.os_max_instance_lifetime_minutes * 60 * 1000
+            Date.now() - providerInstance.maxInstanceLifetimeMinutes * 60 * 1000
           );
           console.log(
             "OpenStackProvider: Pruning server instances older than " +
@@ -691,6 +693,8 @@ export default class OpenStackProvider implements InstanceProvider {
           .then(function (response) {
             const result = response.data;
             if (Object.keys(result.addresses).length > 0) {
+              // improve selection of array field?
+
               // return first ip address
               const firstAddress =
                 result.addresses[Object.keys(result.addresses)[0]];
@@ -732,6 +736,7 @@ export default class OpenStackProvider implements InstanceProvider {
           })
           .connect({
             host: address,
+            // better use env var to allow configuration of port numbers?
             port: 22,
             username: process.env.SSH_USERNAME,
             password: process.env.SSH_PASSWORD,

@@ -1,8 +1,11 @@
 import SSHConsole, { Console } from "./consoles/SSHConsole";
 import FileHandler from "./filehandler/SSHFileHandler";
-import { InstanceProvider, VMEndpoint } from "./providers/Provider";
+import {
+  InstanceProvider,
+  VMEndpoint,
+  InstanceNotFoundErrorMessage,
+} from "./providers/Provider";
 import { Persister } from "./database/Persister";
-import { InstanceNotFoundErrorMessage } from "./providers/OpenStackProvider";
 
 interface AliasedFile {
   absFilePath: string;
@@ -68,6 +71,10 @@ export interface EnvironmentDescription {
   submissionCleanupCommand?: string;
   description: string;
   assignmentLabSheet: string;
+  assignmentLabSheetLocation?: "backend" | "instance";
+  providerImage?: string;
+  providerDockerCmd?: string;
+  providerDockerSupplementalPorts?: string[];
 }
 
 export interface P4EnvironmentResult {
@@ -327,7 +334,10 @@ export default class P4Environment {
             this.environmentProvider.createServer(
               this.username,
               this.groupNumber,
-              this.environmentId
+              this.environmentId,
+              this.configuration.providerImage,
+              this.configuration.providerDockerCmd,
+              this.configuration.providerDockerSupplementalPorts
             )
           );
         } else {
@@ -823,17 +833,35 @@ export default class P4Environment {
     return result;
   }
 
-  public async readFile(alias: string): Promise<string> {
-    const resolvedPath = this.editableFiles.get(alias);
-    if (resolvedPath === undefined) {
-      throw new Error("Could not resolve alias.");
+  public async readFile(
+    alias: string,
+    alreadyResolved?: boolean
+  ): Promise<string> {
+    let resolvedPath;
+    if (alreadyResolved === undefined || alreadyResolved === false) {
+      resolvedPath = this.editableFiles.get(alias);
+      if (resolvedPath === undefined) {
+        throw new Error("Could not resolve alias.");
+      }
+    } else {
+      resolvedPath = alias;
     }
+
     const content = await this.filehandler.readFile(resolvedPath);
     return content;
   }
 
-  public async writeFile(alias: string, newContent: string): Promise<void> {
-    const resolvedPath = this.editableFiles.get(alias);
+  public async writeFile(
+    alias: string,
+    newContent: string,
+    alreadyResolved?: boolean
+  ): Promise<void> {
+    let resolvedPath;
+    if (alreadyResolved === undefined || alreadyResolved === false) {
+      resolvedPath = this.editableFiles.get(alias);
+    } else {
+      resolvedPath = alias;
+    }
     if (resolvedPath === undefined) {
       throw new Error("Could not resolve alias.");
     }
