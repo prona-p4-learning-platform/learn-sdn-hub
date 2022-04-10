@@ -6,7 +6,8 @@ import {
 import MemoryPersister from "../database/MemoryPersister";
 
 export default class PlaintextMultiuserAuthenticationProvider
-  implements AuthenticationProvider {
+  implements AuthenticationProvider
+{
   private persister: MemoryPersister;
 
   constructor(persister: MemoryPersister) {

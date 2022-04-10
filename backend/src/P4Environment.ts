@@ -215,9 +215,10 @@ export default class P4Environment {
         // the group already runs an environment add this user to it
         // and reuse instance
         let groupEnvironmentInstance;
-        const userEnvironmentsOfOtherGroupUser = await persister.GetUserEnvironments(
-          activeEnvironmentsForGroup[0].username
-        );
+        const userEnvironmentsOfOtherGroupUser =
+          await persister.GetUserEnvironments(
+            activeEnvironmentsForGroup[0].username
+          );
         for (const userEnvironmentOfOtherGroupUser of userEnvironmentsOfOtherGroupUser) {
           if (
             userEnvironmentOfOtherGroupUser.environment ===

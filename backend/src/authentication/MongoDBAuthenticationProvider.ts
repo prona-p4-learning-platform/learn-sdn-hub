@@ -16,7 +16,8 @@ username should have an index to ensure uniqueness of username entries
 */
 
 export default class MongoDBAuthenticationProvider
-  implements AuthenticationProvider {
+  implements AuthenticationProvider
+{
   private persister: MongoDBPersister;
 
   constructor(persister: MongoDBPersister) {

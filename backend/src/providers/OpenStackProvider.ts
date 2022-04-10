@@ -230,19 +230,21 @@ export default class OpenStackProvider implements InstanceProvider {
             const serviceCompute = catalog.find(
               (element) => element.type === "compute"
             );
-            providerInstance.endpointPublicComputeURL = serviceCompute.endpoints.find(
-              (element) =>
-                element.interface === "public" &&
-                element.region === providerInstance.os_region
-            ).url;
+            providerInstance.endpointPublicComputeURL =
+              serviceCompute.endpoints.find(
+                (element) =>
+                  element.interface === "public" &&
+                  element.region === providerInstance.os_region
+              ).url;
             const serviceNetwork = catalog.find(
               (element) => element.type === "network"
             );
-            providerInstance.endpointPublicNetworkURL = serviceNetwork.endpoints.find(
-              (element) =>
-                element.interface === "public" &&
-                element.region === providerInstance.os_region
-            ).url;
+            providerInstance.endpointPublicNetworkURL =
+              serviceNetwork.endpoints.find(
+                (element) =>
+                  element.interface === "public" &&
+                  element.region === providerInstance.os_region
+              ).url;
             return resolve();
           })
           .catch(function (err) {
