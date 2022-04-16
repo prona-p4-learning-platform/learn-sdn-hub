@@ -138,6 +138,8 @@ environments.set("l2_learning_switch", {
   ],
   description: "l2_learning_switch description",
   assignmentLabSheet: "../assignments/p4basic2.md",
+  providerDockerCmd: "sshd",
+  providerImage: "ubuntu:focal",
 });
 
 environments.set("p4calc", {
@@ -338,6 +340,8 @@ environments.set("Example1-Repeater", {
   submissionCleanupCommand: "rm /tmp/$user-$environment.tar.gz",
   description: "Example1-Repeater description",
   assignmentLabSheet: "../assignments/prona-repeater.md",
+  assignmentLabSheetLocation: "backend",
+  providerDockerSupplementalPorts: ["80/tcp", "8080/tcp"],
 });
 
 environments.set("Example2-MinimalisticSwitch", {

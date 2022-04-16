@@ -63,8 +63,9 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
 
   router.get(
     "/:environment/assignment",
+    authenticationMiddleware,
     environmentPathParamValidator,
-    (req, res) => {
+    async (req: RequestWithUser, res) => {
       const environment = req.params.environment;
       const targetEnv = environments.get(String(environment));
       console.log("/:environment/assignment");
@@ -73,12 +74,19 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
           .status(404)
           .json({ error: true, message: "Environment not found" });
       }
-      // enhance by not only getting files from backend filesystem, but also
-      // via sftp:// from instance
-      const markdown = fs
-        .readFileSync(path.resolve(__dirname, targetEnv.assignmentLabSheet))
-        .toString();
-
+      let markdown;
+      // if assignmentLabSheetLocation specified as "instance", get lab sheet from instance filesystem
+      if (targetEnv.assignmentLabSheetLocation === "instance") {
+        const env = P4Environment.getActiveEnvironment(
+          req.params.environment,
+          req.user.username
+        );
+        markdown = await env.readFile(targetEnv.assignmentLabSheet, true);
+      } else {
+        markdown = fs
+          .readFileSync(path.resolve(__dirname, targetEnv.assignmentLabSheet))
+          .toString();
+      }
       res.send(markdown);
     }
   );

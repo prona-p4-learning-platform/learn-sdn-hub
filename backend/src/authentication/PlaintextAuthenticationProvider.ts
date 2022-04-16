@@ -5,7 +5,8 @@ import {
 } from "./AuthenticationProvider";
 
 export default class PlaintextAuthenticationProvider
-  implements AuthenticationProvider {
+  implements AuthenticationProvider
+{
   async authenticateUser(
     username: string,
     password: string

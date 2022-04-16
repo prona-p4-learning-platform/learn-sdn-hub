@@ -1,13 +1,16 @@
 import AuthenticationMiddleware from "../../src/authentication/AuthenticationMiddleware";
-import { Request, Response } from "express";
+import { Request, Response, Send } from "express";
 import jwt from "jsonwebtoken";
+import { jest, expect, test } from "@jest/globals";
 
 const mockRequest: Partial<Request> = {
   headers: { authorization: "" },
 };
 const mockResponse: Partial<Response> = {
-  status: jest.fn().mockReturnThis(),
-  json: jest.fn().mockReturnThis(),
+  status: jest.fn().mockReturnThis() as (
+    code: number
+  ) => Response<unknown, Record<string, unknown>>,
+  json: jest.fn().mockReturnThis() as Send,
 };
 test("returns 401 if authentication token is not present in authorization header", () => {
   const nexthandler = jest.fn();
