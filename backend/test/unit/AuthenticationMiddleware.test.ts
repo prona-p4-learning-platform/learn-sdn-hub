@@ -1,7 +1,7 @@
 import AuthenticationMiddleware from "../../src/authentication/AuthenticationMiddleware";
 import { Request, Response, Send } from "express";
 import jwt from "jsonwebtoken";
-import { jest, expect } from "@jest/globals";
+import { jest, expect, test } from "@jest/globals";
 
 const mockRequest: Partial<Request> = {
   headers: { authorization: "" },
