@@ -1,4 +1,5 @@
 import extractCompilationResult from "../../src/CompilationResultExtractor";
+import { expect } from "@jest/globals";
 
 test("it extracts errors successfully", () => {
   expect(
