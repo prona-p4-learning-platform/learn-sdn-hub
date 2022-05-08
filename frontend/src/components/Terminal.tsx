@@ -2,7 +2,7 @@ import React from "react";
 import { AttachAddon } from "xterm-addon-attach";
 import { FitAddon } from "xterm-addon-fit";
 import { SerializeAddon } from "xterm-addon-serialize";
-import { XTerm } from 'xterm-for-react'
+import XTerm from './XTerm'
 import createWebSocket from '../api/WebSocket'
 
 interface TerminalProps {
@@ -63,7 +63,7 @@ export default class XTerminal extends React.Component<TerminalProps> {
       clearTimeout(this.resizeTimer)
     }
     // limit serialized scrollback to 1000 lines
-    const serializedState = this.serializeAddon.serialize(1000)
+    const serializedState = this.serializeAddon.serialize({scrollback: 1000})
     this.props.onTerminalUnmount(this.props.wsEndpoint, serializedState);
     this.websocket.close()
   }

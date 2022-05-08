@@ -1,9 +1,9 @@
 import React from "react";
-import AppBar from "@material-ui/core/AppBar";
-import Toolbar from "@material-ui/core/Toolbar";
-import IconButton from "@material-ui/core/IconButton";
-import MenuIcon from '@material-ui/icons/Menu';
-import Typography from '@material-ui/core/Typography';
+import AppBar from "@mui/material/AppBar";
+import Toolbar from "@mui/material/Toolbar";
+import IconButton from "@mui/material/IconButton";
+import MenuIcon from "@mui/icons-material/Menu";
+import Typography from "@mui/material/Typography";
 import {
   BrowserRouter as Router,
   Route
@@ -13,8 +13,11 @@ import Environment from "./views/Environment";
 import PrivateRoute from './components/PrivateRoute'
 import AssignmentOverview from "./views/AssignmentOverview";
 import 'fontsource-roboto';
-import { Button } from "@material-ui/core";
-import CssBaseline from '@material-ui/core/CssBaseline';
+import { Button } from "@mui/material";
+import CssBaseline from '@mui/material/CssBaseline';
+import { createTheme, ThemeProvider } from '@mui/material/styles';
+
+const theme = createTheme();
 
 interface AppState {
   username: string;
@@ -47,10 +50,12 @@ export default class App extends React.Component {
     this.setState({ username, authenticated: false });
     localStorage.removeItem("token");
     localStorage.removeItem("username");
+    window.location.reload();
   }
 
   render(): JSX.Element {
     return (
+      <ThemeProvider theme={theme}>
       <React.Fragment>
         <CssBaseline />
         <Router>
@@ -87,6 +92,7 @@ export default class App extends React.Component {
           </PrivateRoute>
         </Router>
       </React.Fragment>
+      </ThemeProvider>
     );
   }
 }

@@ -5,7 +5,9 @@ const backendURL = process.env.REACT_APP_API_HOST ?? `${protocol}//${hostname}:$
 const wsProtocol = protocol === "http:" ? "ws:": "wss:"
 const wsBackendHost = process.env.REACT_APP_WS_HOST ?? `${wsProtocol}//${hostname}:${port}`;
 
-export default {
+const config = {
     backendURL,
     wsBackendHost
 }
+
+export default config;

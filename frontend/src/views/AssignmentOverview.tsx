@@ -1,32 +1,29 @@
-import React, { useState, useEffect, useCallback } from 'react'
-import { makeStyles } from '@material-ui/core/styles';
-import CloudUploadIcon from '@material-ui/icons/CloudUpload';
-import CloudOffIcon from '@material-ui/icons/CloudOff';
-import PlayCircleFilledWhiteIcon from '@material-ui/icons/PlayCircleFilledWhite';
-import Button from "@material-ui/core/Button";
-import { Checkbox, ListItemSecondaryAction, Tooltip, Typography } from '@material-ui/core';
-import List from '@material-ui/core/List';
-import ListItem from '@material-ui/core/ListItem';
-import ListItemText from '@material-ui/core/ListItemText';
-import Snackbar from '@material-ui/core/Snackbar';
-import MuiAlert, { AlertProps } from '@material-ui/lab/Alert';
+import { useState, useEffect, useCallback, forwardRef } from 'react'
+import { createTheme } from '@mui/material/styles';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import CloudOffIcon from '@mui/icons-material/CloudOff';
+import PlayCircleFilledWhiteIcon from '@mui/icons-material/PlayCircleFilledWhite';
+import Button from "@mui/material/Button";
+import { Checkbox, ListItemSecondaryAction, Tooltip, Typography } from '@mui/material';
+import List from '@mui/material/List';
+import ListItem from '@mui/material/ListItem';
+import ListItemText from '@mui/material/ListItemText';
+import Snackbar from '@mui/material/Snackbar';
+import MuiAlert, { AlertProps } from '@mui/material/Alert';
 import APIRequest from '../api/Request'
-import Dialog from '@material-ui/core/Dialog';
-import DialogActions from '@material-ui/core/DialogActions';
-import DialogContent from '@material-ui/core/DialogContent';
-import DialogContentText from '@material-ui/core/DialogContentText';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogContentText from '@mui/material/DialogContentText';
 
 type Severity = "error" | "success" | "info" | "warning" | undefined;
 
-function Alert(props: JSX.IntrinsicAttributes & AlertProps) {
-  return <MuiAlert elevation={6} variant="filled" {...props} />;
-}
-
-const useStyles = makeStyles((theme) => ({
-  button: {
-    margin: theme.spacing(1),
-  },
-}));
+const Alert = forwardRef<HTMLDivElement, AlertProps>(function Alert(
+  props,
+  ref,
+) {
+  return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;
+});
 
 interface AssignmentOverviewProps {
 };
@@ -37,7 +34,6 @@ type SubmissionType = {
 }
 
 export default function AssignmentOverview(props: AssignmentOverviewProps) {
-  const classes = useStyles();
   const [assignments, setAssignments] = useState([])
   const [submittedAssignments, setSubmittedAssignments] = useState([] as SubmissionType[])
   const [deployedUserAssignments, setDeployedUserAssignments] = useState([])
@@ -153,8 +149,10 @@ export default function AssignmentOverview(props: AssignmentOverviewProps) {
     }
   }, []);
 
+  const theme = createTheme();
+
   return (
-    <>
+    <div>
       { (deployedUserAssignments.length === 0 && deployedGroupAssignments.length > 0) &&
         <Typography>Your group is working on {deployedGroupAssignments[0]}. You can join and open a connection by clicking deploy.</Typography>
       }
@@ -177,13 +175,13 @@ export default function AssignmentOverview(props: AssignmentOverviewProps) {
             maybe also allow resubmission? (e.g., by unticking submission state checkbox?)
             */}
             <ListItemSecondaryAction>
-              <Button variant="contained" color="primary" className={classes.button} startIcon={<CloudUploadIcon />} disabled={deployedUserAssignments.length > 0 || (deployedGroupAssignments.length > 0 && deployedGroupAssignments.indexOf(assignment) === -1) || (submittedAssignments.findIndex(element => element.assignmentName === assignment) !== -1 && resubmitAssignment !== assignment)} onClick={() => createEnvironment(assignment)}>
+              <Button variant="contained" color="primary" startIcon={<CloudUploadIcon />} disabled={deployedUserAssignments.length > 0 || (deployedGroupAssignments.length > 0 && deployedGroupAssignments.indexOf(assignment) === -1) || (submittedAssignments.findIndex(element => element.assignmentName === assignment) !== -1 && resubmitAssignment !== assignment)} onClick={() => createEnvironment(assignment)} sx={{margin: theme.spacing(1)}}>
                 Deploy
               </Button>
-              <Button variant="contained" color="secondary" className={classes.button} startIcon={<PlayCircleFilledWhiteIcon />} disabled={!isActiveDeployment(assignment)} href={`/environment/${assignment}`}>
+              <Button variant="contained" color="secondary" startIcon={<PlayCircleFilledWhiteIcon />} disabled={!isActiveDeployment(assignment)} href={`/environment/${assignment}`} sx={{margin: theme.spacing(1)}}>
                 Start Assignment
               </Button>
-              <Button variant="contained" color="primary" className={classes.button} startIcon={<CloudOffIcon />} disabled={!isActiveDeployment(assignment)} onClick={() => handleConfirmationUndeployDialogOpen(assignment)}>
+              <Button variant="contained" color="primary" startIcon={<CloudOffIcon />} disabled={!isActiveDeployment(assignment)} onClick={() => handleConfirmationUndeployDialogOpen(assignment)} sx={{margin: theme.spacing(1)}}>
                 Undeploy
               </Button>
               <Tooltip title={showSubmissionStatus(assignment)}>
@@ -198,7 +196,7 @@ export default function AssignmentOverview(props: AssignmentOverviewProps) {
             </ListItemSecondaryAction>
           </ListItem>
         ))}
-        <Snackbar open={deploymentNotification.open} anchorOrigin={{vertical: 'bottom', horizontal: 'left'}}>
+         <Snackbar open={deploymentNotification.open} anchorOrigin={{vertical: 'bottom', horizontal: 'left'}}>
           <Alert severity={deploymentNotification.severity as Severity}>
             {deploymentNotification.result}
           </Alert>
@@ -210,8 +208,8 @@ export default function AssignmentOverview(props: AssignmentOverviewProps) {
         >
           <DialogContent>
             <DialogContentText id="alert-dialog-undeploy-confirmation-description">
-              <p>Undeploy environment?</p>
-              <p>All processes and unsubmitted changes will lost.</p>
+              Undeploy environment?<br/>
+              All processes and unsubmitted changes will lost.
             </DialogContentText>
           </DialogContent>
           <DialogActions>
@@ -230,8 +228,8 @@ export default function AssignmentOverview(props: AssignmentOverviewProps) {
         >
           <DialogContent>
             <DialogContentText id="alert-dialog-undeploy-confirmation-description">
-              <p>You or your group already submitted a result for this assignment.</p>
-              <p>Do you really want to deploy this assignment again?</p>
+              You or your group already submitted a result for this assignment.<br/>
+              Do you really want to deploy this assignment again?
             </DialogContentText>
           </DialogContent>
           <DialogActions>
@@ -244,6 +242,6 @@ export default function AssignmentOverview(props: AssignmentOverviewProps) {
           </DialogActions>
         </Dialog>
       </List>
-    </>
+    </div>
   );
 }

@@ -1,17 +1,17 @@
 import * as React from "react";
-import Button from "@material-ui/core/Button";
+import Button from "@mui/material/Button";
 import P4LanguageServiceEditor from './P4LanguageServiceEditor'
 import * as monaco from 'monaco-editor';
 import APIRequest from '../api/Request'
-import Snackbar from '@material-ui/core/Snackbar';
-import MuiAlert, { AlertProps } from '@material-ui/lab/Alert';
-import { Box, ButtonGroup, Grid, Typography } from "@material-ui/core";
-import CloudUploadIcon from '@material-ui/icons/CloudUpload';
-import CloudDownloadIcon from '@material-ui/icons/CloudDownload';
-import Dialog from '@material-ui/core/Dialog';
-import DialogActions from '@material-ui/core/DialogActions';
-import DialogContent from '@material-ui/core/DialogContent';
-import DialogContentText from '@material-ui/core/DialogContentText';
+import Snackbar from '@mui/material/Snackbar';
+import MuiAlert, { AlertProps } from '@mui/material/Alert';
+import { Box, ButtonGroup, Grid, Typography } from "@mui/material";
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import CloudDownloadIcon from '@mui/icons-material/CloudDownload';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogContentText from '@mui/material/DialogContentText';
 import selectLanguageForEndpoint from "./MonacoLanguageSelector";
 
 type Severity = "error" | "success" | "info" | "warning" | undefined;
@@ -41,9 +41,13 @@ interface P4EditorProps {
   onEditorUnmount: Function;
 }
 
-function Alert(props: JSX.IntrinsicAttributes & AlertProps) {
-  return <MuiAlert elevation={6} variant="filled" {...props} />;
-}
+const Alert = React.forwardRef<HTMLDivElement, AlertProps>(function Alert(
+  props,
+  ref,
+) {
+  return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;
+});
+
 
 export default class P4Editor extends React.Component<P4EditorProps> {
   public state: State;
@@ -203,7 +207,7 @@ export default class P4Editor extends React.Component<P4EditorProps> {
 
     return (
       <Box className="myMonacoClass">
-        <Grid container direction="row" justify="flex-start" alignItems="center" spacing={1}>
+        <Grid container direction="row" justifyContent="flex-start" alignItems="center" spacing={1}>
           <Grid item>
             <ButtonGroup variant="contained" color="primary" style={{ margin: "2px" }}>
               <Button variant="contained" color="primary" disabled={!this.state.fileChanged} startIcon={<CloudUploadIcon />} onClick={this.save}>
@@ -222,7 +226,7 @@ export default class P4Editor extends React.Component<P4EditorProps> {
           value={this.state.code}
           language={selectLanguageForEndpoint(this.props.endpoint).editorLanguage}
           path={this.props.endpoint}
-          onChange={(value: string) => this.onChange(value)} />
+          onChange={(value: string | undefined) => this.onChange(value ?? "")} />
         <Snackbar open={this.state.editorNotificationOpen} autoHideDuration={6000} onClose={handleEditorNotificationClose}>
           <Alert onClose={handleEditorNotificationClose} severity={this.state.editorSeverity as Severity}>
             {this.state.editorResult}
@@ -235,7 +239,7 @@ export default class P4Editor extends React.Component<P4EditorProps> {
         >
           <DialogContent>
             <DialogContentText id="alert-dialog-description">
-              Retrieve file content from host?
+              Retrieve file content from host?<br/>
               Undeployed changes will be lost.
             </DialogContentText>
           </DialogContent>
