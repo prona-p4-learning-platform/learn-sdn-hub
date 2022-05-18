@@ -116,6 +116,7 @@ export default class DockerProvider implements InstanceProvider {
         .join(" ")
         .slice(0, -1);
 
+      // make priviledged configurable, possibly allowing fine-grained capabilities
       const options =
         '{ "Image": "' +
         containerImage +
@@ -137,7 +138,7 @@ export default class DockerProvider implements InstanceProvider {
         exposedPorts +
         ' }, "HostConfig": { "PortBindings": { ' +
         portBindings +
-        ' }, "AutoRemove": true } }';
+        ' }, "Privileged": true, "AutoRemove": true } }';
 
       const containerCreateOptions = JSON.parse(options);
 
