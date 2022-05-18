@@ -1,14 +1,14 @@
 import React from 'react';
 import * as monaco from 'monaco-editor';
-import editorCreator from './MonacoLanguageServerAugmentation';
-import MonacoEditor from 'react-monaco-editor';
+//import editorCreator from './MonacoLanguageServerAugmentation';
+import Editor from "@monaco-editor/react";
 
 interface P4LanguageServiceEditorProps extends monaco.editor.IStandaloneEditorConstructionOptions{
     path: string;
     value: string;
     language: string;
     onMounted: (editor: monaco.editor.IStandaloneCodeEditor) => void;
-    onChange: (value: string) => void;
+    onChange: (value: string | undefined) => void;
 }
 
 export default class P4LanguageServiceEditor extends React.Component<P4LanguageServiceEditorProps> {
@@ -20,12 +20,12 @@ export default class P4LanguageServiceEditor extends React.Component<P4LanguageS
       this.onChange = this.onChange.bind(this)
   }
 
-  onChange(content: string){
-    this.props.onChange(content)
+  onChange(value: string | undefined){
+    this.props.onChange(value)
   }
 
   editorDidMount(editor: any, monaco: any) {
-    this._editor = editorCreator(editor, this.props.path)
+    //this._editor = editorCreator(editor, this.props.path)
     this.props.onMounted(editor)
   }
 
@@ -44,7 +44,7 @@ export default class P4LanguageServiceEditor extends React.Component<P4LanguageS
       automaticLayout: true,
     };
     
-    return <MonacoEditor
+    return <Editor
         width="100%"
         height="100%"
         theme="vs-dark"
@@ -52,7 +52,7 @@ export default class P4LanguageServiceEditor extends React.Component<P4LanguageS
         value={this.props.value}
         onChange={this.onChange}
         options={options}
-        editorDidMount={this.editorDidMount}
+        onMount={this.editorDidMount}
     />
   }
 }

@@ -1,11 +1,32 @@
-import { listen } from '@codingame/monaco-jsonrpc';
-import * as monaco from 'monaco-editor';
-import {
-    MonacoLanguageClient, CloseAction, ErrorAction,
-    MonacoServices, createConnection, MessageConnection
-} from 'monaco-languageclient';
 import createWebSocket from '../api/WebSocket';
 import selectLanguageForEndpoint from './MonacoLanguageSelector'
+
+import 'monaco-editor/esm/vs/editor/editor.all.js';
+
+import 'monaco-editor/esm/vs/editor/standalone/browser/accessibilityHelp/accessibilityHelp.js';
+import 'monaco-editor/esm/vs/editor/standalone/browser/inspectTokens/inspectTokens.js';
+import 'monaco-editor/esm/vs/editor/standalone/browser/iPadShowKeyboard/iPadShowKeyboard.js';
+import 'monaco-editor/esm/vs/editor/standalone/browser/quickAccess/standaloneHelpQuickAccess.js';
+import 'monaco-editor/esm/vs/editor/standalone/browser/quickAccess/standaloneGotoLineQuickAccess.js';
+import 'monaco-editor/esm/vs/editor/standalone/browser/quickAccess/standaloneGotoSymbolQuickAccess.js';
+import 'monaco-editor/esm/vs/editor/standalone/browser/quickAccess/standaloneCommandsQuickAccess.js';
+import 'monaco-editor/esm/vs/editor/standalone/browser/quickInput/standaloneQuickInputService.js';
+import 'monaco-editor/esm/vs/editor/standalone/browser/referenceSearch/standaloneReferenceSearch.js';
+import 'monaco-editor/esm/vs/editor/standalone/browser/toggleHighContrast/toggleHighContrast.js';
+
+// support all basic-languages
+import 'monaco-editor/esm/vs/basic-languages/monaco.contribution';
+
+import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
+
+//import { buildWorkerDefinition } from "monaco-editor-workers";
+//buildWorkerDefinition('../../../../node_modules/monaco-editor-workers/dist/workers', import.meta.url, false);
+
+// eslint-disable-next-line import/first
+import { MonacoLanguageClient, MessageConnection, CloseAction, ErrorAction, MonacoServices, createConnection } from 'monaco-languageclient';
+// eslint-disable-next-line import/first
+import { listen } from '@codingame/monaco-jsonrpc';
+//import normalizeUrl from 'normalize-url';
 
 // register Monaco languages
 monaco.languages.register({
@@ -34,7 +55,7 @@ monaco.languages.register({
     mimetypes: ['application/json'],
 });
 
-export default (editor: monaco.editor.IStandaloneCodeEditor, path: string) : monaco.editor.IStandaloneCodeEditor=> {
+const MonacoLanguageServerAugmentation = (editor: monaco.editor.IStandaloneCodeEditor, path: string) : monaco.editor.IStandaloneCodeEditor=> {
     // get lsp to be used for the language based on endpoint's fileExtension
     const environment = path.split("/").slice(-3,-2)
     const language = selectLanguageForEndpoint(path).lspLanguage
@@ -90,9 +111,9 @@ export default (editor: monaco.editor.IStandaloneCodeEditor, path: string) : mon
 
     function createLanguageClient(connection: MessageConnection): MonacoLanguageClient {
         const model = editor.getModel()
-        const language = model?.getModeId() || ''
+        const language = model?.getLanguageId() || ''
         return new MonacoLanguageClient({
-            name: "P4 Language Client",
+            name: "Language Client",
             clientOptions: {
                 // use a language id as a document selector
                 documentSelector: [language],
@@ -113,3 +134,5 @@ export default (editor: monaco.editor.IStandaloneCodeEditor, path: string) : mon
 
     return editor
 }
+
+export default MonacoLanguageServerAugmentation;

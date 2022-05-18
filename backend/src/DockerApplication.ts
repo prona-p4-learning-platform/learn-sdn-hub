@@ -5,7 +5,7 @@ import MongoDBAuthenticationProvider from "./authentication/MongoDBAuthenticatio
 import DockerProvider from "./providers/DockerProvider";
 
 const persister = new MongoDBPersister(process.env.MONGODB_URL);
-console.log("Attempting to start OpenStack Application.");
+console.log("Attempting to start Docker Application.");
 serverCreator(
   api(
     persister,

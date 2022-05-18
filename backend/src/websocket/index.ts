@@ -34,6 +34,7 @@ export default function wrapWSWithExpressApp(server: Server): void {
       }
       let user;
       try {
+        /* replace secret */
         user = jwt.verify(token, "some-secret") as TokenPayload;
       } catch (err) {
         ws.send("Could not authenticate with given credentials.");

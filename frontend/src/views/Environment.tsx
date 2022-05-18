@@ -1,28 +1,28 @@
 import React from "react";
-import Grid from "@material-ui/core/Grid";
+import Grid from "@mui/material/Grid";
 import Terminal from "../components/Terminal";
 import EditorTabs from "../components/EditorTabs";
 import TerminalTabs from "../components/TerminalTabs";
 import { withRouter } from "react-router-dom";
 import { RouteComponentProps } from "react-router";
-import Button from "@material-ui/core/Button";
+import Button from "@mui/material/Button";
 import { ReactNode } from "react";
 import ReactMarkdown from 'react-markdown'
 import mermaid from 'mermaid'
 import TabControl from '../components/TabControl'
 import APIRequest from '../api/Request'
-import { Typography } from "@material-ui/core";
-import Snackbar from '@material-ui/core/Snackbar';
-import MuiAlert, { AlertProps } from '@material-ui/lab/Alert';
-import Dialog from '@material-ui/core/Dialog';
-import DialogActions from '@material-ui/core/DialogActions';
-import DialogContent from '@material-ui/core/DialogContent';
-import DialogContentText from '@material-ui/core/DialogContentText';
+import { Typography } from "@mui/material";
+import Snackbar from '@mui/material/Snackbar';
+import MuiAlert, { AlertProps } from '@mui/material/Alert';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogContentText from '@mui/material/DialogContentText';
 import P4Editor from "../components/P4Editor";
 import { Position } from "monaco-editor";
-import Stepper from '@material-ui/core/Stepper';
-import Step from '@material-ui/core/Step';
-import StepButton from '@material-ui/core/StepButton';
+import Stepper from '@mui/material/Stepper';
+import Step from '@mui/material/Step';
+import StepButton from '@mui/material/StepButton';
 
 type Severity = "error" | "success" | "info" | "warning" | undefined;
 
@@ -67,9 +67,12 @@ type StateType = {
   providerInstanceStatus: string;
 }
 
-function Alert(props: JSX.IntrinsicAttributes & AlertProps) {
-  return <MuiAlert elevation={6} variant="filled" {...props} />;
-}
+const Alert = React.forwardRef<HTMLDivElement, AlertProps>(function Alert(
+  props,
+  ref,
+) {
+  return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;
+});
 
 export class EnvironmentView extends React.Component<PropsType,StateType> {
   public state: StateType;
@@ -315,7 +318,7 @@ export class EnvironmentView extends React.Component<PropsType,StateType> {
   }
 
   storeEditorState(endpoint: string, code: string, fileChanged: boolean, filePath: string, position: Position) {
-    // currently monaco does not support serialization, so only file content, change statue, file path and cursor/scroll position is preserved on changing file tabs, 
+    // currently monaco does not support serialization, so only file content, change status, file path and cursor/scroll position is preserved on changing file tabs, 
     // when reloading the entire page, changes will be lost however, this maybe also needs to be fixed for terminals, but it seams like a proper multi-session
     // and/or collaboration handling for terminals and editors will address this/would be more appropriate
     this.setState((prevState) => {
@@ -402,14 +405,14 @@ export class EnvironmentView extends React.Component<PropsType,StateType> {
         <Grid container spacing={0}>
           <Grid item xs={6}>
             <TabControl tabNames={["Assignment", "Terminals"]}>
-              <Grid container direction="row" justify="flex-start" alignItems="center" spacing={1}>
+              <Grid container direction="row" justifyContent="flex-start" alignItems="center" spacing={1}>
                 <Grid item xs={12}>
                   <ReactMarkdown
-                    source={this.state.assignment} className="myMarkdownContainer"
+                    children={this.state.assignment} className="myMarkdownContainer"
                   />
                 </Grid>
                 <Grid item xs={12}>
-                  <Grid container direction="row" justify="flex-start" alignItems="center" spacing={1}>
+                  <Grid container direction="row" justifyContent="flex-start" alignItems="center" spacing={1}>
                     {this.state.stepLabels.length > 0 && (
                       <Grid item>
                         <Stepper activeStep={this.state.activeStep}>
@@ -422,7 +425,7 @@ export class EnvironmentView extends React.Component<PropsType,StateType> {
                       </Grid>
                     )}
                     <Grid item>
-                      <Typography>{this.state.providerInstanceStatus}</Typography>
+                      <Typography variant="body2">{this.state.providerInstanceStatus}</Typography>
                       <Button
                         variant="contained"
                         color="primary"
@@ -435,19 +438,20 @@ export class EnvironmentView extends React.Component<PropsType,StateType> {
                   </Grid>
                 </Grid>
               </Grid>
-              <Grid container direction="row" justify="flex-start" alignItems="center" spacing={1}>
-                <Grid container direction="row" justify="flex-start" alignItems="center" spacing={1}>
+              <Grid container direction="row" justifyContent="flex-start" alignItems="center" spacing={1}>
+                <Grid container direction="row" justifyContent="flex-start" alignItems="center" spacing={1}>
                   <Grid item>
                     <Button
                       variant="contained"
                       color="primary"
                       onClick={handleConfirmationRestartDialogOpen}
+                      sx={{ mt: 1.5, ml: 1 }}
                     >
                       Restart terminal environment
                   </Button>
                   </Grid>
                   <Grid item>
-                    <Typography>Status: {this.state.environmentStatus}</Typography>
+                    <Typography align="center" variant="body2">Status: {this.state.environmentStatus}</Typography>
                   </Grid>
                 </Grid>
                 <Grid item>
