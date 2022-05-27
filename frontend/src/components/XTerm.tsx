@@ -3,6 +3,8 @@ import PropTypes from 'prop-types'
 
 import 'xterm/css/xterm.css'
 
+// based on xterm-for-react pkg and updated to support react 18 env for recent xterm.js
+
 // We are using these as types.
 import { Terminal, ITerminalOptions, ITerminalAddon } from 'xterm'
 

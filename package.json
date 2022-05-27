@@ -2,17 +2,6 @@
   "name": "learn-sdn-hub",
   "version": "1.0.0",
   "description": "",
-  "main": ".eslintrc.js",
-  "directories": {
-    "test": "test"
-  },
-  "dependencies": {
-    "cors": "^2.8.5"
-  },
-  "devDependencies": {},
-  "scripts": {
-    "test": "mocha"
-  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/prona-p4-learning-platform/learn-sdn-hub.git"
