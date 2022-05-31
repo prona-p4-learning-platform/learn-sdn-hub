@@ -1,5 +1,5 @@
 import { Router, Request, RequestHandler } from "express";
-import P4Environment from "../P4Environment";
+import P4Environment, { Submission } from "../P4Environment";
 import bodyParser from "body-parser";
 import environments from "../Configuration";
 import { InstanceProvider } from "../providers/Provider";
@@ -301,7 +301,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
         req.user.username,
         req.user.groupNumber
       );
-      return res.status(200).json(Array.from(submittedEnvList));
+      return res.status(200).json(Array.from(submittedEnvList ?? [] as Submission[]));
     }
   );
 

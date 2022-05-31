@@ -398,7 +398,7 @@ export default class DockerProvider implements InstanceProvider {
               );
             } else {
               const portMap = response.NetworkSettings.Ports;
-              if (portMap === {}) {
+              if (Object.keys(portMap).length == 0) {
                 rejected = true;
                 return reject(
                   new Error(
