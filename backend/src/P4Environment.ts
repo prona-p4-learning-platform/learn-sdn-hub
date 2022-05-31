@@ -288,13 +288,21 @@ export default class P4Environment {
   }
 
   async getLanguageServerPort(): Promise<number> {
-    const endpoint = await this.makeSureInstanceExists();
-    return endpoint.LanguageServerPort;
+    try {
+      const endpoint = await this.makeSureInstanceExists();
+      return endpoint.LanguageServerPort;
+    } catch (err) {
+      throw err;
+    }
   }
 
   async getIPAddress(): Promise<string> {
-    const endpoint = await this.makeSureInstanceExists();
-    return endpoint.IPAddress;
+    try {
+      const endpoint = await this.makeSureInstanceExists();
+      return endpoint.IPAddress;
+    } catch (err) {
+      throw err;
+    }
   }
 
   async makeSureInstanceExists(createIfMissing?: boolean): Promise<VMEndpoint> {
@@ -321,7 +329,7 @@ export default class P4Environment {
           })
           .catch(async (err) => {
             if (err.message == InstanceNotFoundErrorMessage) {
-              // OpenStack instance is gone, remove environment
+              // instance is gone, remove environment
               await this.persister.RemoveUserEnvironment(
                 this.username,
                 filtered[0].environment
@@ -461,141 +469,155 @@ export default class P4Environment {
 
   async stop(): Promise<void> {
     return new Promise(async (resolve, reject) => {
-      const endpoint = await this.makeSureInstanceExists();
+      try {
+        const endpoint = await this.makeSureInstanceExists();
 
-      for (const console of this.activeConsoles) {
-        console[1].close(this.environmentId, this.username, this.groupNumber);
-      }
-      this.filehandler.close();
+        for (const console of this.activeConsoles) {
+          console[1].close(this.environmentId, this.username, this.groupNumber);
+        }
+        this.filehandler.close();
 
-      let isEnvironmentUsedByOtherUserInGroup = false;
-      P4Environment.activeEnvironments.forEach((value: P4Environment) => {
-        if (
-          value.groupNumber === this.groupNumber &&
-          value.username != this.username
-        )
-          isEnvironmentUsedByOtherUserInGroup = true;
-      });
-      if (!isEnvironmentUsedByOtherUserInGroup) {
-        for (const command of this.configuration.stopCommands) {
-          let stopCmdFinished = false;
-          await new Promise<void>((stopCmdSuccess, stopCmdFail) => {
-            global.console.log(
-              "Executing stop command: ",
-              JSON.stringify(command),
-              JSON.stringify(endpoint)
-            );
-            const console = new SSHConsole(
-              this.environmentId,
-              this.username,
-              this.groupNumber,
-              endpoint.IPAddress,
-              endpoint.SSHPort,
-              command.executable,
-              command.params,
-              command.cwd,
-              command.provideTty
-            );
-            console.on("finished", async (code: string, signal: string) => {
+        let isEnvironmentUsedByOtherUserInGroup = false;
+        P4Environment.activeEnvironments.forEach((value: P4Environment) => {
+          if (
+            value.groupNumber === this.groupNumber &&
+            value.username != this.username
+          )
+            isEnvironmentUsedByOtherUserInGroup = true;
+        });
+        if (!isEnvironmentUsedByOtherUserInGroup) {
+          for (const command of this.configuration.stopCommands) {
+            let stopCmdFinished = false;
+            await new Promise<void>((stopCmdSuccess, stopCmdFail) => {
               global.console.log(
-                "OUTPUT: " +
-                  console.stdout +
-                  "(exit code: " +
-                  code +
-                  ", signal: " +
-                  signal +
-                  ")"
+                "Executing stop command: ",
+                JSON.stringify(command),
+                JSON.stringify(endpoint)
               );
-              stopCmdFinished = true;
-              console.emit("closed");
+              const console = new SSHConsole(
+                this.environmentId,
+                this.username,
+                this.groupNumber,
+                endpoint.IPAddress,
+                endpoint.SSHPort,
+                command.executable,
+                command.params,
+                command.cwd,
+                command.provideTty
+              );
+              console.on("finished", async (code: string, signal: string) => {
+                global.console.log(
+                  "OUTPUT: " +
+                    console.stdout +
+                    "(exit code: " +
+                    code +
+                    ", signal: " +
+                    signal +
+                    ")"
+                );
+                stopCmdFinished = true;
+                console.emit("closed");
+              });
+              console.on("closed", () => {
+                if (stopCmdFinished === true) {
+                  stopCmdSuccess();
+                } else {
+                  global.console.log("Stop command failed.");
+                  stopCmdFail();
+                }
+              });
             });
-            console.on("closed", () => {
-              if (stopCmdFinished === true) {
-                stopCmdSuccess();
+          }
+
+          this.environmentProvider
+            .deleteServer(endpoint.instance)
+            .then(() => {
+              this.persister
+                .RemoveUserEnvironment(this.username, this.environmentId)
+                .then(() => {
+                  return resolve();
+                })
+                .catch((err) => {
+                  return reject(
+                    new Error("Error: Unable to remove UserEnvironment." + err)
+                  );
+                });
+            })
+            .catch((err) => {
+              if (err.message === InstanceNotFoundErrorMessage) {
+                // OpenStack instance already gone
+                global.console.log(
+                  "Error: Server Instance not found during deletion?"
+                );
               } else {
-                global.console.log("Stop command failed.");
-                stopCmdFail();
+                global.console.log(err);
+                return reject(
+                  new Error("Error: Unable to delete server." + err)
+                );
               }
             });
-          });
+        } else {
+          console.log(
+            "Other users in the same group still use this environment. Skipping executing of stop commands."
+          );
+          return resolve();
         }
-
-        this.environmentProvider
-          .deleteServer(endpoint.instance)
-          .then(() => {
-            this.persister
-              .RemoveUserEnvironment(this.username, this.environmentId)
-              .then(() => {
-                return resolve();
-              })
-              .catch((err) => {
-                return reject(
-                  new Error("Error: Unable to remove UserEnvironment." + err)
-                );
-              });
-          })
-          .catch((err) => {
-            if (err.message === InstanceNotFoundErrorMessage) {
-              // OpenStack instance already gone
-              global.console.log(
-                "Error: Server Instance not found during deletion?"
-              );
-            } else {
-              global.console.log(err);
-              return reject(new Error("Error: Unable to delete server." + err));
-            }
-          });
-      } else {
-        console.log(
-          "Other users in the same group still use this environment. Skipping executing of stop commands."
-        );
-        return resolve();
+      } catch (err) {
+        if (err.message == InstanceNotFoundErrorMessage) {
+          return resolve();
+        } else {
+          return reject(err);
+        }
       }
     });
   }
 
   async restart(): Promise<void> {
-    const endpoint = await this.makeSureInstanceExists();
-    for (const command of this.configuration.stopCommands) {
-      let resolved = false;
-      await new Promise<void>((resolve, reject) => {
-        global.console.log(
-          "Executing stop command: ",
-          JSON.stringify(command),
-          JSON.stringify(endpoint)
-        );
-        const console = new SSHConsole(
-          this.environmentId,
-          this.username,
-          this.groupNumber,
-          endpoint.IPAddress,
-          endpoint.SSHPort,
-          command.executable,
-          command.params,
-          command.cwd,
-          false
-        );
-        console.on("finished", (code: string, signal: string) => {
+    try {
+      const endpoint = await this.makeSureInstanceExists();
+      for (const command of this.configuration.stopCommands) {
+        let resolved = false;
+        await new Promise<void>((resolve, reject) => {
           global.console.log(
-            "OUTPUT: " +
-              console.stdout +
-              "(exit code: " +
-              code +
-              ", signal: " +
-              signal +
-              ")"
+            "Executing stop command: ",
+            JSON.stringify(command),
+            JSON.stringify(endpoint)
           );
-          resolved = true;
-          console.emit("closed");
-        });
-        console.on("closed", () => {
-          if (resolved === true) return resolve();
-          else
-            return reject(
-              new Error("Unable to run stop command." + command.executable)
+          const console = new SSHConsole(
+            this.environmentId,
+            this.username,
+            this.groupNumber,
+            endpoint.IPAddress,
+            endpoint.SSHPort,
+            command.executable,
+            command.params,
+            command.cwd,
+            false
+          );
+          console.on("finished", (code: string, signal: string) => {
+            global.console.log(
+              "OUTPUT: " +
+                console.stdout +
+                "(exit code: " +
+                code +
+                ", signal: " +
+                signal +
+                ")"
             );
+            resolved = true;
+            console.emit("closed");
+          });
+          console.on("closed", () => {
+            if (resolved === true) return resolve();
+            else
+              return reject(
+                new Error("Unable to run stop command." + command.executable)
+              );
+          });
         });
-      });
+      }
+    } catch (err) {
+      throw err;
     }
 
     console.log("Stop commands finished...");
@@ -620,57 +642,61 @@ export default class P4Environment {
     command: string,
     stdoutSuccessMatch?: string
   ): Promise<string> {
-    const endpoint = await this.makeSureInstanceExists();
-    let resolved = false;
+    try {
+      const endpoint = await this.makeSureInstanceExists();
+      let resolved = false;
 
-    return new Promise((resolve, reject) => {
-      // run sshCommand
-      const console = new SSHConsole(
-        this.environmentId,
-        this.username,
-        this.groupNumber,
-        endpoint.IPAddress,
-        endpoint.SSHPort,
-        command,
-        [""],
-        "/",
-        false
-      );
-      console.on("finished", (code: string, signal: string) => {
-        global.console.log(
-          "STDOUT: " +
-            console.stdout +
-            "STDERR: " +
-            console.stderr +
-            "(exit code: " +
-            code +
-            ", signal: " +
-            signal +
-            ")"
+      return new Promise((resolve, reject) => {
+        // run sshCommand
+        const console = new SSHConsole(
+          this.environmentId,
+          this.username,
+          this.groupNumber,
+          endpoint.IPAddress,
+          endpoint.SSHPort,
+          command,
+          [""],
+          "/",
+          false
         );
-        if (code == "0") {
-          // if stdoutSuccessMatch was supplied, try to match stdout against it, to detect whether cmd was successfull
-          if (stdoutSuccessMatch) {
-            if (console.stdout.match(stdoutSuccessMatch)) {
-              // command was run successfully (exit code 0) and stdout matched regexp defined in test
-              resolved = true;
+        console.on("finished", (code: string, signal: string) => {
+          global.console.log(
+            "STDOUT: " +
+              console.stdout +
+              "STDERR: " +
+              console.stderr +
+              "(exit code: " +
+              code +
+              ", signal: " +
+              signal +
+              ")"
+          );
+          if (code == "0") {
+            // if stdoutSuccessMatch was supplied, try to match stdout against it, to detect whether cmd was successfull
+            if (stdoutSuccessMatch) {
+              if (console.stdout.match(stdoutSuccessMatch)) {
+                // command was run successfully (exit code 0) and stdout matched regexp defined in test
+                resolved = true;
+              } else {
+                resolved = false;
+              }
             } else {
-              resolved = false;
+              // command was run successfully (exit code 0)
+              resolved = true;
             }
           } else {
-            // command was run successfully (exit code 0)
-            resolved = true;
+            resolved = false;
           }
-        } else {
-          resolved = false;
-        }
-        console.emit("closed");
+          console.emit("closed");
+        });
+        console.on("closed", () => {
+          if (resolved === true) return resolve(console.stdout);
+          else return reject(new Error("Unable to run SSH command " + command));
+        });
       });
-      console.on("closed", () => {
-        if (resolved === true) return resolve(console.stdout);
-        else return reject(new Error("Unable to run SSH command " + command));
-      });
-    });
+    } catch (err) {
+      throw err;
+    }
   }
 
   async test(
@@ -870,7 +896,11 @@ export default class P4Environment {
   }
 
   async getProviderInstanceStatus(): Promise<string> {
-    const endpoint = await this.makeSureInstanceExists();
-    return endpoint.providerInstanceStatus;
+    try {
+      const endpoint = await this.makeSureInstanceExists();
+      return endpoint.providerInstanceStatus;
+    } catch (err) {
+      throw err;
+    }
   }
 }
