@@ -301,7 +301,9 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
         req.user.username,
         req.user.groupNumber
       );
-      return res.status(200).json(Array.from(submittedEnvList ?? [] as Submission[]));
+      return res
+        .status(200)
+        .json(Array.from(submittedEnvList ?? ([] as Submission[])));
     }
   );
 
