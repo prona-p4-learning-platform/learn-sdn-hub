@@ -1,4 +1,4 @@
-FROM node:15
+FROM node:16
 
 LABEL de.hs-fulda.netlab.name="prona/learn-sdn-hub" \
       de.hs-fulda.netlab.description="P4 and SDN learning environment" \
