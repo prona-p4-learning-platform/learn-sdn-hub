@@ -479,6 +479,7 @@ environments.set("Example3-LearningSwitch", {
   ],
   description: "Example3-LearningSwitch description",
   assignmentLabSheet: "../assignments/prona-learningswitch.md",
+  providerDockerSupplementalPorts: ["80/tcp", "8080/tcp"],
 });
 
 environments.set("Example-p4env", {
