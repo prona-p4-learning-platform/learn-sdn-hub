@@ -560,6 +560,16 @@ export default class P4Environment {
           console.log(
             "Other users in the same group still use this environment. Skipping executing of stop commands."
           );
+          this.persister
+            .RemoveUserEnvironment(this.username, this.environmentId)
+            .then(() => {
+              return resolve();
+            })
+            .catch((err) => {
+              return reject(
+                new Error("Error: Unable to remove UserEnvironment." + err)
+              );
+            });
           return resolve();
         }
       } catch (err) {
