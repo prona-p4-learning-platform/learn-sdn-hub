@@ -104,7 +104,7 @@ export default class DockerProvider implements InstanceProvider {
       // should be always tcp for ssh and lsp - at least for now? ;)
       let containerPorts = [this.sshPort + "/tcp", this.lsPort + "/tcp"];
       // append additionally configured ports
-      if (dockerSupplementalPorts.length > 0)
+      if (dockerSupplementalPorts?.length > 0)
         containerPorts = containerPorts.concat(dockerSupplementalPorts);
 
       const exposedPorts = containerPorts
