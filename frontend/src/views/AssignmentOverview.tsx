@@ -88,15 +88,20 @@ export default function AssignmentOverview(props: AssignmentOverviewProps) {
     fetch(APIRequest("/api/user/assignments", { headers: { authorization: localStorage.getItem("token") || "" } }))
       .then(res => res.json())
       .then(setAssignments)
-    fetch(APIRequest("/api/environment/deployed-user-environments", { headers: { authorization: localStorage.getItem("token") || "" } }))
-      .then(res => res.json())
-      .then(setDeployedUserAssignments)
-    fetch(APIRequest("/api/environment/deployed-group-environments", { headers: { authorization: localStorage.getItem("token") || "" } }))
-      .then(res => res.json())
-      .then(setDeployedGroupAssignments)
-    fetch(APIRequest("/api/environment/submissions", { headers: { authorization: localStorage.getItem("token") || "" } }))
-      .then(res => res.json())
-      .then(setSubmittedAssignments)
+    
+    const update = () => {
+      fetch(APIRequest("/api/environment/deployed-user-environments", { headers: { authorization: localStorage.getItem("token") || "" } }))
+        .then(res => res.json())
+        .then(setDeployedUserAssignments)
+      fetch(APIRequest("/api/environment/deployed-group-environments", { headers: { authorization: localStorage.getItem("token") || "" } }))
+        .then(res => res.json())
+        .then(setDeployedGroupAssignments)
+      fetch(APIRequest("/api/environment/submissions", { headers: { authorization: localStorage.getItem("token") || "" } }))
+        .then(res => res.json())
+        .then(setSubmittedAssignments)
+    };
+    update();
+    setInterval(update, 2000);
   }, [load])
 
   const createEnvironment = useCallback(async (assignment: string) => {
