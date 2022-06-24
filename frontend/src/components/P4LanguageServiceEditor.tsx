@@ -1,6 +1,6 @@
 import React from 'react';
 import * as monaco from 'monaco-editor';
-//import editorCreator from './MonacoLanguageServerAugmentation';
+import editorCreator from './MonacoLanguageServerAugmentation';
 import Editor from "@monaco-editor/react";
 
 interface P4LanguageServiceEditorProps extends monaco.editor.IStandaloneEditorConstructionOptions{
@@ -25,7 +25,7 @@ export default class P4LanguageServiceEditor extends React.Component<P4LanguageS
   }
 
   editorDidMount(editor: any, monaco: any) {
-    //this._editor = editorCreator(editor, this.props.path)
+    this._editor = editorCreator(editor, this.props.path)
     this.props.onMounted(editor)
   }
 
