@@ -23,7 +23,7 @@ import { buildWorkerDefinition } from "monaco-editor-workers";
 
 import { MonacoLanguageClient, CloseAction, ErrorAction, MonacoServices, MessageTransports } from 'monaco-languageclient';
 import { toSocket, WebSocketMessageReader, WebSocketMessageWriter } from 'vscode-ws-jsonrpc';
-import normalizeUrl from 'normalize-url';
+
 buildWorkerDefinition('dist', new URL('', window.location.href).href, false);
 
 // register Monaco languages
@@ -77,58 +77,41 @@ const MonacoLanguageServerAugmentation = (editor: monaco.editor.IStandaloneCodeE
             // response, otherwise language client initialization msg will
             // be sent to early and ignored
 
-            const socket = toSocket(webSocket);
-            const reader = new WebSocketMessageReader(socket);
-            const writer = new WebSocketMessageWriter(socket);
-            const languageClient = createLanguageClient({
-                reader,
-                writer
-            });
-            languageClient.start();
-            reader.onClose(() => languageClient.stop());
+            // save onmessage fn
+            const defaultOnMessage = webSocket.onmessage
+            webSocket.onmessage = (e) => {
+                if (e.data === "backend websocket ready") {
+                    // restore onmessage fn
+                    webSocket.onmessage = defaultOnMessage;
+
+                    // const languageClient = createLanguageClient(connection);
+                    // const disposable = languageClient.start();
+                    // connection.onClose(() => {
+                    //   disposable.dispose()
+                    // });
+                    // // when changing tabs, warning "Language Client services have been overridden" can occur,
+                    // // websocket is closed too late
+                    // webSocket.onclose = (e) => {
+                    //   disposable.dispose();
+                    // }
+
+                    const socket = toSocket(webSocket);
+                    const reader = new WebSocketMessageReader(socket);
+                    const writer = new WebSocketMessageWriter(socket);
+                    const languageClient = createLanguageClient({
+                        reader,
+                        writer
+                    });
+                    languageClient.start();
+                    reader.onClose(() => languageClient.stop());
+                }
+            }
+
         };
-        
 
-    //     // listen when the web socket is opened
-    //     listen({
-    //         webSocket,
-    //         onConnection: connection => {
-    //             // create and start the language client
-
-    //             // sending auth token to backend
-    //             webSocket.send(`auth ${localStorage.getItem("token")}`)
-
-    //             // backend needs some time to process auth token and initiate
-    //             // ws conn from backend to lsp, hence, wait for backend
-    //             // response, otherwise language client initialization msg will
-    //             // be sent to early and ignored
-
-    //             // save onmessage fn
-    //             const defaultOnMessage = webSocket.onmessage
-    //             webSocket.onmessage = (e) => {
-    //                 if (e.data === "backend websocket ready") {
-    //                     // restore onmessage fn
-    //                     webSocket.onmessage = defaultOnMessage;
-
-    //                     const languageClient = createLanguageClient(connection);
-    //                     const disposable = languageClient.start();
-    //                     connection.onClose(() => {
-    //                       disposable.dispose()
-    //                     });
-    //                     // when changing tabs, warning "Language Client services have been overridden" can occur,
-    //                     // websocket is closed too late
-    //                     webSocket.onclose = (e) => {
-    //                       disposable.dispose();
-    //                     }
-    //                 }
-    //             }
-    //         }
-    //     });
-
-    //     editor.onDidDispose(() => {
-    //         webSocket.close()
-    //     })
-    // }
+        editor.onDidDispose(() => {
+            webSocket.close()
+        })
     }
 
     function createLanguageClient(transports: MessageTransports): MonacoLanguageClient {
