@@ -192,14 +192,14 @@ export default class MongoDBPersister implements Persister {
               lastChanged: submission.submissionCreated,
             });
           }
-          console.log(
-            "Retrieved submissions for user: " +
-              username +
-              " in group: " +
-              groupNumber +
-              " result: " +
-              JSON.stringify(submissions)
-          );
+          // console.log(
+          //   "Retrieved submissions for user: " +
+          //     username +
+          //     " in group: " +
+          //     groupNumber +
+          //     " result: " +
+          //     JSON.stringify(submissions)
+          // );
           return resolve(submissions);
         })
         .catch((err) => {

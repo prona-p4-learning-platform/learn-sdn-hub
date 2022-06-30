@@ -65,6 +65,7 @@ export default class XTerminal extends React.Component<TerminalProps> {
     // limit serialized scrollback to 1000 lines
     const serializedState = this.serializeAddon.serialize({scrollback: 1000})
     this.props.onTerminalUnmount(this.props.wsEndpoint, serializedState);
+    console.log("Terminal will unmount...")
     this.websocket.close()
   }
 
