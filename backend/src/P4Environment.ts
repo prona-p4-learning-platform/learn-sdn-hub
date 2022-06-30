@@ -82,6 +82,9 @@ export interface P4EnvironmentResult {
   p4fileEndpoints: Array<string>;
 }
 
+const DenyStartOfMissingInstanceErrorMessage =
+  "Instance not found and explicitly told not to create a new instance.";
+
 // refactor class name? Not only focussing P4 anymore?
 export default class P4Environment {
   private activeConsoles: Map<string, Console>;
@@ -281,8 +284,18 @@ export default class P4Environment {
           return resolve(true);
         })
         .catch((err) => {
-          console.log("Failed to stop environment. " + JSON.stringify(err));
-          return reject(false);
+          if (err === DenyStartOfMissingInstanceErrorMessage) {
+            console.log(
+              "Environment was already stopped. Silently deleting leftovers in user session."
+            );
+            P4Environment.activeEnvironments.delete(
+              `${username}-${environmentId}`
+            );
+            return resolve(true);
+          } else {
+            console.log("Failed to stop environment. " + JSON.stringify(err));
+            return reject(false);
+          }
         });
     });
   }
@@ -350,9 +363,7 @@ export default class P4Environment {
             )
           );
         } else {
-          return reject(
-            "Instance not found and explicitly told not to create a new instance."
-          );
+          return reject(DenyStartOfMissingInstanceErrorMessage);
         }
       } else {
         return reject(
