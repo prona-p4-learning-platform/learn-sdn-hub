@@ -160,14 +160,14 @@ export default class MemoryPersister implements Persister {
           submissions.push(submission);
         }
       });
-      console.log(
-        "Retrieved submissions for user: " +
-          username +
-          " in group: " +
-          group +
-          " result: " +
-          JSON.stringify(submissions)
-      );
+      // console.log(
+      //   "Retrieved submissions for user: " +
+      //     username +
+      //     " in group: " +
+      //     group +
+      //     " result: " +
+      //     JSON.stringify(submissions)
+      // );
       return submissions;
     }
   }
