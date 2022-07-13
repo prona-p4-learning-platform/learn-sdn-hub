@@ -1,7 +1,6 @@
 import React from "react";
 import Grid from "@mui/material/Grid";
 import Terminal from "../components/Terminal";
-import EditorTabs from "../components/EditorTabs";
 import TerminalTabs from "../components/TerminalTabs";
 import { withRouter } from "react-router-dom";
 import { RouteComponentProps } from "react-router";
@@ -18,7 +17,7 @@ import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
-import P4Editor from "../components/P4Editor";
+import Editor from "../components/Editor";
 import { Position } from "monaco-editor";
 import Stepper from '@mui/material/Stepper';
 import Step from '@mui/material/Step';
@@ -361,10 +360,10 @@ export class EnvironmentView extends React.Component<PropsType,StateType> {
       )
     );
 
-    const editors = this.state.files.map((fileAlias: string) =>
-      <P4Editor key={fileAlias} endpoint={`/api/environment/${this.props.match.params.environment}/file/${fileAlias}`} 
-        editorState={this.getEditorState(`/api/environment/${this.props.match.params.environment}/file/${fileAlias}`)} onEditorUnmount={this.storeEditorState} />
-    );
+    //const editors = this.state.files.map((fileAlias: string) =>
+    //  <P4Editor key={fileAlias} endpoint={`/api/environment/${this.props.match.params.environment}/file/${fileAlias}`} 
+    //    editorState={this.getEditorState(`/api/environment/${this.props.match.params.environment}/file/${fileAlias}`)} onEditorUnmount={this.storeEditorState} />
+    //);
 
     const handleEnvironmentNotificationClose = () => {
       this.setState({ environmentNotificationOpen: false })
@@ -463,7 +462,8 @@ export class EnvironmentView extends React.Component<PropsType,StateType> {
             </TabControl>
           </Grid>
           <Grid item xs={6}>
-            <EditorTabs tabNames={this.state.files}>{editors}</EditorTabs>
+            { /* <EditorTabs tabNames={this.state.files}>{editors}</EditorTabs> */ }
+            <Editor files={this.state.files} environment={this.props.match.params.environment}/>
           </Grid>
         </Grid>
         { /* TODO evaluate, e.g., notistack (https://github.com/iamhosseindhv/notistack) to show stacked version of multiple lines with PASSED/FAILED tests */ }

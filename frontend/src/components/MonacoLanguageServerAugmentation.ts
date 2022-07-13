@@ -57,6 +57,7 @@ const MonacoLanguageServerAugmentation = (editor: monaco.editor.IStandaloneCodeE
     // get lsp to be used for the language based on endpoint's fileExtension
     const environment = path.split("/").slice(-3,-2)
     const language = selectLanguageForEndpoint(path).lspLanguage
+    console.log("Selected language: " + language + " for path: " + path);
 
     // if no language was selected, do not install language client services use lsp connection
     if (language !== "") {
