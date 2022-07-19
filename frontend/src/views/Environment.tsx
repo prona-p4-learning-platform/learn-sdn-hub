@@ -17,7 +17,7 @@ import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
-import Editor from "../components/Editor";
+import FileEditor from "../components/FileEditor";
 import { Position } from "monaco-editor";
 import Stepper from '@mui/material/Stepper';
 import Step from '@mui/material/Step';
@@ -462,8 +462,12 @@ export class EnvironmentView extends React.Component<PropsType,StateType> {
             </TabControl>
           </Grid>
           <Grid item xs={6}>
-            { /* <EditorTabs tabNames={this.state.files}>{editors}</EditorTabs> */ }
-            <Editor files={this.state.files} environment={this.props.match.params.environment}/>
+            { this.state.files.length > 0
+            ?
+              <FileEditor files={this.state.files} environment={this.props.match.params.environment}/>
+            :
+              <Typography>Fetching files to initialize editor...</Typography>
+            }
           </Grid>
         </Grid>
         { /* TODO evaluate, e.g., notistack (https://github.com/iamhosseindhv/notistack) to show stacked version of multiple lines with PASSED/FAILED tests */ }

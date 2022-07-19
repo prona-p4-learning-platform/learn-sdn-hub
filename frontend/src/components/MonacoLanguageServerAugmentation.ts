@@ -1,30 +1,31 @@
 import createWebSocket from '../api/WebSocket';
 import selectLanguageForEndpoint from './MonacoLanguageSelector'
 
-import 'monaco-editor/esm/vs/editor/editor.all.js';
+//import 'monaco-editor/esm/vs/editor/editor.all.js';
 
-import 'monaco-editor/esm/vs/editor/standalone/browser/accessibilityHelp/accessibilityHelp.js';
-import 'monaco-editor/esm/vs/editor/standalone/browser/inspectTokens/inspectTokens.js';
-import 'monaco-editor/esm/vs/editor/standalone/browser/iPadShowKeyboard/iPadShowKeyboard.js';
-import 'monaco-editor/esm/vs/editor/standalone/browser/quickAccess/standaloneHelpQuickAccess.js';
-import 'monaco-editor/esm/vs/editor/standalone/browser/quickAccess/standaloneGotoLineQuickAccess.js';
-import 'monaco-editor/esm/vs/editor/standalone/browser/quickAccess/standaloneGotoSymbolQuickAccess.js';
-import 'monaco-editor/esm/vs/editor/standalone/browser/quickAccess/standaloneCommandsQuickAccess.js';
-import 'monaco-editor/esm/vs/editor/standalone/browser/quickInput/standaloneQuickInputService.js';
-import 'monaco-editor/esm/vs/editor/standalone/browser/referenceSearch/standaloneReferenceSearch.js';
-import 'monaco-editor/esm/vs/editor/standalone/browser/toggleHighContrast/toggleHighContrast.js';
+//import 'monaco-editor/esm/vs/editor/standalone/browser/accessibilityHelp/accessibilityHelp.js';
+//import 'monaco-editor/esm/vs/editor/standalone/browser/inspectTokens/inspectTokens.js';
+//import 'monaco-editor/esm/vs/editor/standalone/browser/iPadShowKeyboard/iPadShowKeyboard.js';
+//import 'monaco-editor/esm/vs/editor/standalone/browser/quickAccess/standaloneHelpQuickAccess.js';
+//import 'monaco-editor/esm/vs/editor/standalone/browser/quickAccess/standaloneGotoLineQuickAccess.js';
+//import 'monaco-editor/esm/vs/editor/standalone/browser/quickAccess/standaloneGotoSymbolQuickAccess.js';
+//import 'monaco-editor/esm/vs/editor/standalone/browser/quickAccess/standaloneCommandsQuickAccess.js';
+//import 'monaco-editor/esm/vs/editor/standalone/browser/quickInput/standaloneQuickInputService.js';
+//import 'monaco-editor/esm/vs/editor/standalone/browser/referenceSearch/standaloneReferenceSearch.js';
+//import 'monaco-editor/esm/vs/editor/standalone/browser/toggleHighContrast/toggleHighContrast.js';
 
 // support all basic-languages
 //import 'monaco-editor/esm/vs/basic-languages/monaco.contribution';
 
-import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
+//import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
+import * as monaco from 'monaco-editor';
 
-import { buildWorkerDefinition } from "monaco-editor-workers";
+//import { buildWorkerDefinition } from "monaco-editor-workers";
 
 import { MonacoLanguageClient, CloseAction, ErrorAction, MonacoServices, MessageTransports } from 'monaco-languageclient';
 import { toSocket, WebSocketMessageReader, WebSocketMessageWriter } from 'vscode-ws-jsonrpc';
 
-buildWorkerDefinition('dist', new URL('', window.location.href).href, false);
+//buildWorkerDefinition('dist', new URL('', window.location.href).href, false);
 
 // register Monaco languages
 monaco.languages.register({
@@ -52,6 +53,8 @@ monaco.languages.register({
     aliases: ['JSON', 'json'],
     mimetypes: ['application/json'],
 });
+
+monaco.languages.typescript.javascriptDefaults.setEagerModelSync(true);
 
 const MonacoLanguageServerAugmentation = (editor: monaco.editor.IStandaloneCodeEditor, path: string) : monaco.editor.IStandaloneCodeEditor=> {
     // get lsp to be used for the language based on endpoint's fileExtension

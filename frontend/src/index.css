@@ -57,6 +57,6 @@ code {
 
 .myMonacoClass {
 	width: calc(50vw - 20px);
-	height: calc(100vh - 190px);
+	height: calc(100vh - 130px);
 	padding: 2px;
 }

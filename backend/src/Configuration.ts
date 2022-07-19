@@ -453,6 +453,10 @@ environments.set("Example3-LearningSwitch", {
       absFilePath: "/home/p4/p4-boilerplate/Example3-LearningSwitch/p4app.json",
       alias: "p4app.json",
     },
+    {
+      absFilePath: "/home/p4/tutorials/exercises/basic/basic.p4",
+      alias: "basic.p4",
+    },
   ],
   stopCommands: [
     {
