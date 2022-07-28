@@ -19,8 +19,25 @@ import DialogContentText from '@mui/material/DialogContentText';
 
 import selectLanguageForEndpoint from "./MonacoLanguageSelector";
 
+import 'monaco-editor/esm/vs/editor/editor.all.js';
+
+import 'monaco-editor/esm/vs/editor/standalone/browser/accessibilityHelp/accessibilityHelp.js';
+import 'monaco-editor/esm/vs/editor/standalone/browser/inspectTokens/inspectTokens.js';
+import 'monaco-editor/esm/vs/editor/standalone/browser/iPadShowKeyboard/iPadShowKeyboard.js';
+import 'monaco-editor/esm/vs/editor/standalone/browser/quickAccess/standaloneHelpQuickAccess.js';
+import 'monaco-editor/esm/vs/editor/standalone/browser/quickAccess/standaloneGotoLineQuickAccess.js';
+import 'monaco-editor/esm/vs/editor/standalone/browser/quickAccess/standaloneGotoSymbolQuickAccess.js';
+import 'monaco-editor/esm/vs/editor/standalone/browser/quickAccess/standaloneCommandsQuickAccess.js';
+import 'monaco-editor/esm/vs/editor/standalone/browser/quickInput/standaloneQuickInputService.js';
+import 'monaco-editor/esm/vs/editor/standalone/browser/referenceSearch/standaloneReferenceSearch.js';
+import 'monaco-editor/esm/vs/editor/standalone/browser/toggleHighContrast/toggleHighContrast.js';
+
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
+
+import { buildWorkerDefinition } from 'monaco-editor-workers';
+
 import Editor, { Monaco } from "@monaco-editor/react";
+import { loader } from "@monaco-editor/react";
 
 import { StandaloneServices } from 'vscode/services';
 import getMessageServiceOverride from 'vscode/service-override/messages';
@@ -36,9 +53,12 @@ import { WebsocketProvider } from 'y-websocket';
 import { MonacoBinding } from 'y-monaco'
 import DoUsername from 'do_username'
 
+loader.config({ monaco });
+
 StandaloneServices.initialize({
   ...getMessageServiceOverride(document.body)
 });
+buildWorkerDefinition('dist', new URL('../../', window.location.href).href, false);
 
 type Severity = "error" | "success" | "info" | "warning" | undefined;
 
@@ -229,6 +249,7 @@ export default class FileEditor extends React.Component<FileEditorProps> {
       name: username,
       color: color
     })
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const monacoBinding = new MonacoBinding(subDocText, editor.getModel(), new Set([editor]), awareness)
 
     console.log("username: " + username + " color: " + color);
@@ -276,10 +297,10 @@ export default class FileEditor extends React.Component<FileEditorProps> {
                       reader,
                       writer
                   });
-                  //languageClient.start();
-                  //languageClient.registerConfigurationFeatures();
-                  //languageClient.info("blub");
-                  //reader.onClose(() => languageClient.stop());
+                  languageClient.start();
+                  languageClient.registerConfigurationFeatures();
+                  languageClient.info("blub");
+                  reader.onClose(() => languageClient.stop());
               }
           }
       };
