@@ -47,11 +47,9 @@ import { toSocket, WebSocketMessageReader, WebSocketMessageWriter } from 'vscode
 
 import createWebSocket from '../api/WebSocket';
 
-import * as Y from 'yjs';
-import { WebsocketProvider } from 'y-websocket';
-//import { WebrtcProvider } from 'y-webrtc'
-import { MonacoBinding } from 'y-monaco'
-import DoUsername from 'do_username'
+import { EditorContentManager, RemoteCursorManager, RemoteSelectionManager } from "@convergencelabs/monaco-collab-ext";
+import { connectAnonymously, LocalIndexReference, LocalRangeReference, ModelReference, RealTimeString, RemoteReferenceCreatedEvent, StringInsertEvent, StringRemoveEvent } from "@convergence/convergence";
+import { ColorAssigner } from "@convergence/color-assigner";
 
 loader.config({ monaco });
 
@@ -99,6 +97,7 @@ const Alert = React.forwardRef<HTMLDivElement, AlertProps>(function Alert(
   return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;
 });
 
+const CONVERGENCE_URL = "http://localhost:8000/api/realtime/convergence/default";
 
 export default class FileEditor extends React.Component<FileEditorProps> {
   public state: State;
@@ -106,10 +105,16 @@ export default class FileEditor extends React.Component<FileEditorProps> {
   private editor!: monaco.editor.IStandaloneCodeEditor;
 
   private environmentFiles = {} as FileState;
-  
-  private rootDoc;
-  private folder;
-  private monacoBinding: MonacoBinding | undefined;
+
+  private username: string;
+
+  private colorAssigner:  ColorAssigner;
+  private contentManager!: EditorContentManager;
+  private realTimeModelString!: RealTimeString;
+  private remoteCursorManager!: RemoteCursorManager;
+  private cursorReference!: LocalIndexReference;
+  private remoteSelectionManager!: RemoteSelectionManager;
+  private selectionReference!: LocalRangeReference;
 
   constructor(props: FileEditorProps) {
     super(props);
@@ -126,14 +131,17 @@ export default class FileEditor extends React.Component<FileEditorProps> {
       editorConfirmationDialogOpen: false,
     };
 
+    this.username = localStorage.getItem("username") ?? "default user";
+
+    this.colorAssigner = new ColorAssigner();
+
     this.save = this.save.bind(this);
     this.load = this.load.bind(this);
     this.editorDidMount = this.editorDidMount.bind(this);
     this.editorWillMount = this.editorWillMount.bind(this);
     this.onChange = this.onChange.bind(this);
-
-    this.rootDoc = new Y.Doc();
-    this.folder = this.rootDoc.getMap();
+    this.setLocalCursor = this.setLocalCursor.bind(this);
+    this.addRemoteCursor = this.addRemoteCursor.bind(this);
 
     // register Monaco languages
     monaco.languages.register({
@@ -187,7 +195,121 @@ export default class FileEditor extends React.Component<FileEditorProps> {
             currentFileLanguage: selectLanguageForEndpoint(fileName).editorLanguage,
             currentFileValue: await data.text,
           });
+
+          connectAnonymously(CONVERGENCE_URL, this.username)
+          .then(async d => {
+            const domain = d;
+            // Now open the model, creating it using the initial data if it does not exist.
+            return domain.models().openAutoCreate({
+              collection: "example-monaco",
+              id: fileName + "-group0",
+              data: {
+                "text": await data.text
+              }
+            })
+          })
+          .then((model) => {
+            this.realTimeModelString = model.elementAt("text") as RealTimeString;
+
+            // EditorContentManager
+            this.contentManager = new EditorContentManager({
+              editor: this.editor,
+              onInsert: (index, text) => {
+                console.log("insert: " + index + " " + text);
+                this.realTimeModelString.insert(index, text);
+              },
+              onReplace: (index, length, text) => {
+                console.log("replace: " + index + " " + text + " " + length);
+                this.realTimeModelString.model().startBatch();
+                this.realTimeModelString.remove(index, length);
+                this.realTimeModelString.insert(index, text);
+                this.realTimeModelString.model().completeBatch();
+              },
+              onDelete: (index, length) => {
+                console.log("delete: " + index + " " + length);
+                this.realTimeModelString.remove(index, length);
+              },
+              remoteSourceId: "convergence"
+            });
+    
+            this.realTimeModelString.events().subscribe(e => {
+              console.log("received subscribed: " + e.name);
+              switch (e.name) {
+                case "insert":
+                  console.log("received insert: " + e);
+                  const stringInsertEvent = e as StringInsertEvent;
+                  this.contentManager.insert(stringInsertEvent.index, stringInsertEvent.value);
+                  break;
+                case "remove":
+                  console.log("received remove: " + e);
+                  const stringRemoveElement = e as StringRemoveEvent;
+                  this.contentManager.delete(stringRemoveElement.index, stringRemoveElement.value.length);
+                  break;
+                default:
+              }
+            });
+
+            // RemoteCursorManager
+            this.remoteCursorManager = new RemoteCursorManager({
+              editor: this.editor,
+              tooltips: true,
+              tooltipDuration: 2
+            });
+            this.cursorReference = this.realTimeModelString.indexReference("cursor");
+    
+            const cursorReferences = this.realTimeModelString.references({key: "cursor"});
+            cursorReferences.forEach((reference) => {
+              if (!reference.isLocal()) {
+                this.addRemoteCursor(reference);
+              }
+            });
+    
+            this.setLocalCursor();
+            this.cursorReference.share();
+    
+            this.editor.onDidChangeCursorPosition(e => {
+              this.setLocalCursor();
+            });
+    
+            this.realTimeModelString.on("reference", (e) => {
+              const remoteReferenceCreatedEvent = e as RemoteReferenceCreatedEvent;
+              if (remoteReferenceCreatedEvent.reference.key() === "cursor") {
+                this.addRemoteCursor(remoteReferenceCreatedEvent.reference);
+              }
+            });
+
+            // RemoteSelectionManager
+            this.remoteSelectionManager = new RemoteSelectionManager({editor: this.editor});
+
+            this.selectionReference = this.realTimeModelString.rangeReference("selection");
+            this.setLocalSelection();
+            this.selectionReference.share();
+    
+            this.editor.onDidChangeCursorSelection(e => {
+              this.setLocalSelection();
+            });
+    
+            const selectionReferences = this.realTimeModelString.references({key: "selection"});
+            selectionReferences.forEach((reference) => {
+              if (!reference.isLocal()) {
+                this.addRemoteSelection(reference);
+              }
+            });
+    
+            this.realTimeModelString.on("reference", (e) => {
+              const remoteReferenceCreatedEvent = e as RemoteReferenceCreatedEvent;
+              if (remoteReferenceCreatedEvent.reference.key() === "selection") {
+                this.addRemoteSelection(remoteReferenceCreatedEvent.reference);
+              }
+            });
+
+          })
+          .catch(error => {
+            console.error("Could not open model ", error);
+          });
+
         }
+        // remove hard-coded /home/p4
         this.environmentFiles[fileName] = {
           value: await data.text,
           language: selectLanguageForEndpoint(fileName).editorLanguage,
@@ -195,6 +317,8 @@ export default class FileEditor extends React.Component<FileEditorProps> {
           fileChanged: false,
           fileLocation: data.location ?? "",
         }
+
+        console.log("finished loading...");
       })
       .catch((err) => {
         console.error(err);
@@ -202,58 +326,70 @@ export default class FileEditor extends React.Component<FileEditorProps> {
     }))
   }
 
+  setLocalCursor() {
+    const position = this.editor.getPosition() as monaco.IPosition;
+    const offset = this.editor.getModel()?.getOffsetAt(position);
+    if (offset !== undefined) {
+      this.cursorReference.set(offset);
+    }
+  }
+
+  addRemoteCursor(reference: ModelReference<any>) {
+    const color = this.colorAssigner.getColorAsHex(reference.sessionId());
+    const remoteCursor = this.remoteCursorManager.addCursor(reference.sessionId(), color, reference.user().displayName);
+
+    reference.on("cleared", () => remoteCursor.hide());
+    reference.on("disposed", () => remoteCursor.dispose());
+    reference.on("set", () => {
+      const cursorIndex = reference.value();
+      remoteCursor.setOffset(cursorIndex);
+    });
+  }
+
+  setLocalSelection() {
+    const selection = this.editor.getSelection();
+    if (!selection?.isEmpty()) {
+      const start = this.editor.getModel()?.getOffsetAt(selection?.getStartPosition() as monaco.IPosition);
+      const end = this.editor.getModel()?.getOffsetAt(selection?.getEndPosition() as monaco.IPosition);
+      if (start !== undefined && end !== undefined) {
+        this.selectionReference.set({start, end});
+      }
+    } else if (this.selectionReference.isSet()) {
+      this.selectionReference.clear();
+    }
+  }
+
+  addRemoteSelection(reference: ModelReference<any>) {
+    const color = this.colorAssigner.getColorAsHex(reference.sessionId())
+    const remoteSelection = this.remoteSelectionManager.addSelection(reference.sessionId(), color);
+
+    if (reference.isSet()) {
+      const selection = reference.value();
+      remoteSelection.setOffsets(selection.start, selection.end);
+    }
+
+    reference.on("cleared", () => remoteSelection.hide());
+    reference.on("disposed", () => remoteSelection.dispose());
+    reference.on("set", () => {
+      const selection = reference.value();
+      remoteSelection.setOffsets(selection.start, selection.end);
+    });
+  }
+
   async editorDidMount(editor: monaco.editor.IStandaloneCodeEditor, monaco: Monaco) {
     this.editor = editor;
-    //const monacoBinding = new MonacoBinding(type, editor.getModel(), new Set([editor]), provider.awareness)
     editor.focus();
 
-    let docCollabPath = this.props.files[0].replaceAll("/", "_");
-    let subDoc : Y.Doc;
-    if ( this.folder.get(docCollabPath) == null ) {
-      subDoc = new Y.Doc();
-      this.folder.set(docCollabPath, subDoc);
-    }
-    else
-    {
-      subDoc = this.folder.get(docCollabPath) as Y.Doc;
-    }
-    const subDocText = subDoc.getText(docCollabPath);
-
-    console.log("docCollabPath: " + docCollabPath);
-    console.log("subDoc length: " + subDoc.getText().length);
-
-    // currently y-websocket standalone server needs to be started. See y-websocket repo or start-yjs-websocket-server.ps1 example start script
-    const provider = new WebsocketProvider(`${window.location.protocol === 'http:' ? 'ws:' : 'wss:'}//localhost:1234`, docCollabPath, subDoc)
-
-    // needs to be moved to ../api and '../api/Config' needs to be removed?
-    //if (pathAndQuery.startsWith("/") === false){
-    //  pathAndQuery = "/"+ pathAndQuery
-    //}
-    //const provider = new WebsocketProvider(`${config.wsBackendHost}${pathAndQuery}`, docCollabPath, subDoc);
-    //const provider = new WebsocketProvider(`${config.wsBackendHost}/api/environment/Example1-Repeater/collaboration`, docCollabPath, subDoc);
-    //
-    // e.g.:
-    //
-    //const provider = new WebsocketProvider(`${window.location.protocol === 'http:' ? 'ws:' : 'wss:'}//localhost:3001/api/environment/Example1-Repeater/collaboration`, docCollabPath, subDoc)
-    //provider.on('connection', () => {
-    //  provider.ws?.send(`auth ${localStorage.getItem("token")}`);
-    //});
-
-    // y-webrtc has problems with cursor/edit offset, leading to inconsistant cursor placement and edits, see y-webrtc issues in github repo
-    //const provider = new WebrtcProvider('your-room-name', subDoc);
-
-    const awareness = provider.awareness;
-    const username = DoUsername.generate(16);
-    const color = "#" + ((1<<24)*Math.random() | 0).toString(16);
-    awareness.setLocalStateField('user', {
-      name: username,
-      color: color
-    })
+    const remoteCursorManager = new RemoteCursorManager({
+      editor: editor,
+      tooltips: true,
+      tooltipDuration: 2
+    });
+    
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const monacoBinding = new MonacoBinding(subDocText, editor.getModel(), new Set([editor]), awareness)
+    const cursor = remoteCursorManager.addCursor(this.username, "blue", this.username);
 
-    console.log("username: " + username + " color: " + color);
-
+    // remove hard-coded python
     let language = "python";
     console.log("Starting language client for language: " + language);
     if (language !== "") {
@@ -340,17 +476,9 @@ export default class FileEditor extends React.Component<FileEditorProps> {
     
   };
 
-  componentWillUnmount() {
-    //cursor.dispose();
-    this.rootDoc.destroy();
-    this.monacoBinding?.destroy();
-  }  
-
   onChange(_value: string | undefined) {
     this.environmentFiles[this.state.currentFile].fileChanged = true;
     this.setState({currentFileChanged: true});
-    console.log("changed: " + this.editor.getModel()?.uri.toString());
-    console.log("rooPath: " + MonacoServices.get().workspace.workspaceFolders?.forEach((value) => {console.log(value)}))
   };
 
   async save(): Promise<void> {
@@ -545,3 +673,4 @@ export default class FileEditor extends React.Component<FileEditorProps> {
     );
   }
 }
+
