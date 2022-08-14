@@ -19,7 +19,7 @@ const Alert = forwardRef<HTMLDivElement, AlertProps>(function Alert(
 
 
 export interface LoginFormProps{
-    onSuccessfulAuthentication: (token: string, username: string) => void
+    onSuccessfulAuthentication: (token: string, username: string, groupNumber: number) => void
 }
 
 
@@ -49,7 +49,7 @@ function LoginForm(props: LoginFormProps) {
           setLoginSeverity("success")
           setNotificationOpen(true)
           const message = await result.json()
-          onSuccessfulAuthentication(message.token, message.username)
+          onSuccessfulAuthentication(message.token, message.username, message.groupNumber)
           history.push("/assignments")
           window.location.reload()
       } else if (result.status===401){

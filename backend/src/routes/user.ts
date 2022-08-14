@@ -40,8 +40,8 @@ export default (authProviders: AuthenticationProvider[]): Router => {
     bodyParser.json() as RequestHandler,
     loginValidator,
     async (req, res) => {
-      const username = req.body.username;
-      const password = req.body.password;
+      const username = req.body.username as string;
+      const password = req.body.password as string;
       for (const authProvider of authProviders) {
         try {
           const result = await authProvider.authenticateUser(
@@ -54,10 +54,13 @@ export default (authProviders: AuthenticationProvider[]): Router => {
               id: result.userid,
               groupNumber: result.groupNumber,
             },
+            /* replace secret */
             "some-secret"
-          );
+          ) as string;
           console.log(result, token);
-          return res.status(200).json({ token, username });
+          return res
+            .status(200)
+            .json({ token, username, groupNumber: result.groupNumber });
         } catch (err) {
           console.log("error!", err);
         }

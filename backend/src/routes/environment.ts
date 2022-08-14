@@ -46,6 +46,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
       }
       return res.status(200).json({
         files: targetEnv.editableFiles.map((file) => file.alias),
+        filePaths: targetEnv.editableFiles.map((file) => file.absFilePath),
         // first task in array of tasks will define the tab
         ttyTabs: targetEnv.tasks
           .filter((subtasks) => subtasks[0].provideTty === true)
@@ -57,6 +58,9 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
           .map((subtasks) => subtasks.map((subtask) => subtask.name)),
         stepNames: targetEnv.steps?.map((step) => step.name) ?? [],
         stepLabels: targetEnv.steps?.map((step) => step.label) ?? [],
+        rootPath: targetEnv.rootPath,
+        useCollaboration: targetEnv.useCollaboration,
+        useLanguageClient: targetEnv.useLanguageClient,
       });
     }
   );

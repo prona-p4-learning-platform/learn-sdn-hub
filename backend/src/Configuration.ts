@@ -208,6 +208,10 @@ environments.set("python-test", {
   ],
   description: "python-test description",
   assignmentLabSheet: "../assignments/prona-learningswitch.md",
+  rootPath: "/home/p4/",
+  workspaceFolders: ["/home/p4/p4-boilerplate/Example3-LearningSwitch/"],
+  useCollaboration: true,
+  useLanguageClient: true,
 });
 
 environments.set("Example0-SDN-Intro", {

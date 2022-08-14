@@ -14,6 +14,7 @@ export type RequestWithUser = Request & {
 const middleware: RequestHandler = (req: RequestWithUser, res, next) => {
   const token = req.headers.authorization;
   try {
+    /* replace secret */
     const result = jwt.verify(token, "some-secret") as TokenPayload;
     req.user = result;
     return next();

@@ -75,6 +75,10 @@ export interface EnvironmentDescription {
   providerImage?: string;
   providerDockerCmd?: string;
   providerDockerSupplementalPorts?: string[];
+  rootPath?: string;
+  workspaceFolders?: string[];
+  useCollaboration?: boolean;
+  useLanguageClient?: boolean;
 }
 
 export interface P4EnvironmentResult {

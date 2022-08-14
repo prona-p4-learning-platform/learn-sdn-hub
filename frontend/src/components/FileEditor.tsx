@@ -48,7 +48,7 @@ import { toSocket, WebSocketMessageReader, WebSocketMessageWriter } from 'vscode
 import createWebSocket from '../api/WebSocket';
 
 import { EditorContentManager, RemoteCursorManager, RemoteSelectionManager } from "@convergencelabs/monaco-collab-ext";
-import { connectAnonymously, LocalIndexReference, LocalRangeReference, ModelReference, RealTimeString, RemoteReferenceCreatedEvent, StringInsertEvent, StringRemoveEvent } from "@convergence/convergence";
+import { connectAnonymously, ConvergenceDomain, IdbStorageAdapter, LocalIndexReference, LocalRangeReference, ModelReference, RealTimeString, RemoteReferenceCreatedEvent, StringInsertEvent, StringRemoveEvent } from "@convergence/convergence";
 import { ColorAssigner } from "@convergence/color-assigner";
 
 loader.config({ monaco });
@@ -86,8 +86,14 @@ interface FileStateModel {
 }
 
 interface FileEditorProps {
+  // maybe better use a Type containing fileAlias and absFilePath?
   files: string[];
+  filePaths: string[];
   environment: string;
+  rootPath: string;
+  workspaceFolders: string[];
+  useCollaboration: boolean;
+  useLanguageClient: boolean;
 }
 
 const Alert = React.forwardRef<HTMLDivElement, AlertProps>(function Alert(
@@ -97,8 +103,9 @@ const Alert = React.forwardRef<HTMLDivElement, AlertProps>(function Alert(
   return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;
 });
 
-const CONVERGENCE_URL = "http://localhost:8000/api/realtime/convergence/default";
+const CONVERGENCE_URL = process.env.CONVERGENCE_URL ?? "http://localhost:8000/api/realtime/convergence/default";
 
+// maybe consider to move collaboration and languageclient to class augmentation again?
 export default class FileEditor extends React.Component<FileEditorProps> {
   public state: State;
 
@@ -107,6 +114,9 @@ export default class FileEditor extends React.Component<FileEditorProps> {
   private environmentFiles = {} as FileState;
 
   private username: string;
+  private group: string;
+
+  private convergenceDomain!: ConvergenceDomain;
 
   private colorAssigner:  ColorAssigner;
   private contentManager!: EditorContentManager;
@@ -115,6 +125,9 @@ export default class FileEditor extends React.Component<FileEditorProps> {
   private cursorReference!: LocalIndexReference;
   private remoteSelectionManager!: RemoteSelectionManager;
   private selectionReference!: LocalRangeReference;
+
+  private languageClient!: MonacoLanguageClient;
+
 
   constructor(props: FileEditorProps) {
     super(props);
@@ -131,17 +144,28 @@ export default class FileEditor extends React.Component<FileEditorProps> {
       editorConfirmationDialogOpen: false,
     };
 
-    this.username = localStorage.getItem("username") ?? "default user";
+    this.username = localStorage.getItem("username") ?? "default-user";
+    this.group = localStorage.getItem("group") ?? "0";
 
     this.colorAssigner = new ColorAssigner();
 
     this.save = this.save.bind(this);
     this.load = this.load.bind(this);
+
     this.editorDidMount = this.editorDidMount.bind(this);
     this.editorWillMount = this.editorWillMount.bind(this);
     this.onChange = this.onChange.bind(this);
+
     this.setLocalCursor = this.setLocalCursor.bind(this);
     this.addRemoteCursor = this.addRemoteCursor.bind(this);
+    this.setLocalSelection = this.setLocalSelection.bind(this);
+    this.addRemoteSelection = this.addRemoteSelection.bind(this);
+
+    this.startCollaborationServices = this.startCollaborationServices.bind(this);
+    this.stopCollaborationServices = this.stopCollaborationServices.bind(this);
+
+    this.startLanguageClient = this.startLanguageClient.bind(this);
+    this.stopLanguageClient = this.stopLanguageClient.bind(this);
 
     // register Monaco languages
     monaco.languages.register({
@@ -171,7 +195,9 @@ export default class FileEditor extends React.Component<FileEditorProps> {
 
     // install Monaco language client services
     const options:MonacoServices.Options = {};
-    options.rootPath = "/home/p4/";
+    // implement finding common Path of all filePaths in props?
+    options.rootPath = this.props.rootPath ?? "/home/p4/";
+    // implement insertion of workspaceFolders from props? Find common workspaceFolders?
     options.workspaceFolders = [{
       uri: "file:///home/p4/"
     }];
@@ -187,137 +213,32 @@ export default class FileEditor extends React.Component<FileEditorProps> {
         return { text: response.text(), location: contentLocation };
       })
       .then(async (data) => {
+        const fileContent = await data.text;
+
         if (fileName === this.props.files[0]) {
           // it's enough to store the currentFileValue in state to trigger initial filling of the editor, no need to use this.state.currentFileValue afterwards (e.g., as the value of <Editor/>)
           this.setState({
             currentFile: fileName,
             currentFilePath: data.location,
             currentFileLanguage: selectLanguageForEndpoint(fileName).editorLanguage,
-            currentFileValue: await data.text,
+            currentFileValue: fileContent,
           });
 
-          connectAnonymously(CONVERGENCE_URL, this.username)
-          .then(async d => {
-            const domain = d;
-            // Now open the model, creating it using the initial data if it does not exist.
-            return domain.models().openAutoCreate({
-              collection: "example-monaco",
-              id: fileName + "-group0",
-              data: {
-                "text": await data.text
-              }
-            })
-          })
-          .then((model) => {
-            this.realTimeModelString = model.elementAt("text") as RealTimeString;
-
-            // EditorContentManager
-            this.contentManager = new EditorContentManager({
-              editor: this.editor,
-              onInsert: (index, text) => {
-                console.log("insert: " + index + " " + text);
-                this.realTimeModelString.insert(index, text);
-              },
-              onReplace: (index, length, text) => {
-                console.log("replace: " + index + " " + text + " " + length);
-                this.realTimeModelString.model().startBatch();
-                this.realTimeModelString.remove(index, length);
-                this.realTimeModelString.insert(index, text);
-                this.realTimeModelString.model().completeBatch();
-              },
-              onDelete: (index, length) => {
-                console.log("delete: " + index + " " + length);
-                this.realTimeModelString.remove(index, length);
-              },
-              remoteSourceId: "convergence"
-            });
-    
-            this.realTimeModelString.events().subscribe(e => {
-              console.log("received subscribed: " + e.name);
-              switch (e.name) {
-                case "insert":
-                  console.log("received insert: " + e);
-                  const stringInsertEvent = e as StringInsertEvent;
-                  this.contentManager.insert(stringInsertEvent.index, stringInsertEvent.value);
-                  break;
-                case "remove":
-                  console.log("received remove: " + e);
-                  const stringRemoveElement = e as StringRemoveEvent;
-                  this.contentManager.delete(stringRemoveElement.index, stringRemoveElement.value.length);
-                  break;
-                default:
-              }
-            });
-
-            // RemoteCursorManager
-            this.remoteCursorManager = new RemoteCursorManager({
-              editor: this.editor,
-              tooltips: true,
-              tooltipDuration: 2
-            });
-            this.cursorReference = this.realTimeModelString.indexReference("cursor");
-    
-            const cursorReferences = this.realTimeModelString.references({key: "cursor"});
-            cursorReferences.forEach((reference) => {
-              if (!reference.isLocal()) {
-                this.addRemoteCursor(reference);
-              }
-            });
-    
-            this.setLocalCursor();
-            this.cursorReference.share();
-    
-            this.editor.onDidChangeCursorPosition(e => {
-              this.setLocalCursor();
-            });
-    
-            this.realTimeModelString.on("reference", (e) => {
-              const remoteReferenceCreatedEvent = e as RemoteReferenceCreatedEvent;
-              if (remoteReferenceCreatedEvent.reference.key() === "cursor") {
-                this.addRemoteCursor(remoteReferenceCreatedEvent.reference);
-              }
-            });
-
-            // RemoteSelectionManager
-            this.remoteSelectionManager = new RemoteSelectionManager({editor: this.editor});
-
-            this.selectionReference = this.realTimeModelString.rangeReference("selection");
-            this.setLocalSelection();
-            this.selectionReference.share();
-    
-            this.editor.onDidChangeCursorSelection(e => {
-              this.setLocalSelection();
-            });
-    
-            const selectionReferences = this.realTimeModelString.references({key: "selection"});
-            selectionReferences.forEach((reference) => {
-              if (!reference.isLocal()) {
-                this.addRemoteSelection(reference);
-              }
-            });
-    
-            this.realTimeModelString.on("reference", (e) => {
-              const remoteReferenceCreatedEvent = e as RemoteReferenceCreatedEvent;
-              if (remoteReferenceCreatedEvent.reference.key() === "selection") {
-                this.addRemoteSelection(remoteReferenceCreatedEvent.reference);
-              }
-            });
-
-          })
-          .catch(error => {
-            console.error("Could not open model ", error);
-          });
-
+          this.startCollaborationServices(this.group, fileName, fileContent);
         }
+
         // remove hard-coded /home/p4
         this.environmentFiles[fileName] = {
-          value: await data.text,
+          value: fileContent,
           language: selectLanguageForEndpoint(fileName).editorLanguage,
+          // change to use filePath or a corresponding type
           name: "file:///home/p4/" + fileName,
           fileChanged: false,
           fileLocation: data.location ?? "",
         }
-
+        
+        // check number of models in editor? sometimes additional/superfluous inmemory model shows up
+        // should only contain the files that are used in the env as entries in the model?
         console.log("finished loading...");
       })
       .catch((err) => {
@@ -326,6 +247,192 @@ export default class FileEditor extends React.Component<FileEditorProps> {
     }))
   }
 
+  async editorDidMount(editor: monaco.editor.IStandaloneCodeEditor, monaco: Monaco) {
+    this.editor = editor;
+    editor.focus();
+
+    console.log("Editor language: " + editor.getModel()?.uri.fsPath);
+    // remove \\1 filtering or maybe this initial inmemory model all at once?
+    if (editor.getModel()?.uri.fsPath === "\\1") {
+      const lspLanguage = selectLanguageForEndpoint(this.props.files[0]).lspLanguage
+      this.startLanguageClient(editor, lspLanguage);
+    } else {
+      const lspLanguage = selectLanguageForEndpoint(editor.getModel()?.uri.fsPath ?? "").lspLanguage
+      this.startLanguageClient(editor, lspLanguage);
+    }
+  };
+
+  componentWillUnmount(): void {
+    this.stopCollaborationServices();
+    this.stopLanguageClient();
+  }
+
+  /****************************************
+  **
+  ** Convergence Collaboration Services
+  **
+  ****************************************/
+
+  startCollaborationServices(group: string, fileName: string, initialFileContent: string) {
+    if (!this.props.useCollaboration) {
+      // collaboration disabled in config for this env do not start it and simply return
+      return
+    }
+
+    const collaborationId = fileName + "-group" + group;
+    console.log("Starting collaboration for user: " + this.username + " in group: " + group + " on: " + collaborationId);
+
+    // offline editing support is still experimental accoring to docu, seams to fix issues with
+    // "Uncaught Error: The source model is detached" if network connection to convergence is lost
+    // though reported by monaco, this error seams to originate from convergence, see 
+    // - https://forum.convergence.io/t/how-to-solve-the-source-model-is-detached-error/92
+    // however, offline mode is beta and does not seam to work/help to fix this misleading error?
+    const options = {
+      offline: {
+        storage: new IdbStorageAdapter()
+      }
+    };
+
+    connectAnonymously(CONVERGENCE_URL, this.username, options)
+    .then(async d => {
+      const domain = d;
+      this.convergenceDomain = d;
+      // Open the model and automatically create it, if it does not exist, filling it with initial fileContent
+      return domain.models().openAutoCreate({
+        collection: "learn-sdn-hub",
+        id: collaborationId,
+        data: {
+          "text": initialFileContent
+        }
+      })
+      // need to consider when to delete a model, when last user in group undeploys the env? Keep it and only overwrite it when env is opened by first user in group?
+    })
+    .then((model) => {
+      this.realTimeModelString = model.elementAt("text") as RealTimeString;
+
+      // update the editor content with the latest content (version) of the model
+      // ensures edits meanwhile being done by other users to show up
+      const currentModelContent = this.realTimeModelString.value();
+      //console.log("Using editor model " + this.editor.getModel()?.id + " " + this.editor.getModel()?.uri);
+      // throws error in console, that model is detached when changing the file that is edited, 
+      // however model content is updated perfectly - so works as intended... catch or fix error?
+      // maybe setModel using monaco.editor.getModel(id).setValue() is agnostic to attach status of the model?
+      // Otherwise maybe wait for model to be attached? ...use different approach to get current content of the
+      // model and update the editor's value?
+      this.editor.getModel()?.setValue(currentModelContent);
+
+      //
+      // EditorContentManager
+      //
+      this.contentManager = new EditorContentManager({
+        editor: this.editor,
+        // on local insert, do:
+        onInsert: (index, text) => {
+          this.realTimeModelString.insert(index, text);
+        },
+        // on local replace, do:
+        onReplace: (index, length, text) => {
+          this.realTimeModelString.model().startBatch();
+          this.realTimeModelString.remove(index, length);
+          this.realTimeModelString.insert(index, text);
+          this.realTimeModelString.model().completeBatch();
+        },
+        // on local delete, do:
+        onDelete: (index, length) => {
+          this.realTimeModelString.remove(index, length);
+        },
+        // change to learn-sdn-hub id?
+        remoteSourceId: "convergence"
+      });
+
+      // handle inserts from remote users
+      this.realTimeModelString.on("insert", (e) => {
+        const stringInsertEvent = e as StringInsertEvent;
+        this.contentManager.insert(stringInsertEvent.index, stringInsertEvent.value);
+      })
+
+      // handle removes from remote users
+      // no need to subscribe to remote "replace", these are reported as remove & insert
+      this.realTimeModelString.on("remove", (e) => {
+        const stringRemoveElement = e as StringRemoveEvent;
+        this.contentManager.delete(stringRemoveElement.index, stringRemoveElement.value.length);
+      })
+
+      //
+      // RemoteCursorManager
+      //
+      this.remoteCursorManager = new RemoteCursorManager({
+        editor: this.editor,
+        tooltips: true,
+        tooltipDuration: 2
+      });
+      this.cursorReference = this.realTimeModelString.indexReference("cursor");
+
+      // get all remote cursors and add them to show up in the editor
+      const cursorReferences = this.realTimeModelString.references({key: "cursor"});
+      cursorReferences.forEach((reference) => {
+        if (!reference.isLocal()) {
+          this.addRemoteCursor(reference);
+        }
+      });
+
+      // set local cursor position and share it with remote users
+      this.setLocalCursor();
+      this.cursorReference.share();
+
+      // if cursor is changed in monaco, update cursor position in the collaboration model
+      this.editor.onDidChangeCursorPosition(e => {
+        this.setLocalCursor();
+      });
+
+
+      // add additional cursor as soon as new remote user joins the collaboration session
+      this.realTimeModelString.on("reference", (e) => {
+        const remoteReferenceCreatedEvent = e as RemoteReferenceCreatedEvent;
+        if (remoteReferenceCreatedEvent.reference.key() === "cursor") {
+          this.addRemoteCursor(remoteReferenceCreatedEvent.reference);
+        }
+      });
+
+      //
+      // RemoteSelectionManager
+      //
+      this.remoteSelectionManager = new RemoteSelectionManager({editor: this.editor});
+
+      // set and share local selection in editor
+      this.selectionReference = this.realTimeModelString.rangeReference("selection");
+      this.setLocalSelection();
+      this.selectionReference.share();
+
+      // if selection in editor is changed, update selection in the collaboation model
+      this.editor.onDidChangeCursorSelection(e => {
+        this.setLocalSelection();
+      });
+
+      // add selection from all remote editors
+      const selectionReferences = this.realTimeModelString.references({key: "selection"});
+      selectionReferences.forEach((reference) => {
+        if (!reference.isLocal()) {
+          this.addRemoteSelection(reference);
+        }
+      });
+
+      // add additional selection as soon as new remote user joins the collaboration session
+      this.realTimeModelString.on("reference", (e) => {
+        const remoteReferenceCreatedEvent = e as RemoteReferenceCreatedEvent;
+        if (remoteReferenceCreatedEvent.reference.key() === "selection") {
+          this.addRemoteSelection(remoteReferenceCreatedEvent.reference);
+        }
+      });
+
+    })
+    .catch(error => {
+      console.error("Could not open collaboration model ", error);
+    });
+  }
+
+  // move all collab funcs into start collab function to avoid use of class references and
+  // binding of "this"?
   setLocalCursor() {
     const position = this.editor.getPosition() as monaco.IPosition;
     const offset = this.editor.getModel()?.getOffsetAt(position);
@@ -376,26 +483,59 @@ export default class FileEditor extends React.Component<FileEditorProps> {
     });
   }
 
-  async editorDidMount(editor: monaco.editor.IStandaloneCodeEditor, monaco: Monaco) {
-    this.editor = editor;
-    editor.focus();
+  stopCollaborationServices() {
+    if (!this.props.useCollaboration) {
+      // collaboration disabled in config for this env do not start it and simply return
+      return
+    }
 
-    const remoteCursorManager = new RemoteCursorManager({
-      editor: editor,
-      tooltips: true,
-      tooltipDuration: 2
+    // stop content synchronization
+    this.contentManager?.dispose();
+
+    // remove all remote selections
+    const selectionReferences = this.realTimeModelString?.references({key: "selection"});
+    selectionReferences?.forEach((reference) => {
+      if (!reference.isLocal()) {
+        this.remoteSelectionManager?.removeSelection(reference.sessionId());
+      }
     });
-    
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const cursor = remoteCursorManager.addCursor(this.username, "blue", this.username);
+    this.selectionReference?.dispose();
 
-    // remove hard-coded python
-    let language = "python";
-    console.log("Starting language client for language: " + language);
-    if (language !== "") {
+    // remove all remote cursors
+    const cursorReferences = this.realTimeModelString?.references({key: "cursor"});
+    cursorReferences?.forEach((reference) => {
+      if (!reference.isLocal()) {
+        this.remoteCursorManager?.removeCursor(reference.sessionId());
+      }
+    });
+    this.cursorReference?.dispose();
+
+    // maybe remove this line to fix "The source model is detached" problem? Keep the domain and
+    // only open/create new models and disconnect only on componentWillUnmount etc.?
+    // disconnect from convergence server
+    this.convergenceDomain?.disconnect();
+    this.convergenceDomain?.dispose();
+  }
+
+  /*******************************
+  **
+  ** Monaco Language Client
+  **
+  *******************************/
+
+  startLanguageClient(editor: monaco.editor.IStandaloneCodeEditor, lspLanguage: string) {
+    if (!this.props.useLanguageClient) {
+      // languageClient disabled in config for this env do not start it and simply return
+      return
+    }
+
+    //const language = this.state.currentFileLanguage;
+    //let language = "python";
+    console.log("Starting language client for language: " + lspLanguage);
+    if (lspLanguage !== "") {
       console.log("Starting language client");
 
-      const webSocket = createWebSocket('/environment/' + this.props.environment + '/languageserver/' + language);
+      const webSocket = createWebSocket('/environment/' + this.props.environment + '/languageserver/' + lspLanguage);
 
       webSocket.onopen = () => {
           // create and start the language client
@@ -429,14 +569,14 @@ export default class FileEditor extends React.Component<FileEditorProps> {
                   const socket = toSocket(webSocket);
                   const reader = new WebSocketMessageReader(socket);
                   const writer = new WebSocketMessageWriter(socket);
-                  const languageClient = createLanguageClient({
+                  this.languageClient = createLanguageClient({
                       reader,
                       writer
                   });
-                  languageClient.start();
-                  languageClient.registerConfigurationFeatures();
-                  languageClient.info("blub");
-                  reader.onClose(() => languageClient.stop());
+                  this.languageClient.start();
+                  //languageClient.registerConfigurationFeatures();
+                  //languageClient.info("blub");
+                  reader.onClose(() => this.languageClient.stop());
               }
           }
       };
@@ -461,6 +601,7 @@ export default class FileEditor extends React.Component<FileEditorProps> {
               // disable the default error handler
               errorHandler: {
                   error: () => ({ action: ErrorAction.Continue }),
+                  // maybe use restart of language client? e.g., to recover from conn loss?
                   closed: () => ({ action: CloseAction.DoNotRestart })
               }
           },
@@ -473,8 +614,16 @@ export default class FileEditor extends React.Component<FileEditorProps> {
           }
       });
     }
-    
-  };
+  }
+
+  stopLanguageClient() {
+    if (!this.props.useLanguageClient) {
+      // languageClient disabled in config for this env do not start it and simply return
+      return
+    }
+
+    this.languageClient.stop();
+  }
 
   onChange(_value: string | undefined) {
     this.environmentFiles[this.state.currentFile].fileChanged = true;
@@ -589,7 +738,11 @@ export default class FileEditor extends React.Component<FileEditorProps> {
     };
 
     const changeFile = (event: SelectChangeEvent) => {
+      this.stopCollaborationServices();
+      this.stopLanguageClient();
       this.setState({currentFile: event.target.value});
+      this.startCollaborationServices(this.group, event.target.value, this.environmentFiles[event.target.value].value)
+      this.startLanguageClient(this.editor, selectLanguageForEndpoint(event.target.value).lspLanguage);
     }
 
     const closeSelect = (event: React.SyntheticEvent) => {
@@ -642,7 +795,7 @@ export default class FileEditor extends React.Component<FileEditorProps> {
           path={this.environmentFiles[this.state.currentFile]?.name}
           onChange={this.onChange}
           beforeMount={this.editorWillMount}
-          onMount={this.editorDidMount}
+          onMount={this.editorDidMount}          
         />
         <Snackbar open={this.state.editorNotificationOpen} autoHideDuration={6000} onClose={handleEditorNotificationClose}>
           <Alert onClose={handleEditorNotificationClose} severity={this.state.editorSeverity as Severity}>
@@ -673,4 +826,3 @@ export default class FileEditor extends React.Component<FileEditorProps> {
     );
   }
 }
-
