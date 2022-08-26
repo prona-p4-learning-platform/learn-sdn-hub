@@ -266,6 +266,7 @@ export class EnvironmentView extends React.Component<PropsType,StateType> {
             ttyTabs: data.ttyTabs,
             ttys: data.ttys,
             files: data.files,
+            filePaths: data.filePaths,
             stepNames: data.stepNames,
             stepLabels: data.stepLabels,
             rootPath: data.rootPath,

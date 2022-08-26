@@ -42,7 +42,7 @@ import { loader } from "@monaco-editor/react";
 import { StandaloneServices } from 'vscode/services';
 import getMessageServiceOverride from 'vscode/service-override/messages';
 
-import { MonacoLanguageClient, CloseAction, ErrorAction, MonacoServices, MessageTransports } from 'monaco-languageclient';
+import { MonacoLanguageClient, CloseAction, ErrorAction, MonacoServices, MessageTransports, WorkspaceFolder } from 'monaco-languageclient';
 import { toSocket, WebSocketMessageReader, WebSocketMessageWriter } from 'vscode-ws-jsonrpc';
 
 import createWebSocket from '../api/WebSocket';
@@ -65,7 +65,9 @@ interface State {
   currentFile: string;
   currentFileChanged: boolean;
   currentFileValue: string;
-  currentFileLanguage: string;
+  // maybe better use a type containing editorLanguage and lspLanguage together?
+  currentFileEditorLanguage: string;
+  currentFileLSPLanguage: string;
   currentFilePath: string;
   editorResult: string
   editorSeverity: Severity
@@ -79,14 +81,15 @@ interface FileState {
 
 interface FileStateModel {
   name: string;
-  language: string;
+  editorLanguage: string;
+  lspLanguage: string;
   value: string;
   fileChanged: boolean;
   fileLocation: string;
 }
 
 interface FileEditorProps {
-  // maybe better use a Type containing fileAlias and absFilePath?
+  // maybe better use a Type containing fileAlias and absFilePath instead of using separate vars for them?
   files: string[];
   filePaths: string[];
   environment: string;
@@ -128,6 +131,8 @@ export default class FileEditor extends React.Component<FileEditorProps> {
 
   private languageClient!: MonacoLanguageClient;
 
+  private suppressChangeDetection: boolean;
+
 
   constructor(props: FileEditorProps) {
     super(props);
@@ -136,7 +141,8 @@ export default class FileEditor extends React.Component<FileEditorProps> {
       currentFile: props.files[0],
       currentFileChanged: false,
       currentFileValue: "",
-      currentFileLanguage: "",
+      currentFileEditorLanguage: "",
+      currentFileLSPLanguage: "",
       currentFilePath: "",
       editorResult: "",
       editorSeverity: "info",
@@ -148,6 +154,8 @@ export default class FileEditor extends React.Component<FileEditorProps> {
     this.group = localStorage.getItem("group") ?? "0";
 
     this.colorAssigner = new ColorAssigner();
+
+    this.suppressChangeDetection = false;
 
     this.save = this.save.bind(this);
     this.load = this.load.bind(this);
@@ -192,16 +200,36 @@ export default class FileEditor extends React.Component<FileEditorProps> {
       aliases: ['JSON', 'json'],
       mimetypes: ['application/json'],
     });
+    // additional file types? make them configurable?
 
     // install Monaco language client services
     const options:MonacoServices.Options = {};
-    // implement finding common Path of all filePaths in props?
-    options.rootPath = this.props.rootPath ?? "/home/p4/";
-    // implement insertion of workspaceFolders from props? Find common workspaceFolders?
-    options.workspaceFolders = [{
-      uri: "file:///home/p4/"
-    }];
-    console.log(options.rootPath);
+    // maybe remove ?? part and also findCommonPathPrefix and only allow rootPath and workspaceFolders
+    options.rootPath = this.props.rootPath ?? this.findCommonPathPrefix(this.props.filePaths);
+    let workspaceFolders = [] as WorkspaceFolder[];
+    if (this.props.workspaceFolders.length > 0) {
+      this.props.workspaceFolders.forEach((workspaceDir => {
+        // also support \ in paths?
+        workspaceFolders.push({
+          name: workspaceDir,
+          uri: "file://" + workspaceDir
+        });
+      }))
+      options.workspaceFolders = workspaceFolders;
+    } else {
+      // maybe remove this part and also findCommonPathPrefix and only allow rootPath and workspaceFolders
+      // to be specified in configuration?
+      // test if essential languageClient features also work when rootPath and workspaceFolders are empty
+      this.props.filePaths.forEach((filePath => {
+        // also support \ in paths?
+        const fileDir = filePath.substring(0,filePath.lastIndexOf("/"));
+        workspaceFolders.push({
+          name: fileDir,
+          uri: fileDir
+        });
+      }))
+    }
+    options.workspaceFolders = workspaceFolders;
     MonacoServices.install(options);
   }
 
@@ -217,29 +245,31 @@ export default class FileEditor extends React.Component<FileEditorProps> {
 
         if (fileName === this.props.files[0]) {
           // it's enough to store the currentFileValue in state to trigger initial filling of the editor, no need to use this.state.currentFileValue afterwards (e.g., as the value of <Editor/>)
+          // maybe consolidate editor value state/class vars/remove them?
           this.setState({
             currentFile: fileName,
             currentFilePath: data.location,
-            currentFileLanguage: selectLanguageForEndpoint(fileName).editorLanguage,
+            currentFileEditorLanguage: selectLanguageForEndpoint(fileName).editorLanguage,
+            currentFileLSPLanguage: selectLanguageForEndpoint(fileName).lspLanguage,
             currentFileValue: fileContent,
           });
 
           this.startCollaborationServices(this.group, fileName, fileContent);
         }
 
-        // remove hard-coded /home/p4
         this.environmentFiles[fileName] = {
           value: fileContent,
-          language: selectLanguageForEndpoint(fileName).editorLanguage,
-          // change to use filePath or a corresponding type
-          name: "file:///home/p4/" + fileName,
+          editorLanguage: selectLanguageForEndpoint(fileName).editorLanguage,
+          lspLanguage: selectLanguageForEndpoint(fileName).lspLanguage,
+          // change to use filePath or a corresponding type directly?
+          name: fileName,
           fileChanged: false,
           fileLocation: data.location ?? "",
         }
         
         // check number of models in editor? sometimes additional/superfluous inmemory model shows up
         // should only contain the files that are used in the env as entries in the model?
-        console.log("finished loading...");
+        console.log("finished loading editor files...");
       })
       .catch((err) => {
         console.error(err);
@@ -251,8 +281,8 @@ export default class FileEditor extends React.Component<FileEditorProps> {
     this.editor = editor;
     editor.focus();
 
-    console.log("Editor language: " + editor.getModel()?.uri.fsPath);
     // remove \\1 filtering or maybe this initial inmemory model all at once?
+    //console.log("Editor file path: " + editor.getModel()?.uri.fsPath);
     if (editor.getModel()?.uri.fsPath === "\\1") {
       const lspLanguage = selectLanguageForEndpoint(this.props.files[0]).lspLanguage
       this.startLanguageClient(editor, lspLanguage);
@@ -269,7 +299,11 @@ export default class FileEditor extends React.Component<FileEditorProps> {
 
   /****************************************
   **
-  ** Convergence Collaboration Services
+  ** Collaboration Services
+  **
+  ** Maybe reevaluate yjs in the future,
+  ** currently convergence.io seams to be
+  ** the better option
   **
   ****************************************/
 
@@ -282,44 +316,53 @@ export default class FileEditor extends React.Component<FileEditorProps> {
     const collaborationId = fileName + "-group" + group;
     console.log("Starting collaboration for user: " + this.username + " in group: " + group + " on: " + collaborationId);
 
-    // offline editing support is still experimental accoring to docu, seams to fix issues with
-    // "Uncaught Error: The source model is detached" if network connection to convergence is lost
-    // though reported by monaco, this error seams to originate from convergence, see 
+    // offline editing support is still experimental accoring to docu, seams to fix issues
+    // if network connection to convergence is lost, see
     // - https://forum.convergence.io/t/how-to-solve-the-source-model-is-detached-error/92
-    // however, offline mode is beta and does not seam to work/help to fix this misleading error?
     const options = {
       offline: {
         storage: new IdbStorageAdapter()
       }
     };
 
+    // currently uses anonymous connection, maybe use user or session token based auth,
+    // however, if using exam/assignment, most likely collaboration will be disabled
+    // anyway
     connectAnonymously(CONVERGENCE_URL, this.username, options)
     .then(async d => {
       const domain = d;
       this.convergenceDomain = d;
       // Open the model and automatically create it, if it does not exist, filling it with initial fileContent
       return domain.models().openAutoCreate({
-        collection: "learn-sdn-hub",
+        collection: "learn-sdn-hub-" + group,
         id: collaborationId,
         data: {
           "text": initialFileContent
         }
       })
-      // need to consider when to delete a model, when last user in group undeploys the env? Keep it and only overwrite it when env is opened by first user in group?
     })
     .then((model) => {
+      // remember group to be able to remove created models when environment is undeployed
+      localStorage.setItem("collaboration-collection-created-for-group", group);
+
       this.realTimeModelString = model.elementAt("text") as RealTimeString;
 
       // update the editor content with the latest content (version) of the model
-      // ensures edits meanwhile being done by other users to show up
+      // ensures edits meanwhile being done by other users will show up
       const currentModelContent = this.realTimeModelString.value();
-      //console.log("Using editor model " + this.editor.getModel()?.id + " " + this.editor.getModel()?.uri);
-      // throws error in console, that model is detached when changing the file that is edited, 
-      // however model content is updated perfectly - so works as intended... catch or fix error?
-      // maybe setModel using monaco.editor.getModel(id).setValue() is agnostic to attach status of the model?
-      // Otherwise maybe wait for model to be attached? ...use different approach to get current content of the
-      // model and update the editor's value?
+      this.suppressChangeDetection = true;
+      const editorViewState = this.editor.saveViewState();
       this.editor.getModel()?.setValue(currentModelContent);
+      if (editorViewState !== null) {
+        this.editor.restoreViewState(editorViewState);
+      }
+
+      //Show all models:
+      //monaco.editor.getModels().forEach((model) => {
+      //  console.log("id:" + model.id + ", uri:" + model.uri + " language:" + model.getLanguageId() + " isAttached:" + model.isAttachedToEditor() + " isDisposed:" + model.isDisposed());
+      //})
+
+      this.suppressChangeDetection = false;
 
       //
       // EditorContentManager
@@ -434,10 +477,23 @@ export default class FileEditor extends React.Component<FileEditorProps> {
   // move all collab funcs into start collab function to avoid use of class references and
   // binding of "this"?
   setLocalCursor() {
-    const position = this.editor.getPosition() as monaco.IPosition;
-    const offset = this.editor.getModel()?.getOffsetAt(position);
-    if (offset !== undefined) {
-      this.cursorReference.set(offset);
+    // suppress setting of local cursor when file is selected
+    if (!this.suppressChangeDetection) {
+      const position = this.editor.getPosition() as monaco.IPosition;
+      const offset = this.editor.getModel()?.getOffsetAt(position);
+      if (offset !== undefined) {
+        try {
+          this.cursorReference.set(offset);
+        }
+        catch(e: any) {
+          // when file selection is changed, and cursor was previously set, "The source model is detached"
+          // will be thrown, though value of editor is correclty updated, ignore it for now and accept that
+          // cursor position can not be restored 
+          if (e.message === "The source model is detached") {
+            console.log("The source model is detached. Cursor was moved and cannot be set. Ignoring.");
+          }
+        }
+      }  
     }
   }
 
@@ -454,15 +510,28 @@ export default class FileEditor extends React.Component<FileEditorProps> {
   }
 
   setLocalSelection() {
-    const selection = this.editor.getSelection();
-    if (!selection?.isEmpty()) {
-      const start = this.editor.getModel()?.getOffsetAt(selection?.getStartPosition() as monaco.IPosition);
-      const end = this.editor.getModel()?.getOffsetAt(selection?.getEndPosition() as monaco.IPosition);
-      if (start !== undefined && end !== undefined) {
-        this.selectionReference.set({start, end});
+    // suppress setting of local selection when file is selected
+    if (!this.suppressChangeDetection) {
+      const selection = this.editor.getSelection();
+      if (!selection?.isEmpty()) {
+        const start = this.editor.getModel()?.getOffsetAt(selection?.getStartPosition() as monaco.IPosition);
+        const end = this.editor.getModel()?.getOffsetAt(selection?.getEndPosition() as monaco.IPosition);
+        if (start !== undefined && end !== undefined) {
+          try {
+            this.selectionReference.set({start, end});
+          }
+          catch(e: any) {
+            // when file selection is changed, and selection was previously set, "The source model is detached"
+            // will be thrown, though value of editor is correclty updated, ignore it for now and accept that
+            // selection position can not be restored 
+            if (e.message === "The source model is detached") {
+              console.log("The source model is detached. Previous selection in file cannot be set. Ignoring.");
+            }
+          }
+        }
+      } else if (this.selectionReference.isSet()) {
+        this.selectionReference.clear();
       }
-    } else if (this.selectionReference.isSet()) {
-      this.selectionReference.clear();
     }
   }
 
@@ -510,9 +579,6 @@ export default class FileEditor extends React.Component<FileEditorProps> {
     });
     this.cursorReference?.dispose();
 
-    // maybe remove this line to fix "The source model is detached" problem? Keep the domain and
-    // only open/create new models and disconnect only on componentWillUnmount etc.?
-    // disconnect from convergence server
     this.convergenceDomain?.disconnect();
     this.convergenceDomain?.dispose();
   }
@@ -529,11 +595,8 @@ export default class FileEditor extends React.Component<FileEditorProps> {
       return
     }
 
-    //const language = this.state.currentFileLanguage;
-    //let language = "python";
-    console.log("Starting language client for language: " + lspLanguage);
     if (lspLanguage !== "") {
-      console.log("Starting language client");
+      console.log("Starting language client for language: " + lspLanguage);
 
       const webSocket = createWebSocket('/environment/' + this.props.environment + '/languageserver/' + lspLanguage);
 
@@ -555,17 +618,6 @@ export default class FileEditor extends React.Component<FileEditorProps> {
                   // restore onmessage fn
                   webSocket.onmessage = defaultOnMessage;
 
-                  // const languageClient = createLanguageClient(connection);
-                  // const disposable = languageClient.start();
-                  // connection.onClose(() => {
-                  //   disposable.dispose()
-                  // });
-                  // // when changing tabs, warning "Language Client services have been overridden" can occur,
-                  // // websocket is closed too late
-                  // webSocket.onclose = (e) => {
-                  //   disposable.dispose();
-                  // }
-
                   const socket = toSocket(webSocket);
                   const reader = new WebSocketMessageReader(socket);
                   const writer = new WebSocketMessageWriter(socket);
@@ -574,9 +626,6 @@ export default class FileEditor extends React.Component<FileEditorProps> {
                       writer
                   });
                   this.languageClient.start();
-                  //languageClient.registerConfigurationFeatures();
-                  //languageClient.info("blub");
-                  reader.onClose(() => this.languageClient.stop());
               }
           }
       };
@@ -595,9 +644,13 @@ export default class FileEditor extends React.Component<FileEditorProps> {
           clientOptions: {
               // use a language id as a document selector
               documentSelector: [language],
-              workspaceFolder: {
-                uri: "file:///home/p4/"
-              },
+
+              // workspaceFolder already set globally, no need to set it again, would only
+              // be necessary if workspaceFolders should be different for each selected file
+              //workspaceFolder: {
+              //  uri: "file:///home/p4/"
+              //},
+
               // disable the default error handler
               errorHandler: {
                   error: () => ({ action: ErrorAction.Continue }),
@@ -608,7 +661,6 @@ export default class FileEditor extends React.Component<FileEditorProps> {
           // create a language client connection from the JSON RPC connection on demand
           connectionProvider: {
               get: () => {
-                  console.log("Getting transports " + transports);
                   return Promise.resolve(transports);
               }
           }
@@ -625,9 +677,47 @@ export default class FileEditor extends React.Component<FileEditorProps> {
     this.languageClient.stop();
   }
 
+  findCommonPathPrefix(strings: string[]): string {
+    let commonPrefix = "";
+    const stringA = strings[0];
+    // cycle thgouh remaining strings after the first and check for common prefix
+    strings.forEach((stringB) => {
+      let tempCommonPrefix = "";
+      const shortestLength = Math.min(stringA.length, stringB.length)
+      for (let length = 1; length < shortestLength; length++) {
+        const prefix = stringB.substring(0,length);
+        if (stringA.includes(prefix)) {
+          tempCommonPrefix = prefix;
+        }
+      }
+      // if commonPrefix was not already set
+      if (commonPrefix.length === 0) {
+        if (tempCommonPrefix.length > 0) {
+          commonPrefix = tempCommonPrefix;
+        } else {
+          // no common prefix
+          return "";
+        }
+      } else {
+        // if new tempCommonPrefix is now shorter -> update commonPrefix
+        if (tempCommonPrefix.length < commonPrefix.length) {
+          commonPrefix = tempCommonPrefix;
+        }
+      }
+    })
+    // remove training / or \ from commonPath
+    // \\ currently not used?
+    while(commonPrefix.endsWith("/") || commonPrefix.endsWith("\\")) {
+      commonPrefix = commonPrefix.slice(0,-1);
+    }
+    return commonPrefix;
+  }
+
   onChange(_value: string | undefined) {
-    this.environmentFiles[this.state.currentFile].fileChanged = true;
-    this.setState({currentFileChanged: true});
+    if (!this.suppressChangeDetection) {
+      this.environmentFiles[this.state.currentFile].fileChanged = true;
+      this.setState({currentFileChanged: true});  
+    }
   };
 
   async save(): Promise<void> {
@@ -740,7 +830,14 @@ export default class FileEditor extends React.Component<FileEditorProps> {
     const changeFile = (event: SelectChangeEvent) => {
       this.stopCollaborationServices();
       this.stopLanguageClient();
-      this.setState({currentFile: event.target.value});
+      this.setState({
+        currentFile: event.target.value,
+        currentFilePath: this.environmentFiles[event.target.value].fileLocation,
+        currentFileEditorLanguage: this.environmentFiles[event.target.value].editorLanguage,
+        currentFileLSPLanguage: this.environmentFiles[event.target.value].lspLanguage,
+        currentFileChanged: this.environmentFiles[event.target.value].fileChanged,
+        currentFileValue: this.environmentFiles[event.target.value].value,
+    });
       this.startCollaborationServices(this.group, event.target.value, this.environmentFiles[event.target.value].value)
       this.startLanguageClient(this.editor, selectLanguageForEndpoint(event.target.value).lspLanguage);
     }
@@ -776,7 +873,7 @@ export default class FileEditor extends React.Component<FileEditorProps> {
               Retrieve
             </Button>
           </ButtonGroup>
-          <CustomWidthTooltip title={"Path: " + this.state.currentFilePath + ", Language: " + this.state.currentFileLanguage} placement="top-start">
+          <CustomWidthTooltip title={"Path: " + this.state.currentFilePath + ", Language: " + this.state.currentFileLSPLanguage} placement="top-start">
             {/* onAnimationEnd to focus editor after changing selection and onTransitionEnd to focus editor after selecting the same entry */}
             <Select onChange={changeFile} onAnimationEnd={closeSelect} onTransitionEnd={closeSelect} sx={{ width: '100%' }} value={this.state.currentFile}>
               {this.props.files.map((fileName) => (
@@ -791,8 +888,8 @@ export default class FileEditor extends React.Component<FileEditorProps> {
           theme="vs-dark"
           options={monacoOptions}
           defaultValue={(this.environmentFiles[this.state.currentFile]?.value)}
-          defaultLanguage={this.environmentFiles[this.state.currentFile]?.language}
-          path={this.environmentFiles[this.state.currentFile]?.name}
+          defaultLanguage={this.environmentFiles[this.state.currentFile]?.editorLanguage}
+          path={this.environmentFiles[this.state.currentFile]?.fileLocation}
           onChange={this.onChange}
           beforeMount={this.editorWillMount}
           onMount={this.editorDidMount}          

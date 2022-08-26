@@ -59,6 +59,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
         stepNames: targetEnv.steps?.map((step) => step.name) ?? [],
         stepLabels: targetEnv.steps?.map((step) => step.label) ?? [],
         rootPath: targetEnv.rootPath,
+        workspaceFolders: targetEnv.workspaceFolders,
         useCollaboration: targetEnv.useCollaboration,
         useLanguageClient: targetEnv.useLanguageClient,
       });
