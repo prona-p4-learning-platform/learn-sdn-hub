@@ -2,7 +2,7 @@ import WebSocket from "ws";
 import P4Environment from "../P4Environment";
 
 export default function (
-  ws: WebSocket,
+  wsFromBrowser: WebSocket,
   environment: string,
   username: string,
   language: string
@@ -15,42 +15,44 @@ export default function (
     ])
       .then((result) => {
         const [port, ipAddress] = result;
-        const client = new WebSocket(
+        const wsToLanguageServer = new WebSocket(
           "ws://" + ipAddress + ":" + port + "/" + language
         );
-        client.on("open", () => {
-          ws.send("backend websocket ready");
-          ws.on("message", (data) => {
-            console.log(data);
-            client.send(data);
+        wsToLanguageServer.on("open", () => {
+          wsFromBrowser.send("backend websocket ready");
+          wsFromBrowser.on("message", (data) => {
+            console.log(data.toString());
+            wsToLanguageServer.send(data);
           });
-          client.on("message", (data) => {
-            console.log(data);
-            ws.send(data);
+          wsToLanguageServer.on("message", (data) => {
+            console.log(data.toString());
+            // apperently new vscode-ws-jsonrpc needs string and cannot handle a blob,
+            // otherwise exception from JSON.parse will be thrown
+            wsFromBrowser.send(data.toString());
           });
         });
-        client.on("error", (err) => {
+        wsToLanguageServer.on("error", (err) => {
           console.log(err);
-          ws.close();
+          wsFromBrowser.close();
         });
-        client.on("close", () => {
+        wsToLanguageServer.on("close", () => {
           console.log("LanguageServer Client closed...");
-          ws.close();
+          wsFromBrowser.close();
         });
-        ws.on("close", () => {
+        wsFromBrowser.on("close", () => {
           console.log("LanguageServer WebSocket closed...");
-          client.close();
+          wsToLanguageServer.close();
         });
       })
       .catch((err) => {
         console.log(err);
-        ws.send(
+        wsFromBrowser.send(
           "Could not connect to environment language server, closing connection."
         );
-        ws.close();
+        wsFromBrowser.close();
       });
   } else {
-    ws.send("No P4 environment found, closing connection.");
-    ws.close();
+    wsFromBrowser.send("No P4 environment found, closing connection.");
+    wsFromBrowser.close();
   }
 }

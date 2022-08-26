@@ -1,7 +1,6 @@
 import React from "react";
 import Grid from "@mui/material/Grid";
 import Terminal from "../components/Terminal";
-import EditorTabs from "../components/EditorTabs";
 import TerminalTabs from "../components/TerminalTabs";
 import { withRouter } from "react-router-dom";
 import { RouteComponentProps } from "react-router";
@@ -18,8 +17,7 @@ import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
-import P4Editor from "../components/P4Editor";
-import { Position } from "monaco-editor";
+import FileEditor from "../components/FileEditor";
 import Stepper from '@mui/material/Stepper';
 import Step from '@mui/material/Step';
 import StepButton from '@mui/material/StepButton';
@@ -37,20 +35,13 @@ export type TerminalStateType = {
   state: string;
 }
 
-type EditorStateType = {
-  endpoint: string;
-  code: string;
-  fileChanged: boolean;
-  filePath: string;
-  position: Position;
-}
-
 type StateType = {
   environmentStatus: string;
   errorMessage: string;
   ttyTabs: string[];
   ttys: string[][];
   files: string[];
+  filePaths: string[];
   assignment: string;
   environmentNotificationResult: string;
   environmentNotificationSeverity: Severity;
@@ -63,8 +54,11 @@ type StateType = {
   activeStep: number;
   stepsCompleted: boolean;
   terminalState: TerminalStateType[];
-  editorState: EditorStateType[];
   providerInstanceStatus: string;
+  rootPath: string;
+  workspaceFolders: string[];
+  useCollaboration: boolean;
+  useLanguageClient: boolean;
 }
 
 const Alert = React.forwardRef<HTMLDivElement, AlertProps>(function Alert(
@@ -85,9 +79,9 @@ export class EnvironmentView extends React.Component<PropsType,StateType> {
       ttyTabs: [],
       ttys: [],
       files: [],
+      filePaths: [],
       assignment: "",
       terminalState: [],
-      editorState: [],
       environmentNotificationResult: "",
       environmentNotificationSeverity: "info",
       environmentNotificationOpen: false,
@@ -98,11 +92,14 @@ export class EnvironmentView extends React.Component<PropsType,StateType> {
       stepLabels: [],
       activeStep: 0,
       stepsCompleted: false,
-      providerInstanceStatus: ""
+      providerInstanceStatus: "",
+      rootPath: "",
+      workspaceFolders: [],
+      useCollaboration: true,
+      useLanguageClient: true,
     };
     this.restartEnvironment = this.restartEnvironment.bind(this)
     this.storeTerminalState = this.storeTerminalState.bind(this)
-    this.storeEditorState = this.storeEditorState.bind(this)
   }
 
   componentDidMount(): void {
@@ -265,7 +262,17 @@ export class EnvironmentView extends React.Component<PropsType,StateType> {
       .then((response) => response.json())
       .then((data) => {
         if (data.error !== true) {
-          this.setState({ ttyTabs: data.ttyTabs, ttys: data.ttys, files: data.files, stepNames: data.stepNames, stepLabels: data.stepLabels });
+          this.setState({
+            ttyTabs: data.ttyTabs,
+            ttys: data.ttys,
+            files: data.files,
+            filePaths: data.filePaths,
+            stepNames: data.stepNames,
+            stepLabels: data.stepLabels,
+            rootPath: data.rootPath,
+            workspaceFolders: data.workspaceFolders,
+            useCollaboration: data.useCollaboration,
+            useLanguageClient: data.useLanguageClient });
         }
         if (this.state.stepLabels.length < 1) {
           this.setState({ stepsCompleted: true })
@@ -317,38 +324,6 @@ export class EnvironmentView extends React.Component<PropsType,StateType> {
     return this.state.terminalState.find(element => element.endpoint === endpoint)?.state;
   }
 
-  storeEditorState(endpoint: string, code: string, fileChanged: boolean, filePath: string, position: Position) {
-    // currently monaco does not support serialization, so only file content, change status, file path and cursor/scroll position is preserved on changing file tabs, 
-    // when reloading the entire page, changes will be lost however, this maybe also needs to be fixed for terminals, but it seams like a proper multi-session
-    // and/or collaboration handling for terminals and editors will address this/would be more appropriate
-    this.setState((prevState) => {
-      const newEditorState: EditorStateType = {
-        endpoint: endpoint,
-        code: code,
-        fileChanged: fileChanged,
-        filePath: filePath,
-        position: position
-      };
-      const endpointIndex = prevState.editorState.findIndex(element => element.endpoint === endpoint);
-      if ( endpointIndex === -1 ) {
-        const addedEditorState = [...prevState.editorState, newEditorState];
-        return {
-          editorState: addedEditorState
-        }
-      } else {
-        let changedEditorState = [...prevState.editorState]
-        changedEditorState[endpointIndex] = newEditorState;
-        return {
-          editorState: changedEditorState
-        }
-      }
-    })
-  }
-
-  getEditorState(endpoint: string): EditorStateType | undefined {
-    return this.state.editorState.find(element => element.endpoint === endpoint);
-  }
-
   componentDidUpdate() {
     mermaid.init(document.querySelectorAll('code.language-mermaid'))
   }
@@ -359,11 +334,6 @@ export class EnvironmentView extends React.Component<PropsType,StateType> {
           <Terminal key={alias} wsEndpoint={`/environment/${this.props.match.params.environment}/type/${alias}`}
             terminalState={this.getTerminalState(`/environment/${this.props.match.params.environment}/type/${alias}`)} onTerminalUnmount={this.storeTerminalState} />
       )
-    );
-
-    const editors = this.state.files.map((fileAlias: string) =>
-      <P4Editor key={fileAlias} endpoint={`/api/environment/${this.props.match.params.environment}/file/${fileAlias}`} 
-        editorState={this.getEditorState(`/api/environment/${this.props.match.params.environment}/file/${fileAlias}`)} onEditorUnmount={this.storeEditorState} />
     );
 
     const handleEnvironmentNotificationClose = () => {
@@ -463,7 +433,20 @@ export class EnvironmentView extends React.Component<PropsType,StateType> {
             </TabControl>
           </Grid>
           <Grid item xs={6}>
-            <EditorTabs tabNames={this.state.files}>{editors}</EditorTabs>
+            { this.state.files.length > 0
+            ?
+              <FileEditor
+                files={this.state.files}
+                filePaths={this.state.filePaths}
+                environment={this.props.match.params.environment}
+                rootPath={this.state.rootPath}
+                workspaceFolders={this.state.workspaceFolders}
+                useCollaboration={this.state.useCollaboration}
+                useLanguageClient={this.state.useLanguageClient}
+              />
+            :
+              <Typography>Fetching files to initialize editor...</Typography>
+            }
           </Grid>
         </Grid>
         { /* TODO evaluate, e.g., notistack (https://github.com/iamhosseindhv/notistack) to show stacked version of multiple lines with PASSED/FAILED tests */ }

@@ -21,6 +21,7 @@ const theme = createTheme();
 
 interface AppState {
   username: string;
+  groupNumber: number;
   authenticated: boolean;
 }
 export default class App extends React.Component {
@@ -29,6 +30,7 @@ export default class App extends React.Component {
     super(props);
     this.state = {
       username: "",
+      groupNumber: 0,
       authenticated: false,
     };
 
@@ -38,18 +40,23 @@ export default class App extends React.Component {
     if (localStorage.getItem("username") !== null) {
       this.state.username = localStorage.getItem("username") as string
     }    
+    if (localStorage.getItem("group") !== null) {
+      this.state.groupNumber = parseInt(localStorage.getItem("group") ?? "0")
+    }
   }
 
-  handleUserLogin(token: string, username: string): void {
-    this.setState({ username, authenticated: true });
+  handleUserLogin(token: string, username: string, groupNumber: number): void {
+    this.setState({ username, groupNumber, authenticated: true });
     localStorage.setItem("token", token);
     localStorage.setItem("username", username);
+    localStorage.setItem("group", groupNumber.toString())
   }
 
   handleUserLogout(username: string | null): void {
-    this.setState({ username, authenticated: false });
+    this.setState({ username, groupNumber: 0, authenticated: false });
     localStorage.removeItem("token");
     localStorage.removeItem("username");
+    localStorage.removeItem("group");
     window.location.reload();
   }
 
@@ -67,7 +74,7 @@ export default class App extends React.Component {
               <Typography variant="h6">
                 {this.state.authenticated === false
                     ? "Not logged in"
-                    : `Logged in as ${this.state.username}`}
+                    : `Logged in as ${this.state.username} (group: ${this.state.groupNumber})`}
               </Typography>
               <Button color="inherit" href={`/assignments`}>
                 Assignments
@@ -79,8 +86,8 @@ export default class App extends React.Component {
           </AppBar>
           <Route exact path="/">
            <Home
-              onUserLogin={(token, username) =>
-                this.handleUserLogin(token, username)
+              onUserLogin={(token, username, groupNumber) =>
+                this.handleUserLogin(token, username, groupNumber)
               }
             />
           </Route>

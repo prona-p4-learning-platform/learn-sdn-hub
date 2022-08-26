@@ -17,7 +17,7 @@ export default function selectLanguageForEndpoint(endpoint: string) : MonacoLang
     }
     case 'py': {
         editorLanguage = lspLanguage = "python";
-        break;    
+        break;
     }
     case 'json': {
       editorLanguage = "json";

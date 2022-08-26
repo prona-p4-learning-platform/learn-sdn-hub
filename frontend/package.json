@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@codingame/monaco-jsonrpc": "^0.3.1",
+    "@convergence/color-assigner": "^0.3.0",
+    "@convergence/convergence": "^1.0.0-rc.12",
+    "@convergencelabs/monaco-collab-ext": "^0.3.2",
     "@emotion/react": "^11.9.0",
     "@emotion/styled": "^11.8.1",
     "@monaco-editor/react": "^4.4.5",
@@ -18,16 +20,21 @@
     "@types/react": "^18.0.9",
     "@types/react-dom": "^18.0.4",
     "@types/react-router-dom": "^5.3.3",
+    "do_username": "^0.0.2",
     "fontsource-roboto": "^4.0.0",
     "mermaid": "^9.1.1",
     "monaco-editor": "^0.33.0",
-    "monaco-editor-workers": "^0.33.0-next.3",
-    "monaco-languageclient": "^0.19.0-next.1",
+    "monaco-editor-webpack-plugin": "^7.0.1",
+    "monaco-editor-workers": "^0.33.0",
+    "monaco-languageclient": "^2.1.0",
+    "path": "^0.12.7",
     "react": "^18.1.0",
     "react-dom": "^18.1.0",
     "react-markdown": "^8.0.3",
     "react-router-dom": "^5.3.2",
-    "typescript": "^4.6.4",
+    "react-scripts": "5.0.1",
+    "typescript": "^4.7.4",
+    "vscode-ws-jsonrpc": "^1.0.2",
     "web-vitals": "^2.1.4",
     "xterm": "^4.18.0",
     "xterm-addon-attach": "^0.6.0",
@@ -37,16 +44,17 @@
   "devDependencies": {
     "@svgr/webpack": "^6.2.1",
     "nth-check": "^2.1.1",
+    "react-app-rewired": "^2.2.1",
     "react-scripts": "5.0.1"
   },
   "overrides": {
     "@svgr/webpack": "$@svgr/webpack",
     "nth-check": "$nth-check"
-  },  
+  },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
+    "start": "react-app-rewired start",
+    "build": "react-app-rewired build",
+    "test": "react-app-rewired test",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {

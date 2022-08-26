@@ -31,6 +31,7 @@ test("calls next() if a proper token was passed", () => {
       username: "testuser",
       id: "testid",
     },
+    /* replace secret */
     "some-secret"
   );
   AuthenticationMiddleware(

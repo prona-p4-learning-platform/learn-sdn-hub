@@ -182,8 +182,7 @@ environments.set("python-test", {
   ],
   editableFiles: [
     {
-      absFilePath:
-        "/home/p4/p4-boilerplate/Example3-LearningSwitch/learning_switch_controller_app.py",
+      absFilePath: "/home/p4/p4-boilerplate/Example0-SDN-Intro/OpenFlowApp.py",
       alias: "test1.py",
     },
     {
@@ -208,6 +207,13 @@ environments.set("python-test", {
   ],
   description: "python-test description",
   assignmentLabSheet: "../assignments/prona-learningswitch.md",
+  rootPath: "/home/p4/",
+  workspaceFolders: [
+    "/home/p4/p4-boilerplate/Example3-LearningSwitch/",
+    "/home/p4/p4-boilerplate/Example0-SDN-Intro/",
+  ],
+  useCollaboration: true,
+  useLanguageClient: true,
 });
 
 environments.set("Example0-SDN-Intro", {
@@ -452,6 +458,10 @@ environments.set("Example3-LearningSwitch", {
     {
       absFilePath: "/home/p4/p4-boilerplate/Example3-LearningSwitch/p4app.json",
       alias: "p4app.json",
+    },
+    {
+      absFilePath: "/home/p4/tutorials/exercises/basic/basic.p4",
+      alias: "basic.p4",
     },
   ],
   stopCommands: [
