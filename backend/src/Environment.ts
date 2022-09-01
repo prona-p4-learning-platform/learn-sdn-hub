@@ -7,12 +7,12 @@ import {
 } from "./providers/Provider";
 import { Persister } from "./database/Persister";
 
-interface AliasedFile {
+export interface AliasedFile {
   absFilePath: string;
   alias: string;
 }
 
-interface Task {
+export interface Task {
   executable: string;
   cwd: string;
   params: Array<string>;
@@ -20,7 +20,7 @@ interface Task {
   name: string;
 }
 
-interface AssignmentStep {
+export interface AssignmentStep {
   name: string;
   label: string;
   tests: Array<AssignmentStepTestType>;
@@ -81,21 +81,15 @@ export interface EnvironmentDescription {
   useLanguageClient?: boolean;
 }
 
-export interface P4EnvironmentResult {
-  consoleEndpoints: Array<string>;
-  p4fileEndpoints: Array<string>;
-}
-
 const DenyStartOfMissingInstanceErrorMessage =
   "Instance not found and explicitly told not to create a new instance.";
 
-// refactor class name? Not only focussing P4 anymore?
-export default class P4Environment {
+export default class Environment {
   private activeConsoles: Map<string, Console>;
   private editableFiles: Map<string, string>;
   private configuration: EnvironmentDescription;
   private environmentId: string;
-  private static activeEnvironments = new Map<string, P4Environment>();
+  private static activeEnvironments = new Map<string, Environment>();
   private environmentProvider: InstanceProvider;
   private persister: Persister;
   private username: string;
@@ -105,16 +99,16 @@ export default class P4Environment {
   public static getActiveEnvironment(
     environmentId: string,
     username: string
-  ): P4Environment {
-    return P4Environment.activeEnvironments.get(`${username}-${environmentId}`);
+  ): Environment {
+    return Environment.activeEnvironments.get(`${username}-${environmentId}`);
   }
 
   public static getDeployedUserEnvironmentList(
     username: string
   ): Array<string> {
     const deployedEnvironmentsForUser: Array<string> = new Array<string>();
-    P4Environment.activeEnvironments.forEach(
-      (value: P4Environment, key: string) => {
+    Environment.activeEnvironments.forEach(
+      (value: Environment, key: string) => {
         if (value.username === username)
           deployedEnvironmentsForUser.push(key.split("-").slice(1).join("-"));
       }
@@ -126,8 +120,8 @@ export default class P4Environment {
     groupNumber: number
   ): Array<string> {
     const deployedEnvironmentsForGroup: Array<string> = new Array<string>();
-    P4Environment.activeEnvironments.forEach(
-      async (value: P4Environment, key: string) => {
+    Environment.activeEnvironments.forEach(
+      async (value: Environment, key: string) => {
         if (value.groupNumber == groupNumber) {
           deployedEnvironmentsForGroup.push(key.split("-").slice(1).join("-"));
         }
@@ -177,9 +171,9 @@ export default class P4Environment {
     env: EnvironmentDescription,
     provider: InstanceProvider,
     persister: Persister
-  ): Promise<P4Environment> {
-    return new Promise<P4Environment>(async (resolve, reject) => {
-      const environment = new P4Environment(
+  ): Promise<Environment> {
+    return new Promise<Environment>(async (resolve, reject) => {
+      const environment = new Environment(
         username,
         groupNumber,
         environmentId,
@@ -190,8 +184,8 @@ export default class P4Environment {
       console.log(
         "Creating new environment: " + environmentId + " for user: " + username
       );
-      const activeEnvironmentsForGroup = Array<P4Environment>();
-      P4Environment.activeEnvironments.forEach((environment: P4Environment) => {
+      const activeEnvironmentsForGroup = Array<Environment>();
+      Environment.activeEnvironments.forEach((environment: Environment) => {
         if (environment.groupNumber === groupNumber) {
           if (environment.environmentId !== environmentId) {
             throw Error(
@@ -206,14 +200,14 @@ export default class P4Environment {
         environment
           .start(env, true)
           .then(() => {
-            P4Environment.activeEnvironments.set(
+            Environment.activeEnvironments.set(
               `${username}-${environmentId}`,
               environment
             );
             return resolve(environment);
           })
           .catch((err) => {
-            P4Environment.activeEnvironments.delete(
+            Environment.activeEnvironments.delete(
               `${username}-${environmentId}`
             );
             return reject(new Error("Start of environment failed." + err));
@@ -255,14 +249,14 @@ export default class P4Environment {
         environment
           .start(env, false)
           .then(() => {
-            P4Environment.activeEnvironments.set(
+            Environment.activeEnvironments.set(
               `${username}-${environmentId}`,
               environment
             );
             return resolve(environment);
           })
           .catch((err) => {
-            P4Environment.activeEnvironments.delete(
+            Environment.activeEnvironments.delete(
               `${username}-${environmentId}`
             );
             return reject(
@@ -279,12 +273,19 @@ export default class P4Environment {
   ): Promise<boolean> {
     return new Promise<boolean>((resolve, reject) => {
       const environment = this.getActiveEnvironment(environmentId, username);
+      const groupNumber = environment.groupNumber;
       environment
         .stop()
         .then(() => {
-          P4Environment.activeEnvironments.delete(
-            `${username}-${environmentId}`
-          );
+          Environment.activeEnvironments.delete(`${username}-${environmentId}`);
+          // search for other activeEnvironments in the same group
+          Environment.activeEnvironments.forEach((env: Environment) => {
+            if (env.groupNumber === groupNumber && env.username != username) {
+              Environment.activeEnvironments.delete(
+                `${env.username}-${env.environmentId}`
+              );
+            }
+          });
           return resolve(true);
         })
         .catch((err) => {
@@ -292,15 +293,54 @@ export default class P4Environment {
             console.log(
               "Environment was already stopped. Silently deleting leftovers in user session."
             );
-            P4Environment.activeEnvironments.delete(
+            Environment.activeEnvironments.delete(
               `${username}-${environmentId}`
             );
+            // search for other activeEnvironments in the same group
+            Environment.activeEnvironments.forEach((env: Environment) => {
+              if (env.groupNumber === groupNumber && env.username != username) {
+                Environment.activeEnvironments.delete(
+                  `${env.username}-${env.environmentId}`
+                );
+              }
+            });
             return resolve(true);
           } else {
             console.log("Failed to stop environment. " + JSON.stringify(err));
             return reject(false);
           }
         });
+    });
+  }
+
+  static async deleteInstanceEnvironments(instance: string): Promise<boolean> {
+    return new Promise<boolean>((resolve) => {
+      this.activeEnvironments.forEach((env) => {
+        env.environmentProvider
+          .getServer(instance)
+          .then(() => {
+            // the environment uses the specified instance and should be deleted
+            this.deleteEnvironment(env.username, env.environmentId).then(
+              (result) => {
+                if (!result) {
+                  // unable to delete environment
+                  throw new Error(
+                    "Environment used by instance " +
+                      instance +
+                      " could not be deleted."
+                  );
+                }
+              }
+            );
+          })
+          .catch((err) => {
+            // if instance was not found, ignore it and search instance in the other active environments
+            if (err.message !== InstanceNotFoundErrorMessage) {
+              throw err;
+            }
+          });
+      });
+      return resolve(true);
     });
   }
 
@@ -492,101 +532,108 @@ export default class P4Environment {
         }
         this.filehandler.close();
 
-        let isEnvironmentUsedByOtherUserInGroup = false;
-        P4Environment.activeEnvironments.forEach((value: P4Environment) => {
+        // close consoles of other users in group
+        const activeUsers = new Array<string>();
+        Environment.activeEnvironments.forEach((env: Environment) => {
           if (
-            value.groupNumber === this.groupNumber &&
-            value.username != this.username
-          )
-            isEnvironmentUsedByOtherUserInGroup = true;
-        });
-        if (!isEnvironmentUsedByOtherUserInGroup) {
-          for (const command of this.configuration.stopCommands) {
-            let stopCmdFinished = false;
-            await new Promise<void>((stopCmdSuccess, stopCmdFail) => {
-              global.console.log(
-                "Executing stop command: ",
-                JSON.stringify(command),
-                JSON.stringify(endpoint)
-              );
-              const console = new SSHConsole(
+            env.groupNumber === this.groupNumber &&
+            env.username != this.username
+          ) {
+            activeUsers.push(env.username);
+            for (const console of this.activeConsoles) {
+              console[1].close(
                 this.environmentId,
-                this.username,
-                this.groupNumber,
-                endpoint.IPAddress,
-                endpoint.SSHPort,
-                command.executable,
-                command.params,
-                command.cwd,
-                command.provideTty
+                env.username,
+                this.groupNumber
               );
-              console.on("finished", async (code: string, signal: string) => {
-                global.console.log(
-                  "OUTPUT: " +
-                    console.stdout +
-                    "(exit code: " +
-                    code +
-                    ", signal: " +
-                    signal +
-                    ")"
-                );
-                stopCmdFinished = true;
-                console.emit("closed");
-              });
-              console.on("closed", () => {
-                if (stopCmdFinished === true) {
-                  stopCmdSuccess();
-                } else {
-                  global.console.log("Stop command failed.");
-                  stopCmdFail();
-                }
-              });
-            });
+            }
           }
+        });
+        for (const command of this.configuration.stopCommands) {
+          let stopCmdFinished = false;
+          await new Promise<void>((stopCmdSuccess, stopCmdFail) => {
+            global.console.log(
+              "Executing stop command: ",
+              JSON.stringify(command),
+              JSON.stringify(endpoint)
+            );
+            const console = new SSHConsole(
+              this.environmentId,
+              this.username,
+              this.groupNumber,
+              endpoint.IPAddress,
+              endpoint.SSHPort,
+              command.executable,
+              command.params,
+              command.cwd,
+              command.provideTty
+            );
+            console.on("finished", async (code: string, signal: string) => {
+              global.console.log(
+                "OUTPUT: " +
+                  console.stdout +
+                  "(exit code: " +
+                  code +
+                  ", signal: " +
+                  signal +
+                  ")"
+              );
+              stopCmdFinished = true;
+              console.emit("closed");
+            });
+            console.on("closed", () => {
+              if (stopCmdFinished === true) {
+                stopCmdSuccess();
+              } else {
+                global.console.log("Stop command failed.");
+                stopCmdFail();
+              }
+            });
+          });
+        }
 
-          this.environmentProvider
-            .deleteServer(endpoint.instance)
-            .then(() => {
+        this.environmentProvider
+          .deleteServer(endpoint.instance)
+          .then(() => {
+            this.persister
+              .RemoveUserEnvironment(this.username, this.environmentId)
+              .then(() => {
+                return resolve();
+              })
+              .catch((err) => {
+                return reject(
+                  new Error("Error: Unable to remove UserEnvironment." + err)
+                );
+              });
+            activeUsers.forEach((user: string) => {
               this.persister
-                .RemoveUserEnvironment(this.username, this.environmentId)
+                .RemoveUserEnvironment(user, this.environmentId)
                 .then(() => {
                   return resolve();
                 })
                 .catch((err) => {
                   return reject(
-                    new Error("Error: Unable to remove UserEnvironment." + err)
+                    new Error(
+                      "Error: Unable to remove UserEnvironment for group member " +
+                        user +
+                        "." +
+                        err
+                    )
                   );
                 });
-            })
-            .catch((err) => {
-              if (err.message === InstanceNotFoundErrorMessage) {
-                // OpenStack instance already gone
-                global.console.log(
-                  "Error: Server Instance not found during deletion?"
-                );
-              } else {
-                global.console.log(err);
-                return reject(
-                  new Error("Error: Unable to delete server." + err)
-                );
-              }
             });
-        } else {
-          console.log(
-            "Other users in the same group still use this environment. Skipping executing of stop commands."
-          );
-          this.persister
-            .RemoveUserEnvironment(this.username, this.environmentId)
-            .then(() => {
-              return resolve();
-            })
-            .catch((err) => {
-              return reject(
-                new Error("Error: Unable to remove UserEnvironment." + err)
+          })
+          .catch((err) => {
+            if (err.message === InstanceNotFoundErrorMessage) {
+              // instance already gone (e.g., OpenStack instance already deleted)
+              global.console.log(
+                "Error: Server Instance not found during deletion?"
               );
-            });
-          return resolve();
-        }
+            } else {
+              global.console.log(err);
+              return reject(new Error("Error: Unable to delete server." + err));
+            }
+          });
       } catch (err) {
         if (err.message == InstanceNotFoundErrorMessage) {
           return resolve();
@@ -646,7 +693,7 @@ export default class P4Environment {
     }
 
     console.log("Stop commands finished...");
-    P4Environment.activeEnvironments.forEach((value: P4Environment) => {
+    Environment.activeEnvironments.forEach((value: Environment) => {
       if (value.groupNumber === this.groupNumber) {
         console.log("Found group env " + value.environmentId + "...");
         const terminal = value.getConsoles();

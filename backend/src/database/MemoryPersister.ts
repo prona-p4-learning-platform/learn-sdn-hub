@@ -5,7 +5,7 @@ import {
   TerminalStateType,
   Submission,
   SubmissionFileType,
-} from "../P4Environment";
+} from "../Environment";
 
 const userEnvironments: Map<string, Map<string, UserEnvironment>> = new Map();
 export default class MemoryPersister implements Persister {

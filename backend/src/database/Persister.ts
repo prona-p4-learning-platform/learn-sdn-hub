@@ -2,7 +2,7 @@ import {
   Submission,
   SubmissionFileType,
   TerminalStateType,
-} from "../P4Environment";
+} from "../Environment";
 
 export interface UserAccount {
   _id: string;

@@ -6,6 +6,7 @@ import {
 import axios, { AxiosInstance } from "axios";
 import { Client } from "ssh2";
 import { ToadScheduler, SimpleIntervalJob, AsyncTask } from "toad-scheduler";
+import Environment from "../Environment";
 
 const defaultAxiosTimeout = 30000;
 const schedulerIntervalSeconds = 5 * 60;
@@ -654,7 +655,7 @@ export default class OpenStackProvider implements InstanceProvider {
                         timestampCreated +
                         "and should be deleted"
                     );
-                    providerInstance.deleteServer(server.id);
+                    Environment.deleteInstanceEnvironments(server.id);
                   }
                 }
               }

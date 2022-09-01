@@ -3,7 +3,7 @@ import {
   AuthenticationResult,
 } from "./AuthenticationProvider";
 import MongoDBPersister from "../database/MongoDBPersister";
-import { EnvironmentDescription } from "../P4Environment";
+import { EnvironmentDescription } from "../Environment";
 
 /*
 Example users.json: 

@@ -252,6 +252,10 @@ export default function AssignmentOverview(props: AssignmentOverviewProps) {
             <DialogContentText id="alert-dialog-undeploy-confirmation-description">
               Undeploy environment?<br/>
               All processes and unsubmitted changes will be lost.<br/>
+              { deployedGroupAssignments.length > 0 ? 
+                'Other users in your group are still using the environment,' +
+                'they will also be disconnected.' : ''
+              }
             </DialogContentText>
           </DialogContent>
           <DialogActions>
@@ -266,10 +270,10 @@ export default function AssignmentOverview(props: AssignmentOverviewProps) {
         <Dialog
           open={confirmationResubmitDialogOpen.dialogOpen}
           onClose={handleConfirmationResubmitDialogClose}
-          aria-describedby="alert-dialog-undeploy-confirmation-description"
+          aria-describedby="alert-dialog-resubmit-confirmation-description"
         >
           <DialogContent>
-            <DialogContentText id="alert-dialog-undeploy-confirmation-description">
+            <DialogContentText id="alert-dialog-resubmit-confirmation-description">
               You or your group already submitted a result for this assignment.<br/>
               Do you really want to deploy this assignment again?
             </DialogContentText>

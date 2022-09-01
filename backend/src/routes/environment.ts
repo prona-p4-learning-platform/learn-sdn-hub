@@ -1,5 +1,10 @@
 import { Router, Request, RequestHandler } from "express";
-import P4Environment, { Submission } from "../P4Environment";
+import Environment, {
+  Submission,
+  AliasedFile,
+  Task,
+  AssignmentStep,
+} from "../Environment";
 import bodyParser from "body-parser";
 import environments from "../Configuration";
 import { InstanceProvider } from "../providers/Provider";
@@ -45,19 +50,25 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
           .json({ error: true, message: "Environment not found" });
       }
       return res.status(200).json({
-        files: targetEnv.editableFiles.map((file) => file.alias),
-        filePaths: targetEnv.editableFiles.map((file) => file.absFilePath),
+        files: targetEnv.editableFiles.map((file: AliasedFile) => file.alias),
+        filePaths: targetEnv.editableFiles.map(
+          (file: AliasedFile) => file.absFilePath
+        ),
         // first task in array of tasks will define the tab
         ttyTabs: targetEnv.tasks
-          .filter((subtasks) => subtasks[0].provideTty === true)
-          .map((subtask) => subtask[0].name),
+          .filter((subtasks: Task[]) => subtasks[0].provideTty === true)
+          .map((subtask: Task[]) => subtask[0].name),
         ttys: targetEnv.tasks
-          .filter((subtasks) =>
-            subtasks.filter((task) => task.provideTty === true)
+          .filter((subtasks: Task[]) =>
+            subtasks.filter((task: Task) => task.provideTty === true)
           )
-          .map((subtasks) => subtasks.map((subtask) => subtask.name)),
-        stepNames: targetEnv.steps?.map((step) => step.name) ?? [],
-        stepLabels: targetEnv.steps?.map((step) => step.label) ?? [],
+          .map((subtasks: Task[]) =>
+            subtasks.map((subtask: Task) => subtask.name)
+          ),
+        stepNames:
+          targetEnv.steps?.map((step: AssignmentStep) => step.name) ?? [],
+        stepLabels:
+          targetEnv.steps?.map((step: AssignmentStep) => step.label) ?? [],
         rootPath: targetEnv.rootPath,
         workspaceFolders: targetEnv.workspaceFolders,
         useCollaboration: targetEnv.useCollaboration,
@@ -82,7 +93,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
       let markdown;
       // if assignmentLabSheetLocation specified as "instance", get lab sheet from instance filesystem
       if (targetEnv.assignmentLabSheetLocation === "instance") {
-        const env = P4Environment.getActiveEnvironment(
+        const env = Environment.getActiveEnvironment(
           req.params.environment,
           req.user.username
         );
@@ -108,7 +119,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
           .status(404)
           .json({ error: true, message: "Environment not found" });
       }
-      P4Environment.createEnvironment(
+      Environment.createEnvironment(
         req.user.username,
         req.user.groupNumber,
         String(environment),
@@ -138,7 +149,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
           .status(404)
           .json({ error: true, message: "Environment not found" });
       }
-      P4Environment.deleteEnvironment(req.user.username, String(environment))
+      Environment.deleteEnvironment(req.user.username, String(environment))
         .then((deleted) => {
           if (deleted === true) {
             res.status(200).json();
@@ -164,7 +175,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
     authenticationMiddleware,
     fileWithAliasValidator,
     (req: RequestWithUser, res) => {
-      const env = P4Environment.getActiveEnvironment(
+      const env = Environment.getActiveEnvironment(
         req.params.environment,
         req.user.username
       );
@@ -190,7 +201,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
     authenticationMiddleware,
     fileWithAliasValidator,
     (req: RequestWithUser, res) => {
-      const env = P4Environment.getActiveEnvironment(
+      const env = Environment.getActiveEnvironment(
         req.params.environment,
         req.user.username
       );
@@ -208,7 +219,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
     authenticationMiddleware,
     environmentPathParamValidator,
     (req: RequestWithUser, res) => {
-      const env = P4Environment.getActiveEnvironment(
+      const env = Environment.getActiveEnvironment(
         req.params.environment,
         req.user.username
       );
@@ -231,7 +242,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
     authenticationMiddleware,
     environmentPathParamValidator,
     (req: RequestWithUser, res) => {
-      const env = P4Environment.getActiveEnvironment(
+      const env = Environment.getActiveEnvironment(
         req.params.environment,
         req.user.username
       );
@@ -256,7 +267,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
     authenticationMiddleware,
     environmentPathParamValidator,
     (req: RequestWithUser, res) => {
-      const env = P4Environment.getActiveEnvironment(
+      const env = Environment.getActiveEnvironment(
         req.params.environment,
         req.user.username
       );
@@ -279,7 +290,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
     "/deployed-user-environments",
     authenticationMiddleware,
     (req: RequestWithUser, res) => {
-      const deployedEnvList = P4Environment.getDeployedUserEnvironmentList(
+      const deployedEnvList = Environment.getDeployedUserEnvironmentList(
         req.user.username
       );
       return res.status(200).json(Array.from(deployedEnvList));
@@ -290,7 +301,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
     "/deployed-group-environments",
     authenticationMiddleware,
     (req: RequestWithUser, res) => {
-      const deployedEndpList = P4Environment.getDeployedGroupEnvironmentList(
+      const deployedEndpList = Environment.getDeployedGroupEnvironmentList(
         req.user.groupNumber
       );
       return res.status(200).json(Array.from(deployedEndpList));
@@ -301,7 +312,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
     "/submissions",
     authenticationMiddleware,
     async (req: RequestWithUser, res) => {
-      const submittedEnvList = await P4Environment.getUserSubmissions(
+      const submittedEnvList = await Environment.getUserSubmissions(
         persister,
         req.user.username,
         req.user.groupNumber
@@ -317,7 +328,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
     authenticationMiddleware,
     environmentPathParamValidator,
     (req: RequestWithUser, res) => {
-      const env = P4Environment.getActiveEnvironment(
+      const env = Environment.getActiveEnvironment(
         req.params.environment,
         req.user.username
       );

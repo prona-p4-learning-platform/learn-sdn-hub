@@ -1,4 +1,4 @@
-import { EnvironmentDescription } from "./P4Environment";
+import { EnvironmentDescription } from "./Environment";
 
 const environments = new Map<string, EnvironmentDescription>();
 
