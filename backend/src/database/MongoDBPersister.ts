@@ -4,7 +4,7 @@ import {
   Submission,
   SubmissionFileType,
   TerminalStateType,
-} from "../P4Environment";
+} from "../Environment";
 
 interface SubmissionEntry {
   username: string;
@@ -91,7 +91,6 @@ export default class MongoDBPersister implements Persister {
       .then(() => undefined);
   }
 
-  // TODO: currently stores files locally, maybe also store them in mongodb? or otherwise use shared function for a all persisters for that?
   async SubmitUserEnvironment(
     username: string,
     groupNumber: number,
@@ -167,7 +166,6 @@ export default class MongoDBPersister implements Persister {
     });
   }
 
-  // TODO: currently stores files locally, maybe also store them in mongodb? or otherwise use shared function for a all persisters for that?
   async GetUserSubmissions(
     username: string,
     groupNumber: number

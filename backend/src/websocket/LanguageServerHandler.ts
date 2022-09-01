@@ -1,5 +1,5 @@
 import WebSocket from "ws";
-import P4Environment from "../P4Environment";
+import Environment from "../Environment";
 
 export default function (
   wsFromBrowser: WebSocket,
@@ -7,7 +7,7 @@ export default function (
   username: string,
   language: string
 ): void {
-  const envInstance = P4Environment.getActiveEnvironment(environment, username);
+  const envInstance = Environment.getActiveEnvironment(environment, username);
   if (envInstance !== undefined) {
     Promise.all([
       envInstance.getLanguageServerPort(),

@@ -6,8 +6,9 @@ import {
 import Dockerode from "dockerode";
 import { ToadScheduler, SimpleIntervalJob, AsyncTask } from "toad-scheduler";
 import { Client } from "ssh2";
+import Environment from "../Environment";
 
-const schedulerIntervalSeconds = 10;
+const schedulerIntervalSeconds = 5 * 60;
 
 export default class DockerProvider implements InstanceProvider {
   // Docker config
@@ -361,7 +362,7 @@ export default class DockerProvider implements InstanceProvider {
                   timestampCreated +
                   "and should be deleted"
               );
-              providerInstance.deleteServer(container.Id);
+              Environment.deleteInstanceEnvironments(container.Id);
             }
           }
         });

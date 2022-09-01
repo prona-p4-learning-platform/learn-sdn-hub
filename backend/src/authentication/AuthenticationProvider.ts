@@ -1,4 +1,4 @@
-import { EnvironmentDescription } from "../P4Environment";
+import { EnvironmentDescription } from "../Environment";
 
 export interface AuthenticationResult {
   type: string;
