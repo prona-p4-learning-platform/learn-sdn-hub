@@ -16,4 +16,10 @@ export interface AuthenticationProvider {
     username: string,
     assignmentMap: Map<string, EnvironmentDescription>
   ): Promise<Map<string, EnvironmentDescription>>;
+  changePassword(
+    username: string,
+    oldPassword: string,
+    newPassword: string,
+    confirmNewPassword: string
+  ): Promise<void>;
 }

@@ -68,5 +68,34 @@ export default (authProviders: AuthenticationProvider[]): Router => {
       return res.status(401).json({ error: "Not authenticated." });
     }
   );
+
+  router.post(
+    "/changePassword",
+    authenticationMiddleware,
+    bodyParser.json() as RequestHandler,
+    async (req: RequestWithUser, res) => {
+      const oldPassword = req.body.oldPassword;
+      const newPassword = req.body.newPassword;
+      const confirmNewPassword = req.body.confirmNewPassword;
+      const loggedInUser = req.user.username;
+
+      for (const authProvider of authProviders) {
+        authProvider
+          .changePassword(
+            loggedInUser,
+            oldPassword,
+            newPassword,
+            confirmNewPassword
+          )
+          .catch((err) => {
+            console.log("error!", err);
+            return res.status(500).json();
+          })
+          .then(() => {
+            return res.status(200).json();
+          });
+      }
+    }
+  );
   return router;
 };
