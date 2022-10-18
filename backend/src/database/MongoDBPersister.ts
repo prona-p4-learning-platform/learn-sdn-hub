@@ -42,6 +42,18 @@ export default class MongoDBPersister implements Persister {
     return client.db().collection("users").findOne({ username });
   }
 
+  async ChangeUserPassword(
+    username: string,
+    password: string
+  ): Promise<UserAccount> {
+    const client = await this.getClient();
+    return client
+      .db()
+      .collection("users")
+      .findOneAndUpdate({ username }, { $set: { password } })
+      .then(() => undefined);
+  }
+
   async GetUserEnvironments(username: string): Promise<UserEnvironment[]> {
     const client = await this.getClient();
     return client

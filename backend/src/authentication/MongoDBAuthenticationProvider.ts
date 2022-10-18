@@ -41,6 +41,25 @@ export default class MongoDBAuthenticationProvider
     throw new Error("AuthenticationError");
   }
 
+  async changePassword(
+    username: string,
+    oldPassword: string,
+    newPassword: string,
+    confirmNewPassword: string
+  ): Promise<void> {
+    const user = await this.persister.GetUserAccount(username);
+    if (
+      newPassword.length !== 0 &&
+      user.password === oldPassword &&
+      newPassword === confirmNewPassword
+    ) {
+      console.log(`Change password in mongodb for User : ${user.username}`);
+      await this.persister.ChangeUserPassword(username, newPassword);
+    } else {
+      throw new Error("ChangePasswordError");
+    }
+  }
+
   // enhance to allow overiding with filter defined for the user in mongodb?
   async filterAssignmentList(
     username: string,

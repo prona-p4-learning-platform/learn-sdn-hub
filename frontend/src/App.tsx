@@ -12,6 +12,7 @@ import Home from "./views/Home";
 import Environment from "./views/Environment";
 import PrivateRoute from './components/PrivateRoute'
 import AssignmentOverview from "./views/AssignmentOverview";
+import UserSettings from "./views/UserSettings";
 import 'fontsource-roboto';
 import { Button } from "@mui/material";
 import CssBaseline from '@mui/material/CssBaseline';
@@ -79,6 +80,9 @@ export default class App extends React.Component {
               <Button color="inherit" href={`/assignments`}>
                 Assignments
               </Button>
+              <Button color="inherit" href={`/settings`}>
+                Settings
+              </Button>
               <Button color="inherit" onClick={() => this.handleUserLogout(localStorage.getItem("username"))}>
                 Logout
               </Button>
@@ -93,6 +97,9 @@ export default class App extends React.Component {
           </Route>
           <PrivateRoute isAuthenticated={this.state.authenticated} exact path="/assignments">
             <AssignmentOverview/>
+          </PrivateRoute>
+          <PrivateRoute isAuthenticated={this.state.authenticated} exact path="/settings">
+            <UserSettings/>
           </PrivateRoute>
           <PrivateRoute isAuthenticated={this.state.authenticated} exact path="/environment/:environment">
             <Environment />
