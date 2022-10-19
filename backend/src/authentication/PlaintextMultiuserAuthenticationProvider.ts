@@ -45,6 +45,16 @@ export default class PlaintextMultiuserAuthenticationProvider
     throw new Error("AuthenticationError");
   }
 
+  async changePassword(
+    _username: string,
+    _oldPassword: string,
+    _newPassword: string,
+    _confirmNewPassword: string
+  ): Promise<void> {
+    console.log("PlaintextMultiuserAuthenticationProvider does not support password changes.");
+    return;
+  }
+
   // export and use filterAssignmentList from PlaintextAuthenticationProvider? Duplicate code
   async filterAssignmentList(
     username: string,

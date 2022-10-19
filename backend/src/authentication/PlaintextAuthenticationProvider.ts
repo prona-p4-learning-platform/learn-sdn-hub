@@ -24,6 +24,16 @@ export default class PlaintextAuthenticationProvider
     throw new Error("AuthenticationError");
   }
 
+  async changePassword(
+    _username: string,
+    _oldPassword: string,
+    _newPassword: string,
+    _confirmNewPassword: string
+  ): Promise<void> {
+    console.log("PlaintextAuthenticationProvider does not support password changes.");
+    return;
+  }
+
   async filterAssignmentList(
     username: string,
     assignmentList: Map<string, EnvironmentDescription>
