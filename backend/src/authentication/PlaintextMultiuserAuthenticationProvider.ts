@@ -51,7 +51,9 @@ export default class PlaintextMultiuserAuthenticationProvider
     _newPassword: string,
     _confirmNewPassword: string
   ): Promise<void> {
-    console.log("PlaintextMultiuserAuthenticationProvider does not support password changes.");
+    console.log(
+      "PlaintextMultiuserAuthenticationProvider does not support password changes."
+    );
     return;
   }
 

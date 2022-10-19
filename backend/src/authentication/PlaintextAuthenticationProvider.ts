@@ -30,7 +30,9 @@ export default class PlaintextAuthenticationProvider
     _newPassword: string,
     _confirmNewPassword: string
   ): Promise<void> {
-    console.log("PlaintextAuthenticationProvider does not support password changes.");
+    console.log(
+      "PlaintextAuthenticationProvider does not support password changes."
+    );
     return;
   }
 
