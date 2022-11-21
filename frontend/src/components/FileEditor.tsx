@@ -207,7 +207,7 @@ export default class FileEditor extends React.Component<FileEditorProps> {
     // maybe remove ?? part and also findCommonPathPrefix and only allow rootPath and workspaceFolders
     options.rootPath = this.props.rootPath ?? this.findCommonPathPrefix(this.props.filePaths);
     let workspaceFolders = [] as WorkspaceFolder[];
-    if (this.props.workspaceFolders.length > 0) {
+    if (this.props.workspaceFolders?.length > 0) {
       this.props.workspaceFolders.forEach((workspaceDir => {
         // also support \ in paths?
         workspaceFolders.push({
