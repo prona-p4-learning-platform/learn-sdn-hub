@@ -30,10 +30,9 @@ export default class PlaintextAuthenticationProvider
     _newPassword: string,
     _confirmNewPassword: string
   ): Promise<void> {
-    console.log(
+    throw new Error(
       "PlaintextAuthenticationProvider does not support password changes."
     );
-    return;
   }
 
   async filterAssignmentList(
