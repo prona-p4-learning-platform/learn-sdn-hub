@@ -106,7 +106,7 @@ const Alert = React.forwardRef<HTMLDivElement, AlertProps>(function Alert(
   return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;
 });
 
-const CONVERGENCE_URL = process.env.CONVERGENCE_URL ?? "http://localhost:8000/api/realtime/convergence/default";
+const CONVERGENCE_URL = process.env.REACT_APP_CONVERGENCE_URL ?? "http://localhost:8000/api/realtime/convergence/default";
 
 // maybe consider to move collaboration and languageclient to class augmentation again?
 export default class FileEditor extends React.Component<FileEditorProps> {

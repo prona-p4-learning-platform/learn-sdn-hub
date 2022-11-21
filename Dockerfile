@@ -28,6 +28,9 @@ RUN cd frontend && npm install && npm run build
 RUN rm -rf backend/static
 RUN mkdir -p backend/static
 RUN cp -a frontend/build/* backend/static/
+# temp fix for editorWorker-iife integration, needs to be handled by bundler?
+RUN mkdir -p backend/static/dist
+RUN cp -a node_modules/monaco-editor-workers/dist/workers/editorWorker-iife.js backend/static/dist/
 
 # copy example startup script and use it as the entrypoint when running the container
 COPY examples/start-learn-sdn-hub.sh start-learn-sdn-hub.sh
