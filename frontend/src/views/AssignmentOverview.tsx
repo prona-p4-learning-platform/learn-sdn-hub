@@ -34,7 +34,7 @@ type SubmissionType = {
   lastChanged: Date
 }
 
-const CONVERGENCE_URL = process.env.CONVERGENCE_URL ?? "http://localhost:8000/api/realtime/convergence/default";
+const CONVERGENCE_URL = process.env.REACT_APP_CONVERGENCE_URL ?? "http://localhost:8000/api/realtime/convergence/default";
 
 export default function AssignmentOverview(props: AssignmentOverviewProps) {
   const [assignments, setAssignments] = useState([])
