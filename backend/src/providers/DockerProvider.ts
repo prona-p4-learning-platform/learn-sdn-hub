@@ -360,7 +360,7 @@ export default class DockerProvider implements InstanceProvider {
                 container.Names +
                   " was created at " +
                   timestampCreated +
-                  "and should be deleted"
+                  " and should be deleted"
               );
               Environment.deleteInstanceEnvironments(container.Id);
             }
