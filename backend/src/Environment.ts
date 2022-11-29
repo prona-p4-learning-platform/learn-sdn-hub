@@ -89,6 +89,7 @@ export default class Environment {
   private editableFiles: Map<string, string>;
   private configuration: EnvironmentDescription;
   private environmentId: string;
+  private instanceId: string;
   private static activeEnvironments = new Map<string, Environment>();
   private environmentProvider: InstanceProvider;
   private persister: Persister;
@@ -199,7 +200,8 @@ export default class Environment {
       if (activeEnvironmentsForGroup.length === 0) {
         environment
           .start(env, true)
-          .then(() => {
+          .then((endpoint) => {
+            environment.instanceId = endpoint.instance;
             Environment.activeEnvironments.set(
               `${username}-${environmentId}`,
               environment
@@ -248,7 +250,8 @@ export default class Environment {
         );
         environment
           .start(env, false)
-          .then(() => {
+          .then((endpoint) => {
+            environment.instanceId = endpoint.instance;
             Environment.activeEnvironments.set(
               `${username}-${environmentId}`,
               environment
@@ -316,29 +319,21 @@ export default class Environment {
   static async deleteInstanceEnvironments(instance: string): Promise<boolean> {
     return new Promise<boolean>((resolve) => {
       this.activeEnvironments.forEach((env) => {
-        env.environmentProvider
-          .getServer(instance)
-          .then(() => {
-            // the environment uses the specified instance and should be deleted
-            this.deleteEnvironment(env.username, env.environmentId).then(
-              (result) => {
-                if (!result) {
-                  // unable to delete environment
-                  throw new Error(
-                    "Environment used by instance " +
-                      instance +
-                      " could not be deleted."
-                  );
-                }
+        if (env.instanceId === instance) {
+          // the environment uses the specified instance and should be deleted
+          this.deleteEnvironment(env.username, env.environmentId).then(
+            (result) => {
+              if (!result) {
+                // unable to delete environment
+                throw new Error(
+                  "Environment used by instance " +
+                    instance +
+                    " could not be deleted."
+                );
               }
-            );
-          })
-          .catch((err) => {
-            // if instance was not found, ignore it and search instance in the other active environments
-            if (err.message !== InstanceNotFoundErrorMessage) {
-              throw err;
             }
-          });
+          );
+        }
       });
       return resolve(true);
     });
@@ -427,7 +422,7 @@ export default class Environment {
   async start(
     desc: EnvironmentDescription = this.configuration,
     createIfMissing: boolean
-  ): Promise<void> {
+  ): Promise<VMEndpoint> {
     let endpoint: VMEndpoint;
     try {
       endpoint = await this.makeSureInstanceExists(createIfMissing);
@@ -511,7 +506,7 @@ export default class Environment {
                 readyConsoleCounter === desc.tasks.length
               ) {
                 resolvedOrRejected = true;
-                return resolve();
+                return resolve(endpoint);
               }
             });
           } catch (err) {
