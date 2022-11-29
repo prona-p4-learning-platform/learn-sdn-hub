@@ -17,20 +17,9 @@ WORKDIR /home/p4/learn-sdn-hub
 COPY frontend frontend
 COPY backend backend
 
-# ensure that development env file for environment was excluded
-RUN rm -rf frontend/.env.local
-
-# build backend and frontend
+# build backend and frontend, create static backend
 RUN cd backend && npm install && npm run compile
-RUN cd frontend && npm install && npm run build
-
-# ensure that frontend will be served statically by the backend
-RUN rm -rf backend/static
-RUN mkdir -p backend/static
-RUN cp -a frontend/build/* backend/static/
-# temp fix for editorWorker-iife integration, needs to be handled by bundler?
-RUN mkdir -p backend/static/dist
-RUN cp -a node_modules/monaco-editor-workers/dist/workers/editorWorker-iife.js backend/static/dist/
+RUN cd frontend && npm install && npm run build && npm run create-static-backend
 
 # copy example startup script and use it as the entrypoint when running the container
 COPY examples/start-learn-sdn-hub.sh start-learn-sdn-hub.sh
