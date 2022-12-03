@@ -48,7 +48,7 @@ import { toSocket, WebSocketMessageReader, WebSocketMessageWriter } from 'vscode
 import createWebSocket from '../api/WebSocket';
 
 import { EditorContentManager, RemoteCursorManager, RemoteSelectionManager } from "@convergencelabs/monaco-collab-ext";
-import { connectAnonymously, ConvergenceDomain, IdbStorageAdapter, LocalIndexReference, LocalRangeReference, ModelReference, RealTimeString, RemoteReferenceCreatedEvent, StringInsertEvent, StringRemoveEvent } from "@convergence/convergence";
+import { connectAnonymously, ConvergenceDomain, LocalIndexReference, LocalRangeReference, ModelReference, RealTimeString, RemoteReferenceCreatedEvent, StringInsertEvent, StringRemoveEvent } from "@convergence/convergence";
 import { ColorAssigner } from "@convergence/color-assigner";
 
 loader.config({ monaco });
@@ -316,19 +316,20 @@ export default class FileEditor extends React.Component<FileEditorProps> {
     const collaborationId = fileName + "-group" + group;
     console.log("Starting collaboration for user: " + this.username + " in group: " + group + " on: " + collaborationId);
 
-    // offline editing support is still experimental accoring to docu, seams to fix issues
+    // offline editing support is still experimental according to docu. Seams to fix issues
     // if network connection to convergence is lost, see
     // - https://forum.convergence.io/t/how-to-solve-the-source-model-is-detached-error/92
-    const options = {
-      offline: {
-        storage: new IdbStorageAdapter()
-      }
-    };
+    //const options = {
+    //  offline: {
+    //    storage: new IdbStorageAdapter()
+    //  }
+    //};
 
     // currently uses anonymous connection, maybe use user or session token based auth,
     // however, if using exam/assignment, most likely collaboration will be disabled
     // anyway
-    connectAnonymously(CONVERGENCE_URL, this.username, options)
+    //connectAnonymously(CONVERGENCE_URL, this.username, options)
+    connectAnonymously(CONVERGENCE_URL, this.username)
     .then(async d => {
       const domain = d;
       this.convergenceDomain = d;
@@ -407,7 +408,8 @@ export default class FileEditor extends React.Component<FileEditorProps> {
       this.remoteCursorManager = new RemoteCursorManager({
         editor: this.editor,
         tooltips: true,
-        tooltipDuration: 2
+        tooltipDuration: 5,
+        showTooltipOnHover: true
       });
       this.cursorReference = this.realTimeModelString.indexReference("cursor");
 

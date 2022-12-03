@@ -21,12 +21,12 @@ export default function (
         wsToLanguageServer.on("open", () => {
           wsFromBrowser.send("backend websocket ready");
           wsFromBrowser.on("message", (data) => {
-            console.log(data.toString());
+            //console.log(data.toString());
             wsToLanguageServer.send(data);
           });
           wsToLanguageServer.on("message", (data) => {
-            console.log(data.toString());
-            // apperently new vscode-ws-jsonrpc needs string and cannot handle a blob,
+            //console.log(data.toString());
+            // apparently new vscode-ws-jsonrpc needs string and cannot handle a blob,
             // otherwise exception from JSON.parse will be thrown
             wsFromBrowser.send(data.toString());
           });
