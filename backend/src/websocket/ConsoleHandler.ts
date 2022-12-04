@@ -31,13 +31,13 @@ export default function (
         const size = message.toString().match(/^\x1B\[8;(.*);(.*)t$/);
         const lines = parseInt(size[1]);
         const columns = parseInt(size[2]);
-        console.log(
-          "received SIGWINCH resize event (lines: " +
-            lines +
-            ", columns: " +
-            columns +
-            ")"
-        );
+        //console.log(
+        //  "received SIGWINCH resize event (lines: " +
+        //    lines +
+        //    ", columns: " +
+        //    columns +
+        //    ")"
+        //);
         envConsole.resize(columns, lines);
       } else {
         envConsole.write(message.toString());

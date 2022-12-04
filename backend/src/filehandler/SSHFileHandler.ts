@@ -44,10 +44,10 @@ export default class SSHFileHandler {
     return new Promise((resolve, reject) => {
       this.client.sftp((err, sftp) => {
         if (err) return reject(err);
-        console.log("Retrieved via sftp.");
+        //console.log("Retrieved via sftp.");
         sftp.readFile(absolutePath, (err: Error, content: Buffer) => {
           if (err) return reject(err);
-          console.log("retrieved file.", content);
+          //console.log("retrieved file.", content);
           sftp.end();
           if (encoding) {
             return resolve(content.toString(encoding));
