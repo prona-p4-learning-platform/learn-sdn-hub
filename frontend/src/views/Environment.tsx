@@ -325,7 +325,7 @@ export class EnvironmentView extends React.Component<PropsType,StateType> {
   }
 
   componentDidUpdate() {
-    mermaid.init(document.querySelectorAll('code.language-mermaid'))
+    mermaid.init({}, document.querySelectorAll('code.language-mermaid'))
   }
 
   render(): ReactNode {
