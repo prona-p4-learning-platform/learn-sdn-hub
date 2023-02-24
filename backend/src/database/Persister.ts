@@ -8,7 +8,8 @@ export interface UserAccount {
   _id: string;
   username: string;
   groupNumber: number;
-  password: string;
+  password?: string;
+  passwordHash?: string;
 }
 
 export interface UserEnvironment {

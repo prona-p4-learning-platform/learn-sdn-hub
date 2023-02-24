@@ -1,10 +1,13 @@
 import { MongoClient } from "mongodb";
+import { hash } from "bcrypt";
 import { Persister, UserEnvironment, UserAccount } from "./Persister";
 import {
   Submission,
   SubmissionFileType,
   TerminalStateType,
 } from "../Environment";
+
+const saltRounds = 10;
 
 interface SubmissionEntry {
   username: string;
@@ -46,11 +49,15 @@ export default class MongoDBPersister implements Persister {
     username: string,
     password: string
   ): Promise<UserAccount> {
+    const passwordHash = await hash(password, saltRounds);
     const client = await this.getClient();
     return client
       .db()
       .collection("users")
-      .findOneAndUpdate({ username }, { $set: { password } })
+      .findOneAndUpdate(
+        { username },
+        { $set: { passwordHash }, $unset: { password: "" } }
+      )
       .then(() => undefined);
   }
 
