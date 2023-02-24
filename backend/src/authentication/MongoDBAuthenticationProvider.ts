@@ -3,6 +3,7 @@ import {
   AuthenticationResult,
 } from "./AuthenticationProvider";
 import MongoDBPersister from "../database/MongoDBPersister";
+import { compare } from "bcrypt";
 import { EnvironmentDescription } from "../Environment";
 
 /*
@@ -30,7 +31,10 @@ export default class MongoDBAuthenticationProvider
   ): Promise<AuthenticationResult> {
     const user = await this.persister.GetUserAccount(username);
     console.log("Authenticating user in mongodb: " + user);
-    if (user.password === password) {
+    if (
+      user.password === password ||
+      (await compare(password, user.passwordHash ?? ""))
+    ) {
       return {
         username: user.username,
         userid: user._id,
@@ -50,7 +54,8 @@ export default class MongoDBAuthenticationProvider
     const user = await this.persister.GetUserAccount(username);
     if (
       newPassword.length !== 0 &&
-      user.password === oldPassword &&
+      (user.password === oldPassword ||
+        (await compare(oldPassword, user.passwordHash ?? ""))) &&
       newPassword === confirmNewPassword
     ) {
       console.log(`Change password in mongodb for User : ${user.username}`);
