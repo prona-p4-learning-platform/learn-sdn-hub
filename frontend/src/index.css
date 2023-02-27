@@ -44,7 +44,7 @@ code {
 .myTerminalContainer {
 	display: flex;
 	flex-direction: column;
-  height: inherit;
+	height: inherit;
 }
 
 .myTerminal {
