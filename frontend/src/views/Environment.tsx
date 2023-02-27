@@ -1,11 +1,10 @@
-import React from "react";
+import React, {ReactNode} from "react";
 import Grid from "@mui/material/Grid";
 import Terminal from "../components/Terminal";
 import TerminalTabs from "../components/TerminalTabs";
 import { withRouter } from "react-router-dom";
 import { RouteComponentProps } from "react-router";
 import Button from "@mui/material/Button";
-import { ReactNode } from "react";
 import ReactMarkdown from 'react-markdown'
 import mermaid from 'mermaid'
 import TabControl from '../components/TabControl'
