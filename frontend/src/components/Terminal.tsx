@@ -71,7 +71,7 @@ export default class XTerminal extends React.Component<TerminalProps> {
 
   render() {
     return (
-      <XTerm ref={this.handleTermRef} addons={[this.fitAddon, this.attachAddon, this.serializeAddon]} className="myXtermClass" />
+      <XTerm ref={this.handleTermRef} addons={[this.fitAddon, this.attachAddon, this.serializeAddon]} className="myXtermClass"/>
     );
   }
 }

@@ -253,8 +253,8 @@ export default function AssignmentOverview(props: AssignmentOverviewProps) {
               Undeploy environment?<br/>
               All processes and unsubmitted changes will be lost.<br/>
               { deployedGroupAssignments.length > 0 ? 
-                'Other users in your group are still using the environment,' +
-                'they will also be disconnected.' : ''
+                'Other users still using the environment ' +
+                'will also be disconnected.' : ''
               }
             </DialogContentText>
           </DialogContent>
