@@ -373,7 +373,7 @@ export class EnvironmentView extends React.Component<PropsType,StateType> {
       <>
         <Grid container spacing={0}>
           <Grid item xs={6}>
-            <TabControl tabNames={["Assignment", "Terminals"]}>
+            <TabControl tabNames={["Assignment", "Terminals"]} handleRestart={handleConfirmationRestartDialogOpen} environmentStatus={this.state.environmentStatus}>
               <Grid container direction="row" justifyContent="flex-start" alignItems="center" spacing={1}>
                 <Grid item xs={12}>
                   <ReactMarkdown
@@ -408,21 +408,6 @@ export class EnvironmentView extends React.Component<PropsType,StateType> {
                 </Grid>
               </Grid>
               <Grid container direction="row" justifyContent="flex-start" alignItems="center" spacing={1}>
-                <Grid container direction="row" justifyContent="flex-start" alignItems="center" spacing={1}>
-                  <Grid item>
-                    <Button
-                      variant="contained"
-                      color="primary"
-                      onClick={handleConfirmationRestartDialogOpen}
-                      sx={{ mt: 1.5, ml: 1 }}
-                    >
-                      Restart terminal environment
-                  </Button>
-                  </Grid>
-                  <Grid item>
-                    <Typography align="center" variant="body2">Status: {this.state.environmentStatus}</Typography>
-                  </Grid>
-                </Grid>
                 <Grid item>
                   {this.state.environmentStatus === "running" && (
                     <TerminalTabs tabNames={this.state.ttyTabs}>{terminals}</TerminalTabs>

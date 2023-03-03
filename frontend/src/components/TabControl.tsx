@@ -1,8 +1,10 @@
-import React from "react";
+  import React from "react";
 import Tabs from "@mui/material/Tabs";
 import Tab from "@mui/material/Tab";
 import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
+import { Grid, IconButton, Tooltip } from "@mui/material";
+import RestartAltIcon from '@mui/icons-material/RestartAlt';
 
 interface TabsProps {
   index: any;
@@ -34,6 +36,8 @@ function TabPanel(props: TabsProps) {
 interface TabControlProps {
   tabNames: string[];
   children?: React.ReactChild | React.ReactChild[];
+  handleRestart: Function;
+  environmentStatus: string;
 }
 
 export default function TabControl(props: TabControlProps) {
@@ -41,6 +45,10 @@ export default function TabControl(props: TabControlProps) {
 
   const handleChange = (event: React.ChangeEvent<{}>, newValue: number) => {
     setValue(newValue);
+  };
+
+  const handleRestartConfirmation = (event: React.ChangeEvent<{}>) => {
+    props.handleRestart();
   };
 
   return (
@@ -53,6 +61,18 @@ export default function TabControl(props: TabControlProps) {
         {props.tabNames && props.tabNames.map((name) => (
           <Tab label={name} key={name} />
         ))}
+        <Grid container justifyContent="flex-end" direction="row" alignItems="center">
+          <Grid item>
+            <Typography align="center" variant="body2">Status: {props.environmentStatus}</Typography>
+          </Grid>
+          <Grid item>
+            <Tooltip title="Restart environment" placement="left">
+              <IconButton color="primary" onClick={handleRestartConfirmation}>
+                <RestartAltIcon/>
+              </IconButton>
+            </Tooltip>
+          </Grid>
+        </Grid>
       </Tabs>
 
       {Array.isArray(props.children) && props.children.map((child, index) =>
@@ -63,3 +83,22 @@ export default function TabControl(props: TabControlProps) {
     </>
   );
 }
+
+/*
+                <Grid container direction="row" justifyContent="flex-start" alignItems="center" spacing={1}>
+                  <Grid item>
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      onClick={handleConfirmationRestartDialogOpen}
+                      sx={{ mt: 1.5, ml: 1 }}
+                    >
+                      Restart terminal environment
+                  </Button>
+                  </Grid>
+                  <Grid item>
+                    <Typography align="center" variant="body2">Status: {this.state.environmentStatus}</Typography>
+                  </Grid>
+                </Grid>
+
+*/
