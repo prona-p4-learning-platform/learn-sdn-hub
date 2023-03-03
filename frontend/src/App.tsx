@@ -14,7 +14,7 @@ import PrivateRoute from './components/PrivateRoute'
 import AssignmentOverview from "./views/AssignmentOverview";
 import UserSettings from "./views/UserSettings";
 import 'fontsource-roboto';
-import { Button } from "@mui/material";
+import { Box, Button } from "@mui/material";
 import CssBaseline from '@mui/material/CssBaseline';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 
@@ -73,10 +73,12 @@ export default class App extends React.Component {
                 <MenuIcon />
               </IconButton>
               <Typography variant="h6">
+                learn-sdn-hub
                 {this.state.authenticated === false
-                    ? "Not logged in"
-                    : `Logged in as ${this.state.username} (group: ${this.state.groupNumber})`}
+                    ? ""
+                    : ` - ${this.state.username} (group: ${this.state.groupNumber})`}
               </Typography>
+              <Box sx={{width: '10px'}}/>
               <Button color="inherit" href={`/assignments`}>
                 Assignments
               </Button>
