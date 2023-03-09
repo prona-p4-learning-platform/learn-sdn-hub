@@ -1,69 +1,65 @@
 import React from "react";
+import { useState } from "react";
 import AppBar from "@mui/material/AppBar";
 import Toolbar from "@mui/material/Toolbar";
 import IconButton from "@mui/material/IconButton";
 import MenuIcon from "@mui/icons-material/Menu";
 import Typography from "@mui/material/Typography";
-import {
-  BrowserRouter as Router,
-  Route
-} from "react-router-dom";
+import { BrowserRouter as Router, Route } from "react-router-dom";
 import Home from "./views/Home";
 import Environment from "./views/Environment";
-import PrivateRoute from './components/PrivateRoute'
+import PrivateRoute from "./components/PrivateRoute";
 import AssignmentOverview from "./views/AssignmentOverview";
 import UserSettings from "./views/UserSettings";
-import 'fontsource-roboto';
+import "fontsource-roboto";
 import { Box, Button } from "@mui/material";
-import CssBaseline from '@mui/material/CssBaseline';
-import { createTheme, ThemeProvider } from '@mui/material/styles';
+import CssBaseline from "@mui/material/CssBaseline";
+import { createTheme, ThemeProvider } from "@mui/material/styles";
 
-const theme = createTheme();
+function App() {
+  const [username, setUsername] = useState("");
+  const [groupNumber, setGroupNumber] = useState(0);
+  const [authenticated, setAuthenticated] = useState(false);
 
-interface AppState {
-  username: string;
-  groupNumber: number;
-  authenticated: boolean;
-}
-export default class App extends React.Component {
-  state: AppState;
-  constructor(props: {}) {
-    super(props);
-    this.state = {
-      username: "",
-      groupNumber: 0,
-      authenticated: false,
-    };
+  const theme = createTheme();
 
-    if (localStorage.getItem("token") !== null) {
-      this.state.authenticated = true
-    }
-    if (localStorage.getItem("username") !== null) {
-      this.state.username = localStorage.getItem("username") as string
-    }    
-    if (localStorage.getItem("group") !== null) {
-      this.state.groupNumber = parseInt(localStorage.getItem("group") ?? "0")
-    }
+  if (localStorage.getItem("token") !== null) {
+    setAuthenticated(true);
+  }
+  if (localStorage.getItem("username") !== null) {
+    setUsername(localStorage.getItem("username") as string);
+  }
+  if (localStorage.getItem("group") !== null) {
+    setGroupNumber(parseInt(localStorage.getItem("group") ?? "0"));
   }
 
-  handleUserLogin(token: string, username: string, groupNumber: number): void {
-    this.setState({ username, groupNumber, authenticated: true });
+  function handleUserLogin(
+    token: string,
+    username: string,
+    groupNumber: number
+  ): void {
+    //this.setState({ username, groupNumber, authenticated: true });
+    setUsername(username);
+    setGroupNumber(groupNumber);
+    setAuthenticated(true);
     localStorage.setItem("token", token);
     localStorage.setItem("username", username);
-    localStorage.setItem("group", groupNumber.toString())
+    localStorage.setItem("group", groupNumber.toString());
   }
 
-  handleUserLogout(username: string | null): void {
-    this.setState({ username, groupNumber: 0, authenticated: false });
+  function handleUserLogout(username: string | null): void {
+    //this.setState({ username, groupNumber: 0, authenticated: false });
+    //setUsername(username);
+    setGroupNumber(0);
+    setAuthenticated(false);
     localStorage.removeItem("token");
     localStorage.removeItem("username");
     localStorage.removeItem("group");
     window.location.reload();
   }
 
-  render(): JSX.Element {
-    return (
-      <ThemeProvider theme={theme}>
+  return (
+    <ThemeProvider theme={theme}>
       <React.Fragment>
         <CssBaseline />
         <Router>
@@ -74,41 +70,55 @@ export default class App extends React.Component {
               </IconButton>
               <Typography variant="h6">
                 learn-sdn-hub
-                {this.state.authenticated === false
-                    ? ""
-                    : ` - ${this.state.username} (group: ${this.state.groupNumber})`}
+                {authenticated === false
+                  ? ""
+                  : ` - ${username} (group: ${groupNumber})`}
               </Typography>
-              <Box sx={{width: '10px'}}/>
+              <Box sx={{ width: "10px" }} />
               <Button color="inherit" href={`/assignments`}>
                 Assignments
               </Button>
               <Button color="inherit" href={`/settings`}>
                 Settings
               </Button>
-              <Button color="inherit" onClick={() => this.handleUserLogout(localStorage.getItem("username"))}>
+              <Button
+                color="inherit"
+                onClick={() =>
+                  handleUserLogout(localStorage.getItem("username"))
+                }
+              >
                 Logout
               </Button>
             </Toolbar>
           </AppBar>
           <Route exact path="/">
-           <Home
+            <Home
               onUserLogin={(token, username, groupNumber) =>
-                this.handleUserLogin(token, username, groupNumber)
+                handleUserLogin(token, username, groupNumber)
               }
             />
           </Route>
-          <PrivateRoute isAuthenticated={this.state.authenticated} exact path="/assignments">
-            <AssignmentOverview/>
+          <PrivateRoute
+            isAuthenticated={authenticated}
+            exact
+            path="/assignments"
+          >
+            <AssignmentOverview />
           </PrivateRoute>
-          <PrivateRoute isAuthenticated={this.state.authenticated} exact path="/settings">
-            <UserSettings/>
+          <PrivateRoute isAuthenticated={authenticated} exact path="/settings">
+            <UserSettings />
           </PrivateRoute>
-          <PrivateRoute isAuthenticated={this.state.authenticated} exact path="/environment/:environment">
+          <PrivateRoute
+            isAuthenticated={authenticated}
+            exact
+            path="/environment/:environment"
+          >
             <Environment />
           </PrivateRoute>
         </Router>
       </React.Fragment>
-      </ThemeProvider>
-    );
-  }
+    </ThemeProvider>
+  );
 }
+
+export default App;
