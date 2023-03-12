@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { useState } from "react";
 import AppBar from "@mui/material/AppBar";
 import Toolbar from "@mui/material/Toolbar";
@@ -21,35 +21,36 @@ function App() {
   const [groupNumber, setGroupNumber] = useState(0);
   const [authenticated, setAuthenticated] = useState(false);
 
-  const theme = createTheme();
+  useMemo(() => {
+    if (localStorage.getItem("token") !== null) {
+      setAuthenticated(true);
+    }
+    if (localStorage.getItem("username") !== null) {
+      setUsername(localStorage.getItem("username") as string);
+    }
+    if (localStorage.getItem("group") !== null) {
+      setGroupNumber(parseInt(localStorage.getItem("group") ?? "0"));
+    }
+  }, []);
 
-  if (localStorage.getItem("token") !== null) {
-    setAuthenticated(true);
-  }
-  if (localStorage.getItem("username") !== null) {
-    setUsername(localStorage.getItem("username") as string);
-  }
-  if (localStorage.getItem("group") !== null) {
-    setGroupNumber(parseInt(localStorage.getItem("group") ?? "0"));
-  }
+  const theme = createTheme();
 
   function handleUserLogin(
     token: string,
     username: string,
     groupNumber: number
   ): void {
-    //this.setState({ username, groupNumber, authenticated: true });
     setUsername(username);
     setGroupNumber(groupNumber);
     setAuthenticated(true);
+
     localStorage.setItem("token", token);
     localStorage.setItem("username", username);
     localStorage.setItem("group", groupNumber.toString());
   }
 
   function handleUserLogout(username: string | null): void {
-    //this.setState({ username, groupNumber: 0, authenticated: false });
-    //setUsername(username);
+    setUsername("");
     setGroupNumber(0);
     setAuthenticated(false);
     localStorage.removeItem("token");
