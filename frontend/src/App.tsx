@@ -15,11 +15,14 @@ import "fontsource-roboto";
 import { Box, Button } from "@mui/material";
 import CssBaseline from "@mui/material/CssBaseline";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
+import Brightness4Icon from "@mui/icons-material/Brightness4";
+import Brightness7Icon from "@mui/icons-material/Brightness7";
 
 function App() {
   const [username, setUsername] = useState("");
   const [groupNumber, setGroupNumber] = useState(0);
   const [authenticated, setAuthenticated] = useState(false);
+  const [darkMode, setDarkMode] = useState(false);
 
   useMemo(() => {
     if (localStorage.getItem("token") !== null) {
@@ -31,9 +34,10 @@ function App() {
     if (localStorage.getItem("group") !== null) {
       setGroupNumber(parseInt(localStorage.getItem("group") ?? "0"));
     }
+    if (localStorage.getItem("darkMode") === "true") {
+      setDarkMode(true);
+    }
   }, []);
-
-  const theme = createTheme();
 
   function handleUserLogin(
     token: string,
@@ -58,6 +62,17 @@ function App() {
     localStorage.removeItem("group");
     window.location.reload();
   }
+
+  function changeMode() {
+    setDarkMode(!darkMode);
+    localStorage.setItem("darkMode", (!darkMode).toString());
+  }
+
+  const theme = createTheme({
+    palette: {
+      mode: darkMode ? "dark" : "light",
+    },
+  });
 
   return (
     <ThemeProvider theme={theme}>
@@ -90,6 +105,17 @@ function App() {
               >
                 Logout
               </Button>
+              <IconButton
+                sx={{ ml: 1 }}
+                onClick={() => changeMode()}
+                color="inherit"
+              >
+                {theme.palette.mode === "dark" ? (
+                  <Brightness7Icon />
+                ) : (
+                  <Brightness4Icon />
+                )}
+              </IconButton>
             </Toolbar>
           </AppBar>
           <Route exact path="/">
