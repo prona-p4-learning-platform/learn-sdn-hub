@@ -17,6 +17,7 @@ import CssBaseline from "@mui/material/CssBaseline";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import Brightness4Icon from "@mui/icons-material/Brightness4";
 import Brightness7Icon from "@mui/icons-material/Brightness7";
+import Tooltip from "@mui/material/Tooltip";
 
 function App() {
   const [username, setUsername] = useState("");
@@ -105,17 +106,25 @@ function App() {
               >
                 Logout
               </Button>
-              <IconButton
-                sx={{ ml: 1 }}
-                onClick={() => changeMode()}
-                color="inherit"
+              <Tooltip
+                title={
+                  theme.palette.mode === "dark"
+                    ? "Switch to light mode"
+                    : "Switch to dark mode"
+                }
               >
-                {theme.palette.mode === "dark" ? (
-                  <Brightness7Icon />
-                ) : (
-                  <Brightness4Icon />
-                )}
-              </IconButton>
+                <IconButton
+                  sx={{ ml: 1 }}
+                  onClick={() => changeMode()}
+                  color="inherit"
+                >
+                  {theme.palette.mode === "dark" ? (
+                    <Brightness7Icon />
+                  ) : (
+                    <Brightness4Icon />
+                  )}
+                </IconButton>
+              </Tooltip>
             </Toolbar>
           </AppBar>
           <Route exact path="/">
