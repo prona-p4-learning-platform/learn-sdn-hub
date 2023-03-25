@@ -163,8 +163,13 @@ export default class DockerProvider implements InstanceProvider {
                       // improve selection of array field?
 
                       // only use Host defined for SSH
+                      // 0.0.0.0 used to work also for connecting, but seams to
+                      // have issues using Docker on Windows 
                       const sshBindingHost =
-                        portMap[Object.keys(portMap)[0]][0].HostIp;
+                        portMap[Object.keys(portMap)[0]][0].HostIp === "0.0.0.0"
+                          ? "127.0.0.1"
+                          : portMap[Object.keys(portMap)[0]][0].HostIp;
+                      console.log("Docker host ip: %s", sshBindingHost);
 
                       const sshBindingPort = parseInt(
                         portMap[Object.keys(portMap)[0]][0].HostPort
@@ -250,7 +255,13 @@ export default class DockerProvider implements InstanceProvider {
           // improve selection of array field?
 
           // only use Host defined for SSH
-          const sshBindingHost = portMap[Object.keys(portMap)[0]][0].HostIp;
+          // 0.0.0.0 used to work also for connecting, but seams to
+          // have issues using Docker on Windows 
+          const sshBindingHost =
+            portMap[Object.keys(portMap)[0]][0].HostIp === "0.0.0.0"
+              ? "127.0.0.1"
+              : portMap[Object.keys(portMap)[0]][0].HostIp;
+          console.log("Docker host ip: %s", sshBindingHost);
 
           const sshBindingPort = parseInt(
             portMap[Object.keys(portMap)[0]][0].HostPort

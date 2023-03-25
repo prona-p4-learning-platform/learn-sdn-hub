@@ -12,13 +12,31 @@ export interface AliasedFile {
   alias: string;
 }
 
-export interface Task {
+export interface Shell {
+  type: "Shell";
   executable: string;
   cwd: string;
   params: Array<string>;
   provideTty: boolean;
   name: string;
 }
+
+export interface WebApp {
+  type: "WebApp";
+  url: string;
+  name: string;
+}
+
+export interface Desktop {
+  type: "Desktop";
+  name: string;
+  websocketUrl: string;
+}
+
+export type TerminalType =
+  | Shell
+  | Desktop
+  | WebApp;
 
 export interface AssignmentStep {
   name: string;
@@ -62,9 +80,9 @@ export type SubmissionFileType = {
 };
 
 export interface EnvironmentDescription {
-  tasks: Array<Array<Task>>;
+  terminals: Array<Array<TerminalType>>;
   editableFiles: Array<AliasedFile>;
-  stopCommands: Array<Task>;
+  stopCommands: Array<TerminalType>;
   steps?: Array<AssignmentStep>;
   submissionPrepareCommand?: string;
   submissionSupplementalFiles?: Array<string>;
@@ -458,59 +476,64 @@ export default class Environment {
       let errorConsoleCounter = 0;
       let resolvedOrRejected = false;
       let readyConsoleCounter = 0;
-      desc.tasks.forEach((subtasks) => {
-        subtasks.forEach((task) => {
-          global.console.log(
-            "Opening console: ",
-            JSON.stringify(task),
-            JSON.stringify(endpoint)
-          );
-          try {
-            const console = new SSHConsole(
-              this.environmentId,
-              this.username,
-              this.groupNumber,
-              endpoint.IPAddress,
-              endpoint.SSHPort,
-              task.executable,
-              task.params,
-              task.cwd,
-              task.provideTty
+      desc.terminals.forEach((subterminals) => {
+        subterminals.forEach((subterminal) => {
+          if (subterminal.type === "Shell") {
+            global.console.log(
+              "Opening console: ",
+              JSON.stringify(subterminal),
+              JSON.stringify(endpoint)
             );
-
-            const setupCloseHandler = (): void => {
-              errorConsoleCounter++;
-              if (
-                resolvedOrRejected === false &&
-                errorConsoleCounter + readyConsoleCounter === desc.tasks.length
-              ) {
-                resolvedOrRejected = true;
-                return reject(new Error("Unable to create environment"));
-              } else {
-                this.activeConsoles.delete(task.name);
-                global.console.log("deleted console for task: " + task.name);
-              }
-            };
-
-            console.on("close", setupCloseHandler);
-
-            console.on("error", (err) => {
+            try {
+              const console = new SSHConsole(
+                this.environmentId,
+                this.username,
+                this.groupNumber,
+                endpoint.IPAddress,
+                endpoint.SSHPort,
+                subterminal.executable,
+                subterminal.params,
+                subterminal.cwd,
+                subterminal.provideTty
+              );
+  
+              const setupCloseHandler = (): void => {
+                errorConsoleCounter++;
+                if (
+                  resolvedOrRejected === false &&
+                  errorConsoleCounter + readyConsoleCounter === desc.terminals.length
+                ) {
+                  resolvedOrRejected = true;
+                  return reject(new Error("Unable to create environment"));
+                } else {
+                  this.activeConsoles.delete(subterminal.name);
+                  global.console.log("deleted console for task: " + subterminal.name);
+                }
+              };
+  
+              console.on("close", setupCloseHandler);
+  
+              console.on("error", (err) => {
+                return reject(err);
+              });
+  
+              console.on("ready", () => {
+                readyConsoleCounter++;
+                this.activeConsoles.set(subterminal.name, console);
+                if (
+                  resolvedOrRejected === false &&
+                  readyConsoleCounter === desc.terminals.length
+                ) {
+                  resolvedOrRejected = true;
+                  return resolve(endpoint);
+                }
+              });
+            } catch (err) {
               return reject(err);
-            });
-
-            console.on("ready", () => {
-              readyConsoleCounter++;
-              this.activeConsoles.set(task.name, console);
-              if (
-                resolvedOrRejected === false &&
-                readyConsoleCounter === desc.tasks.length
-              ) {
-                resolvedOrRejected = true;
-                return resolve(endpoint);
-              }
-            });
-          } catch (err) {
-            return reject(err);
+            }
+          }
+          else {
+            // ignoring other terminal types (webframe, desktop) that will not be started, maybe desktop could be started later (start VNC/RDP, add VNC/RDP guacamole connection etc.?)
           }
         });
       });
@@ -545,46 +568,48 @@ export default class Environment {
           }
         });
         for (const command of this.configuration.stopCommands) {
-          let stopCmdFinished = false;
-          await new Promise<void>((stopCmdSuccess, stopCmdFail) => {
-            global.console.log(
-              "Executing stop command: ",
-              JSON.stringify(command),
-              JSON.stringify(endpoint)
-            );
-            const console = new SSHConsole(
-              this.environmentId,
-              this.username,
-              this.groupNumber,
-              endpoint.IPAddress,
-              endpoint.SSHPort,
-              command.executable,
-              command.params,
-              command.cwd,
-              command.provideTty
-            );
-            console.on("finished", async (code: string, signal: string) => {
+          if (command.type === "Shell") {
+            let stopCmdFinished = false;
+            await new Promise<void>((stopCmdSuccess, stopCmdFail) => {
               global.console.log(
-                "OUTPUT: " +
-                  console.stdout +
-                  "(exit code: " +
-                  code +
-                  ", signal: " +
-                  signal +
-                  ")"
+                "Executing stop command: ",
+                JSON.stringify(command),
+                JSON.stringify(endpoint)
               );
-              stopCmdFinished = true;
-              console.emit("closed");
+              const console = new SSHConsole(
+                this.environmentId,
+                this.username,
+                this.groupNumber,
+                endpoint.IPAddress,
+                endpoint.SSHPort,
+                command.executable,
+                command.params,
+                command.cwd,
+                command.provideTty
+              );
+              console.on("finished", async (code: string, signal: string) => {
+                global.console.log(
+                  "OUTPUT: " +
+                    console.stdout +
+                    "(exit code: " +
+                    code +
+                    ", signal: " +
+                    signal +
+                    ")"
+                );
+                stopCmdFinished = true;
+                console.emit("closed");
+              });
+              console.on("closed", () => {
+                if (stopCmdFinished === true) {
+                  stopCmdSuccess();
+                } else {
+                  global.console.log("Stop command failed.");
+                  stopCmdFail();
+                }
+              });
             });
-            console.on("closed", () => {
-              if (stopCmdFinished === true) {
-                stopCmdSuccess();
-              } else {
-                global.console.log("Stop command failed.");
-                stopCmdFail();
-              }
-            });
-          });
+          }
         }
 
         this.environmentProvider
@@ -643,45 +668,47 @@ export default class Environment {
     try {
       const endpoint = await this.makeSureInstanceExists();
       for (const command of this.configuration.stopCommands) {
-        let resolved = false;
-        await new Promise<void>((resolve, reject) => {
-          global.console.log(
-            "Executing stop command: ",
-            JSON.stringify(command),
-            JSON.stringify(endpoint)
-          );
-          const console = new SSHConsole(
-            this.environmentId,
-            this.username,
-            this.groupNumber,
-            endpoint.IPAddress,
-            endpoint.SSHPort,
-            command.executable,
-            command.params,
-            command.cwd,
-            false
-          );
-          console.on("finished", (code: string, signal: string) => {
+        if (command.type === "Shell") {
+          let resolved = false;
+          await new Promise<void>((resolve, reject) => {
             global.console.log(
-              "OUTPUT: " +
-                console.stdout +
-                "(exit code: " +
-                code +
-                ", signal: " +
-                signal +
-                ")"
+              "Executing stop command: ",
+              JSON.stringify(command),
+              JSON.stringify(endpoint)
             );
-            resolved = true;
-            console.emit("closed");
-          });
-          console.on("closed", () => {
-            if (resolved === true) return resolve();
-            else
-              return reject(
-                new Error("Unable to run stop command." + command.executable)
+            const console = new SSHConsole(
+              this.environmentId,
+              this.username,
+              this.groupNumber,
+              endpoint.IPAddress,
+              endpoint.SSHPort,
+              command.executable,
+              command.params,
+              command.cwd,
+              false
+            );
+            console.on("finished", (code: string, signal: string) => {
+              global.console.log(
+                "OUTPUT: " +
+                  console.stdout +
+                  "(exit code: " +
+                  code +
+                  ", signal: " +
+                  signal +
+                  ")"
               );
+              resolved = true;
+              console.emit("closed");
+            });
+            console.on("closed", () => {
+              if (resolved === true) return resolve();
+              else
+                return reject(
+                  new Error("Unable to run stop command." + command.executable)
+                );
+            });
           });
-        });
+        }
       }
     } catch (err) {
       throw err;

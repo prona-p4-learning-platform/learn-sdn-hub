@@ -26,6 +26,33 @@ export default class SSHFileHandler {
           ? fs.readFileSync(process.env.SSH_PRIVATE_KEY_PATH)
           : undefined,
         readyTimeout: 10000,
+        algorithms: {
+            kex: [
+                "diffie-hellman-group1-sha1",
+                "ecdh-sha2-nistp256",
+                "ecdh-sha2-nistp384",
+                "ecdh-sha2-nistp521",
+                "diffie-hellman-group-exchange-sha256",
+                "diffie-hellman-group14-sha1",                                        
+            ],
+            cipher: [
+                "3des-cbc",
+                "aes128-ctr",
+                "aes192-ctr",
+                "aes256-ctr",
+                "aes128-gcm",                                        
+                "aes256-gcm",                                        
+                "aes256-cbc"
+            ],
+            serverHostKey: [
+                "ssh-rsa",
+                "ssh-dss",
+                "ecdsa-sha2-nistp256",
+                "ecdsa-sha2-nistp384",
+                "ecdsa-sha2-nistp521"
+            ],
+            hmac: ["hmac-sha2-256", "hmac-sha2-512", "hmac-sha1"]
+        }
       });
   }
 
@@ -48,6 +75,7 @@ export default class SSHFileHandler {
         sftp.readFile(absolutePath, (err: Error, content: Buffer) => {
           if (err) return reject(err);
           //console.log("retrieved file.", content);
+          // sftp.emit("close")?
           sftp.end();
           if (encoding) {
             return resolve(content.toString(encoding));
@@ -75,6 +103,7 @@ export default class SSHFileHandler {
         const writeStream = sftp.createWriteStream(absolutePath);
         writeStream.on("close", () => {
           console.log("stream closed");
+          // sftp.emit("close")?
           sftp.end();
           return resolve();
         });
@@ -83,6 +112,7 @@ export default class SSHFileHandler {
         });
         writeStream.on("error", () => {
           console.log("stream error");
+          // sftp.emit("close")?
           sftp.end();
           return reject(new Error("SSHFileHandler: SFTP stream error."));
         });

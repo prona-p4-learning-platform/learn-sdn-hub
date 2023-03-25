@@ -2,7 +2,7 @@ import { Router, Request, RequestHandler } from "express";
 import Environment, {
   Submission,
   AliasedFile,
-  Task,
+  TerminalType,
   AssignmentStep,
 } from "../Environment";
 import bodyParser from "body-parser";
@@ -54,17 +54,16 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
         filePaths: targetEnv.editableFiles.map(
           (file: AliasedFile) => file.absFilePath
         ),
-        // first task in array of tasks will define the tab
-        ttyTabs: targetEnv.tasks
-          .filter((subtasks: Task[]) => subtasks[0].provideTty === true)
-          .map((subtask: Task[]) => subtask[0].name),
-        ttys: targetEnv.tasks
-          .filter((subtasks: Task[]) =>
-            subtasks.filter((task: Task) => task.provideTty === true)
+        // first subterminal in array of subterminals will define the tab name
+        terminals: targetEnv.terminals.filter((subterminals: TerminalType[]) =>
+          subterminals.filter(
+            (subterminal: TerminalType) =>
+              (subterminal.type === "Shell" &&
+                subterminal.provideTty === true) ||
+              subterminal.type === "Desktop" ||
+              subterminal.type === "WebApp"
           )
-          .map((subtasks: Task[]) =>
-            subtasks.map((subtask: Task) => subtask.name)
-          ),
+        ),
         stepNames:
           targetEnv.steps?.map((step: AssignmentStep) => step.name) ?? [],
         stepLabels:
@@ -91,7 +90,8 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
           .json({ error: true, message: "Environment not found" });
       }
       let markdown;
-      // if assignmentLabSheetLocation specified as "instance", get lab sheet from instance filesystem
+      // if assignmentLabSheetLocation specified as "instance", 
+      // get lab sheet from instance filesystem
       if (targetEnv.assignmentLabSheetLocation === "instance") {
         const env = Environment.getActiveEnvironment(
           req.params.environment,
