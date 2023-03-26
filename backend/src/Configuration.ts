@@ -29,14 +29,14 @@ environments.set("p4basic", {
         type: "Desktop",
         name: "desk1",
         websocketUrl:
-          "wss://prona.informatik.hs-fulda.de/guacamole/websocket-tunnel?token=03A27A159B2F3602628C65FC63BD57E2763AF475DCC8988A0423759B5AC6C2E3&GUAC_DATA_SOURCE=mysql&GUAC_ID=16&GUAC_TYPE=c&GUAC_WIDTH=2940&GUAC_HEIGHT=1279&GUAC_DPI=96&GUAC_TIMEZONE=Europe%2FBerlin&GUAC_AUDIO=audio%2FL8&GUAC_AUDIO=audio%2FL16&GUAC_IMAGE=image%2Fjpeg&GUAC_IMAGE=image%2Fpng&GUAC_IMAGE=image%2Fwebp",
+          "wss://guacamole-host.example.org/guacamole/websocket-tunnel?token=<token-here>&GUAC_DATA_SOURCE=mysql&GUAC_ID=16&GUAC_TYPE=c&GUAC_WIDTH=2940&GUAC_HEIGHT=1279&GUAC_DPI=96&GUAC_TIMEZONE=Europe%2FBerlin&GUAC_AUDIO=audio%2FL8&GUAC_AUDIO=audio%2FL16&GUAC_IMAGE=image%2Fjpeg&GUAC_IMAGE=image%2Fpng&GUAC_IMAGE=image%2Fwebp",
       },
     ],
     [
       {
         type: "WebApp",
         name: "test",
-        url: "https://ix.homeip.net",
+        url: "https://www.example.org",
       },
     ],
   ],
