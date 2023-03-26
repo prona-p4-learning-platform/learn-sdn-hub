@@ -33,10 +33,7 @@ export interface Desktop {
   websocketUrl: string;
 }
 
-export type TerminalType =
-  | Shell
-  | Desktop
-  | WebApp;
+export type TerminalType = Shell | Desktop | WebApp;
 
 export interface AssignmentStep {
   name: string;
@@ -104,6 +101,8 @@ const DenyStartOfMissingInstanceErrorMessage =
 
 export default class Environment {
   private activeConsoles: Map<string, Console>;
+  private activeDesktops: Map<string, boolean>;
+  private activeWebFrames: Map<string, boolean>;
   private editableFiles: Map<string, string>;
   private configuration: EnvironmentDescription;
   private environmentId: string;
@@ -473,9 +472,10 @@ export default class Environment {
       desc.editableFiles.forEach((val) =>
         this.addEditableFile(val.alias, val.absFilePath)
       );
-      let errorConsoleCounter = 0;
+      let errorTerminalCounter = 0;
       let resolvedOrRejected = false;
-      let readyConsoleCounter = 0;
+      let readyTerminalCounter = 0;
+      const numberOfTerminals = desc.terminals.flat().length;
       desc.terminals.forEach((subterminals) => {
         subterminals.forEach((subterminal) => {
           if (subterminal.type === "Shell") {
@@ -496,33 +496,36 @@ export default class Environment {
                 subterminal.cwd,
                 subterminal.provideTty
               );
-  
+
               const setupCloseHandler = (): void => {
-                errorConsoleCounter++;
+                errorTerminalCounter++;
                 if (
                   resolvedOrRejected === false &&
-                  errorConsoleCounter + readyConsoleCounter === desc.terminals.length
+                  errorTerminalCounter + readyTerminalCounter ===
+                    numberOfTerminals
                 ) {
                   resolvedOrRejected = true;
                   return reject(new Error("Unable to create environment"));
                 } else {
                   this.activeConsoles.delete(subterminal.name);
-                  global.console.log("deleted console for task: " + subterminal.name);
+                  global.console.log(
+                    "deleted console for task: " + subterminal.name
+                  );
                 }
               };
-  
+
               console.on("close", setupCloseHandler);
-  
+
               console.on("error", (err) => {
                 return reject(err);
               });
-  
+
               console.on("ready", () => {
-                readyConsoleCounter++;
+                readyTerminalCounter++;
                 this.activeConsoles.set(subterminal.name, console);
                 if (
                   resolvedOrRejected === false &&
-                  readyConsoleCounter === desc.terminals.length
+                  readyTerminalCounter === numberOfTerminals
                 ) {
                   resolvedOrRejected = true;
                   return resolve(endpoint);
@@ -531,9 +534,40 @@ export default class Environment {
             } catch (err) {
               return reject(err);
             }
-          }
-          else {
-            // ignoring other terminal types (webframe, desktop) that will not be started, maybe desktop could be started later (start VNC/RDP, add VNC/RDP guacamole connection etc.?)
+          } else if (subterminal.type === "Desktop") {
+            // currently Desktops are instantly treated as ready
+            // maybe track Desktop init later (e.g., start VNC, register in guacamole etc.)
+            // maybe also store in activeVNC, activeGuacamoleClients
+            readyTerminalCounter++;
+            if (
+              resolvedOrRejected === false &&
+              readyTerminalCounter === numberOfTerminals
+            ) {
+              resolvedOrRejected = true;
+              return resolve(endpoint);
+            }
+          } else if (subterminal.type === "WebApp") {
+            // currently WebApps are instantly treated as ready
+            // maybe track WebApp init later
+            // maybe also store in activeWebApps var?
+            readyTerminalCounter++;
+            if (
+              resolvedOrRejected === false &&
+              readyTerminalCounter === numberOfTerminals
+            ) {
+              resolvedOrRejected = true;
+              return resolve(endpoint);
+            }
+          } else {
+            // ignoring other unsupported terminal types, will not be started
+            readyTerminalCounter++;
+            if (
+              resolvedOrRejected === false &&
+              readyTerminalCounter === numberOfTerminals
+            ) {
+              resolvedOrRejected = true;
+              return resolve(endpoint);
+            }
           }
         });
       });
@@ -551,6 +585,7 @@ export default class Environment {
         this.filehandler.close();
 
         // close consoles of other users in group
+        // maybe also stop/close Desktops and WebApps later?
         const activeUsers = new Array<string>();
         Environment.activeEnvironments.forEach((env: Environment) => {
           if (

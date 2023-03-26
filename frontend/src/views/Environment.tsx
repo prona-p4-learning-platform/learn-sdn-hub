@@ -46,7 +46,7 @@ export interface Shell {
 }
 
 export interface WebApp {
-  type: "WebFrame";
+  type: "WebApp";
   url: string;
   name: string;
 }
@@ -366,7 +366,7 @@ export class EnvironmentView extends React.Component<PropsType,StateType> {
         if (subterminal.type === "Desktop") {
           return <GuacamoleClient key={subterminal.name} wsEndpoint={`/environment/${this.props.match.params.environment}/desktoptype/${subterminal.name}`}/>
         }
-        if (subterminal.type === "WebFrame") {
+        if (subterminal.type === "WebApp") {
           return <WebFrame key={subterminal.name} url={subterminal.url}/>
         }
         else {

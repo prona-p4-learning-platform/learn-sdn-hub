@@ -67,7 +67,7 @@ export default class App extends React.Component {
       <React.Fragment>
         <CssBaseline />
         <Router>
-          <AppBar position="static" >
+          <AppBar position="static">
             <Toolbar>
               <IconButton edge="start" color="inherit" aria-label="menu">
                 <MenuIcon />
