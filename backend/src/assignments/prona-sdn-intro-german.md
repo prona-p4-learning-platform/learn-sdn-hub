@@ -34,7 +34,7 @@
 * Starten Sie mininet mit der in OpenFlowTopo.py benutzerdefinierten Topologie
 
 ```
-sudo python OpenFlowTopo.py
+sudo python3 OpenFlowTopo.py
 ```
 
 * Warum erhalten Sie eine Warnung über eine fehlende Verbindung zu 127.0.0.1:6633? Untersuchen Sie den Code in OpenFlowTopo.py.
