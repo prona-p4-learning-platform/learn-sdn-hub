@@ -267,7 +267,7 @@ environments.set("Example0-SDN-Intro", {
   assignmentLabSheet: "../assignments/prona-sdn-intro.md",
 });
 
-environments.set("Beispiel0-SDN-Einführung", {
+environments.set("Beispiel0-SDN-Einfuehrung", {
   tasks: [
     [
       {
@@ -314,8 +314,12 @@ environments.set("Beispiel0-SDN-Einführung", {
       provideTty: false,
     },
   ],
-  description: "Beispiel0-SDN-Einführung beschreibung",
+  description: "Beispiel0-SDN-Einfuehrung beschreibung",
   assignmentLabSheet: "../assignments/prona-sdn-intro-german.md",
+  rootPath: "/home/p4/",
+  workspaceFolders: ["/home/p4/p4-boilerplate/Example0-SDN-Intro/"],
+  useCollaboration: true,
+  useLanguageClient: true,
 });
 
 environments.set("Example1-Repeater", {
