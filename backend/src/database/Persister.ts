@@ -10,6 +10,7 @@ export interface UserAccount {
   groupNumber: number;
   password?: string;
   passwordHash?: string;
+  assignmentListFilter?: string;
 }
 
 export interface UserEnvironment {

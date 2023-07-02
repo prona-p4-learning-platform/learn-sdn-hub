@@ -312,14 +312,20 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
     "/submissions",
     authenticationMiddleware,
     async (req: RequestWithUser, res) => {
-      const submittedEnvList = await Environment.getUserSubmissions(
+      await Environment.getUserSubmissions(
         persister,
         req.user.username,
         req.user.groupNumber
-      );
-      return res
-        .status(200)
-        .json(Array.from(submittedEnvList ?? ([] as Submission[])));
+      )
+        .then((submittedEnvList) => {
+          return res
+            .status(200)
+            .json(Array.from(submittedEnvList ?? ([] as Submission[])));
+        })
+        .catch((err) => {
+          console.log("No submission found " + err);
+          return res.status(200).json(Array.from([] as Submission[]));
+        });
     }
   );
 
