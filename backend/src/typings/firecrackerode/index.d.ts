@@ -1,6 +1,6 @@
 import { ChildProcess } from "child_process";
 
-declare namespace Firecrackerode {
+declare namespace firecrackerode {
   interface BootSource {
     kernel_image_path: string;
     boot_args: string;
@@ -77,17 +77,17 @@ declare namespace Firecrackerode {
 }
 
 declare class Firecrackerode {
-  constructor(opts: Firecrackerode.ModemOptions);
+  constructor(opts: firecrackerode.ModemOptions);
 
-  info(): Promise<Firecrackerode.VMInfo>;
+  info(): Promise<firecrackerode.VMInfo>;
   action(action: string): Promise<{ state: string }>;
   bootSource(
-    data: Firecrackerode.BootSource
-  ): Promise<Firecrackerode.BootSource>;
+    data: firecrackerode.BootSource
+  ): Promise<firecrackerode.BootSource>;
   //mmds(): MMDS;
-  drive(id: string): Firecrackerode.Drive;
-  interface(id: string): Firecrackerode.Interface;
-  machineConfig(): Firecrackerode.MachineConfig;
+  drive(id: string): firecrackerode.Drive;
+  interface(id: string): firecrackerode.Interface;
+  machineConfig(): firecrackerode.MachineConfig;
   //logger(data: {}): Promise<{}>;
   //metrics(data: {}): Promise<{}>;
   //vsock(data: {}): Promise<{}>;
