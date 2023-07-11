@@ -11,6 +11,7 @@
     "start:localmultiuservm": "ts-node src/LocalMultiuserVMApplication.ts",
     "start:openstack": "ts-node src/OpenStackApplication.ts",
     "start:docker": "ts-node src/DockerApplication.ts",
+    "start:firecracker": "ts-node src/FirecrackerApplication.ts",
     "lint": "eslint src/**/**/*.{js,ts,tsx}",
     "compile": "tsc --noEmit"
   },
