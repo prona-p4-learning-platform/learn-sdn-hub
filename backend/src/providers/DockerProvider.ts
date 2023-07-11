@@ -362,7 +362,28 @@ export default class DockerProvider implements InstanceProvider {
                   timestampCreated +
                   " and should be deleted"
               );
-              Environment.deleteInstanceEnvironments(container.Id);
+              this.deleteServer(container.Id)
+                .then(() => {
+                  console.log(
+                    "Deleted expired container" +
+                      container.Names +
+                      " expiration date: " +
+                      timestampCreated +
+                      " deadline: " +
+                      deadline
+                  );
+                  Environment.deleteInstanceEnvironments(container.Id);
+                })
+                .catch((err) => {
+                  return reject(
+                    new Error(
+                      "DockerProvider: Failed to delete container to be pruned. " +
+                        container.Names +
+                        " " +
+                        err
+                    )
+                  );
+                });
             }
           }
         });
