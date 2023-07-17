@@ -364,7 +364,10 @@ export class EnvironmentView extends React.Component<PropsType,StateType> {
             onTerminalUnmount={this.storeTerminalState} />
         }
         if (subterminal.type === "Desktop") {
-          return <GuacamoleClient key={subterminal.name} wsEndpoint={`/environment/${this.props.match.params.environment}/desktoptype/${subterminal.name}`}/>
+          return <GuacamoleClient key={subterminal.name}
+            alias={subterminal.name}
+            environment={this.props.match.params.environment}
+            wsEndpoint={`/environment/${this.props.match.params.environment}/desktop/${subterminal.name}`} />
         }
         if (subterminal.type === "WebApp") {
           return <WebFrame key={subterminal.name} url={subterminal.url}/>

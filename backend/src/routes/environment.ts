@@ -28,7 +28,7 @@ const queryValidator = celebrate({
   }),
 });
 
-const fileWithAliasValidator = celebrate({
+const environmentPathParamWithAliasValidator = celebrate({
   [Segments.PARAMS]: Joi.object().keys({
     environment: Joi.string().required(),
     alias: Joi.string().required(),
@@ -173,7 +173,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
   router.get(
     "/:environment/file/:alias",
     authenticationMiddleware,
-    fileWithAliasValidator,
+    environmentPathParamWithAliasValidator,
     (req: RequestWithUser, res) => {
       const env = Environment.getActiveEnvironment(
         req.params.environment,
@@ -199,7 +199,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
     "/:environment/file/:alias",
     bodyParser.text({ type: "text/plain" }) as RequestHandler,
     authenticationMiddleware,
-    fileWithAliasValidator,
+    environmentPathParamWithAliasValidator,
     (req: RequestWithUser, res) => {
       const env = Environment.getActiveEnvironment(
         req.params.environment,

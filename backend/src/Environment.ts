@@ -6,6 +6,8 @@ import {
   InstanceNotFoundErrorMessage,
 } from "./providers/Provider";
 import { Persister } from "./database/Persister";
+import crypto from "crypto";
+import querystring from "querystring";
 
 export interface AliasedFile {
   absFilePath: string;
@@ -14,23 +16,45 @@ export interface AliasedFile {
 
 export interface Shell {
   type: "Shell";
+  name: string;
   executable: string;
   cwd: string;
   params: Array<string>;
   provideTty: boolean;
-  name: string;
 }
 
 export interface WebApp {
   type: "WebApp";
-  url: string;
   name: string;
+  url: string;
+}
+
+class WebAppInstance {
+  url: string;
 }
 
 export interface Desktop {
   type: "Desktop";
   name: string;
-  websocketUrl: string;
+  guacamoleServerURL: string;
+  remoteDesktopProtocol: "vnc" | "rdp";
+  remoteDesktopPort: number;
+  remoteDesktopPassword: string;
+}
+
+class DesktopInstance {
+  guacamoleServerURL: string;
+  remoteDesktopProtocol: "vnc" | "rdp";
+  remoteDesktopPort: number;
+  remoteDesktopPassword: string;
+  remoteDesktopToken: GuacamoleAuthResponse;
+}
+
+export interface GuacamoleAuthResponse {
+  authToken: string;
+  username: string;
+  dataSource: string;
+  availableDataSources: string[];
 }
 
 export type TerminalType = Shell | Desktop | WebApp;
@@ -101,8 +125,8 @@ const DenyStartOfMissingInstanceErrorMessage =
 
 export default class Environment {
   private activeConsoles: Map<string, Console>;
-  private activeDesktops: Map<string, boolean>;
-  private activeWebFrames: Map<string, boolean>;
+  private activeDesktops: Map<string, DesktopInstance>;
+  private activeWebApps: Map<string, WebAppInstance>;
   private editableFiles: Map<string, string>;
   private configuration: EnvironmentDescription;
   private environmentId: string;
@@ -157,6 +181,8 @@ export default class Environment {
     persister: Persister
   ) {
     this.activeConsoles = new Map();
+    this.activeDesktops = new Map();
+    this.activeWebApps = new Map();
     this.editableFiles = new Map();
     this.configuration = configuration;
     this.environmentProvider = environmentProvider;
@@ -180,6 +206,10 @@ export default class Environment {
 
   public getConsoles(): Map<string, Console> {
     return this.activeConsoles;
+  }
+
+  public getDesktopByAlias(alias: string): DesktopInstance {
+    return this.activeDesktops.get(alias);
   }
 
   static async createEnvironment(
@@ -535,17 +565,92 @@ export default class Environment {
               return reject(err);
             }
           } else if (subterminal.type === "Desktop") {
-            // currently Desktops are instantly treated as ready
-            // maybe track Desktop init later (e.g., start VNC, register in guacamole etc.)
-            // maybe also store in activeVNC, activeGuacamoleClients
-            readyTerminalCounter++;
-            if (
-              resolvedOrRejected === false &&
-              readyTerminalCounter === numberOfTerminals
-            ) {
-              resolvedOrRejected = true;
-              return resolve(endpoint);
-            }
+            global.console.log(
+              "Opening desktop: ",
+              JSON.stringify(subterminal),
+              JSON.stringify(endpoint)
+            );
+
+            // currently fixed to guacamole and VNC, additional protocols require
+            // different params, see:
+            //   https://guacamole.apache.org/doc/gug/json-auth.html
+            //   https://guacamole.apache.org/doc/gug/configuring-guacamole.html#connection-configuration
+
+            // username can be anonymous (""), maybe change that to real guacamole user later
+            const payload = {
+              username: "",
+              expires: (Date.now() + 2 * 3600 * 1000).toString(),
+              connections: {
+                [this.username + "-" + this.environmentId]: {
+                  id: this.username + "-" + this.environmentId,
+                  protocol: subterminal.remoteDesktopProtocol,
+                  parameters: {
+                    hostname: endpoint.IPAddress,
+                    port: subterminal.remoteDesktopPort.toString(),
+                    password: subterminal.remoteDesktopPassword,
+                  },
+                },
+              },
+            };
+            const strPayload = JSON.stringify(payload);
+            // change secret (128 bit, 16 byte secret in hexadecimal)
+            const key = Buffer.from("4c0b569e4c96df157eee1b65dd0e4d41", "hex");
+            const hmac = crypto.createHmac("sha256", key);
+            hmac.update(strPayload);
+            const signedPayload = hmac.digest("binary") + strPayload;
+            //debug to compare output with reference app encrypt-json.sh
+            //const hexsignedPayload = Buffer.from(signedPayload, "binary").toString("hex");
+            const cipher = crypto.createCipheriv(
+              "aes-128-cbc",
+              key,
+              "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+            );
+            const enctoken =
+              cipher.update(signedPayload, "binary", "base64") +
+              cipher.final("base64");
+            const urlenctoken = querystring.escape(enctoken);
+
+            fetch(subterminal.guacamoleServerURL + "/api/tokens", {
+              method: "POST",
+              body: "data=" + urlenctoken,
+              headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            })
+              .then(async (response) => {
+                if (response.status === 200) {
+                  const desktop = new DesktopInstance();
+                  desktop.remoteDesktopProtocol =
+                    subterminal.remoteDesktopProtocol;
+                  desktop.remoteDesktopPort = subterminal.remoteDesktopPort;
+                  desktop.remoteDesktopPassword =
+                    subterminal.remoteDesktopPassword;
+                  desktop.remoteDesktopToken =
+                    (await response.json()) as GuacamoleAuthResponse;
+                  desktop.guacamoleServerURL = subterminal.guacamoleServerURL;
+
+                  console.log(
+                    "Received guacamole token " + desktop.remoteDesktopToken
+                  );
+                  this.activeDesktops.set(subterminal.name, desktop);
+
+                  readyTerminalCounter++;
+                  if (
+                    resolvedOrRejected === false &&
+                    readyTerminalCounter === numberOfTerminals
+                  ) {
+                    resolvedOrRejected = true;
+                    return resolve(endpoint);
+                  }
+                } else {
+                  console.log(
+                    "Received error while getting token from guacamole server."
+                  );
+                  return reject(response.status);
+                }
+              })
+              .catch((err) => {
+                console.log("Unable to get token from guacamole server.");
+                return reject(err);
+              });
           } else if (subterminal.type === "WebApp") {
             // currently WebApps are instantly treated as ready
             // maybe track WebApp init later

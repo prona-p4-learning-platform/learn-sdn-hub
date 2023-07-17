@@ -3,6 +3,8 @@ import React from "react";
 import createWebSocket from '../api/WebSocket'
 
 interface GuacamoleClientProps {
+  alias: string;
+  environment: string;
   wsEndpoint: string;
 }
 
@@ -11,6 +13,7 @@ export default class GuacamoleClient extends React.Component<GuacamoleClientProp
   
     constructor(props: GuacamoleClientProps) {
       super(props);
+
       this.websocket = createWebSocket(this.props.wsEndpoint);
     }
   
