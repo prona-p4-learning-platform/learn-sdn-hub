@@ -24,6 +24,7 @@ export default class PlaintextAuthenticationProvider
     throw new Error("AuthenticationError");
   }
 
+  /*eslint @typescript-eslint/no-unused-vars: ["error", { "argsIgnorePattern": "^_" }]*/
   async changePassword(
     _username: string,
     _oldPassword: string,
