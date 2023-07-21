@@ -14,6 +14,7 @@ declare namespace firecrackerode {
   }
 
   interface Preboot {
+    drive_id: string;
     path_on_host: string;
     is_root_device: boolean;
     is_read_only: boolean;
