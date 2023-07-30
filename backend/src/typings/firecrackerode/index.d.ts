@@ -100,8 +100,8 @@ declare class Firecrackerode {
   interface(id: string): firecrackerode.Interface;
   machineConfig(): firecrackerode.MachineConfig;
   logger(data: firecrackerode.Logger): Promise<Logger>;
-  metrics(data: {}): Promise<{}>;
-  vsock(data: {}): Promise<{}>;
+  //metrics(data: {}): Promise<{}>;
+  //vsock(data: {}): Promise<{}>;
   downloadImage(url: string, dest: string): Promise<void>;
   spawn(binPath: string): Promise<ChildProcess>;
   kill(): boolean;
