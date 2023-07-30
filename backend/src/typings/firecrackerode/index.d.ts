@@ -1,4 +1,5 @@
 import { ChildProcess } from "child_process";
+import { Logger } from "mongodb";
 
 declare namespace firecrackerode {
   interface BootSource {
@@ -18,6 +19,13 @@ declare namespace firecrackerode {
     path_on_host: string;
     is_root_device: boolean;
     is_read_only: boolean;
+  }
+
+  interface Logger {
+    log_path: string;
+    level?: string;
+    show_level?: boolean;
+    show_log_origin?: boolean;
   }
 
   class Drive {
@@ -52,9 +60,11 @@ declare namespace firecrackerode {
 
   interface MachineConfigInfo {
     vcpu_count: number;
-    mem_size_mb: number;
-    ht_enabled: boolean;
-    track_dirty_pages: boolean;
+    mem_size_mib: number;
+    ht_enabled?: boolean;
+    track_dirty_pages?: boolean;
+    smt?: boolean;
+    cpu_template?: "T2" | "T2S" | "T2CL" | "T2A" | "V1N1" | "None";
   }
 
   //declare class MMDS {
@@ -89,9 +99,9 @@ declare class Firecrackerode {
   drive(id: string): firecrackerode.Drive;
   interface(id: string): firecrackerode.Interface;
   machineConfig(): firecrackerode.MachineConfig;
-  //logger(data: {}): Promise<{}>;
-  //metrics(data: {}): Promise<{}>;
-  //vsock(data: {}): Promise<{}>;
+  logger(data: firecrackerode.Logger): Promise<Logger>;
+  metrics(data: {}): Promise<{}>;
+  vsock(data: {}): Promise<{}>;
   downloadImage(url: string, dest: string): Promise<void>;
   spawn(binPath: string): Promise<ChildProcess>;
   kill(): boolean;

@@ -28,6 +28,7 @@
     "@types/jest": "^29.4.0",
     "@types/jsonwebtoken": "^9.0.2",
     "@types/mongodb": "^3.6.20",
+    "@types/netmask": "^2.0.2",
     "@types/node": "^18.14.5",
     "@types/ssh2": "^0.5.52",
     "@types/supertest": "^2.0.10",
@@ -55,10 +56,11 @@
     "i": "^0.3.7",
     "jsonwebtoken": "^9.0.0",
     "mongodb": "^3.7.3",
+    "netmask": "^2.0.2",
     "node-pty": "^0.10.1",
     "npm": "^9.6.0",
     "path-to-regexp": "^6.2.1",
-    "ssh2": "^1.10.0",
+    "ssh2": "^1.14.0",
     "toad-scheduler": "^2.2.0",
     "ws": "^8.12.1"
   }
