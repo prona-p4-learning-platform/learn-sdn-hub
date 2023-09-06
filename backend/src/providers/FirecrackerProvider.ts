@@ -111,10 +111,8 @@ class microVM {
         );
       }
 
-      const microVM = this;
-
-      this.microVMInstance.process.on("exit", async function (code, signal) {
-        await fs.unlink(microVM.socketPath).catch(async (err) => {
+      this.microVMInstance.process.on("exit", async function () {
+        await fs.unlink(this.socketPath).catch(async (err) => {
           if ("ENOENT" !== err.code) {
             return reject(
               new Error(
@@ -124,11 +122,11 @@ class microVM {
           }
           // if ENOENT, file does not exist as intended
         });
-        microVM.microVMInstance.process = undefined;
+        this.microVMInstance.process = undefined;
       });
 
-      this.microVMInstance.process.on("close", async function (code, signal) {
-        await fs.unlink(microVM.socketPath).catch(async (err) => {
+      this.microVMInstance.process.on("close", async function () {
+        await fs.unlink(this.socketPath).catch(async (err) => {
           if ("ENOENT" !== err.code) {
             return reject(
               new Error(
@@ -138,11 +136,11 @@ class microVM {
           }
           // if ENOENT, file does not exist as intended
         });
-        microVM.microVMInstance.process = undefined;
+        this.microVMInstance.process = undefined;
       });
 
-      this.microVMInstance.process.on("error", async function (err) {
-        await fs.unlink(microVM.socketPath).catch(async (err) => {
+      this.microVMInstance.process.on("error", async function () {
+        await fs.unlink(this.socketPath).catch(async (err) => {
           if ("ENOENT" !== err.code) {
             return reject(
               new Error(
