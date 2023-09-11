@@ -39,7 +39,9 @@ export interface Desktop {
   guacamoleServerURL: string;
   remoteDesktopProtocol: "vnc" | "rdp";
   remoteDesktopPort: number;
+  remoteDesktopUsername?: string;
   remoteDesktopPassword: string;
+  remoteDesktopHostname?: string;
 }
 
 class DesktopInstance {
@@ -576,18 +578,26 @@ export default class Environment {
             //   https://guacamole.apache.org/doc/gug/json-auth.html
             //   https://guacamole.apache.org/doc/gug/configuring-guacamole.html#connection-configuration
 
-            // username can be anonymous (""), maybe change that to real guacamole user later
+            // Add -join as connection to join already existing connections
             const payload = {
-              username: "",
+              username: this.username,
               expires: (Date.now() + 2 * 3600 * 1000).toString(),
               connections: {
-                [this.username + "-" + this.environmentId]: {
-                  id: this.username + "-" + this.environmentId,
+                [this.groupNumber + "-" + this.environmentId]: {
+                  id: this.groupNumber + "-" + this.environmentId,
                   protocol: subterminal.remoteDesktopProtocol,
                   parameters: {
-                    hostname: endpoint.IPAddress,
+                    hostname: subterminal.remoteDesktopHostname ? subterminal.remoteDesktopHostname : endpoint.IPAddress,
                     port: subterminal.remoteDesktopPort.toString(),
+                    username: subterminal.remoteDesktopUsername ? subterminal.remoteDesktopUsername : undefined,
                     password: subterminal.remoteDesktopPassword,
+                  },
+                },
+                [this.groupNumber + "-" + this.environmentId + "-join"]: {
+                  id: this.groupNumber + "-" + this.environmentId + "-join",
+                  join: this.groupNumber + "-" + this.environmentId,
+                  parameters: {
+                    "read-only": "false"
                   },
                 },
               },
