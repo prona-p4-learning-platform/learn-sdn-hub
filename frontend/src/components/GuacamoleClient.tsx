@@ -15,11 +15,7 @@ export default class GuacamoleClient extends React.Component<GuacamoleClientProp
     private rescaling: boolean = false;
     private startWidth: number = 0;
     private startHeight: number = 0;
-  
-    constructor(props: GuacamoleClientProps) {
-      super(props);
-    }
-  
+
     componentDidMount() {
       const tunnel = createTunnel(this.props.wsEndpoint);
 

@@ -587,9 +587,13 @@ export default class Environment {
                   id: this.groupNumber + "-" + this.environmentId,
                   protocol: subterminal.remoteDesktopProtocol,
                   parameters: {
-                    hostname: subterminal.remoteDesktopHostname ? subterminal.remoteDesktopHostname : endpoint.IPAddress,
+                    hostname: subterminal.remoteDesktopHostname
+                      ? subterminal.remoteDesktopHostname
+                      : endpoint.IPAddress,
                     port: subterminal.remoteDesktopPort.toString(),
-                    username: subterminal.remoteDesktopUsername ? subterminal.remoteDesktopUsername : undefined,
+                    username: subterminal.remoteDesktopUsername
+                      ? subterminal.remoteDesktopUsername
+                      : undefined,
                     password: subterminal.remoteDesktopPassword,
                   },
                 },
@@ -597,7 +601,7 @@ export default class Environment {
                   id: this.groupNumber + "-" + this.environmentId + "-join",
                   join: this.groupNumber + "-" + this.environmentId,
                   parameters: {
-                    "read-only": "false"
+                    "read-only": "false",
                   },
                 },
               },

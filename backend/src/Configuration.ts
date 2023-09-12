@@ -33,7 +33,7 @@ environments.set("p4basic", {
         remoteDesktopPort: 5900,
         remoteDesktopPassword: "vncpassword",
         remoteDesktopUsername: null,
-        remoteDesktopHostname: null
+        remoteDesktopHostname: null,
       },
     ],
     [

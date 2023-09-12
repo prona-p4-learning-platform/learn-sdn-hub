@@ -63,7 +63,7 @@ export class GuacamoleProxyTunnel extends Guacamole.WebSocketTunnel {
                 return;
 
             function getElement(value: any) {
-                var string = new String(value);
+                var string = String(value);
                 return string.length + "." + string;
             }
 
