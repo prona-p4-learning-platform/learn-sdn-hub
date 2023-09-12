@@ -1,11 +1,13 @@
 import WebSocket from "ws";
 import Environment from "../Environment";
+import { addConnection, removeConnection } from "./CurrentConnections";
 
 export default function (
   wsFromBrowser: WebSocket,
   environment: string,
   username: string,
-  desktopQueryString: string
+  desktopQueryString: string,
+  groupNumber: number
 ): void {
   const envInstance = Environment.getActiveEnvironment(environment, username);
   if (envInstance !== undefined) {
@@ -14,28 +16,36 @@ export default function (
     const desktop = envInstance.getDesktopByAlias(desktopQueryString);
     const guacamoleServerURL = new URL(desktop.guacamoleServerURL);
     // currently use ws, backend and guacd are on the same host anyway, maybe upgrade to wss (port 8443) and check certs etc.
-    guacamoleServerURL.protocol = "ws";
+    guacamoleServerURL.protocol = "wss";
+    // Save combination of groupNumber and environment to check if there are multiple connections to the same environment
+    const connectedKey = groupNumber + "-" + environment;
+    // Add connection
+    const curConnected = addConnection(connectedKey);
+    // Add -join to the connection name if there are multiple connections to the same environment
+    // Use connection entry that joins the original connection
+    const joinAddition = (curConnected > 1) ? "-join" : "";
     const wsToRemoteDesktop = new WebSocket(
       guacamoleServerURL.toString() +
-        "/websocket-tunnel?token=" +
+        "websocket-tunnel?token=" +
         desktop.remoteDesktopToken.authToken +
         "&GUAC_DATA_SOURCE=" +
         desktop.remoteDesktopToken.dataSource +
         "&GUAC_ID=" +
-        username +
+        groupNumber +
         "-" +
         environment +
-        "&GUAC_TYPE=c"
+        joinAddition +
+        "&GUAC_TYPE=c&GUAC_TIMEZONE=Europe%2FBerlin",
+        "guacamole"
     );
     wsToRemoteDesktop.on("open", () => {
-      wsFromBrowser.send("backend websocket ready");
       wsFromBrowser.on("message", (data) => {
-        //console.log(data.toString());
-        wsToRemoteDesktop.send(data);
+        // Browser to Remote Desktop
+        wsToRemoteDesktop.send(data.toString());
       });
       wsToRemoteDesktop.on("message", (data) => {
-        //console.log(data.toString());
-        wsFromBrowser.send(data);
+        // Remote Desktop to Browser
+        wsFromBrowser.send(data.toString());
       });
     });
     wsToRemoteDesktop.on("error", (err) => {
@@ -43,6 +53,7 @@ export default function (
       wsFromBrowser.close();
     });
     wsToRemoteDesktop.on("close", () => {
+      removeConnection(connectedKey);
       console.log("RemoteDesktop Client closed...");
       wsFromBrowser.close();
     });
