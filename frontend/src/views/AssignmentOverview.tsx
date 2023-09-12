@@ -15,7 +15,7 @@ import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
-import { connectAnonymously, IdbStorageAdapter } from '@convergence/convergence';
+import { connectAnonymously } from '@convergence/convergence';
 
 type Severity = "error" | "success" | "info" | "warning" | undefined;
 
@@ -144,16 +144,17 @@ export default function AssignmentOverview(props: AssignmentOverviewProps) {
       // though reported by monaco, this error seams to originate from convergence, see 
       // - https://forum.convergence.io/t/how-to-solve-the-source-model-is-detached-error/92
       // however, offline mode is beta and does not seam to work/help to fix this misleading error?
-      const options = {
-        offline: {
-          storage: new IdbStorageAdapter()
-        }
-      };
+      //const options = {
+      //  offline: {
+      //    storage: new IdbStorageAdapter()
+      //  }
+      //};
   
       // currently uses anonymous connection, maybe use user or session token based auth,
       // however, if using exam/assignment, most likely collaboration will be disabled
       // anyway
-      connectAnonymously(CONVERGENCE_URL, localStorage.getItem("username") ?? "default-user", options)
+      //connectAnonymously(CONVERGENCE_URL, localStorage.getItem("username") ?? "default-user", options)
+      connectAnonymously(CONVERGENCE_URL, localStorage.getItem("username") ?? "default-user")
         .then(d => {
           const domain = d;
           domain.models().query("SELECT * FROM learn-sdn-hub-" + group).then(results => {
@@ -167,6 +168,7 @@ export default function AssignmentOverview(props: AssignmentOverviewProps) {
             domain.dispose();
           });
         });  
+      localStorage.removeItem("collaboration-collection-created-for-group");
     }
     try {
       const result = await fetch(APIRequest(`/api/environment/delete?environment=${assignment}`, {
