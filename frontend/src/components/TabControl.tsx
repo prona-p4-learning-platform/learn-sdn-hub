@@ -83,22 +83,3 @@ export default function TabControl(props: TabControlProps) {
     </>
   );
 }
-
-/*
-                <Grid container direction="row" justifyContent="flex-start" alignItems="center" spacing={1}>
-                  <Grid item>
-                    <Button
-                      variant="contained"
-                      color="primary"
-                      onClick={handleConfirmationRestartDialogOpen}
-                      sx={{ mt: 1.5, ml: 1 }}
-                    >
-                      Restart terminal environment
-                  </Button>
-                  </Grid>
-                  <Grid item>
-                    <Typography align="center" variant="body2">Status: {this.state.environmentStatus}</Typography>
-                  </Grid>
-                </Grid>
-
-*/

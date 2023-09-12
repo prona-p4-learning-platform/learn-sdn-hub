@@ -2,7 +2,7 @@ import { Router, Request, RequestHandler } from "express";
 import Environment, {
   Submission,
   AliasedFile,
-  Task,
+  TerminalType,
   AssignmentStep,
 } from "../Environment";
 import bodyParser from "body-parser";
@@ -28,7 +28,7 @@ const queryValidator = celebrate({
   }),
 });
 
-const fileWithAliasValidator = celebrate({
+const environmentPathParamWithAliasValidator = celebrate({
   [Segments.PARAMS]: Joi.object().keys({
     environment: Joi.string().required(),
     alias: Joi.string().required(),
@@ -54,17 +54,16 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
         filePaths: targetEnv.editableFiles.map(
           (file: AliasedFile) => file.absFilePath
         ),
-        // first task in array of tasks will define the tab
-        ttyTabs: targetEnv.tasks
-          .filter((subtasks: Task[]) => subtasks[0].provideTty === true)
-          .map((subtask: Task[]) => subtask[0].name),
-        ttys: targetEnv.tasks
-          .filter((subtasks: Task[]) =>
-            subtasks.filter((task: Task) => task.provideTty === true)
+        // first subterminal in array of subterminals will define the tab name
+        terminals: targetEnv.terminals.filter((subterminals: TerminalType[]) =>
+          subterminals.filter(
+            (subterminal: TerminalType) =>
+              (subterminal.type === "Shell" &&
+                subterminal.provideTty === true) ||
+              subterminal.type === "Desktop" ||
+              subterminal.type === "WebApp"
           )
-          .map((subtasks: Task[]) =>
-            subtasks.map((subtask: Task) => subtask.name)
-          ),
+        ),
         stepNames:
           targetEnv.steps?.map((step: AssignmentStep) => step.name) ?? [],
         stepLabels:
@@ -91,7 +90,8 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
           .json({ error: true, message: "Environment not found" });
       }
       let markdown;
-      // if assignmentLabSheetLocation specified as "instance", get lab sheet from instance filesystem
+      // if assignmentLabSheetLocation specified as "instance",
+      // get lab sheet from instance filesystem
       if (targetEnv.assignmentLabSheetLocation === "instance") {
         const env = Environment.getActiveEnvironment(
           req.params.environment,
@@ -173,7 +173,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
   router.get(
     "/:environment/file/:alias",
     authenticationMiddleware,
-    fileWithAliasValidator,
+    environmentPathParamWithAliasValidator,
     (req: RequestWithUser, res) => {
       const env = Environment.getActiveEnvironment(
         req.params.environment,
@@ -199,7 +199,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
     "/:environment/file/:alias",
     bodyParser.text({ type: "text/plain" }) as RequestHandler,
     authenticationMiddleware,
-    fileWithAliasValidator,
+    environmentPathParamWithAliasValidator,
     (req: RequestWithUser, res) => {
       const env = Environment.getActiveEnvironment(
         req.params.environment,

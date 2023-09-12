@@ -4,11 +4,12 @@ export interface VMEndpoint {
   IPAddress: string;
   SSHPort: number;
   LanguageServerPort: number;
+  RemoteDesktopPort?: number;
 }
 
 // evaluate possiblity to use multiple providers in the same backend, e.g.,
 // configuring individual providers to be used for different assignments,
-// e.g., by using an option like "proivderType" in Configuration.ts
+// e.g., by using an option like "providerType" in Configuration.ts
 
 export interface InstanceProvider {
   createServer(

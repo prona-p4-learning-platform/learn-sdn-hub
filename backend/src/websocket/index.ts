@@ -4,6 +4,7 @@ import { match } from "path-to-regexp";
 import url from "url";
 import ConsoleHandler from "./ConsoleHandler";
 import LanguageServerHandler from "./LanguageServerHandler";
+import RemoteDesktopHandler from "./RemoteDesktopHandler";
 import { TokenPayload } from "../authentication/AuthenticationMiddleware";
 import jwt from "jsonwebtoken";
 interface WebsocketPathParams {
@@ -12,8 +13,13 @@ interface WebsocketPathParams {
 }
 
 interface LSPathParams {
-  language: string;
   environment: string;
+  language: string;
+}
+
+interface RDPathParams {
+  environment: string;
+  alias: string;
 }
 
 const envMatcher = match<WebsocketPathParams>(
@@ -21,6 +27,9 @@ const envMatcher = match<WebsocketPathParams>(
 );
 const lsMatcher = match<LSPathParams>(
   "/environment/:environment/languageserver/:language"
+);
+const rdMatcher = match<RDPathParams>(
+  "/environment/:environment/desktop/:alias"
 );
 
 export default function wrapWSWithExpressApp(server: Server): void {
@@ -43,12 +52,22 @@ export default function wrapWSWithExpressApp(server: Server): void {
       const path = url.parse(request.url).pathname;
       const envMatchResult = envMatcher(path);
       const lspMatchResult = lsMatcher(path);
+      const rdMatchResult = rdMatcher(path);
       if (envMatchResult !== false) {
         const { environment, type } = envMatchResult.params;
         ConsoleHandler(ws, environment, user.username, type);
       } else if (lspMatchResult !== false) {
         const { environment, language } = lspMatchResult.params;
         LanguageServerHandler(ws, environment, user.username, language);
+      } else if (rdMatchResult !== false) {
+        const { environment, alias } = rdMatchResult.params;
+        RemoteDesktopHandler(
+          ws,
+          environment,
+          user.username,
+          alias,
+          user.groupNumber
+        );
       } else {
         ws.send(`No route handler.`);
         ws.close();
