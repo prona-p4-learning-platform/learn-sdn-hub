@@ -61,7 +61,13 @@ export default function wrapWSWithExpressApp(server: Server): void {
         LanguageServerHandler(ws, environment, user.username, language);
       } else if (rdMatchResult !== false) {
         const { environment, alias } = rdMatchResult.params;
-        RemoteDesktopHandler(ws, environment, user.username, alias, user.groupNumber);
+        RemoteDesktopHandler(
+          ws,
+          environment,
+          user.username,
+          alias,
+          user.groupNumber
+        );
       } else {
         ws.send(`No route handler.`);
         ws.close();

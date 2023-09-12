@@ -23,7 +23,7 @@ export default function (
     const curConnected = addConnection(connectedKey);
     // Add -join to the connection name if there are multiple connections to the same environment
     // Use connection entry that joins the original connection
-    const joinAddition = (curConnected > 1) ? "-join" : "";
+    const joinAddition = curConnected > 1 ? "-join" : "";
     const wsToRemoteDesktop = new WebSocket(
       guacamoleServerURL.toString() +
         "websocket-tunnel?token=" +
@@ -36,7 +36,7 @@ export default function (
         environment +
         joinAddition +
         "&GUAC_TYPE=c&GUAC_TIMEZONE=Europe%2FBerlin",
-        "guacamole"
+      "guacamole"
     );
     wsToRemoteDesktop.on("open", () => {
       wsFromBrowser.on("message", (data) => {
