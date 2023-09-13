@@ -45,6 +45,7 @@ export default class PlaintextMultiuserAuthenticationProvider
     throw new Error("AuthenticationError");
   }
 
+  /*eslint @typescript-eslint/no-unused-vars: ["error", { "argsIgnorePattern": "^_" }]*/
   async changePassword(
     _username: string,
     _oldPassword: string,

@@ -1,6 +1,8 @@
 import React, {ReactNode} from "react";
 import Grid from "@mui/material/Grid";
 import Terminal from "../components/Terminal";
+import GuacamoleClient from "../components/GuacamoleClient";
+import WebFrame from "../components/WebFrame";
 import TerminalTabs from "../components/TerminalTabs";
 import { withRouter } from "react-router-dom";
 import { RouteComponentProps } from "react-router";
@@ -34,11 +36,36 @@ export type TerminalStateType = {
   state: string;
 }
 
+export interface Shell {
+  type: "Shell";
+  executable: string;
+  cwd: string;
+  params: Array<string>;
+  provideTty: boolean;
+  name: string;
+}
+
+export interface WebApp {
+  type: "WebApp";
+  url: string;
+  name: string;
+}
+
+export interface Desktop {
+  type: "Desktop";
+  name: string;
+  websocketUrl: string;
+}
+
+export type TerminalType =
+  | Shell
+  | Desktop
+  | WebApp;
+
 type StateType = {
   environmentStatus: string;
   errorMessage: string;
-  ttyTabs: string[];
-  ttys: string[][];
+  terminals: TerminalType[][];
   files: string[];
   filePaths: string[];
   assignment: string;
@@ -75,8 +102,7 @@ export class EnvironmentView extends React.Component<PropsType,StateType> {
     this.state = {
       environmentStatus: "running",
       errorMessage: "",
-      ttyTabs: [],
-      ttys: [],
+      terminals: [],
       files: [],
       filePaths: [],
       assignment: "",
@@ -262,8 +288,7 @@ export class EnvironmentView extends React.Component<PropsType,StateType> {
       .then((data) => {
         if (data.error !== true) {
           this.setState({
-            ttyTabs: data.ttyTabs,
-            ttys: data.ttys,
+            terminals: data.terminals,
             files: data.files,
             filePaths: data.filePaths,
             stepNames: data.stepNames,
@@ -328,10 +353,29 @@ export class EnvironmentView extends React.Component<PropsType,StateType> {
   }
 
   render(): ReactNode {
-    const terminals = this.state.ttys.map((tasks: string[], index: number) => 
-      tasks.map((alias: string) =>
-          <Terminal key={alias} wsEndpoint={`/environment/${this.props.match.params.environment}/type/${alias}`}
-            terminalState={this.getTerminalState(`/environment/${this.props.match.params.environment}/type/${alias}`)} onTerminalUnmount={this.storeTerminalState} />
+    const terminalTabNames = new Array<string>();
+    const terminals = this.state.terminals.map((subterminals: TerminalType[]) =>
+      subterminals.map((subterminal: TerminalType) => {
+        terminalTabNames.push(subterminal.name);
+        if (subterminal.type === "Shell") {
+          return <Terminal key={subterminal.name}
+            wsEndpoint={`/environment/${this.props.match.params.environment}/type/${subterminal.name}`}
+            terminalState={this.getTerminalState(`/environment/${this.props.match.params.environment}/type/${subterminal.name}`)}
+            onTerminalUnmount={this.storeTerminalState} />
+        }
+        if (subterminal.type === "Desktop") {
+          return <GuacamoleClient key={subterminal.name}
+            alias={subterminal.name}
+            environment={this.props.match.params.environment}
+            wsEndpoint={`/environment/${this.props.match.params.environment}/desktop/${subterminal.name}`} />
+        }
+        if (subterminal.type === "WebApp") {
+          return <WebFrame key={subterminal.name} url={subterminal.url}/>
+        }
+        else {
+          return <Typography>unknown terminal type</Typography>
+        }
+      }
       )
     );
 
@@ -410,7 +454,7 @@ export class EnvironmentView extends React.Component<PropsType,StateType> {
               <Grid container direction="row" justifyContent="flex-start" alignItems="center" spacing={1}>
                 <Grid item>
                   {this.state.environmentStatus === "running" && (
-                    <TerminalTabs tabNames={this.state.ttyTabs}>{terminals}</TerminalTabs>
+                    <TerminalTabs tabNames={terminalTabNames}>{terminals}</TerminalTabs>
                   )}
                 </Grid>
               </Grid>

@@ -48,6 +48,7 @@ export default class SSHFileHandler {
         sftp.readFile(absolutePath, (err: Error, content: Buffer) => {
           if (err) return reject(err);
           //console.log("retrieved file.", content);
+          // sftp.emit("close")?
           sftp.end();
           if (encoding) {
             return resolve(content.toString(encoding));
@@ -75,6 +76,7 @@ export default class SSHFileHandler {
         const writeStream = sftp.createWriteStream(absolutePath);
         writeStream.on("close", () => {
           console.log("stream closed");
+          // sftp.emit("close")?
           sftp.end();
           return resolve();
         });
@@ -83,6 +85,7 @@ export default class SSHFileHandler {
         });
         writeStream.on("error", () => {
           console.log("stream error");
+          // sftp.emit("close")?
           sftp.end();
           return reject(new Error("SSHFileHandler: SFTP stream error."));
         });
