@@ -1,5 +1,4 @@
-import React, { useMemo } from "react";
-import { useState } from "react";
+import React, { useMemo, useState } from "react";
 import AppBar from "@mui/material/AppBar";
 import Toolbar from "@mui/material/Toolbar";
 import IconButton from "@mui/material/IconButton";
@@ -134,21 +133,13 @@ function App() {
               }
             />
           </Route>
-          <PrivateRoute
-            isAuthenticated={authenticated}
-            exact
-            path="/assignments"
-          >
+          <PrivateRoute isAuthenticated={authenticated} exact path="/assignments">
             <AssignmentOverview />
           </PrivateRoute>
-          <PrivateRoute isAuthenticated={authenticated} exact path="/settings">
+          <PrivateRoute  isAuthenticated={authenticated}  exact  path="/settings">
             <UserSettings />
           </PrivateRoute>
-          <PrivateRoute
-            isAuthenticated={authenticated}
-            exact
-            path="/environment/:environment"
-          >
+          <PrivateRoute isAuthenticated={authenticated} exact path="/environment/:environment">
             <Environment />
           </PrivateRoute>
         </Router>
