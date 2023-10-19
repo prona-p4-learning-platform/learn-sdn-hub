@@ -113,6 +113,7 @@ class microVM {
 
       this.microVMInstance.process.on("exit", async function () {
         await fs.unlink(this.socketPath).catch(async (err) => {
+          // if ENOENT, file does not exist as intended
           if ("ENOENT" !== err.code) {
             return reject(
               new Error(
@@ -120,13 +121,12 @@ class microVM {
               )
             );
           }
-          // if ENOENT, file does not exist as intended
         });
-        this.microVMInstance.process = undefined;
       });
 
       this.microVMInstance.process.on("close", async function () {
         await fs.unlink(this.socketPath).catch(async (err) => {
+          // if ENOENT, file does not exist as intended
           if ("ENOENT" !== err.code) {
             return reject(
               new Error(
@@ -134,9 +134,7 @@ class microVM {
               )
             );
           }
-          // if ENOENT, file does not exist as intended
         });
-        this.microVMInstance.process = undefined;
       });
 
       this.microVMInstance.process.on("error", async function () {
