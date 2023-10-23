@@ -70,6 +70,7 @@ class microVMInstance {
   groupNumber: number;
   environment: string;
   process: ChildProcess;
+  microVM: microVM;
 }
 
 class microVM {
@@ -552,6 +553,7 @@ export default class FirecrackerProvider implements InstanceProvider {
                                           microVMIPAddress,
                                           {
                                             vmEndpoint: vmEndpoint,
+                                            microVM: mv,
                                             process: process,
                                             expirationDate: expirationDate,
                                             tapInterfaceId: tap_id,
@@ -658,43 +660,51 @@ export default class FirecrackerProvider implements InstanceProvider {
       if (vmEndpoint !== undefined && fc !== undefined && fi !== undefined) {
         // wait for stop tasks to end
         await providerInstance.sleep(1000);
-        if (fi.kill()) {
-          // wait for process to be killed properly before deleting the tap dev
-          await providerInstance.sleep(1000);
+        await fc.microVM
+        .invokeAction("SendCtrlAltDel")
+        .then(async () => {
+          console.log(
+            "FirecrackerProvider: microVM stopped"
+          );
+          // wait for stop tasks to end, is this still necessary after SendCtrlAltDel?
+          if (fi.kill()) {
+            // wait for process to be killed properly before deleting the tap dev
+            await providerInstance.sleep(1000);
 
-          // delete tap interface
-          exec(
-            "sudo brctl delif " +
-              this.bridgeInterface +
-              " " +
-              fc.tapInterfaceId +
-              " && sudo ip tuntap del " +
-              fc.tapInterfaceId +
-              " mode tap",
-            (error, stdout, stderr) => {
-              if (error) {
-                return reject(
-                  new Error(
-                    "FirecrackerProvider: Unable to remove TAP device." +
-                      stderr +
-                      " " +
-                      stdout
-                  )
-                );
+            // delete tap interface
+            exec(
+              "sudo brctl delif " +
+                this.bridgeInterface +
+                " " +
+                fc.tapInterfaceId +
+                " && sudo ip tuntap del " +
+                fc.tapInterfaceId +
+                " mode tap",
+              (error, stdout, stderr) => {
+                if (error) {
+                  return reject(
+                    new Error(
+                      "FirecrackerProvider: Unable to remove TAP device." +
+                        stderr +
+                        " " +
+                        stdout
+                    )
+                  );
+                }
               }
-            }
-          );
-          this.availableIpAddresses.push(vmEndpoint.IPAddress);
-          this.firecrackers.delete(instance);
+            );
+            this.availableIpAddresses.push(vmEndpoint.IPAddress);
+            this.firecrackers.delete(instance);
 
-          return resolve();
-        } else {
-          return reject(
-            new Error(
-              "FirecrackerProvider: Could not delete instance: " + instance
-            )
-          );
-        }
+            return resolve();
+          } else {
+            return reject(
+              new Error(
+                "FirecrackerProvider: Could not delete instance: " + instance
+              )
+            );
+          }
+        })
       } else {
         return reject(new Error(InstanceNotFoundErrorMessage));
       }
