@@ -3,9 +3,10 @@ import { EnvironmentDescription } from "./Environment";
 const environments = new Map<string, EnvironmentDescription>();
 
 environments.set("p4basic", {
-  tasks: [
+  terminals: [
     [
       {
+        type: "Shell",
         name: "bash",
         cwd: "/home/p4/tutorials/exercises/basic/",
         executable: "make",
@@ -15,11 +16,31 @@ environments.set("p4basic", {
     ],
     [
       {
+        type: "Shell",
         name: "bash2",
         cwd: "/home/p4/tutorials/exercises/basic/",
         executable: "ls -al",
         params: [],
         provideTty: true,
+      },
+    ],
+    [
+      {
+        type: "Desktop",
+        name: "desk1",
+        guacamoleServerURL: "http://127.0.0.1:8080/guacamole",
+        remoteDesktopProtocol: "vnc",
+        remoteDesktopPort: 5900,
+        remoteDesktopPassword: "vncpassword",
+        remoteDesktopUsername: null,
+        remoteDesktopHostname: null,
+      },
+    ],
+    [
+      {
+        type: "WebApp",
+        name: "test",
+        url: "https://www.example.org",
       },
     ],
   ],
@@ -31,6 +52,7 @@ environments.set("p4basic", {
   ],
   stopCommands: [
     {
+      type: "Shell",
       name: "bash",
       cwd: "/home/p4/tutorials/exercises/basic/",
       executable: "make",
@@ -90,9 +112,10 @@ environments.set("p4basic", {
 });
 
 environments.set("l2_learning_switch", {
-  tasks: [
+  terminals: [
     [
       {
+        type: "Shell",
         name: "bash",
         cwd: "/home/p4/tutorials/exercises/basic/",
         executable: "make",
@@ -102,6 +125,7 @@ environments.set("l2_learning_switch", {
     ],
     [
       {
+        type: "Shell",
         name: "bash2",
         cwd: "/home/p4/tutorials/exercises/basic/",
         executable: "bash",
@@ -122,6 +146,7 @@ environments.set("l2_learning_switch", {
   ],
   stopCommands: [
     {
+      type: "Shell",
       name: "bash",
       cwd: "/home/p4/tutorials/exercises/basic/",
       executable: "make",
@@ -129,6 +154,7 @@ environments.set("l2_learning_switch", {
       provideTty: false,
     },
     {
+      type: "Shell",
       name: "bash2",
       cwd: "/home/p4/tutorials/exercises/basic/",
       executable: "exit",
@@ -143,9 +169,10 @@ environments.set("l2_learning_switch", {
 });
 
 environments.set("p4calc", {
-  tasks: [
+  terminals: [
     [
       {
+        type: "Shell",
         name: "bash",
         cwd: "/home/ubuntu/tutorials/exercises/calc/",
         executable: "make",
@@ -157,6 +184,7 @@ environments.set("p4calc", {
   editableFiles: [],
   stopCommands: [
     {
+      type: "Shell",
       name: "bash",
       cwd: "/home/ubuntu/tutorials/exercises/calc/",
       executable: "make",
@@ -169,9 +197,10 @@ environments.set("p4calc", {
 });
 
 environments.set("python-test", {
-  tasks: [
+  terminals: [
     [
       {
+        type: "Shell",
         name: "bash",
         cwd: "/home/p4/tmux/example3/",
         executable: "./start-tmux-example3-bash",
@@ -198,6 +227,7 @@ environments.set("python-test", {
   ],
   stopCommands: [
     {
+      type: "Shell",
       name: "bash",
       cwd: "/home/p4/",
       executable: "exit",
@@ -217,9 +247,10 @@ environments.set("python-test", {
 });
 
 environments.set("Example0-SDN-Intro", {
-  tasks: [
+  terminals: [
     [
       {
+        type: "Shell",
         name: "bash",
         cwd: "/home/p4/p4-boilerplate/Example0-SDN-Intro/",
         executable: "./start-terminal1.sh",
@@ -229,6 +260,7 @@ environments.set("Example0-SDN-Intro", {
     ],
     [
       {
+        type: "Shell",
         name: "bash2",
         cwd: "/home/p4/p4-boilerplate/Example0-SDN-Intro/",
         executable: "./start-terminal2.sh",
@@ -249,6 +281,7 @@ environments.set("Example0-SDN-Intro", {
   ],
   stopCommands: [
     {
+      type: "Shell",
       name: "bash",
       cwd: "/home/p4/p4-boilerplate/Example0-SDN-Intro/",
       executable: "./stop-terminal1.sh",
@@ -256,6 +289,7 @@ environments.set("Example0-SDN-Intro", {
       provideTty: false,
     },
     {
+      type: "Shell",
       name: "bash2",
       cwd: "/home/p4/p4-boilerplate/Example0-SDN-Intro/",
       executable: "./stop-terminal2.sh",
@@ -268,9 +302,10 @@ environments.set("Example0-SDN-Intro", {
 });
 
 environments.set("Beispiel0-SDN-Einfuehrung", {
-  tasks: [
+  terminals: [
     [
       {
+        type: "Shell",
         name: "bash",
         cwd: "/home/p4/p4-boilerplate/Example0-SDN-Intro/",
         executable: "./start-terminal1.sh",
@@ -280,6 +315,7 @@ environments.set("Beispiel0-SDN-Einfuehrung", {
     ],
     [
       {
+        type: "Shell",
         name: "bash2",
         cwd: "/home/p4/p4-boilerplate/Example0-SDN-Intro/",
         executable: "./start-terminal2.sh",
@@ -300,6 +336,7 @@ environments.set("Beispiel0-SDN-Einfuehrung", {
   ],
   stopCommands: [
     {
+      type: "Shell",
       name: "bash",
       cwd: "/home/p4/p4-boilerplate/Example0-SDN-Intro/",
       executable: "./stop-terminal1.sh",
@@ -307,6 +344,7 @@ environments.set("Beispiel0-SDN-Einfuehrung", {
       provideTty: false,
     },
     {
+      type: "Shell",
       name: "bash2",
       cwd: "/home/p4/p4-boilerplate/Example0-SDN-Intro/",
       executable: "./stop-terminal2.sh",
@@ -323,9 +361,10 @@ environments.set("Beispiel0-SDN-Einfuehrung", {
 });
 
 environments.set("Example1-Repeater", {
-  tasks: [
+  terminals: [
     [
       {
+        type: "Shell",
         name: "bash",
         cwd: "/home/p4/p4-boilerplate/Example1-Repeater/",
         executable: "./start-terminal1.sh",
@@ -335,6 +374,7 @@ environments.set("Example1-Repeater", {
     ],
     [
       {
+        type: "Shell",
         name: "bash2",
         cwd: "/home/p4/p4-boilerplate/Example1-Repeater/",
         executable: "./start-terminal2.sh",
@@ -366,6 +406,7 @@ environments.set("Example1-Repeater", {
   ],
   stopCommands: [
     {
+      type: "Shell",
       name: "bash",
       cwd: "/home/p4/p4-boilerplate/Example1-Repeater/",
       executable: "./stop-terminal1.sh",
@@ -373,6 +414,7 @@ environments.set("Example1-Repeater", {
       provideTty: false,
     },
     {
+      type: "Shell",
       name: "bash2",
       cwd: "/home/p4/p4-boilerplate/Example1-Repeater/",
       executable: "./stop-terminal2.sh",
@@ -406,9 +448,10 @@ environments.set("Example1-Repeater", {
 });
 
 environments.set("Example2-MinimalisticSwitch", {
-  tasks: [
+  terminals: [
     [
       {
+        type: "Shell",
         name: "bash",
         cwd: "/home/p4/p4-boilerplate/Example2-MinimalisticSwitch/",
         executable: "./start-terminal1.sh",
@@ -416,6 +459,7 @@ environments.set("Example2-MinimalisticSwitch", {
         provideTty: true,
       },
       {
+        type: "Shell",
         name: "bash2",
         cwd: "/home/p4/p4-boilerplate/Example2-MinimalisticSwitch/",
         executable: "./start-terminal2.sh",
@@ -453,6 +497,7 @@ environments.set("Example2-MinimalisticSwitch", {
   ],
   stopCommands: [
     {
+      type: "Shell",
       name: "bash",
       cwd: "/home/p4/p4-boilerplate/Example2-MinimalisticSwitch/",
       executable: "./stop-terminal1.sh",
@@ -460,6 +505,7 @@ environments.set("Example2-MinimalisticSwitch", {
       provideTty: false,
     },
     {
+      type: "Shell",
       name: "bash2",
       cwd: "/home/p4/p4-boilerplate/Example2-MinimalisticSwitch/",
       executable: "./stop-terminal2.sh",
@@ -472,9 +518,10 @@ environments.set("Example2-MinimalisticSwitch", {
 });
 
 environments.set("Example3-LearningSwitch", {
-  tasks: [
+  terminals: [
     [
       {
+        type: "Shell",
         name: "bash",
         cwd: "/home/p4/p4-boilerplate/Example3-LearningSwitch/",
         executable: "./start-terminal1.sh",
@@ -482,6 +529,7 @@ environments.set("Example3-LearningSwitch", {
         provideTty: true,
       },
       {
+        type: "Shell",
         name: "bash2",
         cwd: "/home/p4/p4-boilerplate/Example3-LearningSwitch/",
         executable: "./start-terminal2.sh",
@@ -491,6 +539,7 @@ environments.set("Example3-LearningSwitch", {
     ],
     [
       {
+        type: "Shell",
         name: "bash3",
         cwd: "/home/p4/p4-boilerplate/Example3-LearningSwitch/",
         executable: "./start-terminal3.sh",
@@ -521,6 +570,7 @@ environments.set("Example3-LearningSwitch", {
   ],
   stopCommands: [
     {
+      type: "Shell",
       name: "bash",
       cwd: "/home/p4/p4-boilerplate/Example3-LearningSwitch/",
       executable: "./stop-terminal1.sh",
@@ -528,6 +578,7 @@ environments.set("Example3-LearningSwitch", {
       provideTty: false,
     },
     {
+      type: "Shell",
       name: "bash2",
       cwd: "/home/p4/p4-boilerplate/Example3-LearningSwitch/",
       executable: "./stop-terminal2.sh",
@@ -535,6 +586,7 @@ environments.set("Example3-LearningSwitch", {
       provideTty: false,
     },
     {
+      type: "Shell",
       name: "bash3",
       cwd: "/home/p4/p4-boilerplate/Example3-LearningSwitch/",
       executable: "./stop-terminal3.sh",
@@ -548,9 +600,10 @@ environments.set("Example3-LearningSwitch", {
 });
 
 environments.set("Example-p4env", {
-  tasks: [
+  terminals: [
     [
       {
+        type: "Shell",
         name: "bash",
         cwd: "/home/p4/p4-boilerplate/Example-p4env/",
         executable: "./start-terminal1.sh",
@@ -558,6 +611,7 @@ environments.set("Example-p4env", {
         provideTty: true,
       },
       {
+        type: "Shell",
         name: "bash2",
         cwd: "/home/p4/p4-boilerplate/Example-p4env/",
         executable: "./start-terminal2.sh",
@@ -579,6 +633,7 @@ environments.set("Example-p4env", {
   ],
   stopCommands: [
     {
+      type: "Shell",
       name: "bash",
       cwd: "/home/p4/p4-boilerplate/Example-p4env/",
       executable: "./stop-terminal1.sh",
@@ -586,6 +641,7 @@ environments.set("Example-p4env", {
       provideTty: false,
     },
     {
+      type: "Shell",
       name: "bash2",
       cwd: "/home/p4/p4-boilerplate/Example-p4env/",
       executable: "./stop-terminal2.sh",

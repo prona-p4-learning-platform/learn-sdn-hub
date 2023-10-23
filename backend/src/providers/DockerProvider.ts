@@ -28,6 +28,7 @@ export default class DockerProvider implements InstanceProvider {
   // SSH and LanguageServer Port config
   private sshPort: number;
   private lsPort: number;
+  private remoteDesktopPort: number;
 
   private dockerodeInstance: Dockerode;
 
@@ -63,6 +64,7 @@ export default class DockerProvider implements InstanceProvider {
     // better use env var to allow configuration of port numbers?
     this.sshPort = 22;
     this.lsPort = 3005;
+    this.remoteDesktopPort = 5900;
 
     const scheduler = new ToadScheduler();
 
@@ -103,7 +105,11 @@ export default class DockerProvider implements InstanceProvider {
       const containerCmd = dockerCmd ?? providerInstance.cmd;
       // Default ports to be exposed and bound are SSH and LSP:
       // should be always tcp for ssh and lsp - at least for now? ;)
-      let containerPorts = [this.sshPort + "/tcp", this.lsPort + "/tcp"];
+      let containerPorts = [
+        this.sshPort + "/tcp",
+        this.lsPort + "/tcp",
+        this.remoteDesktopPort + "/tcp",
+      ];
       // append additionally configured ports
       if (dockerSupplementalPorts?.length > 0)
         containerPorts = containerPorts.concat(dockerSupplementalPorts);
@@ -172,6 +178,9 @@ export default class DockerProvider implements InstanceProvider {
                       const lsBindingPort = parseInt(
                         portMap[Object.keys(portMap)[1]][0].HostPort
                       );
+                      const rdBindingPort = parseInt(
+                        portMap[Object.keys(portMap)[2]][0].HostPort
+                      );
                       const expirationDate = new Date(
                         Date.now() +
                           providerInstance.maxInstanceLifetimeMinutes *
@@ -193,6 +202,7 @@ export default class DockerProvider implements InstanceProvider {
                             IPAddress: sshBindingHost,
                             SSHPort: sshBindingPort,
                             LanguageServerPort: lsBindingPort,
+                            RemoteDesktopPort: rdBindingPort,
                           });
                         })
                         .catch((err) => {
@@ -258,6 +268,9 @@ export default class DockerProvider implements InstanceProvider {
           const lsBindingPort = parseInt(
             portMap[Object.keys(portMap)[1]][0].HostPort
           );
+          const rdBindingPort = parseInt(
+            portMap[Object.keys(portMap)[2]][0].HostPort
+          );
 
           const expirationDate = new Date(
             new Date(response.Created).getTime() +
@@ -272,6 +285,7 @@ export default class DockerProvider implements InstanceProvider {
             IPAddress: sshBindingHost,
             SSHPort: sshBindingPort,
             LanguageServerPort: lsBindingPort,
+            RemoteDesktopPort: rdBindingPort,
           });
         })
         .catch((err) => {
@@ -438,10 +452,13 @@ export default class DockerProvider implements InstanceProvider {
                   portMap[Object.keys(portMap)[0]][0].HostPort;
                 const lsBindingPort =
                   portMap[Object.keys(portMap)[1]][0].HostPort;
+                const rdBindingPort =
+                  portMap[Object.keys(portMap)[2]][0].HostPort;
                 if (
                   sshBindingHost !== "" &&
                   sshBindingPort !== "" &&
-                  lsBindingPort !== ""
+                  lsBindingPort !== "" &&
+                  rdBindingPort !== ""
                 ) {
                   resolved = true;
                   return resolve();

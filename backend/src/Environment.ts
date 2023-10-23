@@ -6,19 +6,60 @@ import {
   InstanceNotFoundErrorMessage,
 } from "./providers/Provider";
 import { Persister } from "./database/Persister";
+import crypto from "crypto";
+import querystring from "querystring";
 
 export interface AliasedFile {
   absFilePath: string;
   alias: string;
 }
 
-export interface Task {
+export interface Shell {
+  type: "Shell";
+  name: string;
   executable: string;
   cwd: string;
   params: Array<string>;
   provideTty: boolean;
-  name: string;
 }
+
+export interface WebApp {
+  type: "WebApp";
+  name: string;
+  url: string;
+}
+
+class WebAppInstance {
+  url: string;
+}
+
+export interface Desktop {
+  type: "Desktop";
+  name: string;
+  guacamoleServerURL: string;
+  remoteDesktopProtocol: "vnc" | "rdp";
+  remoteDesktopPort: number;
+  remoteDesktopUsername?: string;
+  remoteDesktopPassword: string;
+  remoteDesktopHostname?: string;
+}
+
+class DesktopInstance {
+  guacamoleServerURL: string;
+  remoteDesktopProtocol: "vnc" | "rdp";
+  remoteDesktopPort: number;
+  remoteDesktopPassword: string;
+  remoteDesktopToken: GuacamoleAuthResponse;
+}
+
+export interface GuacamoleAuthResponse {
+  authToken: string;
+  username: string;
+  dataSource: string;
+  availableDataSources: string[];
+}
+
+export type TerminalType = Shell | Desktop | WebApp;
 
 export interface AssignmentStep {
   name: string;
@@ -62,9 +103,9 @@ export type SubmissionFileType = {
 };
 
 export interface EnvironmentDescription {
-  tasks: Array<Array<Task>>;
+  terminals: Array<Array<TerminalType>>;
   editableFiles: Array<AliasedFile>;
-  stopCommands: Array<Task>;
+  stopCommands: Array<TerminalType>;
   steps?: Array<AssignmentStep>;
   submissionPrepareCommand?: string;
   submissionSupplementalFiles?: Array<string>;
@@ -86,6 +127,8 @@ const DenyStartOfMissingInstanceErrorMessage =
 
 export default class Environment {
   private activeConsoles: Map<string, Console>;
+  private activeDesktops: Map<string, DesktopInstance>;
+  private activeWebApps: Map<string, WebAppInstance>;
   private editableFiles: Map<string, string>;
   private configuration: EnvironmentDescription;
   private environmentId: string;
@@ -140,6 +183,8 @@ export default class Environment {
     persister: Persister
   ) {
     this.activeConsoles = new Map();
+    this.activeDesktops = new Map();
+    this.activeWebApps = new Map();
     this.editableFiles = new Map();
     this.configuration = configuration;
     this.environmentProvider = environmentProvider;
@@ -163,6 +208,10 @@ export default class Environment {
 
   public getConsoles(): Map<string, Console> {
     return this.activeConsoles;
+  }
+
+  public getDesktopByAlias(alias: string): DesktopInstance {
+    return this.activeDesktops.get(alias);
   }
 
   static async createEnvironment(
@@ -455,62 +504,189 @@ export default class Environment {
       desc.editableFiles.forEach((val) =>
         this.addEditableFile(val.alias, val.absFilePath)
       );
-      let errorConsoleCounter = 0;
+      let errorTerminalCounter = 0;
       let resolvedOrRejected = false;
-      let readyConsoleCounter = 0;
-      desc.tasks.forEach((subtasks) => {
-        subtasks.forEach((task) => {
-          global.console.log(
-            "Opening console: ",
-            JSON.stringify(task),
-            JSON.stringify(endpoint)
-          );
-          try {
-            const console = new SSHConsole(
-              this.environmentId,
-              this.username,
-              this.groupNumber,
-              endpoint.IPAddress,
-              endpoint.SSHPort,
-              task.executable,
-              task.params,
-              task.cwd,
-              task.provideTty
+      let readyTerminalCounter = 0;
+      const numberOfTerminals = desc.terminals.flat().length;
+      desc.terminals.forEach((subterminals) => {
+        subterminals.forEach((subterminal) => {
+          if (subterminal.type === "Shell") {
+            global.console.log(
+              "Opening console: ",
+              JSON.stringify(subterminal),
+              JSON.stringify(endpoint)
+            );
+            try {
+              const console = new SSHConsole(
+                this.environmentId,
+                this.username,
+                this.groupNumber,
+                endpoint.IPAddress,
+                endpoint.SSHPort,
+                subterminal.executable,
+                subterminal.params,
+                subterminal.cwd,
+                subterminal.provideTty
+              );
+
+              const setupCloseHandler = (): void => {
+                errorTerminalCounter++;
+                if (
+                  resolvedOrRejected === false &&
+                  errorTerminalCounter + readyTerminalCounter ===
+                    numberOfTerminals
+                ) {
+                  resolvedOrRejected = true;
+                  return reject(new Error("Unable to create environment"));
+                } else {
+                  this.activeConsoles.delete(subterminal.name);
+                  global.console.log(
+                    "deleted console for task: " + subterminal.name
+                  );
+                }
+              };
+
+              console.on("close", setupCloseHandler);
+
+              console.on("error", (err) => {
+                return reject(err);
+              });
+
+              console.on("ready", () => {
+                readyTerminalCounter++;
+                this.activeConsoles.set(subterminal.name, console);
+                if (
+                  resolvedOrRejected === false &&
+                  readyTerminalCounter === numberOfTerminals
+                ) {
+                  resolvedOrRejected = true;
+                  return resolve(endpoint);
+                }
+              });
+            } catch (err) {
+              return reject(err);
+            }
+          } else if (subterminal.type === "Desktop") {
+            global.console.log(
+              "Opening desktop: ",
+              JSON.stringify(subterminal),
+              JSON.stringify(endpoint)
             );
 
-            const setupCloseHandler = (): void => {
-              errorConsoleCounter++;
-              if (
-                resolvedOrRejected === false &&
-                errorConsoleCounter + readyConsoleCounter === desc.tasks.length
-              ) {
-                resolvedOrRejected = true;
-                return reject(new Error("Unable to create environment"));
-              } else {
-                this.activeConsoles.delete(task.name);
-                global.console.log("deleted console for task: " + task.name);
-              }
+            // currently fixed to guacamole and VNC, additional protocols require
+            // different params, see:
+            //   https://guacamole.apache.org/doc/gug/json-auth.html
+            //   https://guacamole.apache.org/doc/gug/configuring-guacamole.html#connection-configuration
+
+            // Add -join as connection to join already existing connections
+            const payload = {
+              username: this.username,
+              expires: (Date.now() + 2 * 3600 * 1000).toString(),
+              connections: {
+                [this.groupNumber + "-" + this.environmentId]: {
+                  id: this.groupNumber + "-" + this.environmentId,
+                  protocol: subterminal.remoteDesktopProtocol,
+                  parameters: {
+                    hostname: subterminal.remoteDesktopHostname
+                      ? subterminal.remoteDesktopHostname
+                      : endpoint.IPAddress,
+                    port: subterminal.remoteDesktopPort.toString(),
+                    username: subterminal.remoteDesktopUsername
+                      ? subterminal.remoteDesktopUsername
+                      : undefined,
+                    password: subterminal.remoteDesktopPassword,
+                  },
+                },
+                [this.groupNumber + "-" + this.environmentId + "-join"]: {
+                  id: this.groupNumber + "-" + this.environmentId + "-join",
+                  join: this.groupNumber + "-" + this.environmentId,
+                  parameters: {
+                    "read-only": "false",
+                  },
+                },
+              },
             };
+            const strPayload = JSON.stringify(payload);
+            // change secret (128 bit, 16 byte secret in hexadecimal)
+            const key = Buffer.from("4c0b569e4c96df157eee1b65dd0e4d41", "hex");
+            const hmac = crypto.createHmac("sha256", key);
+            hmac.update(strPayload);
+            const signedPayload = hmac.digest("binary") + strPayload;
+            //debug to compare output with reference app encrypt-json.sh
+            //const hexsignedPayload = Buffer.from(signedPayload, "binary").toString("hex");
+            const cipher = crypto.createCipheriv(
+              "aes-128-cbc",
+              key,
+              "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+            );
+            const enctoken =
+              cipher.update(signedPayload, "binary", "base64") +
+              cipher.final("base64");
+            const urlenctoken = querystring.escape(enctoken);
 
-            console.on("close", setupCloseHandler);
+            fetch(subterminal.guacamoleServerURL + "/api/tokens", {
+              method: "POST",
+              body: "data=" + urlenctoken,
+              headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            })
+              .then(async (response) => {
+                if (response.status === 200) {
+                  const desktop = new DesktopInstance();
+                  desktop.remoteDesktopProtocol =
+                    subterminal.remoteDesktopProtocol;
+                  desktop.remoteDesktopPort = subterminal.remoteDesktopPort;
+                  desktop.remoteDesktopPassword =
+                    subterminal.remoteDesktopPassword;
+                  desktop.remoteDesktopToken =
+                    (await response.json()) as GuacamoleAuthResponse;
+                  desktop.guacamoleServerURL = subterminal.guacamoleServerURL;
 
-            console.on("error", (err) => {
-              return reject(err);
-            });
+                  console.log(
+                    "Received guacamole token " + desktop.remoteDesktopToken
+                  );
+                  this.activeDesktops.set(subterminal.name, desktop);
 
-            console.on("ready", () => {
-              readyConsoleCounter++;
-              this.activeConsoles.set(task.name, console);
-              if (
-                resolvedOrRejected === false &&
-                readyConsoleCounter === desc.tasks.length
-              ) {
-                resolvedOrRejected = true;
-                return resolve(endpoint);
-              }
-            });
-          } catch (err) {
-            return reject(err);
+                  readyTerminalCounter++;
+                  if (
+                    resolvedOrRejected === false &&
+                    readyTerminalCounter === numberOfTerminals
+                  ) {
+                    resolvedOrRejected = true;
+                    return resolve(endpoint);
+                  }
+                } else {
+                  console.log(
+                    "Received error while getting token from guacamole server."
+                  );
+                  return reject(response.status);
+                }
+              })
+              .catch((err) => {
+                console.log("Unable to get token from guacamole server.");
+                return reject(err);
+              });
+          } else if (subterminal.type === "WebApp") {
+            // currently WebApps are instantly treated as ready
+            // maybe track WebApp init later
+            // maybe also store in activeWebApps var?
+            readyTerminalCounter++;
+            if (
+              resolvedOrRejected === false &&
+              readyTerminalCounter === numberOfTerminals
+            ) {
+              resolvedOrRejected = true;
+              return resolve(endpoint);
+            }
+          } else {
+            // ignoring other unsupported terminal types, will not be started
+            readyTerminalCounter++;
+            if (
+              resolvedOrRejected === false &&
+              readyTerminalCounter === numberOfTerminals
+            ) {
+              resolvedOrRejected = true;
+              return resolve(endpoint);
+            }
           }
         });
       });
@@ -528,6 +704,7 @@ export default class Environment {
         this.filehandler.close();
 
         // close consoles of other users in group
+        // maybe also stop/close Desktops and WebApps later?
         const activeUsers = new Array<string>();
         Environment.activeEnvironments.forEach((env: Environment) => {
           if (
@@ -545,46 +722,48 @@ export default class Environment {
           }
         });
         for (const command of this.configuration.stopCommands) {
-          let stopCmdFinished = false;
-          await new Promise<void>((stopCmdSuccess, stopCmdFail) => {
-            global.console.log(
-              "Executing stop command: ",
-              JSON.stringify(command),
-              JSON.stringify(endpoint)
-            );
-            const console = new SSHConsole(
-              this.environmentId,
-              this.username,
-              this.groupNumber,
-              endpoint.IPAddress,
-              endpoint.SSHPort,
-              command.executable,
-              command.params,
-              command.cwd,
-              command.provideTty
-            );
-            console.on("finished", async (code: string, signal: string) => {
+          if (command.type === "Shell") {
+            let stopCmdFinished = false;
+            await new Promise<void>((stopCmdSuccess, stopCmdFail) => {
               global.console.log(
-                "OUTPUT: " +
-                  console.stdout +
-                  "(exit code: " +
-                  code +
-                  ", signal: " +
-                  signal +
-                  ")"
+                "Executing stop command: ",
+                JSON.stringify(command),
+                JSON.stringify(endpoint)
               );
-              stopCmdFinished = true;
-              console.emit("closed");
+              const console = new SSHConsole(
+                this.environmentId,
+                this.username,
+                this.groupNumber,
+                endpoint.IPAddress,
+                endpoint.SSHPort,
+                command.executable,
+                command.params,
+                command.cwd,
+                command.provideTty
+              );
+              console.on("finished", async (code: string, signal: string) => {
+                global.console.log(
+                  "OUTPUT: " +
+                    console.stdout +
+                    "(exit code: " +
+                    code +
+                    ", signal: " +
+                    signal +
+                    ")"
+                );
+                stopCmdFinished = true;
+                console.emit("closed");
+              });
+              console.on("closed", () => {
+                if (stopCmdFinished === true) {
+                  stopCmdSuccess();
+                } else {
+                  global.console.log("Stop command failed.");
+                  stopCmdFail();
+                }
+              });
             });
-            console.on("closed", () => {
-              if (stopCmdFinished === true) {
-                stopCmdSuccess();
-              } else {
-                global.console.log("Stop command failed.");
-                stopCmdFail();
-              }
-            });
-          });
+          }
         }
 
         this.environmentProvider
@@ -643,45 +822,47 @@ export default class Environment {
     try {
       const endpoint = await this.makeSureInstanceExists();
       for (const command of this.configuration.stopCommands) {
-        let resolved = false;
-        await new Promise<void>((resolve, reject) => {
-          global.console.log(
-            "Executing stop command: ",
-            JSON.stringify(command),
-            JSON.stringify(endpoint)
-          );
-          const console = new SSHConsole(
-            this.environmentId,
-            this.username,
-            this.groupNumber,
-            endpoint.IPAddress,
-            endpoint.SSHPort,
-            command.executable,
-            command.params,
-            command.cwd,
-            false
-          );
-          console.on("finished", (code: string, signal: string) => {
+        if (command.type === "Shell") {
+          let resolved = false;
+          await new Promise<void>((resolve, reject) => {
             global.console.log(
-              "OUTPUT: " +
-                console.stdout +
-                "(exit code: " +
-                code +
-                ", signal: " +
-                signal +
-                ")"
+              "Executing stop command: ",
+              JSON.stringify(command),
+              JSON.stringify(endpoint)
             );
-            resolved = true;
-            console.emit("closed");
-          });
-          console.on("closed", () => {
-            if (resolved === true) return resolve();
-            else
-              return reject(
-                new Error("Unable to run stop command." + command.executable)
+            const console = new SSHConsole(
+              this.environmentId,
+              this.username,
+              this.groupNumber,
+              endpoint.IPAddress,
+              endpoint.SSHPort,
+              command.executable,
+              command.params,
+              command.cwd,
+              false
+            );
+            console.on("finished", (code: string, signal: string) => {
+              global.console.log(
+                "OUTPUT: " +
+                  console.stdout +
+                  "(exit code: " +
+                  code +
+                  ", signal: " +
+                  signal +
+                  ")"
               );
+              resolved = true;
+              console.emit("closed");
+            });
+            console.on("closed", () => {
+              if (resolved === true) return resolve();
+              else
+                return reject(
+                  new Error("Unable to run stop command." + command.executable)
+                );
+            });
           });
-        });
+        }
       }
     } catch (err) {
       throw err;
