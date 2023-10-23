@@ -660,6 +660,7 @@ export default class FirecrackerProvider implements InstanceProvider {
       if (vmEndpoint !== undefined && fc !== undefined && fi !== undefined) {
         // wait for stop tasks to end
         await providerInstance.sleep(1000);
+        // https://github.com/firecracker-microvm/firecracker/blob/main/docs/api_requests/actions.md#send-ctrlaltdel
         await fc.microVM
         .invokeAction("SendCtrlAltDel")
         .then(async () => {
