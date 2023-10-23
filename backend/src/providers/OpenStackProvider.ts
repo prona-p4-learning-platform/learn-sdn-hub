@@ -367,7 +367,11 @@ export default class OpenStackProvider implements InstanceProvider {
                               .then(function () {
                                 // instance creation takes longer after new image is used, needs to be copied to compute hosts
                                 providerInstance
-                                  .waitForServerSSH(floatingIpAddress, 300)
+                                  .waitForServerSSH(
+                                    floatingIpAddress,
+                                    providerInstance.sshPort,
+                                    300
+                                  )
                                   .then(() => {
                                     // finished, successfully created server and associated floating ip
                                     return resolve({
@@ -419,7 +423,11 @@ export default class OpenStackProvider implements InstanceProvider {
                   } else {
                     // instance creation takes longer after new image is used, needs to be copied to compute hosts
                     providerInstance
-                      .waitForServerSSH(fixedIpAddress, 300)
+                      .waitForServerSSH(
+                        fixedIpAddress,
+                        providerInstance.sshPort,
+                        300
+                      )
                       .then(() => {
                         // finished, successfully created server and got fixed ip
                         return resolve({
@@ -719,35 +727,40 @@ export default class OpenStackProvider implements InstanceProvider {
     });
   }
 
-  waitForServerSSH(address: string, timeout: number): Promise<void> {
+  waitForServerSSH(ip: string, port: number, timeout: number): Promise<void> {
     const providerInstance = this.providerInstance;
 
     return new Promise<void>(async (resolve, reject) => {
-      let resolved: boolean;
+      let resolved = false;
       // check ssh connection
-      while (timeout > 0 && resolved === undefined) {
+      while (timeout > 0 && resolved === false) {
         const sshConn = new Client();
         sshConn
           .on("ready", () => {
-            return resolve();
             resolved = true;
+            sshConn.end();
+            return resolve();
           })
           .on("error", (err) => {
+            sshConn.end();
             console.log(
-              "OpenStackProvider: SSH connection failed - retrying..." + err
+              "OpenStackProvider: SSH connection failed - retrying... " + err
             );
           })
           .connect({
-            host: address,
-            // better use env var to allow configuration of port numbers?
-            port: 22,
+            host: ip,
+            port: port,
             username: process.env.SSH_USERNAME,
             password: process.env.SSH_PASSWORD,
+            readyTimeout: 1000,
           });
-        await providerInstance.sleep(5000);
-        timeout -= 5;
+        await providerInstance.sleep(1000);
+        timeout -= 1;
       }
-      return reject("OpenStackProvider: Timed out waiting for SSH connection.");
+      if (!resolved)
+        return reject(
+          "OpenStackProvider: Timed out waiting for SSH connection."
+        );
     });
   }
 

@@ -376,7 +376,28 @@ export default class DockerProvider implements InstanceProvider {
                   timestampCreated +
                   " and should be deleted"
               );
-              Environment.deleteInstanceEnvironments(container.Id);
+              this.deleteServer(container.Id)
+                .then(() => {
+                  console.log(
+                    "Deleted expired container" +
+                      container.Names +
+                      " expiration date: " +
+                      timestampCreated +
+                      " deadline: " +
+                      deadline
+                  );
+                  Environment.deleteInstanceEnvironments(container.Id);
+                })
+                .catch((err) => {
+                  return reject(
+                    new Error(
+                      "DockerProvider: Failed to delete container to be pruned. " +
+                        container.Names +
+                        " " +
+                        err
+                    )
+                  );
+                });
             }
           }
         });
@@ -408,7 +429,7 @@ export default class DockerProvider implements InstanceProvider {
               rejected = true;
               return reject(
                 new Error(
-                  "DockerProvider: Container was not stated. Check image and cmd used to init the container."
+                  "DockerProvider: Container was not started. Check image and cmd used to init the container."
                 )
               );
             } else {
@@ -472,10 +493,12 @@ export default class DockerProvider implements InstanceProvider {
         const sshConn = new Client();
         sshConn
           .on("ready", () => {
+            sshConn.end();
             resolved = true;
             return resolve();
           })
           .on("error", (err) => {
+            sshConn.end();
             console.log(
               "DockerProvider: SSH connection failed - retrying..." + err
             );
@@ -485,6 +508,7 @@ export default class DockerProvider implements InstanceProvider {
             port: port,
             username: process.env.SSH_USERNAME,
             password: process.env.SSH_PASSWORD,
+            readyTimeout: 1000,
           });
         await providerInstance.sleep(1000);
         timeout -= 1;
