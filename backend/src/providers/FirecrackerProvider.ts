@@ -661,12 +661,8 @@ export default class FirecrackerProvider implements InstanceProvider {
         // wait for stop tasks to end
         await providerInstance.sleep(1000);
         // https://github.com/firecracker-microvm/firecracker/blob/main/docs/api_requests/actions.md#send-ctrlaltdel
-        await fc.microVM
-        .invokeAction("SendCtrlAltDel")
-        .then(async () => {
-          console.log(
-            "FirecrackerProvider: microVM stopped"
-          );
+        await fc.microVM.invokeAction("SendCtrlAltDel").then(async () => {
+          console.log("FirecrackerProvider: microVM stopped");
           // wait for stop tasks to end, is this still necessary after SendCtrlAltDel?
           if (fi.kill()) {
             // wait for process to be killed properly before deleting the tap dev
@@ -705,7 +701,7 @@ export default class FirecrackerProvider implements InstanceProvider {
               )
             );
           }
-        })
+        });
       } else {
         return reject(new Error(InstanceNotFoundErrorMessage));
       }
