@@ -2,7 +2,7 @@ import { EnvironmentDescription } from "./Environment";
 
 const environments = new Map<string, EnvironmentDescription>();
 
-environments.set("p4basic", {
+environments.set("p4basic-with-guacamole", {
   terminals: [
     [
       {
