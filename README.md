@@ -1,6 +1,6 @@
 # learn-sdn-hub
 
-learn-sdn-hub offers an environment to experiment with SDN technologies and especially [P4](https://p4.org/). Though the use-case for learn-sdn-hub is not limited to teaching and learning P4, allowing an easy entry to programmable data plane solutions was one of the main goals the tool was designed for. It is used for masters' and bachelors' courses in the area of network programmability at [Darmstadt University of Applied Sciences](https://fbi.h-da.de/en/study-with-us/laboratories/networks-telecommunications) and [Fulda University of Applied Sciences](https://www.hs-fulda.de/en/studies/departments/applied-computer-science/about-us/laboratories/netlab). learn-sdn-hub can also be used for different lab environments, esp. as long as terminal-based access to a lab environment, web-based configuration and programming tools and a provided lab exercise should be made available. Therefore, it could also be used for other teaching and exploratory learning approaches including Dev, Ops as well as DevOps area.
+learn-sdn-hub offers an environment to experiment with Software-defined Networking (SDN) technologies like [P4](https://p4.org/). Though the use-case for learn-sdn-hub is not limited to teaching and learning SDN, allowing an easy entry to programmable data plane solutions was one of the main goals the tool was designed for. It is used for masters' and bachelors' courses in the area of network programmability at [Darmstadt University of Applied Sciences](https://fbi.h-da.de/en/study-with-us/laboratories/networks-telecommunications) and [Fulda University of Applied Sciences](https://www.hs-fulda.de/en/studies/departments/applied-computer-science/about-us/laboratories/netlab). learn-sdn-hub can also be used for different lab environments, esp. as long as terminal-based access to a lab environment, web-based configuration, programming tools and a provided lab exercise should be made available. Therefore, it could also be used for other teaching and exploratory learning approaches in the Dev, Ops as well as DevOps area.
 
 Initial development was partially funded by the research programme [digLL](https://www.digll-hessen.de/), to improve digitally supported teaching and learning in Hesse, Germany.
 
@@ -9,10 +9,10 @@ Initial development was partially funded by the research programme [digLL](https
 * Web-based lab environment based on React and TypeScript
 * Multiple assignments can be provided for users and deployed to hosts running the exercises' tasks
 * Web-based access to terminals for each assigment based on [xterm.js](https://xtermjs.org/) (esp. using SSH)
-* Editing of SDN- or P4-related files, as well as other configuration or source code files used by the assignments, using web-based [monaco editor](https://microsoft.github.io/monaco-editor/)
-* Augmentation of monaco editor to support SDN and P4 languages and facilitating development tasks by supporting features like auto completion, syntax highlighting, error feedback etc.
+* Editing of, e.g., SDN-related files, as well as other configuration or source code files used by the assignments, using web-based [monaco editor](https://microsoft.github.io/monaco-editor/)
+* Augmentation of monaco editor to support SDN and P4 languages, facilitating development tasks by supporting features like auto completion, syntax highlighting, error feedback etc.
 * Modular authentication backend (included are a simple single user, simple multi user and a MongoDB based authentication backend)
-* Modular assignment host backend (included is an SSH backend for single user, multi user (using hosts, VMs, containers to run the assignments) and an OpenStack provider starting and configuring instances to run the assignments)
+* Modular assignment host backend (included is an SSH backend for single user, multi user (using hosts, VMs, containers to run the assignments) and an OpenStack (VM), Docker (container) and Firecracker (microVM) provider starting and configuring instances to run the assignments)
 
 The following figures show screenshots of the environment, used to teach the basic functions of a P4-based Layer 2 "learning" (flooding & filtering) switch:
 
@@ -70,7 +70,7 @@ and run it in VirtualBox or another hypervisor. You also need to give the machin
 You can also prepare a Ubuntu VM by using the [installation scripts](https://github.com/jafingerhut/p4-guide/blob/master/bin/install-p4dev-v2.sh) from the p4 guide
 repo. By default and for the following example configuration, we assume the VM to have a user p4 with password p4 (as the default for the p4 tutorial vms).
 
-To install the LSP and the LSP load balancer in the VM, run the following in the VM (currently using latest feature version of node, hence 15):
+To install the LSP and the LSP load balancer in the VM, run the following in the VM (currently using latest production/stable version of node):
 
 ```sh
 git clone https://github.com/wylieconlon/jsonrpc-ws-proxy
@@ -137,7 +137,7 @@ Both the host running the backend and frontend as well as the VM or host executi
 
 ```sh
 wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.37.2/install.sh | bash
-nvm install 15
+nvm install
 bash
 ```
 
