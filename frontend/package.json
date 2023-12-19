@@ -3,9 +3,6 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@convergence/color-assigner": "^0.3.0",
-    "@convergence/convergence": "^1.0.0-rc.12",
-    "@convergencelabs/monaco-collab-ext": "^0.4.0",
     "@emotion/react": "^11.9.0",
     "@emotion/styled": "^11.8.1",
     "@monaco-editor/react": "^4.4.5",
@@ -19,7 +16,6 @@
     "@types/react": "^18.0.9",
     "@types/react-dom": "^18.0.4",
     "@types/react-router-dom": "^5.3.3",
-    "do_username": "^0.0.2",
     "fontsource-roboto": "^4.0.0",
     "guacamole-common-js": "^1.4.0-a",
     "mermaid": "^9.4.0",
@@ -39,7 +35,11 @@
     "xterm": "^4.18.0",
     "xterm-addon-attach": "^0.6.0",
     "xterm-addon-fit": "^0.5.0",
-    "xterm-addon-serialize": "^0.6.2"
+    "xterm-addon-serialize": "^0.6.2",
+    "y-monaco": "^0.1.5",
+    "y-webrtc": "^10.2.6",
+    "y-websocket": "^1.5.1",
+    "yjs": "^13.6.10"
   },
   "devDependencies": {
     "@svgr/webpack": "^6.2.1",

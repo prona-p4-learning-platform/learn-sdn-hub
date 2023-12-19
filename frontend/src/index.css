@@ -82,14 +82,14 @@ code {
 	padding: 2px;
 }
 
-.monaco-remote-cursor {
+/*.monaco-remote-cursor {
   position: absolute;
   pointer-events: none;
   z-index: 4000;
   width: 2px;
 }
 
-.monaco-remote-cursor:before {
+ .monaco-remote-cursor:before {
   content: "";
   width: 6px;
   height: 5px;
@@ -123,6 +123,26 @@ code {
   pointer-events: auto;
   opacity: 0.3;
   background: blue;
+} */
+
+.yRemoteSelection {
+  background-color: rgb(250, 129, 0, .5)
+}
+.yRemoteSelectionHead {
+  position: absolute;
+  border-left: orange solid 2px;
+  border-top: orange solid 2px;
+  border-bottom: orange solid 2px;
+  height: 100%;
+  box-sizing: border-box;
+}
+.yRemoteSelectionHead::after {
+  position: absolute;
+  content: ' ';
+  border: 3px solid orange;
+  border-radius: 4px;
+  left: -4px;
+  top: -5px;
 }
 
 #guacContainer {
