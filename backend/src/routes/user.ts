@@ -53,14 +53,18 @@ export default (authProviders: AuthenticationProvider[]): Router => {
               username: result.username,
               id: result.userid,
               groupNumber: result.groupNumber,
+              ...(result.role && { role: result.role }),
             },
             /* replace secret */
             "some-secret"
           ) as string;
           console.log(result, token);
-          return res
-            .status(200)
-            .json({ token, username, groupNumber: result.groupNumber });
+          return res.status(200).json({
+            token,
+            username,
+            groupNumber: result.groupNumber,
+            ...(result.role && { role: result.role }),
+          });
         } catch (err) {
           console.log("error!", err);
         }

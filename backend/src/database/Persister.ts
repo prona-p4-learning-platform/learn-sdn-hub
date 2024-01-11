@@ -11,12 +11,27 @@ export interface UserAccount {
   password?: string;
   passwordHash?: string;
   assignmentListFilter?: string;
+  role?: string;
 }
 
 export interface UserEnvironment {
   environment: string;
   description: string;
   instance: string;
+}
+
+export interface UserData {
+  _id: string;
+  username: string;
+  groupNumber: number;
+  role: string;
+  courses: string[];
+}
+
+export interface CourseData {
+  _id: string;
+  name: string;
+  assignments: string[];
 }
 
 export interface Persister {
@@ -43,4 +58,6 @@ export interface Persister {
     username: string,
     groupNumber: number
   ) => Promise<Submission[]>;
+  GetAllUsers: () => Promise<UserData[]>;
+  GetAllCourses: () => Promise<CourseData[]>;
 }

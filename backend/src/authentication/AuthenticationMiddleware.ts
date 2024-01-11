@@ -5,6 +5,7 @@ export type TokenPayload = {
   username: string;
   id: string;
   groupNumber: number;
+  role?: string;
 };
 
 export type RequestWithUser = Request & {

@@ -1,6 +1,12 @@
 import { MongoClient } from "mongodb";
 import { hash } from "bcrypt";
-import { Persister, UserEnvironment, UserAccount } from "./Persister";
+import {
+  Persister,
+  UserEnvironment,
+  UserAccount,
+  UserData,
+  CourseData,
+} from "./Persister";
 import {
   Submission,
   SubmissionFileType,
@@ -225,6 +231,35 @@ export default class MongoDBPersister implements Persister {
           );
         });
     });
+  }
+
+  async GetAllUsers(): Promise<UserData[]> {
+    const client = await this.getClient();
+    return client
+      .db()
+      .collection("users")
+      .find(
+        {},
+        {
+          projection: {
+            _id: 1,
+            username: 1,
+            groupNumber: 1,
+            role: 1,
+            courses: 1,
+          },
+        }
+      )
+      .toArray();
+  }
+
+  async GetAllCourses(): Promise<CourseData[]> {
+    const client = await this.getClient();
+    return client
+      .db()
+      .collection("courses")
+      .find({}, { projection: { _id: 1, name: 1, assignments: 1 } })
+      .toArray();
   }
 
   async close(): Promise<void> {

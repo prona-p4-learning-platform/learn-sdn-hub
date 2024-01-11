@@ -10,6 +10,7 @@ import Environment from "./views/Environment";
 import PrivateRoute from "./components/PrivateRoute";
 import AssignmentOverview from "./views/AssignmentOverview";
 import UserSettings from "./views/UserSettings";
+import Administration from "./views/Administration";
 import "fontsource-roboto";
 import { Box, Button } from "@mui/material";
 import CssBaseline from "@mui/material/CssBaseline";
@@ -21,6 +22,7 @@ import Tooltip from "@mui/material/Tooltip";
 function App() {
   const [username, setUsername] = useState("");
   const [groupNumber, setGroupNumber] = useState(0);
+  const [role, setRole] = useState("");
   const [authenticated, setAuthenticated] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
 
@@ -37,29 +39,37 @@ function App() {
     if (localStorage.getItem("darkMode") === "true") {
       setDarkMode(true);
     }
+    if (localStorage.getItem("role")) {
+      setRole(localStorage.getItem("role") as string);
+    }
   }, []);
 
   function handleUserLogin(
     token: string,
     username: string,
-    groupNumber: number
+    groupNumber: number,
+    role?: string
   ): void {
     setUsername(username);
     setGroupNumber(groupNumber);
     setAuthenticated(true);
+    setRole(role ?? "");
 
     localStorage.setItem("token", token);
     localStorage.setItem("username", username);
     localStorage.setItem("group", groupNumber.toString());
+    if (role) localStorage.setItem("role", role ?? "");
   }
 
   function handleUserLogout(username: string | null): void {
     setUsername("");
     setGroupNumber(0);
     setAuthenticated(false);
+    setRole("");
     localStorage.removeItem("token");
     localStorage.removeItem("username");
     localStorage.removeItem("group");
+    localStorage.removeItem("role");
     window.location.reload();
   }
 
@@ -97,6 +107,11 @@ function App() {
               <Button color="inherit" href={`/settings`}>
                 Settings
               </Button>
+              {role && role === "admin" && (
+                <Button color="inherit" href={`/admin`}>
+                  Administration
+                </Button>
+              )}
               <Button
                 color="inherit"
                 onClick={() =>
@@ -128,19 +143,30 @@ function App() {
           </AppBar>
           <Route exact path="/">
             <Home
-              onUserLogin={(token, username, groupNumber) =>
-                handleUserLogin(token, username, groupNumber)
+              onUserLogin={(token, username, groupNumber, role) =>
+                handleUserLogin(token, username, groupNumber, role)
               }
             />
           </Route>
-          <PrivateRoute isAuthenticated={authenticated} exact path="/assignments">
+          <PrivateRoute
+            isAuthenticated={authenticated}
+            exact
+            path="/assignments"
+          >
             <AssignmentOverview />
           </PrivateRoute>
-          <PrivateRoute  isAuthenticated={authenticated}  exact  path="/settings">
+          <PrivateRoute isAuthenticated={authenticated} exact path="/settings">
             <UserSettings />
           </PrivateRoute>
-          <PrivateRoute isAuthenticated={authenticated} exact path="/environment/:environment">
+          <PrivateRoute
+            isAuthenticated={authenticated}
+            exact
+            path="/environment/:environment"
+          >
             <Environment />
+          </PrivateRoute>
+          <PrivateRoute isAuthenticated={authenticated} exact path="/admin">
+            <Administration />
           </PrivateRoute>
         </Router>
       </React.Fragment>

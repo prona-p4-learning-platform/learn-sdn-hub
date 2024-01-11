@@ -5,6 +5,7 @@ export interface AuthenticationResult {
   username: string;
   userid: string;
   groupNumber: number;
+  role?: string;
 }
 
 export interface AuthenticationProvider {

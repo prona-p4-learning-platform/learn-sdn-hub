@@ -40,6 +40,7 @@ export default class MongoDBAuthenticationProvider
         userid: user._id,
         groupNumber: user.groupNumber ?? 0,
         type: "mongodb",
+        role: user.role,
       };
     }
     throw new Error("AuthenticationError");

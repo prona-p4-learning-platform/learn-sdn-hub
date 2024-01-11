@@ -1,4 +1,10 @@
-import { Persister, UserEnvironment, UserAccount } from "./Persister";
+import {
+  Persister,
+  UserEnvironment,
+  UserAccount,
+  UserData,
+  CourseData,
+} from "./Persister";
 import fs from "fs";
 import path from "path";
 import {
@@ -170,6 +176,16 @@ export default class MemoryPersister implements Persister {
       // );
       return submissions;
     }
+  }
+
+  async GetAllUsers(): Promise<UserData[]> {
+    // TODO: implement
+    throw new Error("Method not implemented.");
+  }
+
+  async GetAllCourses(): Promise<CourseData[]> {
+    // TODO: implement
+    throw new Error("Method not implemented.");
   }
 
   async close(): Promise<void> {
