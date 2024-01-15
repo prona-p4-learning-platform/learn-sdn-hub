@@ -68,13 +68,22 @@ const MonacoLanguageServerAugmentation = (editor: monaco.editor.IStandaloneCodeE
         // @ts-ignore
         MonacoServices.install(monaco);
 
+        const timeout = 10000; // 10 seconds
         const webSocket = createWebSocket('/environment/' + environment + '/languageserver/' + language);
+
+        // keep connection alive
+        const keepAlive = () => {
+            webSocket.send("ping");
+            setTimeout(keepAlive, timeout);
+        }
 
         webSocket.onopen = () => {
             // create and start the language client
 
             // sending auth token to backend
             webSocket.send(`auth ${localStorage.getItem("token")}`)
+
+            keepAlive();
 
             // backend needs some time to process auth token and initiate
             // ws conn from backend to lsp, hence, wait for backend
@@ -115,6 +124,8 @@ const MonacoLanguageServerAugmentation = (editor: monaco.editor.IStandaloneCodeE
 
         editor.onDidDispose(() => {
             webSocket.close()
+            //really necessary?
+            //clearTimeout(keepAlive)
         })
     }
 
