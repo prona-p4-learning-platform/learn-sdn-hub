@@ -42,7 +42,7 @@ import { loader } from "@monaco-editor/react";
 import { StandaloneServices } from 'vscode/services';
 import getMessageServiceOverride from 'vscode/service-override/messages';
 
-import { MonacoLanguageClient, CloseAction, ErrorAction, MonacoServices, MessageTransports, WorkspaceFolder } from 'monaco-languageclient';
+import { MonacoLanguageClient, MonacoServices, MessageTransports, WorkspaceFolder } from 'monaco-languageclient';
 import { toSocket, WebSocketMessageReader, WebSocketMessageWriter } from 'vscode-ws-jsonrpc';
 
 import createWebSocket from '../api/WebSocket';
@@ -108,6 +108,18 @@ const Alert = React.forwardRef<HTMLDivElement, AlertProps>(function Alert(
 
 const CONVERGENCE_URL = process.env.REACT_APP_CONVERGENCE_URL ?? "http://localhost:8000/api/realtime/convergence/default";
 
+class KeepAliveAwareWebSocketMessageReader extends WebSocketMessageReader {
+  protected readMessage(message: any): void {
+    if (message === "pong") {
+      // ignore pong keep-alive message from backend
+      //console.log("received pong from backend");
+    } else {
+      //console.log("received message from backend: " + message);
+      super.readMessage(message);
+    }
+  }
+}
+
 // maybe consider to move collaboration and languageclient to class augmentation again?
 export default class FileEditor extends React.Component<FileEditorProps> {
   public state: State;
@@ -121,7 +133,7 @@ export default class FileEditor extends React.Component<FileEditorProps> {
 
   private convergenceDomain!: ConvergenceDomain;
 
-  private colorAssigner:  ColorAssigner;
+  private colorAssigner: ColorAssigner;
   private contentManager!: EditorContentManager;
   private realTimeModelString!: RealTimeString;
   private remoteCursorManager!: RemoteCursorManager;
@@ -130,8 +142,11 @@ export default class FileEditor extends React.Component<FileEditorProps> {
   private selectionReference!: LocalRangeReference;
 
   private languageClient!: MonacoLanguageClient;
+  private languageClientWSTimerId!: NodeJS.Timer;
+  private languageClientWSTimeout: number = 10000;
 
   private suppressChangeDetection: boolean;
+  private languageClientWebSocket!: WebSocket;
 
 
   constructor(props: FileEditorProps) {
@@ -243,20 +258,6 @@ export default class FileEditor extends React.Component<FileEditorProps> {
       .then(async (data) => {
         const fileContent = await data.text;
 
-        if (fileName === this.props.files[0]) {
-          // it's enough to store the currentFileValue in state to trigger initial filling of the editor, no need to use this.state.currentFileValue afterwards (e.g., as the value of <Editor/>)
-          // maybe consolidate editor value state/class vars/remove them?
-          this.setState({
-            currentFile: fileName,
-            currentFilePath: data.location,
-            currentFileEditorLanguage: selectLanguageForEndpoint(fileName).editorLanguage,
-            currentFileLSPLanguage: selectLanguageForEndpoint(fileName).lspLanguage,
-            currentFileValue: fileContent,
-          });
-
-          this.startCollaborationServices(this.group, fileName, fileContent);
-        }
-
         this.environmentFiles[fileName] = {
           value: fileContent,
           editorLanguage: selectLanguageForEndpoint(fileName).editorLanguage,
@@ -266,7 +267,7 @@ export default class FileEditor extends React.Component<FileEditorProps> {
           fileChanged: false,
           fileLocation: data.location ?? "",
         }
-        
+
         // check number of models in editor? sometimes additional/superfluous inmemory model shows up
         // should only contain the files that are used in the env as entries in the model?
         console.log("finished loading editor files...");
@@ -275,21 +276,37 @@ export default class FileEditor extends React.Component<FileEditorProps> {
         console.error(err);
       })
     }))
+
+    const initialFile = this.props.files[0];
+    const file = this.environmentFiles[initialFile];
+    // it's enough to store the currentFileValue in state to trigger initial filling of the editor, no need to use this.state.currentFileValue afterwards (e.g., as the value of <Editor/>)
+    // maybe consolidate editor value state/class vars/remove them?
+    this.setState({
+      currentFile: file.name,
+      currentFilePath: file.fileLocation,
+      currentFileEditorLanguage: file.editorLanguage,
+      currentFileLSPLanguage: file.lspLanguage,
+      currentFileValue: file.value,
+    });
+
+    this.startCollaborationServices(this.group, file.name, file.value);
+    console.log("Loading editor file: " + file.name + " with editorLanguage: " + file.editorLanguage + " and lspLanguage: " + file.lspLanguage);
+    this.startLanguageClient(this.editor, file.lspLanguage);
   }
 
   async editorDidMount(editor: monaco.editor.IStandaloneCodeEditor, monaco: Monaco) {
     this.editor = editor;
-    editor.focus();
+    //editor.focus();
 
     // remove \\1 filtering or maybe this initial inmemory model all at once?
     //console.log("Editor file path: " + editor.getModel()?.uri.fsPath);
-    if (editor.getModel()?.uri.fsPath === "\\1") {
-      const lspLanguage = selectLanguageForEndpoint(this.props.files[0]).lspLanguage
-      this.startLanguageClient(editor, lspLanguage);
-    } else {
-      const lspLanguage = selectLanguageForEndpoint(editor.getModel()?.uri.fsPath ?? "").lspLanguage
-      this.startLanguageClient(editor, lspLanguage);
-    }
+    //if (editor.getModel()?.uri.fsPath === "\\1") {
+    //  const lspLanguage = selectLanguageForEndpoint(this.props.files[0]).lspLanguage
+    //  this.startLanguageClient(editor, lspLanguage);
+    //} else {
+    //  const lspLanguage = selectLanguageForEndpoint(editor.getModel()?.uri.fsPath ?? "").lspLanguage
+    //  this.startLanguageClient(editor, lspLanguage);
+    //}
   };
 
   componentWillUnmount(): void {
@@ -600,13 +617,13 @@ export default class FileEditor extends React.Component<FileEditorProps> {
     if (lspLanguage !== "") {
       console.log("Starting language client for language: " + lspLanguage);
 
-      const webSocket = createWebSocket('/environment/' + this.props.environment + '/languageserver/' + lspLanguage);
+      this.languageClientWebSocket = createWebSocket('/environment/' + this.props.environment + '/languageserver/' + lspLanguage);
 
-      webSocket.onopen = () => {
+      this.languageClientWebSocket.onopen = () => {
           // create and start the language client
 
           // sending auth token to backend
-          webSocket.send(`auth ${localStorage.getItem("token")}`)
+          this.languageClientWebSocket.send(`auth ${localStorage.getItem("token")}`)
 
           // backend needs some time to process auth token and initiate
           // ws conn from backend to lsp, hence, wait for backend
@@ -614,14 +631,27 @@ export default class FileEditor extends React.Component<FileEditorProps> {
           // be sent to early and ignored
 
           // save onmessage fn
-          const defaultOnMessage = webSocket.onmessage
-          webSocket.onmessage = (e) => {
+          //const defaultOnMessage = this.languageClientWebSocket.onmessage
+          this.languageClientWebSocket.onmessage = (e) => {
               if (e.data === "backend websocket ready") {
                   // restore onmessage fn
-                  webSocket.onmessage = defaultOnMessage;
+                  console.log("backend websocket ready, starting language client");
+                  //this.languageClientWebSocket.onmessage = (e) => {
+                    //console.log("received message from backend: " + e.data);
+                    //if (e.data === "pong") {
+                      // ignore pong keep-alive message from backend
+                    //}
+                    //defaultOnMessage?.call(this.languageClientWebSocket, e);
+                  //}
 
-                  const socket = toSocket(webSocket);
-                  const reader = new WebSocketMessageReader(socket);
+                  // keep connection alive
+                  this.languageClientWSTimerId = setInterval(() => {
+                    this.languageClientWebSocket.send("ping");
+                  }, this.languageClientWSTimeout);
+
+                  const socket = toSocket(this.languageClientWebSocket);
+                  // need to implement own reader to ensure "pong" message is filtered...
+                  const reader = new KeepAliveAwareWebSocketMessageReader(socket);
                   const writer = new WebSocketMessageWriter(socket);
                   this.languageClient = createLanguageClient({
                       reader,
@@ -631,10 +661,6 @@ export default class FileEditor extends React.Component<FileEditorProps> {
               }
           }
       };
-
-      editor.onDidDispose(() => {
-          webSocket.close()
-      })
 
     }
 
@@ -654,11 +680,11 @@ export default class FileEditor extends React.Component<FileEditorProps> {
               //},
 
               // disable the default error handler
-              errorHandler: {
-                  error: () => ({ action: ErrorAction.Continue }),
-                  // maybe use restart of language client? e.g., to recover from conn loss?
-                  closed: () => ({ action: CloseAction.DoNotRestart })
-              }
+              //errorHandler: {
+                  //error: () => ({ action: ErrorAction.Continue }),
+                  // maybe use restart of language client? e.g., to recover from conn loss? 
+                  //closed: () => ({ action: CloseAction.Restart })
+              //}
           },
           // create a language client connection from the JSON RPC connection on demand
           connectionProvider: {
@@ -676,7 +702,10 @@ export default class FileEditor extends React.Component<FileEditorProps> {
       return
     }
 
-    this.languageClient.stop();
+    // if languageClient connection was closed, this.languageClient will be undefined
+    this.languageClient?.dispose();
+    clearInterval(this.languageClientWSTimerId);
+    //this.languageClientWebSocket.close()
   }
 
   findCommonPathPrefix(strings: string[]): string {
