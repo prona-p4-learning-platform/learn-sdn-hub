@@ -130,6 +130,8 @@ export default class FileEditor extends React.Component<FileEditorProps> {
   private selectionReference!: LocalRangeReference;
 
   private languageClient!: MonacoLanguageClient;
+  private languageClientWSTimerId!: NodeJS.Timer;
+  private languageClientWSTimeout: number = 30000;
 
   private suppressChangeDetection: boolean;
 
@@ -602,6 +604,9 @@ export default class FileEditor extends React.Component<FileEditorProps> {
 
       const webSocket = createWebSocket('/environment/' + this.props.environment + '/languageserver/' + lspLanguage);
 
+      // keep connection alive
+      //const timeout = 30000;
+
       webSocket.onopen = () => {
           // create and start the language client
 
@@ -620,6 +625,11 @@ export default class FileEditor extends React.Component<FileEditorProps> {
                   // restore onmessage fn
                   webSocket.onmessage = defaultOnMessage;
 
+                  // keep connection alive
+                  this.languageClientWSTimerId = setInterval(() => {
+                    webSocket.send("ping");
+                  }, this.languageClientWSTimeout);
+
                   const socket = toSocket(webSocket);
                   const reader = new WebSocketMessageReader(socket);
                   const writer = new WebSocketMessageWriter(socket);
@@ -628,12 +638,13 @@ export default class FileEditor extends React.Component<FileEditorProps> {
                       writer
                   });
                   this.languageClient.start();
-              }
+                }
           }
       };
 
       editor.onDidDispose(() => {
-          webSocket.close()
+        //clearInterval(this.timerId);
+        webSocket.close()
       })
 
     }
