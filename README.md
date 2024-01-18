@@ -329,3 +329,109 @@ The examples in the repository also show how to use tmux to allow shared termina
 ### Enable languageClient
 
 To enable monaco languageClient, ``useLanguageClient: true`` needs to be set in the assignment configuration file. ``rootPath`` and ``workspaceFolders`` can also be defined there, to allow, e.g., auto completion across files in these folders.
+
+### Run front- and backend manually for developing
+
+1. Clone the git repository.
+2. Ensure you are on node 16.
+3. Run `npm i` in frontend, backend and the root folder.
+4. Open two terminal tabs, one for frontend, one for backend. 
+5. In frontend run `npm start`
+6. In backend create a script, e.g. `custom.sh`
+7. Paste this code into your script
+
+```bash
+#!/bin/bash
+export BACKEND_HTTP_PORT="3001"
+export BACKEND_TYPE="docker"
+
+export DOCKER_SOCKET_PATH="/var/run/docker.sock"
+#export DOCKER_HOST="192.168.229.129"
+#export DOCKER_PORT="3000"
+#export DOCKER_PROTOCOL="http"
+export DOCKER_IMAGE="prona/p4-container"
+export DOCKER_CMD="-s"
+export DOCKER_MAX_INSTANCE_LIFETIME_MINUTES="120"
+export DOCKER_MAX_INSTANCE_LIFETIME_MINUTES="2"
+
+export MONGODB_URL="mongodb+srv://admin:<admin-password-here>@cluster0.tdnvj.mongodb.net/learn-sdn-hub?retryWrites=true&w=majority"
+
+export SSH_USERNAME="p4"
+export SSH_PASSWORD="p4"
+
+#Set-Location C:\Users\fdai109\git\learn-sdn-hub
+#npm run build
+#Remove-Item -Path "backend\static\" -Recurse
+#Copy-Item -Path "frontend\build*" -Destination "backend\static\" -Recurse
+
+cd /opt/learn-sdn-hub/backend
+npm run start:docker
+```
+
+8. Replace the `<admin-password-here>` with the admin's password.
+9. Run the script with `sudo sh custom.sh`
+
+### Embedded CLab topology
+
+1. Start docker
+```bash
+sudo service docker start
+```
+
+2. Deploy CLab yml
+```bash
+sudo clab deploy -t srl02.clab.yml
+```
+
+3. Graph the CLab Container
+```bash
+sudo clab graph --topo srl02.clab.yml --srv ":3002"
+```
+
+4. Reload the website
+
+![Screenshot of website with iframe](/frontend/public/Screenshot_CLab.png)
+
+#### Current issues
+
+The frontend sends an api request to the backend. The backend should start a child process where it graphs the CLab topography automatically. Somehow the api call passes trough and we get 200 but the child process does not start. 
+
+```ts
+export default (): Router => {
+	const router = Router();
+
+	router.get("/", (_, res) => {
+		const ymlPath =
+			"<path-to-topo.yml>"; // Test path to topology
+
+		function execAsync(command: string) {
+			return new Promise((resolve, reject) => {
+				exec(command, (error: any, stdout: any, stderr: any) => {
+					if (error) {
+						reject(`Ausführungsfehler: ${error}`);
+						return;
+					}
+					resolve({ stdout, stderr });
+				});
+			});
+		}
+
+		async function runCommandsSequentially() {
+            console.log("Hello world this is containerlab endpoint") // Does not get printed
+			try {
+				const result2: any = await execAsync(
+					`sudo containerlab graph --topo ${ymlPath} --srv ":3003"`
+				);
+				console.log("Befehl ausgeführt:", result2.stdout); // Does not get printed
+			} catch (error) {
+				console.error("Fehler:", error);
+			}
+		}
+
+		runCommandsSequentially();
+        res.status(200); // Status 200 gets returned
+	});
+
+	return router;
+};
+```
