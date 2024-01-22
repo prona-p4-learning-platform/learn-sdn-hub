@@ -1,4 +1,4 @@
-import { MongoClient } from "mongodb";
+import { ClientSession, MongoClient, ObjectID } from "mongodb";
 import { hash } from "bcrypt";
 import {
   Persister,
@@ -6,6 +6,7 @@ import {
   UserAccount,
   UserData,
   CourseData,
+  ResponseObject,
 } from "./Persister";
 import {
   Submission,
@@ -260,6 +261,82 @@ export default class MongoDBPersister implements Persister {
       .collection("courses")
       .find({}, { projection: { _id: 1, name: 1, assignments: 1 } })
       .toArray();
+  }
+
+  async AddCourseToUsers(
+    userIDs: ObjectID[],
+    courseID: ObjectID,
+    session: ClientSession,
+    client: MongoClient
+  ): Promise<void> {
+    return client
+      .db()
+      .collection("users")
+      .updateMany(
+        { _id: { $in: userIDs }, courses: { $ne: courseID } },
+        { $addToSet: { courses: courseID } },
+        { session }
+      )
+      .then(() => undefined);
+  }
+
+  async RemoveCourseFromUsers(
+    userIDs: ObjectID[],
+    courseID: ObjectID,
+    session: ClientSession,
+    client: MongoClient
+  ): Promise<void> {
+    return client
+      .db()
+      .collection("users")
+      .updateMany(
+        { _id: { $in: userIDs }, courses: courseID },
+        { $pull: { courses: courseID } },
+        { session }
+      )
+      .then(() => undefined);
+  }
+
+  async UpdateCourseForUsers(
+    courseUserAction: {
+      add: { userID: string }[];
+      remove: { userID: string }[];
+    },
+    courseID: string
+  ): Promise<ResponseObject> {
+    const client = await this.getClient();
+    const session = client.startSession();
+    const response = { error: false, message: "Success" };
+
+    const userIDsAdd: ObjectID[] = courseUserAction.add.map(
+      (userObject) => new ObjectID(userObject.userID)
+    );
+    const userIDsRemove: ObjectID[] = courseUserAction.remove.map(
+      (userObject) => new ObjectID(userObject.userID)
+    );
+    const courseIDObj = new ObjectID(courseID);
+
+    try {
+      await session.withTransaction(async () => {
+        await this.AddCourseToUsers(userIDsAdd, courseIDObj, session, client);
+        await this.RemoveCourseFromUsers(
+          userIDsRemove,
+          courseIDObj,
+          session,
+          client
+        );
+      });
+
+      response.error = false;
+    } catch (err) {
+      console.log("Transaction aborted due to an unexpected error: " + err);
+      response.error = true;
+      response.message =
+        "Transaction aborted due to an unexpected error: " + err;
+    } finally {
+      session.endSession();
+      return response;
+    }
   }
 
   async close(): Promise<void> {

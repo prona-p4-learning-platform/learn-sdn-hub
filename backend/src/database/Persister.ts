@@ -34,6 +34,17 @@ export interface CourseData {
   assignments: string[];
 }
 
+export interface ResponseObject {
+  error: boolean;
+  message: string;
+}
+
+type CourseUserAction = {
+  [key in "add" | "remove"]: {
+    userID: string;
+  }[];
+};
+
 export interface Persister {
   GetUserAccount: (username: string) => Promise<UserAccount>;
   GetUserEnvironments: (username: string) => Promise<UserEnvironment[]>;
@@ -60,4 +71,8 @@ export interface Persister {
   ) => Promise<Submission[]>;
   GetAllUsers: () => Promise<UserData[]>;
   GetAllCourses: () => Promise<CourseData[]>;
+  UpdateCourseForUsers(
+    courseUserAction: CourseUserAction,
+    courseID: string
+  ): Promise<ResponseObject>;
 }

@@ -1,12 +1,33 @@
-import { Alert, Container, Grid, Snackbar } from "@mui/material";
+import { Alert, Grid, Snackbar } from "@mui/material";
 import AdminTabs from "../components/AdminTabs";
 import UserAssignment from "../components/UserAssignment";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import APIRequest from "../api/Request";
+import type { User } from "../typings/user/UserType";
 
 const Administration = () => {
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string>("");
-  const [authorized, setAuthorized] = useState(true);
+  const [authorized, setAuthorized] = useState(false);
+  const [users, setUsers] = useState<User[]>([]);
+
+  useEffect(() => {
+    fetch(
+      APIRequest("/api/users", {
+        headers: { authorization: localStorage.getItem("token") || "" },
+      })
+    )
+      .then((response) => response.json())
+      .then((data) => {
+        if (data && !data.message) {
+          setAuthorized(true);
+          setUsers(data);
+          return;
+        }
+        handleAuthorization(false, data.message);
+      })
+      .catch((error) => console.error("Error fetching users:", error));
+  }, []);
 
   const handleNotificationClose = () => {
     setNotificationOpen(false);
@@ -21,18 +42,13 @@ const Administration = () => {
   };
 
   return (
-    <Container>
+    <Grid container spacing={0}>
       {authorized ? (
-        <Grid container spacing={0}>
-          <Grid item xs={12}>
-            <AdminTabs tabNames={["Assign Users", "Course Assignments"]}>
-              <UserAssignment
-                key="assignUsers"
-                onAuthorization={handleAuthorization}
-              ></UserAssignment>
-              <div key="courseAssignments">Course Assignments</div>
-            </AdminTabs>
-          </Grid>
+        <Grid item xs={12}>
+          <AdminTabs tabNames={["Assign Users", "Course Assignments"]}>
+            <UserAssignment key="assignUsers" users={users}></UserAssignment>
+            <div key="courseAssignments">Course Assignments</div>
+          </AdminTabs>
         </Grid>
       ) : null}
       <Snackbar
@@ -44,7 +60,7 @@ const Administration = () => {
           {errorMessage}
         </Alert>
       </Snackbar>
-    </Container>
+    </Grid>
   );
 };
 

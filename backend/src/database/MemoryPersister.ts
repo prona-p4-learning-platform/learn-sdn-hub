@@ -1,9 +1,11 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import {
   Persister,
   UserEnvironment,
   UserAccount,
   UserData,
   CourseData,
+  ResponseObject,
 } from "./Persister";
 import fs from "fs";
 import path from "path";
@@ -185,6 +187,16 @@ export default class MemoryPersister implements Persister {
 
   async GetAllCourses(): Promise<CourseData[]> {
     // TODO: implement
+    throw new Error("Method not implemented.");
+  }
+
+  async UpdateCourseForUsers(
+    courseUserAction: {
+      add: { userID: string }[];
+      remove: { userID: string }[];
+    },
+    courseID: string
+  ): Promise<ResponseObject> {
     throw new Error("Method not implemented.");
   }
 
