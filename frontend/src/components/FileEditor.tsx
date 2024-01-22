@@ -55,6 +55,7 @@ import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
 //import { WebrtcProvider } from 'y-webrtc'
 import { MonacoBinding } from 'y-monaco'
+import { toUint8Array } from 'js-base64'
 
 loader.config({ monaco });
 
@@ -264,14 +265,14 @@ export default class FileEditor extends React.Component<FileEditorProps> {
             currentFilePath: data.location,
             currentFileEditorLanguage: selectLanguageForEndpoint(fileName).editorLanguage,
             currentFileLSPLanguage: selectLanguageForEndpoint(fileName).lspLanguage,
-            //currentFileValue: fileContent,
-            currentFileValue: "",
+            currentFileValue: fileContent,
+            //currentFileValue: "",
           });
         }
 
         this.environmentFiles[fileName] = {
-          //value: fileContent,
-          value: "",
+          value: fileContent,
+          //value: "",
           editorLanguage: selectLanguageForEndpoint(fileName).editorLanguage,
           lspLanguage: selectLanguageForEndpoint(fileName).lspLanguage,
           // change to use filePath or a corresponding type directly?
@@ -292,7 +293,7 @@ export default class FileEditor extends React.Component<FileEditorProps> {
 
   async editorDidMount(editor: monaco.editor.IStandaloneCodeEditor, monaco: Monaco) {
     this.editor = editor;
-    editor.focus();
+    //editor.focus();
 
     // remove \\1 filtering or maybe this initial inmemory model all at once?
     //console.log("Editor file path: " + editor.getModel()?.uri.fsPath);
@@ -312,54 +313,103 @@ export default class FileEditor extends React.Component<FileEditorProps> {
     this.stopLanguageClient();
   }
 
-  startCollaborationServices(group: string, fileName: string) {
+  async startCollaborationServices(group: string, fileName: string) {
     if (!this.props.useCollaboration) {
       // collaboration disabled in config for this env do not start it and simply return
       return
     }
 
-    let docCollabPath = this.props.files[0].replaceAll("/", "_");
-    let subDoc : Y.Doc;
-    if ( this.folder.get(docCollabPath) == null ) {
-      subDoc = new Y.Doc();
-      this.folder.set(docCollabPath, subDoc);
-    }
-    else
-    {
-      subDoc = this.folder.get(docCollabPath) as Y.Doc;
-    }
-    const subDocText = subDoc.getText(docCollabPath);
+    //let docCollabPath = this.props.files[0].replaceAll("/", "_");
+    //let subDoc : Y.Doc;
+    //if ( this.folder.get(docCollabPath) == null ) {
+    //  subDoc = new Y.Doc();
+    //  this.folder.set(docCollabPath, subDoc);
+    //}
+    //else
+    //{
+    //  subDoc = this.folder.get(docCollabPath) as Y.Doc;
+    //}
+    //const subDocText = subDoc.getText(docCollabPath);
 
-    console.log("docCollabPath: " + docCollabPath);
-    console.log("subDoc length: " + subDoc.getText(docCollabPath).length);
+    //console.log("docCollabPath: " + docCollabPath);
+    //console.log("subDoc length: " + subDoc.getText(docCollabPath).length);
 
-    const collaborationId = fileName + "-group" + group;
-    console.log("Starting collaboration for user: " + this.username + " in group: " + group + " on: " + collaborationId);
+    //const collaborationId = fileName + "-group" + group;
+    //console.log("Starting collaboration for user: " + this.username + " in group: " + group + " on: " + collaborationId);
 
     //const wsProvider = new WebsocketProvider(`${window?.location?.protocol === 'http' ? 'ws:' : 'wss:'}//localhost:1234`, collaborationId, ydocument)
-    this.collaborationProvider = new WebsocketProvider("ws://localhost:1234", "monaco", subDoc)
-    this.collaborationProvider.on('status', (event: { status: any; }) => {
-      console.log(event.status) // logs "connected" or "disconnected"
+    //this.collaborationProvider = new WebsocketProvider("ws://localhost:1234", "monaco", subDoc)
+    //???document = Y.Doc.fromJSON(JSON.parse(localStorage.getItem("yjsDoc") ?? "{}"))
+    const document = new Y.Doc();
+    document.on('update', (update: any) => {
+      console.log("update: " + update);
+      //localStorage.setItem("yjsDoc", JSON.stringify(document.toJSON()));
     });
-    //console.log(wsProvider.wsconnected);
-    //this.collaborationProvider.connect();
-    //console.log(wsProvider.wsconnected);
 
-    //const ytext = this.rootDoc?.getText('monaco');
-    //console.log(this.editor);
+    const result = await fetch(APIRequest(`/api/environment/${this.props.environment}/collabdoc/${fileName}`, { headers: { 'Content-Type': 'application/json', authorization: localStorage.getItem("token") || "" } }));
+    if (result.status === 200) {
+      const content = await result.text();
+      Y.applyUpdate(document, toUint8Array(content));
 
-    const awareness = this.collaborationProvider.awareness;
-    const username = this.username + "-" + this.group;
-    const color = "#" + ((1<<24)*Math.random() | 0).toString(16);
-    awareness.setLocalStateField('user', {
-      name: username,
-      color: color
-    })
-    this.binding = new MonacoBinding(subDocText, this.editor.getModel(), new Set([this.editor]), awareness)
-    console.log("subDoc length: " + subDoc.getText().length);
-
-    //console.log(this.binding);
-    //console.log(wsProvider.wsconnected);
+      this.collaborationProvider = new WebsocketProvider("ws://localhost:1234", "monaco", document)
+      //this.collaborationProvider = new WebsocketProvider("ws://demos.yjs.dev", "monaco", document)
+      const type = document.getText('monaco')
+  
+      this.collaborationProvider.on('sync', (event: { status: any; }) => {
+        console.log(event)
+      });
+      this.collaborationProvider.on('status', (event: { status: any; }) => {
+        console.log(event) // event.status logs "connected" or "disconnected"
+      });
+      this.collaborationProvider.on('connection-close', (event: { status: any; }) => {
+        console.log(event)
+      });
+      this.collaborationProvider.on('connection-error', (event: { status: any; }) => {
+        console.log(event)
+      });
+      //console.log(wsProvider.wsconnected);
+      //this.collaborationProvider.connect();
+      //console.log(wsProvider.wsconnected);
+  
+      //const ytext = this.rootDoc?.getText('monaco');
+      //console.log(this.editor);
+  
+      const awareness = this.collaborationProvider.awareness;
+      const username = this.username + "-" + this.group;
+      const color = "#" + ((1<<24)*Math.random() | 0).toString(16);
+      awareness.setLocalStateField('user', {
+        name: username,
+        color: color
+      })
+      awareness.on('change', (e: any) => {
+        console.log(e);
+      });
+      awareness.setLocalState({user: {name: username, color: color}});
+      awareness.on('update', (e: any) => { 
+        console.log(e);
+      });
+      if (this.editor != null) {
+        if (this.editor.getModel()) {
+          this.binding = new MonacoBinding(type, this.editor.getModel()!, new Set([this.editor]), this.collaborationProvider.awareness);
+        }
+        else
+        {
+          console.log("MonacoBinding editor model is null");      
+        }
+      }
+      else
+      {
+        console.log("MonacoBinding editor is null");
+      }
+      //this.binding = new MonacoBinding(type, this.editor.getModel(), new Set([this.editor]), awareness);
+      //console.log("subDoc length: " + subDoc.getText().length);
+  
+      //console.log(this.binding);
+      //console.log(wsProvider.wsconnected);
+    } else {
+      console.log("Collab doc not found");
+      //throw exception?
+    }
   }
 
   /****************************************
@@ -794,7 +844,7 @@ export default class FileEditor extends React.Component<FileEditorProps> {
       this.environmentFiles[this.state.currentFile].fileChanged = true;
       this.setState({currentFileChanged: true});  
     }
-    console.log("File changed: " + this.state.currentFile);
+    //console.log("File changed: " + this.state.currentFile);
   };
 
   async save(): Promise<void> {

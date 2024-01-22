@@ -243,7 +243,7 @@ environments.set("python-test", {
     "/home/p4/p4-boilerplate/Example0-SDN-Intro/",
   ],
   useCollaboration: true,
-  useLanguageClient: true,
+  useLanguageClient: false,
 });
 
 environments.set("Example0-SDN-Intro", {

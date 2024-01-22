@@ -8,6 +8,9 @@ import {
 import { Persister } from "./database/Persister";
 import crypto from "crypto";
 import querystring from "querystring";
+import * as Y from 'yjs';
+import { fromUint8Array } from 'js-base64'
+import environment from "./routes/environment";
 
 export interface AliasedFile {
   absFilePath: string;
@@ -130,6 +133,7 @@ export default class Environment {
   private activeDesktops: Map<string, DesktopInstance>;
   private activeWebApps: Map<string, WebAppInstance>;
   private editableFiles: Map<string, string>;
+  private static activeCollabDocs = new Map<string, string>();
   private configuration: EnvironmentDescription;
   private environmentId: string;
   private instanceId: string;
@@ -1142,6 +1146,23 @@ export default class Environment {
     }
     await this.filehandler.writeFile(resolvedPath, newContent);
   }
+
+  // Create a yjs Doc, handle intial content and return it
+  public static async getCollabDoc(alias: string, environmentId: string, username: string): Promise<string> {
+    const env = Environment.getActiveEnvironment(environmentId, username);
+    if (this.activeCollabDocs.get(alias) === undefined) {
+      let resolvedPath = env.editableFiles.get(alias);
+      if (resolvedPath === undefined) {
+        throw new Error("Could not resolve alias.");
+      }
+      const content = await env.filehandler.readFile(resolvedPath);
+      const ydoc = new Y.Doc();
+      const ytext = ydoc.getText('monaco');
+      ytext.insert(0, content);
+      this.activeCollabDocs.set(alias, fromUint8Array(Y.encodeStateAsUpdate(ydoc)));
+    }
+    return this.activeCollabDocs.get(alias);
+  }  
 
   async getProviderInstanceStatus(): Promise<string> {
     try {

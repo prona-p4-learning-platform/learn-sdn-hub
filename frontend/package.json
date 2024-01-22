@@ -18,6 +18,7 @@
     "@types/react-router-dom": "^5.3.3",
     "fontsource-roboto": "^4.0.0",
     "guacamole-common-js": "^1.4.0-a",
+    "js-base64": "^3.7.6",
     "mermaid": "^9.4.0",
     "monaco-editor": "^0.33.0",
     "monaco-editor-webpack-plugin": "^7.0.1",
@@ -37,9 +38,9 @@
     "xterm-addon-fit": "^0.5.0",
     "xterm-addon-serialize": "^0.6.2",
     "y-monaco": "^0.1.5",
-    "y-webrtc": "^10.2.6",
-    "y-websocket": "^1.5.1",
-    "yjs": "^13.6.10"
+    "y-webrtc": "^10.3.0",
+    "y-websocket": "^1.5.3",
+    "yjs": "^13.6.11"
   },
   "devDependencies": {
     "@svgr/webpack": "^6.2.1",
