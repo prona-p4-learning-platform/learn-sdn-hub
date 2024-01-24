@@ -15,8 +15,7 @@ import authenticationMiddleware, {
   RequestWithUser,
 } from "../authentication/AuthenticationMiddleware";
 import { celebrate, Joi, Segments } from "celebrate";
-import * as Y from 'yjs';
-
+import * as Y from "yjs";
 
 const environmentPathParamValidator = celebrate({
   [Segments.PARAMS]: Joi.object().keys({
@@ -225,11 +224,13 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
         req.params.environment,
         req.user.username
       );
-      await Environment.getCollabDoc(req.params.alias, req.params.environment, req.user.username)
+      await Environment.getCollabDoc(
+        req.params.alias,
+        req.params.environment,
+        req.user.username
+      )
         .then((content: string) => {
-          res
-            .status(200)
-            .end(content);
+          res.status(200).end(content);
         })
         .catch((err) => {
           console.log(err);

@@ -8,8 +8,8 @@ import {
 import { Persister } from "./database/Persister";
 import crypto from "crypto";
 import querystring from "querystring";
-import * as Y from 'yjs';
-import { fromUint8Array } from 'js-base64'
+import * as Y from "yjs";
+import { fromUint8Array } from "js-base64";
 import environment from "./routes/environment";
 
 export interface AliasedFile {
@@ -1148,7 +1148,11 @@ export default class Environment {
   }
 
   // Create a yjs Doc, handle intial content and return it
-  public static async getCollabDoc(alias: string, environmentId: string, username: string): Promise<string> {
+  public static async getCollabDoc(
+    alias: string,
+    environmentId: string,
+    username: string
+  ): Promise<string> {
     const env = Environment.getActiveEnvironment(environmentId, username);
     if (this.activeCollabDocs.get(alias) === undefined) {
       let resolvedPath = env.editableFiles.get(alias);
@@ -1157,12 +1161,15 @@ export default class Environment {
       }
       const content = await env.filehandler.readFile(resolvedPath);
       const ydoc = new Y.Doc();
-      const ytext = ydoc.getText('monaco');
+      const ytext = ydoc.getText("monaco");
       ytext.insert(0, content);
-      this.activeCollabDocs.set(alias, fromUint8Array(Y.encodeStateAsUpdate(ydoc)));
+      this.activeCollabDocs.set(
+        alias,
+        fromUint8Array(Y.encodeStateAsUpdate(ydoc))
+      );
     }
     return this.activeCollabDocs.get(alias);
-  }  
+  }
 
   async getProviderInstanceStatus(): Promise<string> {
     try {
