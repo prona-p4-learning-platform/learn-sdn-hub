@@ -22,7 +22,12 @@ export default function (
           wsFromBrowser.send("backend websocket ready");
           wsFromBrowser.on("message", (data) => {
             //console.log(data.toString());
-            wsToLanguageServer.send(data);
+            if (data.toString() === "ping") {
+              wsFromBrowser.send("pong");
+              return;
+            } else {
+              wsToLanguageServer.send(data);
+            }
           });
           wsToLanguageServer.on("message", (data) => {
             //console.log(data.toString());
