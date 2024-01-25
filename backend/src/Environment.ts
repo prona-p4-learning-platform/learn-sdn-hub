@@ -10,7 +10,6 @@ import crypto from "crypto";
 import querystring from "querystring";
 import * as Y from "yjs";
 import { fromUint8Array } from "js-base64";
-import environment from "./routes/environment";
 
 export interface AliasedFile {
   absFilePath: string;
@@ -1155,7 +1154,7 @@ export default class Environment {
   ): Promise<string> {
     const env = Environment.getActiveEnvironment(environmentId, username);
     if (this.activeCollabDocs.get(alias) === undefined) {
-      let resolvedPath = env.editableFiles.get(alias);
+      const resolvedPath = env.editableFiles.get(alias);
       if (resolvedPath === undefined) {
         throw new Error("Could not resolve alias.");
       }
