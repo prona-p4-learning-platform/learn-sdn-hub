@@ -12,20 +12,20 @@ code {
     monospace;
 }
 
-.myGlyphMarginClass {
-	background: red;
-}
-
 .myContentClass {
 	background: lightblue;
 }
 
+
+/* mermaid */
 .myMarkdownContainer {
 	overflow-y: scroll;
 	height: calc(100vh - 210px);
 	width: calc(50vw - 20px);
 }
 
+
+/* xterm.js and terminal classes */
 .myTerminalTab {
 	overflow-y: auto;
 	overflow-x: hidden;
@@ -71,60 +71,25 @@ code {
   z-index: 255;
 }
 
-.myEditorTabContainer {
-	height: calc(100vh - 220px);
-	width: calc(50vw - 20px);
-}
 
+/* monaco & editor classes */
 .myMonacoClass {
 	width: calc(50vw - 20px);
 	height: calc(100vh - 130px);
 	padding: 2px;
 }
 
-/*.monaco-remote-cursor {
-  position: absolute;
-  pointer-events: none;
-  z-index: 4000;
-  width: 2px;
+.myGlyphMarginClass {
+	background: red;
 }
 
- .monaco-remote-cursor:before {
-  content: "";
-  width: 6px;
-  height: 5px;
-  display: block;
-  margin-left: -2px;
-  margin-top: 0;
-  z-index: 4000;
-  background: inherit;
+.myEditorTabContainer {
+	height: calc(100vh - 220px);
+	width: calc(50vw - 20px);
 }
 
-.monaco-remote-cursor-tooltip {
-  position: absolute;
-  white-space: nowrap;
-  color: #FFFFFF;
-  text-shadow: 0 0 1px #000000;
-  opacity: 1.0;
-  font-size: 12px;
-  padding: 2px;
-  font-family: sans-serif;
-  z-index: 4000;
 
-  transition: opacity 0.5s ease-out;
-  -webkit-transition: opacity 0.5s ease-out;
-  -moz-transition: opacity 0.5s ease-out;
-  -ms-transition: opacity 0.5s ease-out;
-  -o-transition: opacity 0.5s ease-out;
-}
-
-.monaco-remote-selection {
-  position: absolute;
-  pointer-events: auto;
-  opacity: 0.3;
-  background: blue;
-} */
-
+/* yjs */
 .yRemoteSelection {
   background-color: rgb(250, 129, 0, .5)
 }
@@ -145,6 +110,8 @@ code {
   top: -5px;
 }
 
+
+/* guacamole */
 #guacContainer {
   overflow: hidden;
   cursor: none;
