@@ -52,8 +52,6 @@ import getMessageServiceOverride from "vscode/service-override/messages";
 // monaco-languageclient
 import {
   MonacoLanguageClient,
-  CloseAction,
-  ErrorAction,
   MonacoServices,
   MessageTransports,
   WorkspaceFolder,
@@ -89,9 +87,6 @@ interface State {
   fileState: FileState;
   currentFile: string;
   currentFileChanged: boolean;
-  currentFileValue: string;
-  // maybe better use a type containing editorLanguage and lspLanguage together?
-  currentFileEditorLanguage: string;
   currentFileLSPLanguage: string;
   currentFilePath: string;
   editorResult: string;
@@ -114,7 +109,6 @@ interface FileStateModel {
 }
 
 interface FileEditorProps {
-  // maybe better use a Type containing fileAlias and absFilePath instead of using separate vars for them?
   files: string[];
   filePaths: string[];
   environment: string;
@@ -156,8 +150,8 @@ export default class FileEditor extends React.Component<FileEditorProps> {
 
   private binding?: MonacoBinding;
   private collaborationProvider?: WebsocketProvider;
-  private rootDoc;
-  private folder;
+  //private collaborationProvider?: WebrtcProvider;
+  private suppressChangeDetection = false;
 
   private languageClient!: MonacoLanguageClient;
   private languageClientWSTimerId!: NodeJS.Timer;
@@ -172,8 +166,6 @@ export default class FileEditor extends React.Component<FileEditorProps> {
       fileState: {} as FileState,
       currentFile: props.files[0],
       currentFileChanged: false,
-      currentFileValue: "",
-      currentFileEditorLanguage: "",
       currentFileLSPLanguage: "",
       currentFilePath: "",
       editorResult: "",
@@ -198,9 +190,6 @@ export default class FileEditor extends React.Component<FileEditorProps> {
 
     this.startLanguageClient = this.startLanguageClient.bind(this);
     this.stopLanguageClient = this.stopLanguageClient.bind(this);
-
-    this.rootDoc = new Y.Doc();
-    this.folder = this.rootDoc.getMap();
 
     // register Monaco languages
     monaco.languages.register({
@@ -293,7 +282,6 @@ export default class FileEditor extends React.Component<FileEditorProps> {
           value: fileContent,
           editorLanguage: selectLanguageForEndpoint(fileName).editorLanguage,
           lspLanguage: selectLanguageForEndpoint(fileName).lspLanguage,
-          // change to use filePath or a corresponding type directly?
           name: fileName,
           fileChanged: false,
           fileLocation: data.location ?? "",
@@ -310,18 +298,19 @@ export default class FileEditor extends React.Component<FileEditorProps> {
 
     const initialFile = this.props.files[0];
     const file = this.environmentFiles[initialFile];
-    // it's enough to store the currentFileValue in state to trigger initial filling of the editor, no need to use this.state.currentFileValue afterwards (e.g., as the value of <Editor/>)
-    // maybe consolidate editor value state/class vars/remove them?
     this.setState({
       currentFile: file.name,
       currentFilePath: file.fileLocation,
       currentFileEditorLanguage: file.editorLanguage,
       currentFileLSPLanguage: file.lspLanguage,
-      currentFileValue: file.value,
     });
 
     console.log("Loading editor file: " + file.name + " with editorLanguage: " + file.editorLanguage + " and lspLanguage: " + file.lspLanguage);
     this.startLanguageClient(this.editor, file.lspLanguage);
+
+    this.suppressChangeDetection = true;
+    await this.startCollaborationServices(this.group, this.state.currentFile);
+    this.suppressChangeDetection = false;
   }
 
   async editorDidMount(
@@ -330,7 +319,6 @@ export default class FileEditor extends React.Component<FileEditorProps> {
   ) {
     this.editor = editor;
     //editor.focus();
-    this.startCollaborationServices(this.group, this.state.currentFile);
   }
 
   componentWillUnmount(): void {
@@ -344,28 +332,18 @@ export default class FileEditor extends React.Component<FileEditorProps> {
    **
    ****************************************/
 
+  getRandomInt(min: number, max: number) {
+    min = Math.ceil(min);
+    max = Math.floor(max);
+    return Math.floor(Math.random() * (max - min) + min); // The maximum is exclusive and the minimum is inclusive
+  }
+  
+
   async startCollaborationServices(group: string, fileName: string) {
     if (!this.props.useCollaboration) {
       // collaboration disabled in config for this env do not start it and simply return
       return;
     }
-
-    //subDocs not supported with y-websocket, hence next line are just some notes for future reference or use with y-webrtc etc.
-    //
-    //let docCollabPath = this.props.files[0].replaceAll("/", "_");
-    //let subDoc : Y.Doc;
-    //if ( this.folder.get(docCollabPath) == null ) {
-    //  subDoc = new Y.Doc();
-    //  this.folder.set(docCollabPath, subDoc);
-    //}
-    //else
-    //{
-    //  subDoc = this.folder.get(docCollabPath) as Y.Doc;
-    //}
-    //const subDocText = subDoc.getText(docCollabPath);
-    //
-    //console.log("docCollabPath: " + docCollabPath);
-    //console.log("subDoc length: " + subDoc.getText(docCollabPath).length);
 
     const collaborationId = fileName + "-group" + group;
     console.log(
@@ -377,12 +355,7 @@ export default class FileEditor extends React.Component<FileEditorProps> {
         collaborationId
     );
 
-    const document = new Y.Doc();
-    //document.on("update", (update: any) => {
-    //console.log("update: " + update);
-    //optional local caching, better use y-websocket's persistence feature?
-    //localStorage.setItem("yjsDoc", JSON.stringify(document.toJSON()));
-    //});
+    const doc = new Y.Doc();
 
     const result = await fetch(
       APIRequest(
@@ -397,8 +370,9 @@ export default class FileEditor extends React.Component<FileEditorProps> {
     );
     if (result.status === 200) {
       const content = await result.text();
-      Y.applyUpdate(document, toUint8Array(content));
+      Y.applyUpdate(doc, toUint8Array(content));
 
+      // Websocket provider
       this.collaborationProvider = new WebsocketProvider(
         `${window?.location?.protocol === "http:" || undefined ? "ws:" : "wss:"}//` +
           (process.env.REACT_APP_YJS_WEBSOCKET_HOST ??
@@ -407,50 +381,117 @@ export default class FileEditor extends React.Component<FileEditorProps> {
           `:` +
           (process.env.REACT_APP_YJS_WEBSOCKET_PORT ?? `1234`),
         collaborationId,
-        document
+        doc
       );
-      const type = document.getText("monaco");
 
-      //debugging yjs:
-      //
-      //this.collaborationProvider.on("sync", (event: { status: any }) => {
-      //  console.log(event);
-      //});
-      //this.collaborationProvider.on("status", (event: { status: any }) => {
-      //  console.log(event); // event.status logs "connected" or "disconnected"
-      //});
-      //this.collaborationProvider.on(
-      //  "connection-close",
-      //  (event: { status: any }) => {
-      //    console.log(event);
-      //  }
-      //);
-      //this.collaborationProvider.on(
-      //  "connection-error",
-      //  (event: { status: any }) => {
-      //    console.log(event);
-      //  }
-      //);
-      //console.log(wsProvider.wsconnected);
-      //this.collaborationProvider.connect();
-      //console.log(wsProvider.wsconnected);
+      // WebRTC provider alternative
+      // this.collaborationProvider = new WebrtcProvider(
+      //   collaborationId,
+      //   doc,
+      //   {
+      //     signaling: [
+      //       `${window?.location?.protocol === "http:" || undefined ? "ws:" : "wss:"}//` +
+      //         (process.env.REACT_APP_YJS_WEBRTC_HOST ??
+      //         window?.location?.hostname ??
+      //         `localhost`) +
+      //         `:` +
+      //         (process.env.REACT_APP_YJS_WEBRTC_PORT ?? `4444`),
+      //     ],
+      //   }
+      // );
 
-      //const ytext = this.rootDoc?.getText('monaco');
-      //console.log(this.editor);
+      const type = doc.getText("monaco");
 
       const awareness = this.collaborationProvider.awareness;
-      const username = this.username + "-" + this.group;
-      const color = "#" + (((1 << 24) * Math.random()) | 0).toString(16);
+      const username = this.username;
+
+      const red = this.getRandomInt(64,192);
+      const green = this.getRandomInt(64,192);
+      const blue = this.getRandomInt(64,192);
+      let hexColor = '#' + red.toString(16).padStart(2, '0')+ green.toString(16).padStart(2, '0') + blue.toString(16).padStart(2, '0');
+      console.log("my color: " + hexColor);
+
+      awareness.on('update', ({ added = [], updated = [], removed = [] }) => {
+        added.forEach((client) => {
+          //yjs awareness debug:
+          //console.log("added client: " + client);
+          //
+          //awareness.getStates().forEach((state, clientId) => {
+          //  console.log("client state: " + clientId + " state: " + state.user.name + " color: " + state.user.color);
+          //});
+
+          // add css class for new client
+          if (awareness.getStates().get(client) !== undefined) {
+            const { name, color } = awareness.getStates().get(client)!.user;
+            const colorRed = parseInt(color.substring(1,3), 16);
+            const colorGreen = parseInt(color.substring(3,5), 16);
+            const colorBlue = parseInt(color.substring(5,7), 16);
+            const newClient = document.createElement("style");
+            //newClient.type = "text/css";
+            newClient.innerHTML = `
+            .yRemoteSelection-${client} {
+              background-color: rgb(${colorRed}, ${colorGreen}, ${colorBlue}, .5)
+            }
+            .yRemoteSelection-${client}:hover {
+              position: relative;
+              content: ${name};
+              border: 1px solid #222222;
+              left: -4px;
+              top: -5px;
+            }
+            .yRemoteSelectionHead-${client} {
+              position: absolute;
+              border-left: ${color} solid 2px;
+              border-top: ${color} solid 2px;
+              border-bottom: ${color} solid 2px;
+              height: 100%;
+              box-sizing: border-box;
+            }          
+            .yRemoteSelectionHead-${client}::after {
+              position: absolute;
+              content: ' ';
+              border: 3px solid ${color};
+              border-radius: 4px;
+              left: -4px;
+              top: -5px;
+            }
+            .yRemoteSelectionHead-${client}::before {
+                position: absolute;
+                white-space: nowrap;
+                color: rgb(${colorRed}, ${colorGreen}, ${colorBlue}, .5);
+                text-shadow: 0 0 2px #000000;
+                opacity: 1.0;
+                font-size: 12px;
+                font-family: sans-serif;
+                z-index: 4000;
+                content: "${name}";
+                opacity: 1.0;
+                left: 4px;
+                top: -12px;
+                transition: opacity 0.5s ease-out;
+                -webkit-transition: opacity 0.5s ease-out;
+                -moz-transition: opacity 0.5s ease-out;
+                -ms-transition: opacity 0.5s ease-out;
+                -o-transition: opacity 0.5s ease-out;
+              }
+            }`;
+            document.head.appendChild(newClient);
+          }
+        });
+        //no need to handle updated and removed clients for now, styles will be kept and will not change
+        //updated.forEach((client) => {
+        //  console.log("updated client: " + client);
+        //});
+        //removed.forEach((client) => {
+        //  console.log("removed client: " + client);
+        //});
+      });
+      console.log("my client id: " + awareness.clientID);
       awareness.setLocalStateField("user", {
         name: username,
-        color: color,
+        color: hexColor,
       });
-      //awareness.on("change", (e: any) => {
-      //  console.log(e);
-      //});
-      //awareness.on("update", (e: any) => {
-      //  console.log(e);
-      //});
+
       if (this.editor != null) {
         if (this.editor.getModel()) {
           this.binding = new MonacoBinding(
@@ -460,19 +501,16 @@ export default class FileEditor extends React.Component<FileEditorProps> {
             awareness
           );
         } else {
+          // should not happen, since editor is mounted
           console.log("MonacoBinding editor model is null");
         }
       } else {
+        // should not happen, since editor is mounted
         console.log("MonacoBinding editor is null");
       }
-
-      //this.binding = new MonacoBinding(type, this.editor.getModel(), new Set([this.editor]), this.collaborationProvider.awareness);
-      //console.log("subDoc length: " + subDoc.getText().length);
-      //console.log(this.binding);
-      //console.log(wsProvider.wsconnected);
     } else {
       console.log("Collab doc not found");
-      //throw exception?
+      //throw exception? Should not happen though, since collab doc is created on first access
     }
   }
 
@@ -482,6 +520,8 @@ export default class FileEditor extends React.Component<FileEditorProps> {
       return;
     }
     this.binding?.destroy();
+    // WebRTC provider problem is room is taken, cannot be joined/created again
+    //this.collaborationProvider?.room?.destroy();
     this.collaborationProvider?.disconnect();
   }
 
@@ -590,7 +630,7 @@ export default class FileEditor extends React.Component<FileEditorProps> {
     clearInterval(this.languageClientWSTimerId);
     //this.languageClientWebSocket.close()
   }
-  
+
   findCommonPathPrefix(strings: string[]): string {
     let commonPrefix = "";
     const stringA = strings[0];
@@ -628,6 +668,9 @@ export default class FileEditor extends React.Component<FileEditorProps> {
   }
 
   onChange(_value: string | undefined) {
+    if (this.suppressChangeDetection) {
+      return;
+    }
     this.environmentFiles[this.state.currentFile].fileChanged = true;
     this.setState({ currentFileChanged: true });
     //console.log("File changed: " + this.state.currentFile);
@@ -757,7 +800,6 @@ export default class FileEditor extends React.Component<FileEditorProps> {
           this.environmentFiles[event.target.value].lspLanguage,
         currentFileChanged:
           this.environmentFiles[event.target.value].fileChanged,
-        currentFileValue: this.environmentFiles[event.target.value].value,
       });
       this.startCollaborationServices(this.group, event.target.value);
       this.startLanguageClient(
