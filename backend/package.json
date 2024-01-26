@@ -46,7 +46,7 @@
     "typescript": "^5.1.6"
   },
   "dependencies": {
-    "axios": "^0.26.1",
+    "axios": "^1.6.0",
     "bcrypt": "^5.1.0",
     "celebrate": "^15.0.1",
     "connect-history-api-fallback": "^2.0.0",
