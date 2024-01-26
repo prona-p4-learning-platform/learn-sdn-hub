@@ -52,6 +52,7 @@
     "connect-history-api-fallback": "^2.0.0",
     "cors": "^2.8.5",
     "dockerode": "^3.3.4",
+    "js-base64": "^3.7.6",
     "jsonwebtoken": "^9.0.0",
     "mongodb": "^3.7.3",
     "netmask": "^2.0.2",
@@ -60,6 +61,7 @@
     "path-to-regexp": "^6.2.1",
     "ssh2": "^1.14.0",
     "toad-scheduler": "^2.2.0",
-    "ws": "^8.13.0"
+    "ws": "^8.13.0",
+    "yjs": "^13.6.11"
   }
 }

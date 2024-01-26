@@ -8,11 +8,13 @@ Initial development was partially funded by the research programme [digLL](https
 
 * Web-based lab environment based on React and TypeScript
 * Multiple assignments can be provided for users and deployed to hosts running the exercises' tasks
-* Web-based access to terminals for each assigment based on [xterm.js](https://xtermjs.org/) (esp. using SSH)
+* Web-based access to terminals for each assigment based on [xterm.js](https://xtermjs.org/) (using SSH), Apache Guacamole (remote desktop using VNC, RDP etc.) and web frames (iframe)
 * Editing of, e.g., SDN-related files, as well as other configuration or source code files used by the assignments, using web-based [monaco editor](https://microsoft.github.io/monaco-editor/)
-* Augmentation of monaco editor to support SDN and P4 languages, facilitating development tasks by supporting features like auto completion, syntax highlighting, error feedback etc.
+* Augmentation of monaco editor to support SDN and P4 languages, facilitating development tasks by supporting features like auto completion, syntax highlighting, error feedback etc. using [monaco-languageclient](https://github.com/TypeFox/monaco-languageclient)
+* Collaboration support for terminals (tmux), Guacamole (inherently supported by shared remote desktops) as well as collaborative editing in the monaco editor (based on yjs [y-monaco](https://github.com/yjs/y-monaco))
 * Modular authentication backend (included are a simple single user, simple multi user and a MongoDB based authentication backend)
 * Modular assignment host backend (included is an SSH backend for single user, multi user (using hosts, VMs, containers to run the assignments) and an OpenStack (VM), Docker (container) and Firecracker (microVM) provider starting and configuring instances to run the assignments)
+* Support for tests and submissions in assignments
 
 The following figures show screenshots of the environment, used to teach the basic functions of a P4-based Layer 2 "learning" (flooding & filtering) switch:
 
@@ -20,7 +22,7 @@ The following figures show screenshots of the environment, used to teach the bas
 
 ![gns3 proxy setup figure including external clients, backend servers and the proxy in the middle as well as its functions](https://raw.githubusercontent.com/prona-p4-learning-platform/learn-sdn-hub/master/examples/screenshots/learn-sdn-hub-screenshot2-small.png "terminal access to mininet and editing of Python code of the controller app in monaco editor")
 
-The assignment shown in the screenshots was based on the [p4-boilerplate](https://github.com/prona-p4-learning-platform/p4-boilerplate). You can find the code and lab exercises in [Example3-LearningSwitch](https://github.com/prona-p4-learning-platform/p4-boilerplate/tree/main/Example3-LearningSwitch). [p4-container](https://github.com/prona-p4-learning-platform/p4-container) can be used as a host to run the tasks of the assignment.
+The assignment shown in the screenshots was based on the [p4-boilerplate](https://github.com/prona-p4-learning-platform/p4-boilerplate). You can find the code and lab exercises in [Example3-LearningSwitch](https://github.com/prona-p4-learning-platform/p4-boilerplate/tree/main/Example3-LearningSwitch). [p4-container](https://github.com/prona-p4-learning-platform/p4-container) can be used as container image for the instances using the docker providerto run the tasks of the assignment. It already contains all requirements for a learn-sdn-hub instance (primarily, SSH server and LSP proxy).
 
 ## Quick start installation and configuration using provided Docker image
 
@@ -61,74 +63,6 @@ More sophisticated examples to run learn-sdn-hub in production environments are 
 
 The startup script [start-learn-sdn-hub.sh](https://github.com/prona-p4-learning-platform/learn-sdn-hub/tree/master/examples/start-learn-sdn-hub.sh) for the container image entrypoint can be used as a reference.
 
-## Prepare a P4 host
-
-(e.g. virtual machine/image/host) to be used by the backend to run P4 code and the language server for the monaco editor
-
-Best way to get started and install a host that can be used to run P4 exercises is using the [p4 tutorials VM](https://github.com/p4lang/tutorials) 
-and run it in VirtualBox or another hypervisor. You also need to give the machine an IP address that can be reached from the backend (see providers in next steps).
-You can also prepare a Ubuntu VM by using the [installation scripts](https://github.com/jafingerhut/p4-guide/blob/master/bin/install-p4dev-v2.sh) from the p4 guide
-repo. By default and for the following example configuration, we assume the VM to have a user p4 with password p4 (as the default for the p4 tutorial vms).
-
-To install the LSP and the LSP load balancer in the VM, run the following in the VM (currently using latest production/stable version of node):
-
-```sh
-git clone https://github.com/wylieconlon/jsonrpc-ws-proxy
-cd jsonrpc-ws-proxy
-npm install
-npm run prepare
-```
-
-Create a servers.yml file in the jsonrpc-ws-proxy directory containing the location of the p4 LSP, e.g.:
-
-```yaml
-langservers:
-  p4:
-    - node
-    - /home/p4/p4-vscode-extension/server/build/server.js
-    - --stdio
-```
-
-You can add further LSP so support additional languages in the LSP load balancer.
-Install the p4 vscode extension in the VM (make sure that it will be in the location you specified in servers.yml file above, in
-this case ```/home/p4/p4-vscode-extension/server/build/server.js```):
-
-```sh
-git clone https://github.com/prona-p4-learning-platform/p4-vscode-extension.git
-cd p4-vscode-extension
-npm install
-cd server
-npm run build
-cp -a src/antlr_autogenerated build/
-```
-
-Start the LSP load balancer:
-
-```sh
-node dist/server.js --port 3005 --languageServers servers.yml
-```
-
-If everything went well, you should make sure that the LSP load balancer is started automatically when the VM starts. You can use a systemd unit like this for that:
-
-```ini
-[Unit]
-Description=LSP load balancer server
-After=network.target
-
-[Service]
-Type=simple
-Restart=always
-RestartSec=1
-KillMode=process
-User=p4
-WorkingDirectory=/home/p4/jsonrpc-ws-proxy
-ExecStart=/home/p4/.nvm/versions/node/v15.4.0/bin/node dist/server.js --port 3005 --languageServers servers.yml
-
-[Install]
-WantedBy=multi-user.target
-Alias=lsp-loadbalancer.service
-```
-
 ## Manual Installation
 
 ### Prerequisites
@@ -159,45 +93,7 @@ npm run build
 
 You can copy the production build of the frontend to the static directory of the backend. This way, the frontend is included and served in the backend. See [Dockerfile](https://github.com/prona-p4-learning-platform/learn-sdn-hub/tree/master/Dockerfile)
 
-### Run the backend using a local VM
-(using [LocalVMProvider.ts](https://github.com/prona-p4-learning-platform/learn-sdn-hub/blob/master/backend/src/providers/LocalVMProvider.ts))
-
-You can use a virtual machine or a physical or even your local machine and specify the IP address to be used by the backend to run P4 code and assignments. The machine must contain p4 tool chain (esp. [p4c](https://github.com/p4lang/p4c)) and needs to be reachable using SSH. Also, it should run the LSP load balancer, as described above. Start the backend:
-
-```sh
-export VBOX_IP_ADDRESSES=<IP addresses of the hosts to execute P4 on>
-export VBOX_SSH_PORTS=<SSH ports of the hosts to execute P4 on>
-export SSH_USERNAME=<Username to be used for the ssh connection, e.g., "p4">
-export SSH_PASSWORD=<Password to be used for the ssh connection>
-cd backend
-npm run start:localvm
-```
-
-Optionally you can also ```export SSH_PRIVATE_KEY_PATH=<SSH keyfile>``` to use an SSH keyfile for the connections to the host running your P4 assignments.
-
-*CAUTION:* VBOX_IP_ADDRESSES is a list of possible instances. Everytime you deploy an assignment, an entry of the list is consumed (disposable instances). Therefore localvm should be used primarily for test and development. If you plan to use the specified hosts permanently to serve as instances to run the assignments, you should use localmultiuservm provider as described in the next section.
-
-[start-learn-sdn-hub.sh](https://github.com/prona-p4-learning-platform/learn-sdn-hub/tree/master/examples/start-learn-sdn-hub.sh) can be used as a reference to create a startup script.
-
-### Run the backend using a local multiuser VM
-(using [LocalMultiuserVMProvider.ts](https://github.com/prona-p4-learning-platform/learn-sdn-hub/blob/master/backend/src/providers/LocalMultiuserVMProvider.ts))
-
-You can use multiple virtual machines or physical hosts as host instances the backend will run assignments on. Again, these hosts must contain p4 tool chain (esp. [p4c](https://github.com/p4lang/p4c)) and need to be reachable using SSH. Also, they should run the LSP load balancer, as described above. Start the backend:
-
-```sh
-export VBOX_IP_ADDRESSES=<IP addresses of the hosts to execute P4 on>
-export VBOX_SSH_PORTS=<SSH ports of the hosts to execute P4 on>
-export SSH_USERNAME=<Username to be used for the ssh connection, e.g., "p4">
-export SSH_PASSWORD=<Password to be used for the ssh connection>
-export BACKEND_USERS=<Comma-separated list of username:password to be used to connect to the backend, e.g., "group0:p4,group1:passwordX,group2:passwortY">
-export BACKEND_USER_MAPPING=<Comma-separated list of username:instance allowing to map users to specific instances, e.g., to deploy all assignments of group0 to the first instance specified in the list VBOX_IP_ADDRESSES, and all assignments of group1 to the second, "group0:0,group1:1">
-
-cd backend
-npm run start:localmultiuservm
-```
-Optionally you can also ```export SSH_PRIVATE_KEY_PATH=<SSH keyfile>``` to use an SSH keyfile for the connections to the host running your P4 assignments.
-
-[start-learn-sdn-hub.sh](https://github.com/prona-p4-learning-platform/learn-sdn-hub/tree/master/examples/start-learn-sdn-hub.sh) can be used as a reference to create a startup script.
+## Configuration
 
 ### Run the backend using Docker instances for assignments
 (using [DockerProvider.ts](https://github.com/prona-p4-learning-platform/learn-sdn-hub/blob/master/backend/src/providers/DockerProvider.ts))
@@ -266,6 +162,12 @@ Optionally you can also ```export SSH_PRIVATE_KEY_PATH=<SSH keyfile>``` to use a
 
 [start-learn-sdn-hub.sh](https://github.com/prona-p4-learning-platform/learn-sdn-hub/tree/master/examples/start-learn-sdn-hub.sh) can be used as a reference to create a startup script.
 
+
+### Run the backend using Firecracker microVMs for assignments
+(using [FirecrackerProvider.ts](https://github.com/prona-p4-learning-platform/learn-sdn-hub/blob/master/backend/src/providers/FirecrackerProvider.ts))
+
+t.b.w.
+
 ### Run the frontend separatly (only recommended for development and debugging purposes)
 
 To run the frontend in development mode (we recommend to rather copy the production build of the frontend to the backend as described in the Installation section and let the backend contain and serve the frontend), you need to create frontend config file as ".env.local" file in the frontend directory:
@@ -291,7 +193,7 @@ If you run the backend on a custom port other than the default TCP port 3001, yo
 REACT_APP_BACKEND_HTTP_PORT=16000
 ```
 
-### Configuration
+### Assignment Configuration
 
 Configuration of assignments, editable files, lab sheets, SSH consoles etc. needs to be done in backend/src/Configuration.ts. Assignment lab sheets can be stored in backend/src/assigments or retrieved from the deployed instance.
 
@@ -304,28 +206,31 @@ the use of MongoDB Atlas service.
 export MONGODB_URL="mongodb+srv://admin:password-here@cluster0.tdnvj.mongodb.net/learn-sdn-hub?retryWrites=true&w=majority"
 ```
 
-### Enable Collaboration ###
+### Enable Collaboration
 
 Users in the same group can use collaboration to work in the editor together.
 To enable collaboration, ``useCollaboration: true`` needs to be set in the assignment configuration file.
 
-Currently convergence.io is used for the implementation of editor collaboration. An environment variable needs to be set to configure convergence connection:
+Currently yjs is used for the implementation of editor collaboration. An environment variable needs to be set to configure yjs websocket connection:
 
-Connection currently uses anonymous connection, so if security is an issue for collaboration, convergence server and backend should be placed on the same host using localhost for the connection.
+Connection currently uses anonymous connection, so if security is an issue for collaboration, yjs server and backend should be placed on the same host using localhost for the connection. By default y-websocket is used.
 
 ```sh
-CONVERGENCE_URL = "http://localhost:8000/api/realtime/convergence/default"
+REACT_APP_YJS_WEBSOCKET_HOST = "localhost"
+REACT_APP_YJS_WEBSOCKET_PORT = "1234"
 ```
 
 Convergence server can be started, e.g., using:
 
-```docker
-docker rm --force convergence
-docker run -p "8000:80" --name convergence convergencelabs/convergence-omnibus
+```sh
+cd backend
+HOST=localhost PORT=1234 npx y-websocket
 ```
+
+The code for FileEditor.tsx also contains a y-webrtc provider example.
 
 The examples in the repository also show how to use tmux to allow shared terminal usage.
 
 ### Enable languageClient
 
-To enable monaco languageClient, ``useLanguageClient: true`` needs to be set in the assignment configuration file. ``rootPath`` and ``workspaceFolders`` can also be defined there, to allow, e.g., auto completion across files in these folders.
+To enable monaco languageClient, ``useLanguageClient: true`` needs to be set in the assignment configuration file. ``rootPath`` and ``workspaceFolders`` can also be defined there, to allow, e.g., auto completion across files in these folders. The instance must provide an LSP port (LSP proxy as described above), e.g., 3005 TCP supporting the languages used in the editor. See [servers.yml](https://github.com/prona-p4-learning-platform/p4-container/blob/master/servers.yml) for an example to use Python and P4 LSP in the proxy. The [lsp.service](https://github.com/prona-p4-learning-platform/p4-container/blob/master/lsp.service) file and [Dockerfile](https://github.com/prona-p4-learning-platform/p4-container/blob/58647e3cdda328f805678e974ea8e780bc9aa27a/Dockerfile#L100) show how the LSP proxy can be configured and started.

@@ -214,6 +214,26 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
     }
   );
 
+  router.get(
+    "/:environment/collabdoc/:alias",
+    authenticationMiddleware,
+    environmentPathParamWithAliasValidator,
+    async (req: RequestWithUser, res) => {
+      await Environment.getCollabDoc(
+        req.params.alias,
+        req.params.environment,
+        req.user.username
+      )
+        .then((content: string) => {
+          res.status(200).end(content);
+        })
+        .catch((err) => {
+          console.log(err);
+          res.status(500).json({ error: true, message: err.message });
+        });
+    }
+  );
+
   router.post(
     "/:environment/restart",
     authenticationMiddleware,
