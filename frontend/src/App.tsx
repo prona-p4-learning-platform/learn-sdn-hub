@@ -10,7 +10,7 @@ import Environment from "./views/Environment";
 import PrivateRoute from "./components/PrivateRoute";
 import AssignmentOverview from "./views/AssignmentOverview";
 import UserSettings from "./views/UserSettings";
-import "fontsource-roboto";
+import "@fontsource/roboto";
 import { Box, Button } from "@mui/material";
 import CssBaseline from "@mui/material/CssBaseline";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
@@ -53,7 +53,7 @@ function App() {
     localStorage.setItem("group", groupNumber.toString());
   }
 
-  function handleUserLogout(username: string | null): void {
+  function handleUserLogout(_username: string | null): void {
     setUsername("");
     setGroupNumber(0);
     setAuthenticated(false);

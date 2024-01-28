@@ -53,7 +53,7 @@ export class GuacamoleProxyTunnel extends Guacamole.WebSocketTunnel {
         super(tunnelURL);
         this.tunnel = this;
 
-        this.sendMessage = function(elements) {
+        this.sendMessage = function(_elements) {
             // Do not attempt to send messages if not connected
             if (!this.tunnel.isConnected())
                 return;
@@ -80,7 +80,7 @@ export class GuacamoleProxyTunnel extends Guacamole.WebSocketTunnel {
             this.socket?.send(message);
         };
 
-        this.connect = function (data) {
+        this.connect = function (_data) {
             this.reset_timeout();
 
             // Mark the tunnel as connecting

@@ -43,7 +43,7 @@ export default class XTerminal extends React.Component<TerminalProps> {
       //running "resize" manually in the shell also fixes ncurses, tmux, screen etc. dimensions
       this.websocket.send("\x1B[8;"+this.fitAddon.proposeDimensions().rows+";"+this.fitAddon.proposeDimensions().cols+"t");
     }
-    this.xterm?.terminal.onResize((size) => {
+    this.xterm?.terminal.onResize((_size) => {
       this.fitAddon.fit();
       if (this.websocket?.readyState === 1) {
         //signal window resize to ssh using SIGWINCH (\x1B[8;25;80t)

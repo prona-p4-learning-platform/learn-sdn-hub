@@ -4,7 +4,7 @@ interface HomeProps {
   onUserLogin: (token: string, username: string, groupNumber: number) => void;
 }
 export default class Home extends React.Component {
-  props!: HomeProps;
+  declare props: HomeProps;
   
   handleSuccessfulAuthentication(token: string, username: string, groupNumber: number): void {
     this.props.onUserLogin(token, username, groupNumber)

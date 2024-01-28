@@ -33,7 +33,7 @@ type SubmissionType = {
   lastChanged: Date
 }
 
-export default function AssignmentOverview(props: AssignmentOverviewProps) {
+export default function AssignmentOverview(_props: AssignmentOverviewProps) {
   const [assignments, setAssignments] = useState([])
   const [submittedAssignments, setSubmittedAssignments] = useState([] as SubmissionType[])
   const [deployedUserAssignments, setDeployedUserAssignments] = useState([])

@@ -170,27 +170,26 @@ t.b.w.
 
 ### Run the frontend separatly (only recommended for development and debugging purposes)
 
-To run the frontend in development mode (we recommend to rather copy the production build of the frontend to the backend as described in the Installation section and let the backend contain and serve the frontend), you need to create frontend config file as ".env.local" file in the frontend directory:
-
-```sh
-REACT_APP_API_HOST=http://localhost:3001
-REACT_APP_WS_HOST=ws://localhost:3001
-```
-
-You need to adapt "localhost" in the .env.local file if your backend is not running on the same host as the frontend.
-After creating the file, run the frontend by issuing:
+To run the frontend in development mode you can use the following command:
 
 ```sh
 cd frontend
-npm run start
+npm run dev
 ```
 
 A web browser will open automatically leading you to the login in the frontend. If you use the demo authentication provider, you can use default user "p4" and password "p4".
 
+Vite proxies calls to the backend automatically. If the backend is not running on the same machine you can use environment variables to manually redirect this traffic. Create a ".env.local" file in the frontend directory and use the following variables:
+
+```sh
+VITE_REACT_APP_API_HOST=http://localhost:3001
+VITE_REACT_APP_WS_HOST=ws://localhost:3001
+```
+
 If you run the backend on a custom port other than the default TCP port 3001, you can also specify this port in the .env.local file to be used by the frontend to connect to the backend:
 
 ```sh
-REACT_APP_BACKEND_HTTP_PORT=16000
+VITE_REACT_APP_BACKEND_HTTP_PORT=16000
 ```
 
 ### Assignment Configuration
@@ -216,8 +215,8 @@ Currently yjs is used for the implementation of editor collaboration. An environ
 Connection currently uses anonymous connection, so if security is an issue for collaboration, yjs server and backend should be placed on the same host using localhost for the connection. By default y-websocket is used.
 
 ```sh
-REACT_APP_YJS_WEBSOCKET_HOST = "localhost"
-REACT_APP_YJS_WEBSOCKET_PORT = "1234"
+VITE_REACT_APP_YJS_WEBSOCKET_HOST = "localhost"
+VITE_REACT_APP_YJS_WEBSOCKET_PORT = "1234"
 ```
 
 Convergence server can be started, e.g., using:

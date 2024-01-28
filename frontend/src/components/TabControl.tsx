@@ -1,4 +1,4 @@
-  import React from "react";
+import React from "react";
 import Tabs from "@mui/material/Tabs";
 import Tab from "@mui/material/Tab";
 import Typography from "@mui/material/Typography";
@@ -43,11 +43,11 @@ interface TabControlProps {
 export default function TabControl(props: TabControlProps) {
   const [value, setValue] = React.useState(0);
 
-  const handleChange = (event: React.ChangeEvent<{}>, newValue: number) => {
+  const handleChange = (_event: React.ChangeEvent<{}>, newValue: number) => {
     setValue(newValue);
   };
 
-  const handleRestartConfirmation = (event: React.ChangeEvent<{}>) => {
+  const handleRestartConfirmation = (_event: React.ChangeEvent<{}>) => {
     props.handleRestart();
   };
 
