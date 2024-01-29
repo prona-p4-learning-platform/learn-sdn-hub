@@ -12,7 +12,7 @@ const saltRounds = 10;
 interface EnvironmentEntry {
   environment: string;
   description: string;
-  instance: string;  
+  instance: string;
 }
 
 interface UserEntry {
