@@ -9,7 +9,24 @@ import {
 
 const saltRounds = 10;
 
+interface EnvironmentEntry {
+  environment: string;
+  description: string;
+  instance: string;
+}
+
+interface UserEntry {
+  _id?: string;
+  username: string;
+  password?: string;
+  passwordHash?: string;
+  groupNumber: number;
+  assignmentListFilter?: string;
+  environments: EnvironmentEntry[];
+}
+
 interface SubmissionEntry {
+  _id?: string;
   username: string;
   groupNumber: number;
   environment: string;
@@ -29,9 +46,7 @@ export default class MongoDBPersister implements Persister {
 
   private async getClient(): Promise<MongoClient> {
     if (!this.connectPromise) {
-      this.connectPromise = MongoClient.connect(this.connectURL, {
-        useUnifiedTopology: true,
-      });
+      this.connectPromise = MongoClient.connect(this.connectURL);
     }
     if (!this.mongoClient) {
       const client = await this.connectPromise;
@@ -42,7 +57,7 @@ export default class MongoDBPersister implements Persister {
 
   async GetUserAccount(username: string): Promise<UserAccount> {
     const client = await this.getClient();
-    return client.db().collection("users").findOne({ username });
+    return client.db().collection<UserEntry>("users").findOne({ username });
   }
 
   async ChangeUserPassword(
@@ -53,7 +68,7 @@ export default class MongoDBPersister implements Persister {
     const client = await this.getClient();
     return client
       .db()
-      .collection("users")
+      .collection<UserEntry>("users")
       .findOneAndUpdate(
         { username },
         { $set: { passwordHash }, $unset: { password: "" } }
@@ -65,7 +80,7 @@ export default class MongoDBPersister implements Persister {
     const client = await this.getClient();
     return client
       .db()
-      .collection("users")
+      .collection<UserEntry>("users")
       .findOne({ username }, { projection: { environments: 1 } })
       .then((result) =>
         result && result.environments ? result.environments : []
@@ -81,7 +96,7 @@ export default class MongoDBPersister implements Persister {
     const client = await this.getClient();
     return client
       .db()
-      .collection("users")
+      .collection<UserEntry>("users")
       .findOneAndUpdate(
         { username, "environments.environment": { $ne: environment } },
         { $push: { environments: { environment, description, instance } } },
@@ -99,7 +114,7 @@ export default class MongoDBPersister implements Persister {
     const client = await this.getClient();
     return client
       .db()
-      .collection("users")
+      .collection<UserEntry>("users")
       .findOneAndUpdate(
         { username, "environments.environment": { $eq: environment } },
         { $pull: { environments: { environment } } },
@@ -137,7 +152,7 @@ export default class MongoDBPersister implements Persister {
       // delete all previous submissions of this environment for the current user
       client
         .db()
-        .collection("submissions")
+        .collection<SubmissionEntry>("submissions")
         .deleteMany({
           username: username,
           environment: environment,
@@ -152,7 +167,7 @@ export default class MongoDBPersister implements Persister {
       // delete all previous submissions of this environment for the current group
       client
         .db()
-        .collection("submissions")
+        .collection<SubmissionEntry>("submissions")
         .deleteMany({
           groupNumber: groupNumber,
           environment: environment,
@@ -167,7 +182,7 @@ export default class MongoDBPersister implements Persister {
 
       return client
         .db()
-        .collection("submissions")
+        .collection<SubmissionEntry>("submissions")
         .insertOne({
           username: username,
           groupNumber: groupNumber,
@@ -197,7 +212,7 @@ export default class MongoDBPersister implements Persister {
       // retrieve all previous submissions the current user or group
       client
         .db()
-        .collection("submissions")
+        .collection<SubmissionEntry>("submissions")
         .find({
           $or: [{ username: username }, { groupNumber: groupNumber }],
         })
