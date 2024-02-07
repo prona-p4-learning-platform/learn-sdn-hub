@@ -6,10 +6,7 @@ let instance: MongoDBPersister = null;
 let connection: MongoClient = null;
 
 beforeAll(async () => {
-  connection = await MongoClient.connect(process.env.MONGO_URL, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  });
+  connection = await MongoClient.connect(process.env.MONGO_URL);
   instance = new MongoDBPersister(process.env.MONGO_URL);
   try {
     await connection.db().dropCollection("users");
