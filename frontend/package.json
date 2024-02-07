@@ -3,6 +3,14 @@
   "version": "0.1.0",
   "type": "module",
   "private": true,
+  "scripts": {
+    "build": "tsc && vite build",
+    "create-static-backend": "npx shx rm -rf ../backend/static && npx shx mkdir -p ../backend/static && npx shx cp -rf ./build/* ../backend/static/",
+    "dev": "vite",
+    "postinstall": "npx shx mkdir -p ./public/dist && npx shx cp -f ../node_modules/monaco-editor-workers/dist/workers/*.js ./public/dist || npx shx cp -f ./node_modules/monaco-editor-workers/dist/workers/*.js ./public/dist",
+    "preview": "vite preview",
+    "type-check": "tsc"
+  },
   "dependencies": {
     "@emotion/react": "^11.11.3",
     "@emotion/styled": "^11.11.0",
@@ -45,13 +53,5 @@
     "@vitejs/plugin-react": "^4.2.1",
     "typescript": "^5.2.2",
     "vite": "^5.0.12"
-  },
-  "scripts": {
-    "build": "tsc && vite build",
-    "create-static-backend": "npx shx rm -rf ../backend/static && npx shx mkdir -p ../backend/static && npx shx cp -rf ./build/* ../backend/static/",
-    "dev": "vite",
-    "postinstall": "npx shx mkdir -p ./public/dist && npx shx cp -f ../node_modules/monaco-editor-workers/dist/workers/*.js ./public/dist || npx shx cp -f ./node_modules/monaco-editor-workers/dist/workers/*.js ./public/dist",
-    "preview": "vite preview",
-    "type-check": "tsc"
   }
 }
