@@ -26,21 +26,21 @@ export interface Persister {
     username: string,
     environment: string,
     description: string,
-    instance: string
+    instance: string,
   ) => Promise<void>;
   RemoveUserEnvironment: (
     username: string,
-    environment: string
+    environment: string,
   ) => Promise<void>;
   SubmitUserEnvironment: (
     username: string,
     groupNumber: number,
     environment: string,
     terminalStates: TerminalStateType[],
-    submittedFiles: SubmissionFileType[]
+    submittedFiles: SubmissionFileType[],
   ) => Promise<void>;
   GetUserSubmissions: (
     username: string,
-    groupNumber: number
+    groupNumber: number,
   ) => Promise<Submission[]>;
 }

@@ -18,7 +18,7 @@ export interface InstanceProvider {
     environment: string,
     image?: string,
     dockerCmd?: string,
-    dockerSupplementalPorts?: string[]
+    dockerSupplementalPorts?: string[],
   ): Promise<VMEndpoint>;
   getServer(instance: string): Promise<VMEndpoint>;
   deleteServer(instance: string): Promise<void>;

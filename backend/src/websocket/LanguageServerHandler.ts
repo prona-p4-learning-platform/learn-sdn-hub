@@ -5,7 +5,7 @@ export default function (
   wsFromBrowser: WebSocket,
   environment: string,
   username: string,
-  language: string
+  language: string,
 ): void {
   const envInstance = Environment.getActiveEnvironment(environment, username);
   if (envInstance !== undefined) {
@@ -16,7 +16,7 @@ export default function (
       .then((result) => {
         const [port, ipAddress] = result;
         const wsToLanguageServer = new WebSocket(
-          "ws://" + ipAddress + ":" + port + "/" + language
+          "ws://" + ipAddress + ":" + port + "/" + language,
         );
         wsToLanguageServer.on("open", () => {
           wsFromBrowser.send("backend websocket ready");
@@ -52,7 +52,7 @@ export default function (
       .catch((err) => {
         console.log(err);
         wsFromBrowser.send(
-          "Could not connect to environment language server, closing connection."
+          "Could not connect to environment language server, closing connection.",
         );
         wsFromBrowser.close();
       });

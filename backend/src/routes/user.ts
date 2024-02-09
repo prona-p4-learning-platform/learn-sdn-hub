@@ -27,11 +27,11 @@ export default (authProviders: AuthenticationProvider[]): Router => {
       for (const authProvider of authProviders) {
         tempAssignmentMap = await authProvider.filterAssignmentList(
           loggedInUser,
-          tempAssignmentMap
+          tempAssignmentMap,
         );
       }
       return res.status(200).json(Array.from(tempAssignmentMap.keys()));
-    }
+    },
   );
 
   // remove body-parser as it is included in express >=4.17
@@ -46,7 +46,7 @@ export default (authProviders: AuthenticationProvider[]): Router => {
         try {
           const result = await authProvider.authenticateUser(
             username,
-            password
+            password,
           );
           const token = jwt.sign(
             {
@@ -55,7 +55,7 @@ export default (authProviders: AuthenticationProvider[]): Router => {
               groupNumber: result.groupNumber,
             },
             /* replace secret */
-            "some-secret"
+            "some-secret",
           ) as string;
           console.log(result, token);
           return res
@@ -66,7 +66,7 @@ export default (authProviders: AuthenticationProvider[]): Router => {
         }
       }
       return res.status(401).json({ error: "Not authenticated." });
-    }
+    },
   );
 
   router.post(
@@ -85,7 +85,7 @@ export default (authProviders: AuthenticationProvider[]): Router => {
             loggedInUser,
             oldPassword,
             newPassword,
-            confirmNewPassword
+            confirmNewPassword,
           )
           .catch((err) => {
             console.log("error!", err);
@@ -95,7 +95,7 @@ export default (authProviders: AuthenticationProvider[]): Router => {
             return res.status(200).json();
           });
       }
-    }
+    },
   );
   return router;
 };

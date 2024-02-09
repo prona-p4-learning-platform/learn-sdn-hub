@@ -145,26 +145,26 @@ export default class Environment {
 
   public static getActiveEnvironment(
     environmentId: string,
-    username: string
+    username: string,
   ): Environment {
     return Environment.activeEnvironments.get(`${username}-${environmentId}`);
   }
 
   public static getDeployedUserEnvironmentList(
-    username: string
+    username: string,
   ): Array<string> {
     const deployedEnvironmentsForUser: Array<string> = new Array<string>();
     Environment.activeEnvironments.forEach(
       (value: Environment, key: string) => {
         if (value.username === username)
           deployedEnvironmentsForUser.push(key.split("-").slice(1).join("-"));
-      }
+      },
     );
     return deployedEnvironmentsForUser;
   }
 
   public static getDeployedGroupEnvironmentList(
-    groupNumber: number
+    groupNumber: number,
   ): Array<string> {
     const deployedEnvironmentsForGroup: Array<string> = new Array<string>();
     Environment.activeEnvironments.forEach(
@@ -172,7 +172,7 @@ export default class Environment {
         if (value.groupNumber == groupNumber) {
           deployedEnvironmentsForGroup.push(key.split("-").slice(1).join("-"));
         }
-      }
+      },
     );
     return deployedEnvironmentsForGroup;
   }
@@ -183,7 +183,7 @@ export default class Environment {
     environmentId: string,
     configuration: EnvironmentDescription,
     environmentProvider: InstanceProvider,
-    persister: Persister
+    persister: Persister,
   ) {
     this.activeConsoles = new Map();
     this.activeDesktops = new Map();
@@ -223,7 +223,7 @@ export default class Environment {
     environmentId: string,
     env: EnvironmentDescription,
     provider: InstanceProvider,
-    persister: Persister
+    persister: Persister,
   ): Promise<Environment> {
     return new Promise<Environment>(async (resolve, reject) => {
       const environment = new Environment(
@@ -232,17 +232,17 @@ export default class Environment {
         environmentId,
         env,
         provider,
-        persister
+        persister,
       );
       console.log(
-        "Creating new environment: " + environmentId + " for user: " + username
+        "Creating new environment: " + environmentId + " for user: " + username,
       );
       const activeEnvironmentsForGroup = Array<Environment>();
       Environment.activeEnvironments.forEach((environment: Environment) => {
         if (environment.groupNumber === groupNumber) {
           if (environment.environmentId !== environmentId) {
             throw Error(
-              "Your group already deployed another environment. Please reload assignment list."
+              "Your group already deployed another environment. Please reload assignment list.",
             );
           } else {
             activeEnvironmentsForGroup.push(environment);
@@ -256,13 +256,13 @@ export default class Environment {
             environment.instanceId = endpoint.instance;
             Environment.activeEnvironments.set(
               `${username}-${environmentId}`,
-              environment
+              environment,
             );
             return resolve(environment);
           })
           .catch((err) => {
             Environment.activeEnvironments.delete(
-              `${username}-${environmentId}`
+              `${username}-${environmentId}`,
             );
             return reject(new Error("Start of environment failed." + err));
           });
@@ -272,7 +272,7 @@ export default class Environment {
         let groupEnvironmentInstance;
         const userEnvironmentsOfOtherGroupUser =
           await persister.GetUserEnvironments(
-            activeEnvironmentsForGroup[0].username
+            activeEnvironmentsForGroup[0].username,
           );
         for (const userEnvironmentOfOtherGroupUser of userEnvironmentsOfOtherGroupUser) {
           if (
@@ -286,7 +286,7 @@ export default class Environment {
           username,
           activeEnvironmentsForGroup[0].environmentId,
           activeEnvironmentsForGroup[0].configuration.description,
-          groupEnvironmentInstance
+          groupEnvironmentInstance,
         );
         console.log(
           "Added existing environment: " +
@@ -298,7 +298,7 @@ export default class Environment {
             " in group: " +
             groupNumber +
             " using instance: " +
-            groupEnvironmentInstance
+            groupEnvironmentInstance,
         );
         environment
           .start(env, false)
@@ -306,16 +306,16 @@ export default class Environment {
             environment.instanceId = endpoint.instance;
             Environment.activeEnvironments.set(
               `${username}-${environmentId}`,
-              environment
+              environment,
             );
             return resolve(environment);
           })
           .catch((err) => {
             Environment.activeEnvironments.delete(
-              `${username}-${environmentId}`
+              `${username}-${environmentId}`,
             );
             return reject(
-              new Error("Failed to join environment of your group." + err)
+              new Error("Failed to join environment of your group." + err),
             );
           });
       }
@@ -324,7 +324,7 @@ export default class Environment {
 
   static async deleteEnvironment(
     username: string,
-    environmentId: string
+    environmentId: string,
   ): Promise<boolean> {
     return new Promise<boolean>((resolve, reject) => {
       const environment = this.getActiveEnvironment(environmentId, username);
@@ -337,7 +337,7 @@ export default class Environment {
           Environment.activeEnvironments.forEach((env: Environment) => {
             if (env.groupNumber === groupNumber && env.username != username) {
               Environment.activeEnvironments.delete(
-                `${env.username}-${env.environmentId}`
+                `${env.username}-${env.environmentId}`,
               );
             }
           });
@@ -346,16 +346,16 @@ export default class Environment {
         .catch((err) => {
           if (err === DenyStartOfMissingInstanceErrorMessage) {
             console.log(
-              "Environment was already stopped. Silently deleting leftovers in user session."
+              "Environment was already stopped. Silently deleting leftovers in user session.",
             );
             Environment.activeEnvironments.delete(
-              `${username}-${environmentId}`
+              `${username}-${environmentId}`,
             );
             // search for other activeEnvironments in the same group
             Environment.activeEnvironments.forEach((env: Environment) => {
               if (env.groupNumber === groupNumber && env.username != username) {
                 Environment.activeEnvironments.delete(
-                  `${env.username}-${env.environmentId}`
+                  `${env.username}-${env.environmentId}`,
                 );
               }
             });
@@ -380,10 +380,10 @@ export default class Environment {
                 throw new Error(
                   "Environment used by instance " +
                     instance +
-                    " could not be deleted."
+                    " could not be deleted.",
                 );
               }
-            }
+            },
           );
         }
       });
@@ -412,11 +412,11 @@ export default class Environment {
   async makeSureInstanceExists(createIfMissing?: boolean): Promise<VMEndpoint> {
     return new Promise<VMEndpoint>(async (resolve, reject) => {
       const environments = await this.persister.GetUserEnvironments(
-        this.username
+        this.username,
       );
       console.log("Current user environments: " + JSON.stringify(environments));
       const filtered = environments.filter(
-        (env) => env.environment === this.environmentId
+        (env) => env.environment === this.environmentId,
       );
       if (filtered.length === 1) {
         console.log(
@@ -424,7 +424,7 @@ export default class Environment {
             this.environmentId +
             " already deployed for user " +
             this.username +
-            ", trying to reopen it..."
+            ", trying to reopen it...",
         );
         this.environmentProvider
           .getServer(filtered[0].instance)
@@ -436,7 +436,7 @@ export default class Environment {
               // instance is gone, remove environment
               await this.persister.RemoveUserEnvironment(
                 this.username,
-                filtered[0].environment
+                filtered[0].environment,
               );
             }
             return reject(err);
@@ -450,8 +450,8 @@ export default class Environment {
               this.environmentId,
               this.configuration.providerImage,
               this.configuration.providerDockerCmd,
-              this.configuration.providerDockerSupplementalPorts
-            )
+              this.configuration.providerDockerSupplementalPorts,
+            ),
           );
         } else {
           return reject(DenyStartOfMissingInstanceErrorMessage);
@@ -464,8 +464,8 @@ export default class Environment {
               ". Remove duplicate environments from persister " +
               this.persister +
               " envs found: " +
-              filtered
-          )
+              filtered,
+          ),
         );
       }
     });
@@ -473,7 +473,7 @@ export default class Environment {
 
   async start(
     desc: EnvironmentDescription = this.configuration,
-    createIfMissing: boolean
+    createIfMissing: boolean,
   ): Promise<VMEndpoint> {
     let endpoint: VMEndpoint;
     try {
@@ -485,7 +485,7 @@ export default class Environment {
       this.username,
       this.environmentId,
       this.configuration.description,
-      endpoint.instance
+      endpoint.instance,
     );
     console.log(
       "Added new environment: " +
@@ -493,19 +493,19 @@ export default class Environment {
         "for user: " +
         this.username +
         " using endpoint: " +
-        JSON.stringify(endpoint)
+        JSON.stringify(endpoint),
     );
     return new Promise((resolve, reject) => {
       try {
         this.filehandler = new FileHandler(
           endpoint.IPAddress,
-          endpoint.SSHPort
+          endpoint.SSHPort,
         );
       } catch (err) {
         return reject(err);
       }
       desc.editableFiles.forEach((val) =>
-        this.addEditableFile(val.alias, val.absFilePath)
+        this.addEditableFile(val.alias, val.absFilePath),
       );
       let errorTerminalCounter = 0;
       let resolvedOrRejected = false;
@@ -517,7 +517,7 @@ export default class Environment {
             global.console.log(
               "Opening console: ",
               JSON.stringify(subterminal),
-              JSON.stringify(endpoint)
+              JSON.stringify(endpoint),
             );
             try {
               const console = new SSHConsole(
@@ -529,7 +529,7 @@ export default class Environment {
                 subterminal.executable,
                 subterminal.params,
                 subterminal.cwd,
-                subterminal.provideTty
+                subterminal.provideTty,
               );
 
               const setupCloseHandler = (): void => {
@@ -544,7 +544,7 @@ export default class Environment {
                 } else {
                   this.activeConsoles.delete(subterminal.name);
                   global.console.log(
-                    "deleted console for task: " + subterminal.name
+                    "deleted console for task: " + subterminal.name,
                   );
                 }
               };
@@ -573,7 +573,7 @@ export default class Environment {
             global.console.log(
               "Opening desktop: ",
               JSON.stringify(subterminal),
-              JSON.stringify(endpoint)
+              JSON.stringify(endpoint),
             );
 
             // currently fixed to guacamole and VNC, additional protocols require
@@ -620,7 +620,7 @@ export default class Environment {
             const cipher = crypto.createCipheriv(
               "aes-128-cbc",
               key,
-              "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+              "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00",
             );
             const enctoken =
               cipher.update(signedPayload, "binary", "base64") +
@@ -645,7 +645,7 @@ export default class Environment {
                   desktop.guacamoleServerURL = subterminal.guacamoleServerURL;
 
                   console.log(
-                    "Received guacamole token " + desktop.remoteDesktopToken
+                    "Received guacamole token " + desktop.remoteDesktopToken,
                   );
                   this.activeDesktops.set(subterminal.name, desktop);
 
@@ -659,7 +659,7 @@ export default class Environment {
                   }
                 } else {
                   console.log(
-                    "Received error while getting token from guacamole server."
+                    "Received error while getting token from guacamole server.",
                   );
                   return reject(response.status);
                 }
@@ -719,7 +719,7 @@ export default class Environment {
               console[1].close(
                 this.environmentId,
                 env.username,
-                this.groupNumber
+                this.groupNumber,
               );
             }
           }
@@ -731,7 +731,7 @@ export default class Environment {
               global.console.log(
                 "Executing stop command: ",
                 JSON.stringify(command),
-                JSON.stringify(endpoint)
+                JSON.stringify(endpoint),
               );
               const console = new SSHConsole(
                 this.environmentId,
@@ -742,7 +742,7 @@ export default class Environment {
                 command.executable,
                 command.params,
                 command.cwd,
-                command.provideTty
+                command.provideTty,
               );
               console.on("finished", async (code: string, signal: string) => {
                 global.console.log(
@@ -752,7 +752,7 @@ export default class Environment {
                     code +
                     ", signal: " +
                     signal +
-                    ")"
+                    ")",
                 );
                 stopCmdFinished = true;
                 console.emit("closed");
@@ -779,7 +779,7 @@ export default class Environment {
               })
               .catch((err) => {
                 return reject(
-                  new Error("Error: Unable to remove UserEnvironment." + err)
+                  new Error("Error: Unable to remove UserEnvironment." + err),
                 );
               });
             activeUsers.forEach((user: string) => {
@@ -794,8 +794,8 @@ export default class Environment {
                       "Error: Unable to remove UserEnvironment for group member " +
                         user +
                         "." +
-                        err
-                    )
+                        err,
+                    ),
                   );
                 });
             });
@@ -804,7 +804,7 @@ export default class Environment {
             if (err.message === InstanceNotFoundErrorMessage) {
               // instance already gone (e.g., OpenStack instance already deleted)
               global.console.log(
-                "Error: Server Instance not found during deletion?"
+                "Error: Server Instance not found during deletion?",
               );
             } else {
               global.console.log(err);
@@ -831,7 +831,7 @@ export default class Environment {
             global.console.log(
               "Executing stop command: ",
               JSON.stringify(command),
-              JSON.stringify(endpoint)
+              JSON.stringify(endpoint),
             );
             const console = new SSHConsole(
               this.environmentId,
@@ -842,7 +842,7 @@ export default class Environment {
               command.executable,
               command.params,
               command.cwd,
-              false
+              false,
             );
             console.on("finished", (code: string, signal: string) => {
               global.console.log(
@@ -852,7 +852,7 @@ export default class Environment {
                   code +
                   ", signal: " +
                   signal +
-                  ")"
+                  ")",
               );
               resolved = true;
               console.emit("closed");
@@ -861,7 +861,7 @@ export default class Environment {
               if (resolved === true) return resolve();
               else
                 return reject(
-                  new Error("Unable to run stop command." + command.executable)
+                  new Error("Unable to run stop command." + command.executable),
                 );
             });
           });
@@ -881,7 +881,7 @@ export default class Environment {
           // write command to console
           value.write("cd " + value.cwd + "\n");
           console.log(
-            "Executing " + value.command + " " + value.args.join(" ") + "\n"
+            "Executing " + value.command + " " + value.args.join(" ") + "\n",
           );
           value.write(value.command + " " + value.args.join(" ") + "\n");
         });
@@ -891,7 +891,7 @@ export default class Environment {
 
   async runSSHCommand(
     command: string,
-    stdoutSuccessMatch?: string
+    stdoutSuccessMatch?: string,
   ): Promise<string> {
     try {
       const endpoint = await this.makeSureInstanceExists();
@@ -908,7 +908,7 @@ export default class Environment {
           command,
           [""],
           "/",
-          false
+          false,
         );
         console.on("finished", (code: string, signal: string) => {
           global.console.log(
@@ -920,7 +920,7 @@ export default class Environment {
               code +
               ", signal: " +
               signal +
-              ")"
+              ")",
           );
           if (code == "0") {
             // if stdoutSuccessMatch was supplied, try to match stdout against it, to detect whether cmd was successfull
@@ -952,7 +952,7 @@ export default class Environment {
 
   async test(
     stepIndex: string,
-    terminalStates: TerminalStateType[]
+    terminalStates: TerminalStateType[],
   ): Promise<string> {
     console.log("TESTING step " + stepIndex);
 
@@ -969,8 +969,8 @@ export default class Environment {
             if (terminalStates.length === 0) {
               return reject(
                 new Error(
-                  "No terminal states available. Please use the terminals to run the steps given in the assignment and check again."
-                )
+                  "No terminal states available. Please use the terminals to run the steps given in the assignment and check again.",
+                ),
               );
             } else {
               for (const terminalState of terminalStates) {
@@ -1007,12 +1007,12 @@ export default class Environment {
       } else {
         // no tests defined
         global.console.log(
-          "Cannot execute test. No steps defined in tasks for assignment."
+          "Cannot execute test. No steps defined in tasks for assignment.",
         );
         return reject(
           new Error(
-            "Cannot execute test. No steps defined in tasks for assignment."
-          )
+            "Cannot execute test. No steps defined in tasks for assignment.",
+          ),
         );
       }
     });
@@ -1020,7 +1020,7 @@ export default class Environment {
 
   async submit(
     stepIndex: string,
-    terminalStates: TerminalStateType[]
+    terminalStates: TerminalStateType[],
   ): Promise<void> {
     console.log("SUBMITTING assignment (step " + stepIndex + ")");
     const submittedFiles = new Array<SubmissionFileType>();
@@ -1060,7 +1060,7 @@ export default class Environment {
           .replace("$environment", this.environmentId);
         const fileContent = await this.filehandler.readFile(
           fileNameWithExpanededVars,
-          "binary"
+          "binary",
         );
         const flattenedFilePathName = fileNameWithExpanededVars
           .replace(/\//g, "_")
@@ -1098,14 +1098,14 @@ export default class Environment {
       this.groupNumber,
       this.environmentId,
       terminalStates,
-      submittedFiles
+      submittedFiles,
     );
   }
 
   public static async getUserSubmissions(
     persister: Persister,
     username: string,
-    groupNumber: number
+    groupNumber: number,
   ): Promise<Submission[]> {
     const result = await persister.GetUserSubmissions(username, groupNumber);
     return result;
@@ -1113,7 +1113,7 @@ export default class Environment {
 
   public async readFile(
     alias: string,
-    alreadyResolved?: boolean
+    alreadyResolved?: boolean,
   ): Promise<string> {
     let resolvedPath;
     if (alreadyResolved === undefined || alreadyResolved === false) {
@@ -1132,7 +1132,7 @@ export default class Environment {
   public async writeFile(
     alias: string,
     newContent: string,
-    alreadyResolved?: boolean
+    alreadyResolved?: boolean,
   ): Promise<void> {
     let resolvedPath;
     if (alreadyResolved === undefined || alreadyResolved === false) {
@@ -1150,7 +1150,7 @@ export default class Environment {
   public static async getCollabDoc(
     alias: string,
     environmentId: string,
-    username: string
+    username: string,
   ): Promise<string> {
     const env = Environment.getActiveEnvironment(environmentId, username);
     if (this.activeCollabDocs.get(alias) === undefined) {
@@ -1164,7 +1164,7 @@ export default class Environment {
       ytext.insert(0, content);
       this.activeCollabDocs.set(
         alias,
-        fromUint8Array(Y.encodeStateAsUpdate(ydoc))
+        fromUint8Array(Y.encodeStateAsUpdate(ydoc)),
       );
     }
     return this.activeCollabDocs.get(alias);

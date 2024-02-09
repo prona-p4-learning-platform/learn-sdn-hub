@@ -8,7 +8,7 @@ import { InstanceProvider } from "./providers/Provider";
 export default (
   persister: Persister,
   authenticationProviders: AuthenticationProvider[],
-  provider: InstanceProvider
+  provider: InstanceProvider,
 ): Router => {
   const router = Router();
   router.use("/api/environment", environmentRoutes(persister, provider));

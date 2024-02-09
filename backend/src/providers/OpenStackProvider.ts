@@ -130,7 +130,7 @@ export default class OpenStackProvider implements InstanceProvider {
 
     this.associateFloatingIP = process.env.OPENSTACK_ASSOCIATE_FLOATING_IP;
     this.maxInstanceLifetimeMinutes = parseInt(
-      process.env.OPENSTACK_MAX_INSTANCE_LIFETIME_MINUTES
+      process.env.OPENSTACK_MAX_INSTANCE_LIFETIME_MINUTES,
     );
 
     this.providerInstance = this;
@@ -156,13 +156,13 @@ export default class OpenStackProvider implements InstanceProvider {
       },
       (err: Error) => {
         console.log(
-          "OpenStackProvider: Could not prune stale server instances..." + err
+          "OpenStackProvider: Could not prune stale server instances..." + err,
         );
-      }
+      },
     );
     const job = new SimpleIntervalJob(
       { seconds: schedulerIntervalSeconds, runImmediately: true },
-      task
+      task,
     );
 
     scheduler.addSimpleIntervalJob(job);
@@ -173,12 +173,15 @@ export default class OpenStackProvider implements InstanceProvider {
 
     return new Promise((resolve, reject) => {
       const tokenExpires = Date.parse(
-        providerInstance.os_token?.expires_at ?? Date()
+        providerInstance.os_token?.expires_at ?? Date(),
       );
       const now = Date.now();
 
       console.log(
-        "Token expires at: " + new Date(tokenExpires) + " now: " + new Date(now)
+        "Token expires at: " +
+          new Date(tokenExpires) +
+          " now: " +
+          new Date(now),
       );
 
       // add 5 sec for the token to be valid for subsequent operations
@@ -229,22 +232,22 @@ export default class OpenStackProvider implements InstanceProvider {
             // get compute and network public endpoint urls from received service catalog
             const catalog = response.data.token.catalog as Array<Service>;
             const serviceCompute = catalog.find(
-              (element) => element.type === "compute"
+              (element) => element.type === "compute",
             );
             providerInstance.endpointPublicComputeURL =
               serviceCompute.endpoints.find(
                 (element) =>
                   element.interface === "public" &&
-                  element.region === providerInstance.os_region
+                  element.region === providerInstance.os_region,
               ).url;
             const serviceNetwork = catalog.find(
-              (element) => element.type === "network"
+              (element) => element.type === "network",
             );
             providerInstance.endpointPublicNetworkURL =
               serviceNetwork.endpoints.find(
                 (element) =>
                   element.interface === "public" &&
-                  element.region === providerInstance.os_region
+                  element.region === providerInstance.os_region,
               ).url;
             return resolve();
           })
@@ -257,7 +260,7 @@ export default class OpenStackProvider implements InstanceProvider {
             providerInstance.endpointPublicComputeURL = undefined;
             providerInstance.endpointPublicNetworkURL = undefined;
             return reject(
-              new Error("OpenStackProvider: Authentication failed: " + err)
+              new Error("OpenStackProvider: Authentication failed: " + err),
             );
           });
       }
@@ -267,7 +270,7 @@ export default class OpenStackProvider implements InstanceProvider {
   async createServer(
     username: string,
     groupNumber: number,
-    environment: string
+    environment: string,
   ): Promise<VMEndpoint> {
     const providerInstance = this.providerInstance;
 
@@ -302,14 +305,14 @@ export default class OpenStackProvider implements InstanceProvider {
           providerInstance.axiosInstance
             .post(
               providerInstance.endpointPublicComputeURL + "/servers",
-              data_server
+              data_server,
             )
             .then(function (response) {
               // get server instance id
               const serverId = response.data.server.id as string;
               const expirationDate = new Date(
                 Date.now() +
-                  providerInstance.maxInstanceLifetimeMinutes * 60 * 1000
+                  providerInstance.maxInstanceLifetimeMinutes * 60 * 1000,
               );
               providerInstance
                 .waitForServerAddresses(serverId, 60)
@@ -330,7 +333,7 @@ export default class OpenStackProvider implements InstanceProvider {
                       .post(
                         providerInstance.endpointPublicNetworkURL +
                           "/v2.0/floatingips",
-                        data_floatingIp
+                        data_floatingIp,
                       )
                       .then(function (response) {
                         const floatingIpAddress = response.data.floatingip
@@ -344,7 +347,7 @@ export default class OpenStackProvider implements InstanceProvider {
                             providerInstance.endpointPublicComputeURL +
                               "/servers/" +
                               serverId +
-                              "/os-interface"
+                              "/os-interface",
                           )
                           .then(function (response) {
                             const portId = response.data.interfaceAttachments[0]
@@ -362,7 +365,7 @@ export default class OpenStackProvider implements InstanceProvider {
                                 providerInstance.endpointPublicNetworkURL +
                                   "/v2.0/floatingips/" +
                                   floatingIpAddressId,
-                                data_floatingipassociation
+                                data_floatingipassociation,
                               )
                               .then(function () {
                                 // instance creation takes longer after new image is used, needs to be copied to compute hosts
@@ -370,7 +373,7 @@ export default class OpenStackProvider implements InstanceProvider {
                                   .waitForServerSSH(
                                     floatingIpAddress,
                                     providerInstance.sshPort,
-                                    300
+                                    300,
                                   )
                                   .then(() => {
                                     // finished, successfully created server and associated floating ip
@@ -389,8 +392,8 @@ export default class OpenStackProvider implements InstanceProvider {
                                     return reject(
                                       new Error(
                                         "OpenStackProvider: Initial SSH connection failed. " +
-                                          err
-                                      )
+                                          err,
+                                      ),
                                     );
                                   });
                               })
@@ -398,8 +401,8 @@ export default class OpenStackProvider implements InstanceProvider {
                                 return reject(
                                   new Error(
                                     "OpenStackProvider: Could not associate floating ip to port id from server: " +
-                                      err
-                                  )
+                                      err,
+                                  ),
                                 );
                               });
                           })
@@ -407,8 +410,8 @@ export default class OpenStackProvider implements InstanceProvider {
                             return reject(
                               new Error(
                                 "OpenStackProvider: Could not get port id from server: " +
-                                  err
-                              )
+                                  err,
+                              ),
                             );
                           });
                       })
@@ -416,8 +419,8 @@ export default class OpenStackProvider implements InstanceProvider {
                         return reject(
                           new Error(
                             "OpenStackProvider: Could not allocate new Floating IP: " +
-                              err
-                          )
+                              err,
+                          ),
                         );
                       });
                   } else {
@@ -426,7 +429,7 @@ export default class OpenStackProvider implements InstanceProvider {
                       .waitForServerSSH(
                         fixedIpAddress,
                         providerInstance.sshPort,
-                        300
+                        300,
                       )
                       .then(() => {
                         // finished, successfully created server and got fixed ip
@@ -444,8 +447,8 @@ export default class OpenStackProvider implements InstanceProvider {
                         return reject(
                           new Error(
                             "OpenStackProvider: Initial SSH connection failed. " +
-                              err
-                          )
+                              err,
+                          ),
                         );
                       });
                   }
@@ -454,14 +457,14 @@ export default class OpenStackProvider implements InstanceProvider {
                   return reject(
                     new Error(
                       "OpenStackProvider: Timed out waiting for instance: " +
-                        err
-                    )
+                        err,
+                    ),
                   );
                 });
             })
             .catch(function (err) {
               return reject(
-                new Error("OpenStackProvider: Server Creation failed: " + err)
+                new Error("OpenStackProvider: Server Creation failed: " + err),
               );
             });
         })
@@ -482,14 +485,16 @@ export default class OpenStackProvider implements InstanceProvider {
           // get server ips
           let address: string;
           console.log(
-            "OpenStackProvider: Getting server instance " + instance + ")"
+            "OpenStackProvider: Getting server instance " + instance + ")",
           );
           // check identifier format to inhibit injection?
           // minor issue, as we produce and hold the id in the backend?
           // also relevant for similar lines of code for the entire backend
           providerInstance.axiosInstance
             .get(
-              providerInstance.endpointPublicComputeURL + "/servers/" + instance
+              providerInstance.endpointPublicComputeURL +
+                "/servers/" +
+                instance,
             )
             .then(function (response) {
               const result = response.data.server;
@@ -510,7 +515,7 @@ export default class OpenStackProvider implements InstanceProvider {
                 const createdDate = new Date(result.created as string);
                 const expirationDate = new Date(
                   createdDate.getTime() +
-                    providerInstance.maxInstanceLifetimeMinutes * 60 * 1000
+                    providerInstance.maxInstanceLifetimeMinutes * 60 * 1000,
                 );
                 return resolve({
                   instance: instance,
@@ -528,7 +533,7 @@ export default class OpenStackProvider implements InstanceProvider {
                 return reject(new Error(InstanceNotFoundErrorMessage));
               } else {
                 return reject(
-                  "OpenStackProvider: Failed to get server instance. " + err
+                  "OpenStackProvider: Failed to get server instance. " + err,
                 );
               }
             });
@@ -549,38 +554,40 @@ export default class OpenStackProvider implements InstanceProvider {
         .then(() => {
           // delete server instance
           console.log(
-            "OpenStackProvider: Deleting server instance " + instance + ")"
+            "OpenStackProvider: Deleting server instance " + instance + ")",
           );
           // check identifier format to inhibit injection?
           // minor issue, as we produce and hold the id in the backend?
           // also relevant for similar lines of code for the entire backend
           providerInstance.axiosInstance
             .delete(
-              providerInstance.endpointPublicComputeURL + "/servers/" + instance
+              providerInstance.endpointPublicComputeURL +
+                "/servers/" +
+                instance,
             )
             .then(() => {
               if (providerInstance.associateFloatingIP === "true") {
                 providerInstance.axiosInstance
                   .get(
                     providerInstance.endpointPublicNetworkURL +
-                      "/v2.0/floatingips"
+                      "/v2.0/floatingips",
                   )
                   .then(function (response) {
                     const floating_ips = response.data
                       .floatingips as Array<FloatingIp>;
                     const used_floating_ip = floating_ips.find(
-                      (element) => element.description === instance
+                      (element) => element.description === instance,
                     );
                     if (used_floating_ip !== undefined) {
                       console.log(
                         "OpenStackProvider: Deleting floating ip " +
-                          used_floating_ip.floating_ip_address
+                          used_floating_ip.floating_ip_address,
                       );
                       providerInstance.axiosInstance
                         .delete(
                           providerInstance.endpointPublicNetworkURL +
                             "/v2.0/floatingips/" +
-                            used_floating_ip.id
+                            used_floating_ip.id,
                         )
                         .then(function () {
                           return resolve();
@@ -589,15 +596,15 @@ export default class OpenStackProvider implements InstanceProvider {
                           return reject(
                             new Error(
                               "OpenStackProvider: Could not delete floating ip" +
-                                err
-                            )
+                                err,
+                            ),
                           );
                         });
                     } else {
                       return reject(
                         new Error(
-                          "OpenStackProvider: Could not find floating ip"
-                        )
+                          "OpenStackProvider: Could not find floating ip",
+                        ),
                       );
                     }
                   })
@@ -605,8 +612,8 @@ export default class OpenStackProvider implements InstanceProvider {
                     return reject(
                       new Error(
                         "OpenStackProvider: Could not get floating ip list: " +
-                          err
-                      )
+                          err,
+                      ),
                     );
                   });
               } else {
@@ -619,7 +626,7 @@ export default class OpenStackProvider implements InstanceProvider {
                 return reject(new Error(InstanceNotFoundErrorMessage));
               } else {
                 return reject(
-                  "OpenStackProvider: Failed to delete instance. " + err
+                  "OpenStackProvider: Failed to delete instance. " + err,
                 );
               }
             });
@@ -642,11 +649,12 @@ export default class OpenStackProvider implements InstanceProvider {
         .then(() => {
           // get servers older than timestamp
           const deadline = new Date(
-            Date.now() - providerInstance.maxInstanceLifetimeMinutes * 60 * 1000
+            Date.now() -
+              providerInstance.maxInstanceLifetimeMinutes * 60 * 1000,
           );
           console.log(
             "OpenStackProvider: Pruning server instances older than " +
-              deadline.toISOString()
+              deadline.toISOString(),
           );
           providerInstance.axiosInstance
             .get(providerInstance.endpointPublicComputeURL + "/servers/detail")
@@ -661,7 +669,7 @@ export default class OpenStackProvider implements InstanceProvider {
                       server.name +
                         " was created at " +
                         timestampCreated +
-                        "and should be deleted"
+                        "and should be deleted",
                     );
                     Environment.deleteInstanceEnvironments(server.id);
                   }
@@ -672,7 +680,7 @@ export default class OpenStackProvider implements InstanceProvider {
             .catch(function (err) {
               return reject(
                 "OpenStackProvider: Failed get list of server instances to prune. " +
-                  err
+                  err,
               );
             });
         })
@@ -692,14 +700,14 @@ export default class OpenStackProvider implements InstanceProvider {
         console.log(
           "OpenStackProvider: Waiting for server to get ready... (timeout: " +
             timeout +
-            ")"
+            ")",
         );
         providerInstance.axiosInstance
           .get(
             providerInstance.endpointPublicComputeURL +
               "/servers/" +
               serverId +
-              "/ips"
+              "/ips",
           )
           .then(function (response) {
             const result = response.data;
@@ -716,8 +724,8 @@ export default class OpenStackProvider implements InstanceProvider {
           .catch(function (err) {
             return reject(
               new Error(
-                "OpenStackProvider: Could not get server instance ips." + err
-              )
+                "OpenStackProvider: Could not get server instance ips." + err,
+              ),
             );
           });
         await providerInstance.sleep(5000);
@@ -744,7 +752,7 @@ export default class OpenStackProvider implements InstanceProvider {
           .on("error", (err) => {
             sshConn.end();
             console.log(
-              "OpenStackProvider: SSH connection failed - retrying... " + err
+              "OpenStackProvider: SSH connection failed - retrying... " + err,
             );
           })
           .connect({
@@ -759,7 +767,7 @@ export default class OpenStackProvider implements InstanceProvider {
       }
       if (!resolved)
         return reject(
-          "OpenStackProvider: Timed out waiting for SSH connection."
+          "OpenStackProvider: Timed out waiting for SSH connection.",
         );
     });
   }

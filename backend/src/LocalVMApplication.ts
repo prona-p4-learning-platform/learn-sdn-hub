@@ -5,9 +5,13 @@ import PlaintextAuthenticationProvider from "./authentication/PlaintextAuthentic
 import LocalVMProvider from "./providers/LocalVMProvider";
 
 console.log(
-  "Attempting to start Local VM Application for development purposes."
+  "Attempting to start Local VM Application for development purposes.",
 );
 const persister = new MemoryPersister();
 serverCreator(
-  api(persister, [new PlaintextAuthenticationProvider()], new LocalVMProvider())
+  api(
+    persister,
+    [new PlaintextAuthenticationProvider()],
+    new LocalVMProvider(),
+  ),
 );

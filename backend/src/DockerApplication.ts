@@ -10,6 +10,6 @@ serverCreator(
   api(
     persister,
     [new MongoDBAuthenticationProvider(persister)],
-    new DockerProvider()
-  )
+    new DockerProvider(),
+  ),
 );

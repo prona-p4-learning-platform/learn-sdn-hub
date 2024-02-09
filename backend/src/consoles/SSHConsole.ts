@@ -50,7 +50,7 @@ export default class SSHConsole extends EventEmitter implements Console {
     command: string,
     args: Array<string>,
     cwd: string,
-    provideTty: boolean
+    provideTty: boolean,
   ) {
     super();
     this.command = command;
@@ -164,7 +164,7 @@ export default class SSHConsole extends EventEmitter implements Console {
           stream
             .on("close", function (code: string, signal: string) {
               console.log(
-                "Stream :: close :: code: " + code + ", signal: " + signal
+                "Stream :: close :: code: " + code + ", signal: " + signal,
               );
               sshConsole.emit("finished", code, signal);
               sshConsole.end();
@@ -177,7 +177,7 @@ export default class SSHConsole extends EventEmitter implements Console {
               //console.log("STDERR: " + data);
               sshConsole.emit("stderr", data);
             });
-        }
+        },
       );
     }
   }
@@ -195,7 +195,7 @@ export default class SSHConsole extends EventEmitter implements Console {
   async close(
     environmentId: string,
     username: string,
-    groupNumber: number
+    groupNumber: number,
   ): Promise<void> {
     console.log("SSH console close");
     SSHConsole.sshConnections.forEach((value, key, map) => {
