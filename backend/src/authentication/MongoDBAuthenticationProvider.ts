@@ -27,7 +27,7 @@ export default class MongoDBAuthenticationProvider
 
   async authenticateUser(
     username: string,
-    password: string
+    password: string,
   ): Promise<AuthenticationResult> {
     const user = await this.persister.GetUserAccount(username);
     console.log("Authenticating user in mongodb: " + user);
@@ -49,7 +49,7 @@ export default class MongoDBAuthenticationProvider
     username: string,
     oldPassword: string,
     newPassword: string,
-    confirmNewPassword: string
+    confirmNewPassword: string,
   ): Promise<void> {
     const user = await this.persister.GetUserAccount(username);
     if (
@@ -68,7 +68,7 @@ export default class MongoDBAuthenticationProvider
   // enhance to allow overiding with filter defined for the user in mongodb?
   async filterAssignmentList(
     username: string,
-    assignmentList: Map<string, EnvironmentDescription>
+    assignmentList: Map<string, EnvironmentDescription>,
   ): Promise<Map<string, EnvironmentDescription>> {
     const user = await this.persister.GetUserAccount(username);
     if (user.assignmentListFilter != undefined) {

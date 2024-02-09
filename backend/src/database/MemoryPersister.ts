@@ -33,17 +33,17 @@ export default class MemoryPersister implements Persister {
           "Mapped user " +
             username +
             " to group number " +
-            usermap.get(username)
+            usermap.get(username),
         );
         return usermap.get(username);
       } else {
         throw new Error(
-          "No mapping defined to map user " + username + " to a group."
+          "No mapping defined to map user " + username + " to a group.",
         );
       }
     } else {
       console.log(
-        "No BACKEND_USER_MAPPING environment variable set. Mapping user to group 0."
+        "No BACKEND_USER_MAPPING environment variable set. Mapping user to group 0.",
       );
       return 0;
     }
@@ -61,7 +61,7 @@ export default class MemoryPersister implements Persister {
     username: string,
     environment: string,
     description: string,
-    instance: string
+    instance: string,
   ): Promise<void> {
     if (!userEnvironments.has(username)) {
       userEnvironments.set(username, new Map<string, UserEnvironment>());
@@ -75,7 +75,7 @@ export default class MemoryPersister implements Persister {
 
   async RemoveUserEnvironment(
     username: string,
-    environment: string
+    environment: string,
   ): Promise<void> {
     if (
       userEnvironments.has(username) &&
@@ -90,7 +90,7 @@ export default class MemoryPersister implements Persister {
     groupNumber: number,
     environment: string,
     terminalStates: TerminalStateType[],
-    submittedFiles: SubmissionFileType[]
+    submittedFiles: SubmissionFileType[],
   ): Promise<void> {
     console.log(
       "Storing assignment result for user: " +
@@ -98,7 +98,7 @@ export default class MemoryPersister implements Persister {
         " assignment environment: " +
         environment +
         " terminalStates: " +
-        terminalStates
+        terminalStates,
     );
     const resultPathRoot = path.resolve("src", "assignments", "results");
     !fs.existsSync(resultPathRoot) && fs.mkdirSync(resultPathRoot);
@@ -111,10 +111,10 @@ export default class MemoryPersister implements Persister {
       fs.writeFileSync(
         path.resolve(
           resultPath,
-          terminalState.endpoint.split("/").slice(-1) + "-output.txt"
+          terminalState.endpoint.split("/").slice(-1) + "-output.txt",
         ),
         terminalState.state,
-        "binary"
+        "binary",
       );
     }
 
@@ -122,14 +122,14 @@ export default class MemoryPersister implements Persister {
       fs.writeFileSync(
         path.resolve(resultPath, submissionFile.fileName),
         submissionFile.fileContent,
-        "binary"
+        "binary",
       );
     }
   }
 
   async GetUserSubmissions(
     username: string,
-    groupNumber: number
+    groupNumber: number,
   ): Promise<Submission[]> {
     const group = "group" + groupNumber;
     const submissions: Array<Submission> = [];
@@ -142,10 +142,10 @@ export default class MemoryPersister implements Persister {
           submissionDir.match("(.*)-" + group + "-(.*)")
         ) {
           const files = fs.readdirSync(
-            path.resolve(resultPathRoot, submissionDir)
+            path.resolve(resultPathRoot, submissionDir),
           );
           const lastMTime = fs.statSync(
-            path.resolve(resultPathRoot, submissionDir, files.pop())
+            path.resolve(resultPathRoot, submissionDir, files.pop()),
           ).mtime;
           let assignmentName = submissionDir;
           if (submissionDir.match(username + "-(.*)")) {

@@ -62,7 +62,7 @@ export default class MongoDBPersister implements Persister {
 
   async ChangeUserPassword(
     username: string,
-    password: string
+    password: string,
   ): Promise<UserAccount> {
     const passwordHash = await hash(password, saltRounds);
     const client = await this.getClient();
@@ -71,7 +71,7 @@ export default class MongoDBPersister implements Persister {
       .collection<UserEntry>("users")
       .findOneAndUpdate(
         { username },
-        { $set: { passwordHash }, $unset: { password: "" } }
+        { $set: { passwordHash }, $unset: { password: "" } },
       )
       .then(() => undefined);
   }
@@ -83,7 +83,7 @@ export default class MongoDBPersister implements Persister {
       .collection<UserEntry>("users")
       .findOne({ username }, { projection: { environments: 1 } })
       .then((result) =>
-        result && result.environments ? result.environments : []
+        result && result.environments ? result.environments : [],
       );
   }
 
@@ -91,7 +91,7 @@ export default class MongoDBPersister implements Persister {
     username: string,
     environment: string,
     description: string,
-    instance: string
+    instance: string,
   ): Promise<void> {
     const client = await this.getClient();
     return client
@@ -102,14 +102,14 @@ export default class MongoDBPersister implements Persister {
         { $push: { environments: { environment, description, instance } } },
         {
           projection: { environments: 1 },
-        }
+        },
       )
       .then(() => undefined);
   }
 
   async RemoveUserEnvironment(
     username: string,
-    environment: string
+    environment: string,
   ): Promise<void> {
     const client = await this.getClient();
     return client
@@ -120,7 +120,7 @@ export default class MongoDBPersister implements Persister {
         { $pull: { environments: { environment } } },
         {
           projection: { environments: 1 },
-        }
+        },
       )
       .then(() => undefined);
   }
@@ -130,7 +130,7 @@ export default class MongoDBPersister implements Persister {
     groupNumber: number,
     environment: string,
     terminalStates: TerminalStateType[],
-    submittedFiles: SubmissionFileType[]
+    submittedFiles: SubmissionFileType[],
   ): Promise<void> {
     return new Promise<void>(async (resolve, reject) => {
       console.log(
@@ -139,7 +139,7 @@ export default class MongoDBPersister implements Persister {
           " assignment environment: " +
           environment +
           " terminalStates: " +
-          terminalStates
+          terminalStates,
       );
 
       const now = new Date();
@@ -160,8 +160,8 @@ export default class MongoDBPersister implements Persister {
         .catch((err) => {
           return reject(
             new Error(
-              "Unable to delete previous submissions for this user." + err
-            )
+              "Unable to delete previous submissions for this user." + err,
+            ),
           );
         });
       // delete all previous submissions of this environment for the current group
@@ -175,8 +175,8 @@ export default class MongoDBPersister implements Persister {
         .catch((err) => {
           return reject(
             new Error(
-              "Unable to delete previous submissions for this group." + err
-            )
+              "Unable to delete previous submissions for this group." + err,
+            ),
           );
         });
 
@@ -202,7 +202,7 @@ export default class MongoDBPersister implements Persister {
 
   async GetUserSubmissions(
     username: string,
-    groupNumber: number
+    groupNumber: number,
   ): Promise<Submission[]> {
     return new Promise<Submission[]>(async (resolve, reject) => {
       const submissions: Array<Submission> = [];
@@ -236,7 +236,7 @@ export default class MongoDBPersister implements Persister {
         })
         .catch((err) => {
           return reject(
-            new Error("Unable to retrieve submissions of user or group.") + err
+            new Error("Unable to retrieve submissions of user or group.") + err,
           );
         });
     });

@@ -5,7 +5,7 @@ export default function (
   ws: WebSocket,
   environment: string,
   username: string,
-  type: string
+  type: string,
 ): void {
   console.log(environment, username);
   const envInstance = Environment.getActiveEnvironment(environment, username);

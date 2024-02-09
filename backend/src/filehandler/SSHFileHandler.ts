@@ -31,11 +31,11 @@ export default class SSHFileHandler {
 
   async readFile(
     absolutePath: string,
-    encoding?: BufferEncoding
+    encoding?: BufferEncoding,
   ): Promise<string> {
     if (this.hasClosed) {
       return Promise.reject(
-        new Error("SSHFileHandler: SSH connection closed.")
+        new Error("SSHFileHandler: SSH connection closed."),
       );
     }
     if (this.hasErrored) {
@@ -63,7 +63,7 @@ export default class SSHFileHandler {
   async writeFile(absolutePath: string, content: string): Promise<void> {
     if (this.hasClosed) {
       return Promise.reject(
-        new Error("SSHFileHandler: SSH connection closed.")
+        new Error("SSHFileHandler: SSH connection closed."),
       );
     }
     if (this.hasErrored) {
@@ -102,7 +102,7 @@ export default class SSHFileHandler {
     }
     if (this.hasErrored) {
       return Promise.reject(
-        new Error("SSHFileHandler: SFTP connection error.")
+        new Error("SSHFileHandler: SFTP connection error."),
       );
     }
     this.client.end();

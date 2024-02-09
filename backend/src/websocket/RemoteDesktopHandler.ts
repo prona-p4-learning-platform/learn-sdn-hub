@@ -7,7 +7,7 @@ export default function (
   environment: string,
   username: string,
   desktopQueryString: string,
-  groupNumber: number
+  groupNumber: number,
 ): void {
   const envInstance = Environment.getActiveEnvironment(environment, username);
   if (envInstance !== undefined) {
@@ -36,7 +36,7 @@ export default function (
         environment +
         joinAddition +
         "&GUAC_TYPE=c&GUAC_TIMEZONE=Europe%2FBerlin",
-      "guacamole"
+      "guacamole",
     );
     wsToRemoteDesktop.on("open", () => {
       wsFromBrowser.on("message", (data) => {

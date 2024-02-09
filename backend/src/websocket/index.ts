@@ -23,13 +23,13 @@ interface RDPathParams {
 }
 
 const envMatcher = match<WebsocketPathParams>(
-  "/ws/environment/:environment/type/:type"
+  "/ws/environment/:environment/type/:type",
 );
 const lsMatcher = match<LSPathParams>(
-  "/ws/environment/:environment/languageserver/:language"
+  "/ws/environment/:environment/languageserver/:language",
 );
 const rdMatcher = match<RDPathParams>(
-  "/ws/environment/:environment/desktop/:alias"
+  "/ws/environment/:environment/desktop/:alias",
 );
 
 export default function wrapWSWithExpressApp(server: Server): void {

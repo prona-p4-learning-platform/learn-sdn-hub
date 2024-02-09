@@ -49,7 +49,7 @@ export default class DockerProvider implements InstanceProvider {
     this.cmd = process.env.DOCKER_CMD;
 
     this.maxInstanceLifetimeMinutes = parseInt(
-      process.env.DOCKER_MAX_INSTANCE_LIFETIME_MINUTES
+      process.env.DOCKER_MAX_INSTANCE_LIFETIME_MINUTES,
     );
 
     this.dockerodeInstance = new Dockerode({
@@ -77,13 +77,13 @@ export default class DockerProvider implements InstanceProvider {
       },
       (err: Error) => {
         console.log(
-          "DockerProvider: Could not prune stale container instances..." + err
+          "DockerProvider: Could not prune stale container instances..." + err,
         );
-      }
+      },
     );
     const job = new SimpleIntervalJob(
       { seconds: schedulerIntervalSeconds, runImmediately: true },
-      task
+      task,
     );
 
     scheduler.addSimpleIntervalJob(job);
@@ -95,7 +95,7 @@ export default class DockerProvider implements InstanceProvider {
     environment: string,
     image?: string,
     dockerCmd?: string,
-    dockerSupplementalPorts?: string[]
+    dockerSupplementalPorts?: string[],
   ): Promise<VMEndpoint> {
     const providerInstance = this.providerInstance;
     const cri = providerInstance.dockerodeInstance;
@@ -158,7 +158,7 @@ export default class DockerProvider implements InstanceProvider {
               providerInstance
                 .waitForServerAddresses(
                   container.id,
-                  providerInstance.containerStartTimeoutSeconds
+                  providerInstance.containerStartTimeoutSeconds,
                 )
                 .then(() => {
                   container
@@ -173,25 +173,25 @@ export default class DockerProvider implements InstanceProvider {
                         portMap[Object.keys(portMap)[0]][0].HostIp;
 
                       const sshBindingPort = parseInt(
-                        portMap[Object.keys(portMap)[0]][0].HostPort
+                        portMap[Object.keys(portMap)[0]][0].HostPort,
                       );
                       const lsBindingPort = parseInt(
-                        portMap[Object.keys(portMap)[1]][0].HostPort
+                        portMap[Object.keys(portMap)[1]][0].HostPort,
                       );
                       const rdBindingPort = parseInt(
-                        portMap[Object.keys(portMap)[2]][0].HostPort
+                        portMap[Object.keys(portMap)[2]][0].HostPort,
                       );
                       const expirationDate = new Date(
                         Date.now() +
                           providerInstance.maxInstanceLifetimeMinutes *
                             60 *
-                            1000
+                            1000,
                       );
                       providerInstance
                         .waitForServerSSH(
                           sshBindingHost,
                           sshBindingPort,
-                          providerInstance.containerSSHTimeoutSeconds
+                          providerInstance.containerSSHTimeoutSeconds,
                         )
                         .then(() => {
                           return resolve({
@@ -209,8 +209,8 @@ export default class DockerProvider implements InstanceProvider {
                           return reject(
                             new Error(
                               "DockerProvider: Could not connect to container using SSH " +
-                                err
-                            )
+                                err,
+                            ),
                           );
                         });
                     })
@@ -218,8 +218,8 @@ export default class DockerProvider implements InstanceProvider {
                       return reject(
                         new Error(
                           "DockerProvider: Could not inspect started container to get port and ip address: " +
-                            err
-                        )
+                            err,
+                        ),
                       );
                     });
                 })
@@ -227,20 +227,20 @@ export default class DockerProvider implements InstanceProvider {
                   return reject(
                     new Error(
                       "DockerProvider: Could not get container addresses: " +
-                        err
-                    )
+                        err,
+                    ),
                   );
                 });
             })
             .catch((err) => {
               return reject(
-                new Error("DockerProvider: Could not start container " + err)
+                new Error("DockerProvider: Could not start container " + err),
               );
             });
         })
         .catch((err) => {
           return reject(
-            new Error("DockerProvider: Could not create container: " + err)
+            new Error("DockerProvider: Could not create container: " + err),
           );
         });
     });
@@ -263,18 +263,18 @@ export default class DockerProvider implements InstanceProvider {
           const sshBindingHost = portMap[Object.keys(portMap)[0]][0].HostIp;
 
           const sshBindingPort = parseInt(
-            portMap[Object.keys(portMap)[0]][0].HostPort
+            portMap[Object.keys(portMap)[0]][0].HostPort,
           );
           const lsBindingPort = parseInt(
-            portMap[Object.keys(portMap)[1]][0].HostPort
+            portMap[Object.keys(portMap)[1]][0].HostPort,
           );
           const rdBindingPort = parseInt(
-            portMap[Object.keys(portMap)[2]][0].HostPort
+            portMap[Object.keys(portMap)[2]][0].HostPort,
           );
 
           const expirationDate = new Date(
             new Date(response.Created).getTime() +
-              providerInstance.maxInstanceLifetimeMinutes * 60 * 1000
+              providerInstance.maxInstanceLifetimeMinutes * 60 * 1000,
           );
           // dummy
           return resolve({
@@ -295,8 +295,8 @@ export default class DockerProvider implements InstanceProvider {
             return reject(
               new Error(
                 "DockerProvider: Could not inspect container to get port and ip address: " +
-                  err
-              )
+                  err,
+              ),
             );
           }
         });
@@ -327,15 +327,15 @@ export default class DockerProvider implements InstanceProvider {
               } else {
                 return reject(
                   new Error(
-                    "DockerProvider: Could not remove container: " + err
-                  )
+                    "DockerProvider: Could not remove container: " + err,
+                  ),
                 );
               }
             });
         })
         .catch((err) => {
           return reject(
-            new Error("DockerProvider: Could not kill container: " + err)
+            new Error("DockerProvider: Could not kill container: " + err),
           );
         });
     });
@@ -350,19 +350,19 @@ export default class DockerProvider implements InstanceProvider {
     return new Promise((resolve, reject) => {
       // get containers older than timestamp
       const deadline = new Date(
-        Date.now() - providerInstance.maxInstanceLifetimeMinutes * 60 * 1000
+        Date.now() - providerInstance.maxInstanceLifetimeMinutes * 60 * 1000,
       );
       console.log(
         "DockerProvider: Pruning container instances older than " +
-          deadline.toISOString()
+          deadline.toISOString(),
       );
       cri.listContainers((err, containers) => {
         if (err !== null) {
           return reject(
             new Error(
               "DockerProvider: Failed to get list of server instances to prune. " +
-                err
-            )
+                err,
+            ),
           );
         }
         containers.forEach((container) => {
@@ -374,7 +374,7 @@ export default class DockerProvider implements InstanceProvider {
                 container.Names +
                   " was created at " +
                   timestampCreated +
-                  " and should be deleted"
+                  " and should be deleted",
               );
               this.deleteServer(container.Id)
                 .then(() => {
@@ -384,7 +384,7 @@ export default class DockerProvider implements InstanceProvider {
                       " expiration date: " +
                       timestampCreated +
                       " deadline: " +
-                      deadline
+                      deadline,
                   );
                   Environment.deleteInstanceEnvironments(container.Id);
                 })
@@ -394,8 +394,8 @@ export default class DockerProvider implements InstanceProvider {
                       "DockerProvider: Failed to delete container to be pruned. " +
                         container.Names +
                         " " +
-                        err
-                    )
+                        err,
+                    ),
                   );
                 });
             }
@@ -418,7 +418,7 @@ export default class DockerProvider implements InstanceProvider {
         console.log(
           "DockerProvider: Waiting for container to get ready... (timeout: " +
             timeout +
-            ")"
+            ")",
         );
 
         cri
@@ -429,8 +429,8 @@ export default class DockerProvider implements InstanceProvider {
               rejected = true;
               return reject(
                 new Error(
-                  "DockerProvider: Container was not started. Check image and cmd used to init the container."
-                )
+                  "DockerProvider: Container was not started. Check image and cmd used to init the container.",
+                ),
               );
             } else {
               const portMap = response.NetworkSettings.Ports;
@@ -438,8 +438,8 @@ export default class DockerProvider implements InstanceProvider {
                 rejected = true;
                 return reject(
                   new Error(
-                    "DockerProvider: Container does not provide any ports. Per default the image must provide SSH and LSP to allow collaborative terminals and file editing."
-                  )
+                    "DockerProvider: Container does not provide any ports. Per default the image must provide SSH and LSP to allow collaborative terminals and file editing.",
+                  ),
                 );
               } else {
                 // improve selection of array field?
@@ -471,8 +471,8 @@ export default class DockerProvider implements InstanceProvider {
             return reject(
               new Error(
                 "DockerProvider: Could not inspect server instance to get ips and ports." +
-                  err
-              )
+                  err,
+              ),
             );
           });
         await providerInstance.sleep(1000);
@@ -500,7 +500,7 @@ export default class DockerProvider implements InstanceProvider {
           .on("error", (err) => {
             sshConn.end();
             console.log(
-              "DockerProvider: SSH connection failed - retrying..." + err
+              "DockerProvider: SSH connection failed - retrying..." + err,
             );
           })
           .connect({

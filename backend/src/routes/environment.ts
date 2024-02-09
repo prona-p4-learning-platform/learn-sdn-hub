@@ -52,7 +52,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
       return res.status(200).json({
         files: targetEnv.editableFiles.map((file: AliasedFile) => file.alias),
         filePaths: targetEnv.editableFiles.map(
-          (file: AliasedFile) => file.absFilePath
+          (file: AliasedFile) => file.absFilePath,
         ),
         // first subterminal in array of subterminals will define the tab name
         terminals: targetEnv.terminals.filter((subterminals: TerminalType[]) =>
@@ -61,8 +61,8 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
               (subterminal.type === "Shell" &&
                 subterminal.provideTty === true) ||
               subterminal.type === "Desktop" ||
-              subterminal.type === "WebApp"
-          )
+              subterminal.type === "WebApp",
+          ),
         ),
         stepNames:
           targetEnv.steps?.map((step: AssignmentStep) => step.name) ?? [],
@@ -73,7 +73,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
         useCollaboration: targetEnv.useCollaboration,
         useLanguageClient: targetEnv.useLanguageClient,
       });
-    }
+    },
   );
 
   router.get(
@@ -95,7 +95,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
       if (targetEnv.assignmentLabSheetLocation === "instance") {
         const env = Environment.getActiveEnvironment(
           req.params.environment,
-          req.user.username
+          req.user.username,
         );
         markdown = await env.readFile(targetEnv.assignmentLabSheet, true);
       } else {
@@ -104,7 +104,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
           .toString();
       }
       res.send(markdown);
-    }
+    },
   );
 
   router.post(
@@ -125,7 +125,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
         String(environment),
         targetEnv,
         provider,
-        persister
+        persister,
       )
         .then(() => {
           res.status(200).json();
@@ -134,7 +134,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
           console.log(err);
           res.status(500).json({ status: "error", message: err.message });
         });
-    }
+    },
   );
 
   router.post(
@@ -167,7 +167,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
             message: "Failed to delete environment " + err.message,
           });
         });
-    }
+    },
   );
 
   router.get(
@@ -177,7 +177,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
     (req: RequestWithUser, res) => {
       const env = Environment.getActiveEnvironment(
         req.params.environment,
-        req.user.username
+        req.user.username,
       );
       env
         .readFile(req.params.alias)
@@ -192,7 +192,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
           console.log(err);
           res.status(500).json({ error: true, message: err.message });
         });
-    }
+    },
   );
 
   router.post(
@@ -203,15 +203,15 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
     (req: RequestWithUser, res) => {
       const env = Environment.getActiveEnvironment(
         req.params.environment,
-        req.user.username
+        req.user.username,
       );
       env
         .writeFile(req.params.alias, req.body)
         .then(() => res.status(200).end())
         .catch((err: Error) =>
-          res.status(400).json({ status: "error", message: err.message })
+          res.status(400).json({ status: "error", message: err.message }),
         );
-    }
+    },
   );
 
   router.get(
@@ -222,7 +222,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
       await Environment.getCollabDoc(
         req.params.alias,
         req.params.environment,
-        req.user.username
+        req.user.username,
       )
         .then((content: string) => {
           res.status(200).end(content);
@@ -231,7 +231,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
           console.log(err);
           res.status(500).json({ error: true, message: err.message });
         });
-    }
+    },
   );
 
   router.post(
@@ -241,7 +241,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
     (req: RequestWithUser, res) => {
       const env = Environment.getActiveEnvironment(
         req.params.environment,
-        req.user.username
+        req.user.username,
       );
       env
         .restart()
@@ -251,9 +251,9 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
             .json({ status: "finished", message: "Restart complete" });
         })
         .catch((err) =>
-          res.status(500).json({ status: "error", message: err.message })
+          res.status(500).json({ status: "error", message: err.message }),
         );
-    }
+    },
   );
 
   router.post(
@@ -264,7 +264,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
     (req: RequestWithUser, res) => {
       const env = Environment.getActiveEnvironment(
         req.params.environment,
-        req.user.username
+        req.user.username,
       );
       env
         .test(req.body.activeStep, req.body.terminalState)
@@ -275,9 +275,9 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
           });
         })
         .catch((err) =>
-          res.status(500).json({ status: "error", message: err.message })
+          res.status(500).json({ status: "error", message: err.message }),
         );
-    }
+    },
   );
 
   // remove body-parser as it is included in express >=4.17
@@ -289,7 +289,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
     (req: RequestWithUser, res) => {
       const env = Environment.getActiveEnvironment(
         req.params.environment,
-        req.user.username
+        req.user.username,
       );
       env
         .submit(req.body.activeStep, req.body.terminalState)
@@ -301,9 +301,9 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
           });
         })
         .catch((err) =>
-          res.status(500).json({ status: "error", message: err.message })
+          res.status(500).json({ status: "error", message: err.message }),
         );
-    }
+    },
   );
 
   router.get(
@@ -311,10 +311,10 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
     authenticationMiddleware,
     (req: RequestWithUser, res) => {
       const deployedEnvList = Environment.getDeployedUserEnvironmentList(
-        req.user.username
+        req.user.username,
       );
       return res.status(200).json(Array.from(deployedEnvList));
-    }
+    },
   );
 
   router.get(
@@ -322,10 +322,10 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
     authenticationMiddleware,
     (req: RequestWithUser, res) => {
       const deployedEndpList = Environment.getDeployedGroupEnvironmentList(
-        req.user.groupNumber
+        req.user.groupNumber,
       );
       return res.status(200).json(Array.from(deployedEndpList));
-    }
+    },
   );
 
   router.get(
@@ -335,7 +335,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
       await Environment.getUserSubmissions(
         persister,
         req.user.username,
-        req.user.groupNumber
+        req.user.groupNumber,
       )
         .then((submittedEnvList) => {
           return res
@@ -346,7 +346,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
           console.log("No submission found " + err);
           return res.status(200).json(Array.from([] as Submission[]));
         });
-    }
+    },
   );
 
   router.get(
@@ -356,7 +356,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
     (req: RequestWithUser, res) => {
       const env = Environment.getActiveEnvironment(
         req.params.environment,
-        req.user.username
+        req.user.username,
       );
       env
         .getProviderInstanceStatus()
@@ -366,7 +366,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
         .catch(() => {
           return res.status(200).json({ status: "" });
         });
-    }
+    },
   );
 
   return router;

@@ -12,24 +12,24 @@ export default class LocalVMProvider implements InstanceProvider {
       ipAddresses = process.env.VBOX_IP_ADDRESSES.split(",");
     } else {
       console.log(
-        "LocalVMProvider: No VBOX_IP_ADDRESSES environment variable set. LocalVMProvider can not provide instances."
+        "LocalVMProvider: No VBOX_IP_ADDRESSES environment variable set. LocalVMProvider can not provide instances.",
       );
       return;
     }
     if (process.env.VBOX_SSH_PORTS != undefined) {
       sshPorts = process.env.VBOX_SSH_PORTS.split(",").map((port) =>
-        Number.parseInt(port)
+        Number.parseInt(port),
       );
     } else {
       console.log(
-        "LocalVMProvider: No VBOX_SSH_PORTS environment variable set. LocalVMProvider uses Port 22 for all instances."
+        "LocalVMProvider: No VBOX_SSH_PORTS environment variable set. LocalVMProvider uses Port 22 for all instances.",
       );
       // better use env var to allow configuration of port numbers?
       sshPorts = ipAddresses.map(() => 22);
     }
     ipAddresses.forEach((ipAddress, index) => {
       console.log(
-        `LocalVMProvider: Adding VM to LocalVMProvider pool: ${ipAddress} with SSH port: ${sshPorts[index]}`
+        `LocalVMProvider: Adding VM to LocalVMProvider pool: ${ipAddress} with SSH port: ${sshPorts[index]}`,
       );
       this.availableInstances.set(`vm-${index}`, {
         // vms can be reused for different environments, hence providerInstanceStatus will not contain expiration info etc.
@@ -48,7 +48,7 @@ export default class LocalVMProvider implements InstanceProvider {
       return this.availableInstances.get(this.availableInstancesList.pop());
     }
     throw new Error(
-      "LocalVMProvider: Cannot create server. No VMs available or list of supplied one-time VM endpoints exhausted."
+      "LocalVMProvider: Cannot create server. No VMs available or list of supplied one-time VM endpoints exhausted.",
     );
   }
 
@@ -60,7 +60,7 @@ export default class LocalVMProvider implements InstanceProvider {
     console.log(
       "Ignoring to delete server " +
         instance +
-        " as LocalVMProvider uses prebuild VMs that will not be deleted"
+        " as LocalVMProvider uses prebuild VMs that will not be deleted",
     );
     return Promise.resolve();
   }

@@ -9,7 +9,7 @@ export default class PlaintextAuthenticationProvider
 {
   async authenticateUser(
     username: string,
-    password: string
+    password: string,
   ): Promise<AuthenticationResult> {
     if (password === "p4") {
       return {
@@ -29,16 +29,16 @@ export default class PlaintextAuthenticationProvider
     _username: string,
     _oldPassword: string,
     _newPassword: string,
-    _confirmNewPassword: string
+    _confirmNewPassword: string,
   ): Promise<void> {
     throw new Error(
-      "PlaintextAuthenticationProvider does not support password changes."
+      "PlaintextAuthenticationProvider does not support password changes.",
     );
   }
 
   async filterAssignmentList(
     username: string,
-    assignmentList: Map<string, EnvironmentDescription>
+    assignmentList: Map<string, EnvironmentDescription>,
   ): Promise<Map<string, EnvironmentDescription>> {
     const usersAllowedAssignments =
       process.env.BACKEND_USER_ALLOWED_ASSIGNMENTS;
