@@ -154,7 +154,7 @@ export default class FileEditor extends React.Component<FileEditorProps> {
   private suppressChangeDetection = false;
 
   private languageClient!: MonacoLanguageClient;
-  private languageClientWSTimerId!: NodeJS.Timer;
+  private languageClientWSTimerId!: NodeJS.Timeout;
   private languageClientWSTimeout: number = 10000;
 
   private languageClientWebSocket!: WebSocket;
@@ -315,7 +315,7 @@ export default class FileEditor extends React.Component<FileEditorProps> {
 
   async editorDidMount(
     editor: monaco.editor.IStandaloneCodeEditor,
-    monaco: Monaco
+    _monaco: Monaco
   ) {
     this.editor = editor;
     //editor.focus();
@@ -375,11 +375,11 @@ export default class FileEditor extends React.Component<FileEditorProps> {
       // Websocket provider
       this.collaborationProvider = new WebsocketProvider(
         `${window?.location?.protocol === "http:" || undefined ? "ws:" : "wss:"}//` +
-          (process.env.REACT_APP_YJS_WEBSOCKET_HOST ??
+          (import.meta.env.VITE_REACT_APP_YJS_WEBSOCKET_HOST ??
             window?.location?.hostname ??
             `localhost`) +
           `:` +
-          (process.env.REACT_APP_YJS_WEBSOCKET_PORT ?? `1234`),
+          (import.meta.env.VITE_REACT_APP_YJS_WEBSOCKET_PORT ?? `1234`),
         collaborationId,
         doc
       );
@@ -391,11 +391,11 @@ export default class FileEditor extends React.Component<FileEditorProps> {
       //   {
       //     signaling: [
       //       `${window?.location?.protocol === "http:" || undefined ? "ws:" : "wss:"}//` +
-      //         (process.env.REACT_APP_YJS_WEBRTC_HOST ??
+      //         (import.meta.env.VITE_REACT_APP_YJS_WEBRTC_HOST ??
       //         window?.location?.hostname ??
       //         `localhost`) +
       //         `:` +
-      //         (process.env.REACT_APP_YJS_WEBRTC_PORT ?? `4444`),
+      //         (import.meta.env.VITE_REACT_APP_YJS_WEBRTC_PORT ?? `4444`),
       //     ],
       //   }
       // );
@@ -411,7 +411,7 @@ export default class FileEditor extends React.Component<FileEditorProps> {
       let hexColor = '#' + red.toString(16).padStart(2, '0')+ green.toString(16).padStart(2, '0') + blue.toString(16).padStart(2, '0');
       console.log("my color: " + hexColor);
 
-      awareness.on('update', ({ added = [], updated = [], removed = [] }) => {
+      awareness.on('update', ({ added = [] /*, updated = [], removed = [] */}) => {
         added.forEach((client) => {
           //yjs awareness debug:
           //console.log("added client: " + client);
@@ -808,7 +808,7 @@ export default class FileEditor extends React.Component<FileEditorProps> {
       );
     };
 
-    const closeSelect = (event: React.SyntheticEvent) => {
+    const closeSelect = (_event: React.SyntheticEvent) => {
       this.editor?.focus();
     };
 

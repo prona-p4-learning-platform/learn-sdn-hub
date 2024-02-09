@@ -23,13 +23,13 @@ interface RDPathParams {
 }
 
 const envMatcher = match<WebsocketPathParams>(
-  "/environment/:environment/type/:type"
+  "/ws/environment/:environment/type/:type"
 );
 const lsMatcher = match<LSPathParams>(
-  "/environment/:environment/languageserver/:language"
+  "/ws/environment/:environment/languageserver/:language"
 );
 const rdMatcher = match<RDPathParams>(
-  "/environment/:environment/desktop/:alias"
+  "/ws/environment/:environment/desktop/:alias"
 );
 
 export default function wrapWSWithExpressApp(server: Server): void {
@@ -66,7 +66,7 @@ export default function wrapWSWithExpressApp(server: Server): void {
           environment,
           user.username,
           alias,
-          user.groupNumber
+          user.groupNumber,
         );
       } else {
         ws.send(`No route handler.`);

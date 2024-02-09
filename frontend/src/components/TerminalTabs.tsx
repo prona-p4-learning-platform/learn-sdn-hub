@@ -46,11 +46,11 @@ export default function TerminalTabs(props: TabControlProps) {
   const [value, setValue] = React.useState(0);
   const [fullscreen, setFullscreen] = React.useState(false);
 
-  const handleChange = (event: React.ChangeEvent<{}>, newValue: number) => {
+  const handleChange = (_event: React.ChangeEvent<{}>, newValue: number) => {
     setValue(newValue);
   };
 
-  const toggleFullscreen = (event: React.ChangeEvent<{}>) => {
+  const toggleFullscreen = (_event: React.ChangeEvent<{}>) => {
     setFullscreen(!fullscreen);
   };
 
