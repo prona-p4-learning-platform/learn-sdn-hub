@@ -1,3 +1,15 @@
+# Node modules
 node_modules
+frontend/node_modules
+backend/node_modules
+
+# Build folders
+frontend/build
+backend/dist
+backend/static
+
+# Workers
+frontend/public/dist
+
 npm-debug.log
 .env.local
