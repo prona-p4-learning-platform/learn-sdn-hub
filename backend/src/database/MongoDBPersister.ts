@@ -36,9 +36,9 @@ interface SubmissionEntry {
 }
 
 export default class MongoDBPersister implements Persister {
-  private mongoClient: MongoClient;
+  private mongoClient?: MongoClient;
   private connectURL: string;
-  private connectPromise: Promise<MongoClient>;
+  private connectPromise?: Promise<MongoClient>;
 
   constructor(url: string) {
     this.connectURL = url;

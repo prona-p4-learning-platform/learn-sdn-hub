@@ -31,10 +31,6 @@ export interface WebApp {
   url: string;
 }
 
-class WebAppInstance {
-  url: string;
-}
-
 export interface Desktop {
   type: "Desktop";
   name: string;
@@ -46,7 +42,7 @@ export interface Desktop {
   remoteDesktopHostname?: string;
 }
 
-class DesktopInstance {
+interface DesktopInstance {
   guacamoleServerURL: string;
   remoteDesktopProtocol: "vnc" | "rdp";
   remoteDesktopPort: number;
@@ -130,17 +126,16 @@ const DenyStartOfMissingInstanceErrorMessage =
 export default class Environment {
   private activeConsoles: Map<string, Console>;
   private activeDesktops: Map<string, DesktopInstance>;
-  private activeWebApps: Map<string, WebAppInstance>;
   private editableFiles: Map<string, string>;
   private static activeCollabDocs = new Map<string, string>();
   private configuration: EnvironmentDescription;
   private environmentId: string;
-  private instanceId: string;
+  private instanceId?: string;
   private static activeEnvironments = new Map<string, Environment>();
   private environmentProvider: InstanceProvider;
   private persister: Persister;
   private username: string;
-  private filehandler: FileHandler;
+  private filehandler!: FileHandler; // TODO: filehandler is not set in constructor
   private groupNumber: number;
 
   public static getActiveEnvironment(
@@ -187,7 +182,6 @@ export default class Environment {
   ) {
     this.activeConsoles = new Map();
     this.activeDesktops = new Map();
-    this.activeWebApps = new Map();
     this.editableFiles = new Map();
     this.configuration = configuration;
     this.environmentProvider = environmentProvider;
@@ -658,15 +652,14 @@ export default class Environment {
             })
               .then(async (response) => {
                 if (response.status === 200) {
-                  const desktop = new DesktopInstance();
-                  desktop.remoteDesktopProtocol =
-                    subterminal.remoteDesktopProtocol;
-                  desktop.remoteDesktopPort = subterminal.remoteDesktopPort;
-                  desktop.remoteDesktopPassword =
-                    subterminal.remoteDesktopPassword;
-                  desktop.remoteDesktopToken =
-                    (await response.json()) as GuacamoleAuthResponse;
-                  desktop.guacamoleServerURL = subterminal.guacamoleServerURL;
+                  const desktop: DesktopInstance = {
+                    remoteDesktopProtocol: subterminal.remoteDesktopProtocol,
+                    remoteDesktopPort: subterminal.remoteDesktopPort,
+                    remoteDesktopPassword: subterminal.remoteDesktopPassword,
+                    remoteDesktopToken:
+                      (await response.json()) as GuacamoleAuthResponse,
+                    guacamoleServerURL: subterminal.guacamoleServerURL,
+                  };
 
                   console.log(
                     "Received guacamole token " + desktop.remoteDesktopToken,

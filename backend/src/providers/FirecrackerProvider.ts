@@ -62,7 +62,7 @@ interface FirecrackerActionState {
   state: string;
 }
 
-class microVMInstance {
+interface microVMInstance {
   vmEndpoint: VMEndpoint;
   expirationDate: Date;
   tapInterfaceId: string;
@@ -78,7 +78,7 @@ class microVM {
   socketPath: string;
   axiosInstance: AxiosInstance;
   baseURL: string;
-  microVMInstance: microVMInstance;
+  microVMInstance: Partial<microVMInstance>;
 
   constructor(binPath: string, socketPath: string) {
     this.binPath = binPath;
@@ -93,7 +93,7 @@ class microVM {
       "application/json";
     this.baseURL = "http://localhost";
 
-    this.microVMInstance = new microVMInstance();
+    this.microVMInstance = {};
   }
 
   spawn(): Promise<ChildProcess> {
@@ -107,9 +107,10 @@ class microVM {
           },
         );
       } catch (err) {
-        return reject(
+        reject(
           new Error("FirecrackerProvider: Could not spawn firecracker process"),
         );
+        return;
       }
 
       this.microVMInstance.process.on("exit", async () => {
@@ -156,7 +157,7 @@ class microVM {
   }
 
   kill(): boolean {
-    return this.microVMInstance.process.kill();
+    return this.microVMInstance.process?.kill() ?? true;
   }
 
   async setLogger(data: FirecrackerLogger): Promise<FirecrackerLogger> {

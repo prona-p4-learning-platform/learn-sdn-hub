@@ -32,7 +32,7 @@ export default class SSHConsole extends EventEmitter implements Console {
   public args: Array<string>;
   public cwd: string;
   private provideTty: boolean;
-  private stream: ClientChannel;
+  private stream?: ClientChannel;
   public initialConsoleBuffer: Array<string>;
   public initialConsoleBufferConsumed = false;
   private static sshConnections: Map<string, CustomizedSSHClient> = new Map();
@@ -187,12 +187,12 @@ export default class SSHConsole extends EventEmitter implements Console {
 
   write(data: string): void {
     //console.log(`${this.command}${this.args} writing: `, data);
-    this.stream.write(data);
+    this.stream?.write(data);
   }
 
   writeLine(data: string): void {
     //console.log(`${this.command}${this.args}`, data);
-    this.stream.write(`${data}\n`);
+    this.stream?.write(`${data}\n`);
   }
 
   async close(
@@ -211,11 +211,11 @@ export default class SSHConsole extends EventEmitter implements Console {
         map.delete(key);
       }
     });
-    this.stream.end();
+    this.stream?.end();
   }
 
   resize(columns: number, lines: number): void {
-    this.stream.setWindow(lines, columns, 0, 0);
+    this.stream?.setWindow(lines, columns, 0, 0);
   }
 
   consumeInitialConsoleBuffer(): string {

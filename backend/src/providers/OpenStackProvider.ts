@@ -119,7 +119,7 @@ export default class OpenStackProvider implements InstanceProvider {
 
     // check for open stack username
     const ENV_USERNAME = process.env.OPENSTACK_USERNAME;
-    if (ENV_USERNAME) this.os_username;
+    if (ENV_USERNAME) this.os_username = ENV_USERNAME;
     else {
       throw new Error(
         "OpenStackProvider: No username provided (OPENSTACK_USERNAME).",
@@ -128,7 +128,7 @@ export default class OpenStackProvider implements InstanceProvider {
 
     // check for open stack password
     const ENV_PASSWORD = process.env.OPENSTACK_PASSWORD;
-    if (ENV_PASSWORD) this.os_password;
+    if (ENV_PASSWORD) this.os_password = ENV_PASSWORD;
     else {
       throw new Error(
         "OpenStackProvider: No password provided (OPENSTACK_PASSWORD).",
@@ -219,7 +219,7 @@ export default class OpenStackProvider implements InstanceProvider {
     // check for open stack floating ip association
     const ENV_FLOATING_ASSOCIATE = process.env.OPENSTACK_ASSOCIATE_FLOATING_IP;
     if (ENV_FLOATING_ASSOCIATE)
-      this.os_floatingNetworkId = ENV_FLOATING_ASSOCIATE.toLowerCase();
+      this.associateFloatingIP = ENV_FLOATING_ASSOCIATE.toLowerCase();
     else {
       throw new Error(
         "OpenStackProvider: No floating ip association provided (OPENSTACK_ASSOCIATE_FLOATING_IP).",
