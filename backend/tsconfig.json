@@ -15,7 +15,7 @@
     /* Linting */
     "alwaysStrict": true,
     "strictNullChecks": false,
-    "strictBindCallApply": false,
+    "strictBindCallApply": true,
     "strictFunctionTypes": false,
     "strictPropertyInitialization": false,
     "noImplicitAny": true,
