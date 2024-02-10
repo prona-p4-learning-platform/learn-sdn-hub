@@ -6,8 +6,8 @@ test("it extracts errors successfully", () => {
     extractCompilationResult(
       `/tmp/test-wHXUrU/test.p4(13):syntax error, unexpected TYPEDEF, expecting ;
       typedef
-      error: 1 errors encountered, aborting compilation\n`
-    )
+      error: 1 errors encountered, aborting compilation\n`,
+    ),
   ).toEqual([
     {
       line: 13,
