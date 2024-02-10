@@ -14,7 +14,7 @@
     "start:docker": "ts-node src/DockerApplication.ts",
     "start:firecracker": "ts-node --files src/FirecrackerApplication.ts",
     "lint": "eslint src/**/**/*.{js,ts,tsx}",
-    "compile": "tsc --noEmit"
+    "type-check": "tsc --noEmit"
   },
   "devDependencies": {
     "@shelf/jest-mongodb": "^4.2.0",

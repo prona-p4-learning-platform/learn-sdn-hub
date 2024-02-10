@@ -1,18 +1,33 @@
 {
-    "compilerOptions": {
-        "outDir": "./dist/",
-        "sourceMap": true,
-        "noImplicitAny": true,
-        "module": "commonjs",
-        "target": "es6",
-        "jsx": "react",
-        "esModuleInterop": true,
-        "typeRoots": [
-            "node_modules/@types/",
-            "./src/typings"
-        ]
-    },
-    "exclude": [
-        "node_modules"
-    ]
+  "compilerOptions": {
+    "target": "ES2020",
+    "lib": ["ES2022", "DOM"],
+    "module": "CommonJS",
+    "outDir": "dist",
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+
+    /* Transpiler options */
+    "sourceMap": true,
+    "declaration": false,
+    "removeComments": true,
+
+    /* Linting */
+    "alwaysStrict": true,
+    "strictNullChecks": false,
+    "strictBindCallApply": false,
+    "strictFunctionTypes": false,
+    "strictPropertyInitialization": false,
+    "noImplicitAny": true,
+    "noImplicitThis": false,
+    "useUnknownInCatchVariables": false,
+
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noFallthroughCasesInSwitch": false,
+
+    "noImplicitOverride": false,
+    "noImplicitReturns": false
+  },
+  "include": ["src"]
 }
