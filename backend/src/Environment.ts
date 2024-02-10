@@ -812,7 +812,10 @@ export default class Environment {
             }
           });
       } catch (err) {
-        if (err.message == InstanceNotFoundErrorMessage) {
+        if (
+          err instanceof Error &&
+          err.message == InstanceNotFoundErrorMessage
+        ) {
           return resolve();
         } else {
           return reject(err);
