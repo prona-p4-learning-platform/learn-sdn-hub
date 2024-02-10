@@ -22,7 +22,7 @@
     "noImplicitThis": true,
     "useUnknownInCatchVariables": true,
 
-    "noUnusedLocals": false,
+    "noUnusedLocals": true,
     "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": false,
 

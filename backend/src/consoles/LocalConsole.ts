@@ -12,13 +12,10 @@ export interface Console {
 
 export class SimpleConsole extends EventEmitter implements Console {
   private console: IPty;
-  private command: string;
-  private args: Array<string>;
 
   constructor(command: string, args: Array<string>, cwd: string) {
     super();
-    this.command = command;
-    this.args = args;
+
     this.console = pty.spawn(command, args, { cwd });
     this.console.on("data", (data) => {
       console.log(`${command}${args} stdout: ${data}`);
