@@ -23,11 +23,14 @@ export default class PlaintextMultiuserAuthenticationProvider
     username: string,
     password: string,
   ): Promise<AuthenticationResult> {
-    const usersConfig = process.env.BACKEND_USERS.split(",");
-    const users: Map<string, string> = new Map();
+    const usersConfig = process.env.BACKEND_USERS?.split(",") ?? [];
+    const users = new Map<string, string>();
+
     usersConfig.forEach((user) => {
-      const login = user.split(":")[0];
-      const password = user.split(":")[1];
+      const split = user.split(":");
+      const login = split[0];
+      const password = split[1];
+
       users.set(login, password);
     });
 
@@ -64,22 +67,28 @@ export default class PlaintextMultiuserAuthenticationProvider
   ): Promise<Map<string, EnvironmentDescription>> {
     const usersAllowedAssignments =
       process.env.BACKEND_USER_ALLOWED_ASSIGNMENTS;
-    if (usersAllowedAssignments == undefined) {
+
+    if (usersAllowedAssignments === undefined) {
       return assignmentList;
     } else {
-      const users: Map<string, string> = new Map();
-      usersAllowedAssignments.split(",").forEach((user) => {
-        const name = user.split(":")[0];
-        const regex = user.split(":")[1];
+      const users = new Map<string, string>();
+
+      for (const user of usersAllowedAssignments.split(",")) {
+        const split = user.split(":");
+        const name = split[0];
+        const regex = split[1];
+
         users.set(name, regex);
-      });
-      if (users.has(username)) {
-        const tempRegex = users.get(username);
+      }
+
+      const user = users.get(username);
+      if (user) {
         for (const key of assignmentList.keys()) {
-          if (key.match(tempRegex) == null) {
+          if (key.match(user) === null) {
             assignmentList.delete(key);
           }
         }
+
         return assignmentList;
       } else {
         assignmentList.clear();

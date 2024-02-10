@@ -13,13 +13,16 @@ export type RequestWithUser = Request & {
 
 function middleware(req: Request, res: Response, next: NextFunction): void {
   const token = req.headers.authorization;
-  try {
-    /* TODO: replace secret */
-    const result = jwt.verify(token, "some-secret") as TokenPayload;
-    const reqWithUser = req as RequestWithUser;
 
-    reqWithUser.user = result;
-    next();
+  try {
+    if (token) {
+      /* TODO: replace secret */
+      const result = jwt.verify(token, "some-secret") as TokenPayload;
+      const reqWithUser = req as RequestWithUser;
+
+      reqWithUser.user = result;
+      next();
+    } else throw new Error("No authorization header found.");
   } catch (err) {
     res.status(401).json({ error: true, message: "Invalid token." });
   }

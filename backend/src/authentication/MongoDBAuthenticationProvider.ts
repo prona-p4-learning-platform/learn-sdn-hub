@@ -82,22 +82,27 @@ export default class MongoDBAuthenticationProvider
     } else {
       const usersAllowedAssignments =
         process.env.BACKEND_USER_ALLOWED_ASSIGNMENTS;
-      if (usersAllowedAssignments == undefined) {
+
+      if (usersAllowedAssignments === undefined) {
         return assignmentList;
       } else {
-        const users: Map<string, string> = new Map();
+        const users = new Map<string, string>();
+
         usersAllowedAssignments.split(",").forEach((user) => {
           const name = user.split(":")[0];
           const regex = user.split(":")[1];
+
           users.set(name, regex);
         });
-        if (users.has(username)) {
-          const tempRegex = users.get(username);
+
+        const user = users.get(username);
+        if (user) {
           for (const key of assignmentList.keys()) {
-            if (key.match(tempRegex) == null) {
+            if (key.match(user) === null) {
               assignmentList.delete(key);
             }
           }
+
           return assignmentList;
         } else {
           assignmentList.clear();

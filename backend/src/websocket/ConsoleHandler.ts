@@ -15,22 +15,27 @@ export default function (
       ws.close();
       return;
     }
+
     const initialConsoleBuffer = envConsole.consumeInitialConsoleBuffer();
     if (initialConsoleBuffer.length > 0) {
       ws.send(initialConsoleBuffer);
     }
+
     envConsole.on("data", (data: string) => {
       ws.send(data.toString());
     });
+
     envConsole.on("close", () => {
       ws.send("Remote tty has gone.");
       ws.close();
     });
+
     ws.on("message", function (message) {
-      if (message.toString().match(/^\x1B\[8;(.*);(.*)t$/)) {
-        const size = message.toString().match(/^\x1B\[8;(.*);(.*)t$/);
-        const lines = parseInt(size[1]);
-        const columns = parseInt(size[2]);
+      const matchings = message.toString().match(/^\x1B\[8;(.*);(.*)t$/);
+
+      if (matchings && matchings[1] && matchings[2]) {
+        const lines = parseInt(matchings[1]);
+        const columns = parseInt(matchings[2]);
         //console.log(
         //  "received SIGWINCH resize event (lines: " +
         //    lines +

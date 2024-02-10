@@ -62,8 +62,11 @@ export default class SSHConsole extends EventEmitter implements Console {
     // sharing connections in the same group would be possible and multiple users can then use the same xterm.js together,
     // however refresh/different console sizes (which is inevitable due to different browser window sizes) etc. will lead to console corruption
     const consoleIdentifier = `${ipaddress}:${port}:${environmentId}:${username}:${groupNumber}`;
-    if (provideTty && SSHConsole.sshConnections.has(consoleIdentifier)) {
-      sshConsole = SSHConsole.sshConnections.get(consoleIdentifier);
+    const sshConnection = SSHConsole.sshConnections.get(consoleIdentifier);
+
+    if (provideTty && sshConnection) {
+      sshConsole = sshConnection;
+
       if (sshConsole.ready === false) {
         sshConsole.on("ready", () => {
           sshConsole.ready = true;

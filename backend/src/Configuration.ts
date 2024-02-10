@@ -32,8 +32,6 @@ environments.set("p4basic-with-guacamole", {
         remoteDesktopProtocol: "vnc",
         remoteDesktopPort: 5900,
         remoteDesktopPassword: "vncpassword",
-        remoteDesktopUsername: null,
-        remoteDesktopHostname: null,
       },
     ],
     [

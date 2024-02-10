@@ -19,42 +19,44 @@ export default class MemoryPersister implements Persister {
   }
 
   async getUserMapping(username: string): Promise<number> {
-    if (process.env.BACKEND_USER_MAPPING != undefined) {
+    if (process.env.BACKEND_USER_MAPPING) {
       const userMappingConfig = process.env.BACKEND_USER_MAPPING.split(",");
-      const usermap: Map<string, number> = new Map();
-      userMappingConfig.forEach((userMappingConfigEntry) => {
-        const login = userMappingConfigEntry.split(":")[0];
-        const instanceNumber = userMappingConfigEntry.split(":")[1];
-        usermap.set(login, parseInt(instanceNumber));
-      });
+      const usermap = new Map<string, number>();
 
-      if (usermap.has(username)) {
-        console.log(
-          "Mapped user " +
-            username +
-            " to group number " +
-            usermap.get(username),
-        );
-        return usermap.get(username);
+      for (const userMappingConfigEntry of userMappingConfig) {
+        const split = userMappingConfigEntry.split(":");
+        const login = split[0];
+        const instanceNumber = split[1];
+
+        usermap.set(login, parseInt(instanceNumber));
+      }
+
+      const map = usermap.get(username);
+      if (map !== undefined) {
+        console.log("Mapped user " + username + " to group number " + map);
+
+        return Promise.resolve(map);
       } else {
-        throw new Error(
-          "No mapping defined to map user " + username + " to a group.",
+        return Promise.reject(
+          new Error(
+            "No mapping defined to map user " + username + " to a group.",
+          ),
         );
       }
     } else {
       console.log(
         "No BACKEND_USER_MAPPING environment variable set. Mapping user to group 0.",
       );
-      return 0;
+
+      return Promise.resolve(0);
     }
   }
 
   async GetUserEnvironments(username: string): Promise<UserEnvironment[]> {
     const userEnvironment = userEnvironments.get(username);
-    if (userEnvironment) {
-      return [...userEnvironment.values()];
-    }
-    return [];
+    const result = userEnvironment ? Array.from(userEnvironment.values()) : [];
+
+    return Promise.resolve(result);
   }
 
   async AddUserEnvironment(
@@ -63,26 +65,29 @@ export default class MemoryPersister implements Persister {
     description: string,
     instance: string,
   ): Promise<void> {
-    if (!userEnvironments.has(username)) {
-      userEnvironments.set(username, new Map<string, UserEnvironment>());
+    let userEnv = userEnvironments.get(username);
+
+    if (!userEnv) {
+      userEnv = new Map<string, UserEnvironment>();
+      userEnvironments.set(username, userEnv);
     }
-    userEnvironments.get(username).set(environment, {
+
+    userEnv.set(environment, {
       environment,
       description,
       instance,
     });
+
+    return Promise.resolve();
   }
 
   async RemoveUserEnvironment(
     username: string,
     environment: string,
   ): Promise<void> {
-    if (
-      userEnvironments.has(username) &&
-      userEnvironments.get(username).has(environment)
-    ) {
-      userEnvironments.get(username).delete(environment);
-    }
+    userEnvironments.get(username)?.delete(environment);
+
+    return Promise.resolve();
   }
 
   async SubmitUserEnvironment(
@@ -132,11 +137,13 @@ export default class MemoryPersister implements Persister {
     groupNumber: number,
   ): Promise<Submission[]> {
     const group = "group" + groupNumber;
-    const submissions: Array<Submission> = [];
+    const submissions: Submission[] = [];
     const resultPathRoot = path.resolve("src", "assignments", "results");
+
     if (fs.existsSync(resultPathRoot)) {
       const submissionDirs = fs.readdirSync(resultPathRoot);
-      submissionDirs.forEach(function (submissionDir) {
+
+      for (const submissionDir of submissionDirs) {
         if (
           submissionDir.match(username + "-(.*)") ||
           submissionDir.match("(.*)-" + group + "-(.*)")
@@ -144,22 +151,27 @@ export default class MemoryPersister implements Persister {
           const files = fs.readdirSync(
             path.resolve(resultPathRoot, submissionDir),
           );
-          const lastMTime = fs.statSync(
-            path.resolve(resultPathRoot, submissionDir, files.pop()),
-          ).mtime;
+          const file = files.pop();
+          const lastMTime = file
+            ? fs.statSync(path.resolve(resultPathRoot, submissionDir, file))
+                .mtime
+            : new Date(0);
           let assignmentName = submissionDir;
+
           if (submissionDir.match(username + "-(.*)")) {
             assignmentName = submissionDir.substring(username.length + 1);
           } else if (submissionDir.match("(.*)-" + group + "-(.*)")) {
             assignmentName = submissionDir.substring(username.length + 1);
           }
-          const submission: Submission = {
+
+          const submission = {
             assignmentName: assignmentName,
             lastChanged: lastMTime,
           };
+
           submissions.push(submission);
         }
-      });
+      }
       // console.log(
       //   "Retrieved submissions for user: " +
       //     username +
@@ -168,11 +180,12 @@ export default class MemoryPersister implements Persister {
       //     " result: " +
       //     JSON.stringify(submissions)
       // );
-      return submissions;
     }
+
+    return Promise.resolve(submissions);
   }
 
   async close(): Promise<void> {
-    return undefined;
+    return Promise.resolve();
   }
 }

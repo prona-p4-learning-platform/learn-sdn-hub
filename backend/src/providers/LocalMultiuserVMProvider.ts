@@ -56,12 +56,15 @@ export default class LocalMultiuserVMProvider implements InstanceProvider {
       //TODO: should leverage user group mapping from AuthenticationProvider
       if (process.env.BACKEND_USER_MAPPING != undefined) {
         const userMappingConfig = process.env.BACKEND_USER_MAPPING.split(",");
-        const usermap: Map<string, number> = new Map();
-        userMappingConfig.forEach((userMappingConfigEntry) => {
-          const login = userMappingConfigEntry.split(":")[0];
-          const instanceNumber = userMappingConfigEntry.split(":")[1];
+        const usermap = new Map<string, number>();
+
+        for (const userMappingConfigEntry of userMappingConfig) {
+          const split = userMappingConfigEntry.split(":");
+          const login = split[0];
+          const instanceNumber = split[1];
+
           usermap.set(login, parseInt(instanceNumber));
-        });
+        }
 
         if (usermap.has(username)) {
           console.log(
@@ -70,8 +73,12 @@ export default class LocalMultiuserVMProvider implements InstanceProvider {
               " to instance number " +
               usermap.get(username),
           );
-          if (this.availableInstances.has(`vm-${usermap.get(username)}`)) {
-            return this.availableInstances.get(`vm-${usermap.get(username)}`);
+
+          const instance = this.availableInstances.get(
+            `vm-${usermap.get(username)}`,
+          );
+          if (instance) {
+            return instance;
           } else {
             throw new Error(
               "LocalMultiUserVMProvider: Instance " +
@@ -99,7 +106,13 @@ export default class LocalMultiuserVMProvider implements InstanceProvider {
   }
 
   async getServer(instance: string): Promise<VMEndpoint> {
-    return this.availableInstances.get(instance);
+    const endpoint = this.availableInstances.get(instance);
+
+    if (endpoint) return endpoint;
+    else
+      throw new Error(
+        "LocalMultiUserVMProvider: VMEndpoint not found: " + instance,
+      );
   }
 
   async deleteServer(instance: string): Promise<void> {

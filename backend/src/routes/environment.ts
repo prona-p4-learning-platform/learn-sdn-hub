@@ -92,7 +92,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
         return;
       }
 
-      let markdown: string;
+      let markdown: string | undefined;
       // if assignmentLabSheetLocation specified as "instance",
       // get lab sheet from instance filesystem
       if (targetEnv.assignmentLabSheetLocation === "instance") {
@@ -100,7 +100,15 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
           reqWithUser.params.environment,
           reqWithUser.user.username,
         );
-        markdown = await env.readFile(targetEnv.assignmentLabSheet, true);
+
+        if (env) {
+          markdown = await env.readFile(targetEnv.assignmentLabSheet, true);
+        } else {
+          res
+            .status(500)
+            .send({ status: "error", message: "Environment not found." });
+          return;
+        }
       } else {
         markdown = fs
           .readFileSync(path.resolve(__dirname, targetEnv.assignmentLabSheet))
@@ -192,22 +200,28 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
         reqWithUser.user.username,
       );
 
-      env
-        .readFile(reqWithUser.params.alias)
-        .then((content: string) => {
-          res
-            .set(
-              "Content-Location",
-              env.getFilePathByAlias(reqWithUser.params.alias),
-            )
-            .set("Access-Control-Expose-Headers", "Content-Location")
-            .status(200)
-            .end(content);
-        })
-        .catch((err) => {
-          console.log(err);
-          res.status(500).json({ error: true, message: err.message });
-        });
+      if (env) {
+        env
+          .readFile(reqWithUser.params.alias)
+          .then((content: string) => {
+            res
+              .set(
+                "Content-Location",
+                env.getFilePathByAlias(reqWithUser.params.alias),
+              )
+              .set("Access-Control-Expose-Headers", "Content-Location")
+              .status(200)
+              .end(content);
+          })
+          .catch((err) => {
+            console.log(err);
+            res.status(500).json({ error: true, message: err.message });
+          });
+      } else {
+        res
+          .status(500)
+          .json({ error: true, message: "No active environment found." });
+      }
     },
   );
 
@@ -223,12 +237,18 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
         reqWithUser.user.username,
       );
 
-      env
-        .writeFile(reqWithUser.params.alias, reqWithUser.body)
-        .then(() => res.status(200).end())
-        .catch((err: Error) =>
-          res.status(400).json({ status: "error", message: err.message }),
-        );
+      if (env) {
+        env
+          .writeFile(reqWithUser.params.alias, reqWithUser.body)
+          .then(() => res.status(200).end())
+          .catch((err: Error) =>
+            res.status(400).json({ status: "error", message: err.message }),
+          );
+      } else {
+        res
+          .status(500)
+          .json({ error: true, message: "No active environment found." });
+      }
     },
   );
 
@@ -236,15 +256,15 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
     "/:environment/collabdoc/:alias",
     authenticationMiddleware,
     environmentPathParamWithAliasValidator,
-    async (req, res) => {
+    (req, res) => {
       const reqWithUser = req as RequestWithUser;
 
-      await Environment.getCollabDoc(
+      Environment.getCollabDoc(
         reqWithUser.params.alias,
         reqWithUser.params.environment,
         reqWithUser.user.username,
       )
-        .then((content: string) => {
+        .then((content) => {
           res.status(200).end(content);
         })
         .catch((err) => {
@@ -265,16 +285,22 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
         reqWithUser.user.username,
       );
 
-      env
-        .restart()
-        .then(() => {
-          res
-            .status(200)
-            .json({ status: "finished", message: "Restart complete" });
-        })
-        .catch((err) =>
-          res.status(500).json({ status: "error", message: err.message }),
-        );
+      if (env) {
+        env
+          .restart()
+          .then(() => {
+            res
+              .status(200)
+              .json({ status: "finished", message: "Restart complete" });
+          })
+          .catch((err) =>
+            res.status(500).json({ status: "error", message: err.message }),
+          );
+      } else {
+        res
+          .status(500)
+          .json({ error: true, message: "No active environment found." });
+      }
     },
   );
 
@@ -290,17 +316,23 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
         reqWithUser.user.username,
       );
 
-      env
-        .test(reqWithUser.body.activeStep, reqWithUser.body.terminalState)
-        .then((testResult) => {
-          res.status(200).json({
-            status: "finished",
-            message: testResult,
-          });
-        })
-        .catch((err) =>
-          res.status(500).json({ status: "error", message: err.message }),
-        );
+      if (env) {
+        env
+          .test(reqWithUser.body.activeStep, reqWithUser.body.terminalState)
+          .then((testResult) => {
+            res.status(200).json({
+              status: "finished",
+              message: testResult,
+            });
+          })
+          .catch((err) =>
+            res.status(500).json({ status: "error", message: err.message }),
+          );
+      } else {
+        res
+          .status(500)
+          .json({ error: true, message: "No active environment found." });
+      }
     },
   );
 
@@ -317,18 +349,24 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
         reqWithUser.user.username,
       );
 
-      env
-        .submit(reqWithUser.body.activeStep, reqWithUser.body.terminalState)
-        .then(() => {
-          res.status(200).json({
-            status: "finished",
-            message:
-              "Terminal content and files submitted! Assignment finished!",
-          });
-        })
-        .catch((err) =>
-          res.status(500).json({ status: "error", message: err.message }),
-        );
+      if (env) {
+        env
+          .submit(reqWithUser.body.activeStep, reqWithUser.body.terminalState)
+          .then(() => {
+            res.status(200).json({
+              status: "finished",
+              message:
+                "Terminal content and files submitted! Assignment finished!",
+            });
+          })
+          .catch((err) =>
+            res.status(500).json({ status: "error", message: err.message }),
+          );
+      } else {
+        res
+          .status(500)
+          .json({ error: true, message: "No active environment found." });
+      }
     },
   );
 
@@ -386,14 +424,20 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
         reqWithUser.user.username,
       );
 
-      env
-        .getProviderInstanceStatus()
-        .then((value) => {
-          res.status(200).json({ status: value });
-        })
-        .catch(() => {
-          res.status(200).json({ status: "" });
-        });
+      if (env) {
+        env
+          .getProviderInstanceStatus()
+          .then((value) => {
+            res.status(200).json({ status: value });
+          })
+          .catch(() => {
+            res.status(200).json({ status: "" });
+          });
+      } else {
+        res
+          .status(500)
+          .json({ error: true, message: "No active environment found." });
+      }
     },
   );
 

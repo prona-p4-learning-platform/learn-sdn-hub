@@ -146,7 +146,7 @@ export default class Environment {
   public static getActiveEnvironment(
     environmentId: string,
     username: string,
-  ): Environment {
+  ): Environment | undefined {
     return Environment.activeEnvironments.get(`${username}-${environmentId}`);
   }
 
@@ -201,11 +201,11 @@ export default class Environment {
     this.editableFiles.set(alias, path);
   }
 
-  public getFilePathByAlias(alias: string): string {
+  public getFilePathByAlias(alias: string): string | undefined {
     return this.editableFiles.get(alias);
   }
 
-  public getConsoleByAlias(alias: string): Console {
+  public getConsoleByAlias(alias: string): Console | undefined {
     return this.activeConsoles.get(alias);
   }
 
@@ -213,11 +213,11 @@ export default class Environment {
     return this.activeConsoles;
   }
 
-  public getDesktopByAlias(alias: string): DesktopInstance {
+  public getDesktopByAlias(alias: string): DesktopInstance | undefined {
     return this.activeDesktops.get(alias);
   }
 
-  static async createEnvironment(
+  static createEnvironment(
     username: string,
     groupNumber: number,
     environmentId: string,
@@ -234,21 +234,24 @@ export default class Environment {
         provider,
         persister,
       );
+
       console.log(
         "Creating new environment: " + environmentId + " for user: " + username,
       );
+
       const activeEnvironmentsForGroup = Array<Environment>();
-      Environment.activeEnvironments.forEach((environment: Environment) => {
+      for (const environment of Environment.activeEnvironments.values()) {
         if (environment.groupNumber === groupNumber) {
           if (environment.environmentId !== environmentId) {
-            throw Error(
+            throw new Error(
               "Your group already deployed another environment. Please reload assignment list.",
             );
           } else {
             activeEnvironmentsForGroup.push(environment);
           }
         }
-      });
+      }
+
       if (activeEnvironmentsForGroup.length === 0) {
         environment
           .start(env, true)
@@ -258,13 +261,15 @@ export default class Environment {
               `${username}-${environmentId}`,
               environment,
             );
-            return resolve(environment);
+
+            resolve(environment);
           })
           .catch((err) => {
             Environment.activeEnvironments.delete(
               `${username}-${environmentId}`,
             );
-            return reject(new Error("Start of environment failed." + err));
+
+            reject(new Error("Start of environment failed." + err));
           });
       } else {
         // the group already runs an environment add this user to it
@@ -274,6 +279,7 @@ export default class Environment {
           await persister.GetUserEnvironments(
             activeEnvironmentsForGroup[0].username,
           );
+
         for (const userEnvironmentOfOtherGroupUser of userEnvironmentsOfOtherGroupUser) {
           if (
             userEnvironmentOfOtherGroupUser.environment ===
@@ -282,12 +288,14 @@ export default class Environment {
             groupEnvironmentInstance = userEnvironmentOfOtherGroupUser.instance;
           }
         }
+
         await persister.AddUserEnvironment(
           username,
           activeEnvironmentsForGroup[0].environmentId,
           activeEnvironmentsForGroup[0].configuration.description,
-          groupEnvironmentInstance,
+          groupEnvironmentInstance!, // TODO: might be undefined?
         );
+
         console.log(
           "Added existing environment: " +
             environmentId +
@@ -300,6 +308,7 @@ export default class Environment {
             " using instance: " +
             groupEnvironmentInstance,
         );
+
         environment
           .start(env, false)
           .then((endpoint) => {
@@ -322,49 +331,64 @@ export default class Environment {
     });
   }
 
-  static async deleteEnvironment(
+  static deleteEnvironment(
     username: string,
     environmentId: string,
   ): Promise<boolean> {
     return new Promise<boolean>((resolve, reject) => {
       const environment = this.getActiveEnvironment(environmentId, username);
-      const groupNumber = environment.groupNumber;
-      environment
-        .stop()
-        .then(() => {
-          Environment.activeEnvironments.delete(`${username}-${environmentId}`);
-          // search for other activeEnvironments in the same group
-          Environment.activeEnvironments.forEach((env: Environment) => {
-            if (env.groupNumber === groupNumber && env.username != username) {
-              Environment.activeEnvironments.delete(
-                `${env.username}-${env.environmentId}`,
-              );
-            }
-          });
-          return resolve(true);
-        })
-        .catch((err) => {
-          if (err === DenyStartOfMissingInstanceErrorMessage) {
-            console.log(
-              "Environment was already stopped. Silently deleting leftovers in user session.",
-            );
+
+      if (environment) {
+        const groupNumber = environment.groupNumber;
+
+        environment
+          .stop()
+          .then(() => {
             Environment.activeEnvironments.delete(
               `${username}-${environmentId}`,
             );
             // search for other activeEnvironments in the same group
             Environment.activeEnvironments.forEach((env: Environment) => {
-              if (env.groupNumber === groupNumber && env.username != username) {
+              if (
+                env.groupNumber === groupNumber &&
+                env.username !== username
+              ) {
                 Environment.activeEnvironments.delete(
                   `${env.username}-${env.environmentId}`,
                 );
               }
             });
-            return resolve(true);
-          } else {
-            console.log("Failed to stop environment. " + JSON.stringify(err));
-            return reject(false);
-          }
-        });
+            resolve(true);
+          })
+          .catch((err) => {
+            if (err === DenyStartOfMissingInstanceErrorMessage) {
+              console.log(
+                "Environment was already stopped. Silently deleting leftovers in user session.",
+              );
+              Environment.activeEnvironments.delete(
+                `${username}-${environmentId}`,
+              );
+              // search for other activeEnvironments in the same group
+              Environment.activeEnvironments.forEach((env: Environment) => {
+                if (
+                  env.groupNumber === groupNumber &&
+                  env.username != username
+                ) {
+                  Environment.activeEnvironments.delete(
+                    `${env.username}-${env.environmentId}`,
+                  );
+                }
+              });
+              resolve(true);
+            } else {
+              console.log("Failed to stop environment. " + JSON.stringify(err));
+              reject(false);
+            }
+          });
+      } else {
+        console.log("Environment not found.");
+        reject(false);
+      }
     });
   }
 
@@ -960,10 +984,11 @@ export default class Environment {
     console.log("TESTING step " + stepIndex);
 
     return new Promise(async (resolve, reject) => {
-      if (this.configuration.steps?.length > 0) {
+      if (this.configuration.steps && this.configuration.steps?.length > 0) {
         const activeStep = this.configuration.steps[parseInt(stepIndex)];
         let testOutput = "";
-        let someTestsFailed = undefined as boolean;
+        let someTestsFailed = false;
+
         for (const test of activeStep.tests) {
           let testPassed = false;
           // per default test result is false
@@ -977,9 +1002,10 @@ export default class Environment {
               );
             } else {
               for (const terminalState of terminalStates) {
-                if (
-                  terminalState.endpoint.split("/").pop().match(test.terminal)
-                ) {
+                const split = terminalState.endpoint.split("/");
+                const element = split.pop();
+
+                if (element !== undefined && element.match(test.terminal)) {
                   if (terminalState.state.match(test.match)) {
                     testOutput += "PASSED: " + test.successMessage + " ";
                     testPassed = true;
@@ -1155,30 +1181,30 @@ export default class Environment {
     environmentId: string,
     username: string,
   ): Promise<string> {
-    const env = Environment.getActiveEnvironment(environmentId, username);
     if (this.activeCollabDocs.get(alias) === undefined) {
-      const resolvedPath = env.editableFiles.get(alias);
-      if (resolvedPath === undefined) {
+      const env = Environment.getActiveEnvironment(environmentId, username);
+      const resolvedPath = env?.editableFiles.get(alias);
+
+      if (!env || resolvedPath === undefined) {
         throw new Error("Could not resolve alias.");
       }
+
       const content = await env.filehandler.readFile(resolvedPath);
       const ydoc = new Y.Doc();
       const ytext = ydoc.getText("monaco");
+
       ytext.insert(0, content);
       this.activeCollabDocs.set(
         alias,
         fromUint8Array(Y.encodeStateAsUpdate(ydoc)),
       );
     }
-    return this.activeCollabDocs.get(alias);
+
+    return this.activeCollabDocs.get(alias)!; // TODO: might be undefined?
   }
 
   async getProviderInstanceStatus(): Promise<string> {
-    try {
-      const endpoint = await this.makeSureInstanceExists();
-      return endpoint.providerInstanceStatus;
-    } catch (err) {
-      throw err;
-    }
+    const endpoint = await this.makeSureInstanceExists();
+    return endpoint.providerInstanceStatus;
   }
 }

@@ -97,10 +97,10 @@ export default class OpenStackProvider implements InstanceProvider {
   private os_floatingNetworkId: string;
 
   // the authentication token from keystone
-  private os_token: Token;
+  private os_token?: Token;
 
-  private endpointPublicComputeURL: string;
-  private endpointPublicNetworkURL: string;
+  private endpointPublicComputeURL?: string;
+  private endpointPublicNetworkURL?: string;
 
   // OpenStack Provider config
   private associateFloatingIP: string;
@@ -115,23 +115,134 @@ export default class OpenStackProvider implements InstanceProvider {
   private providerInstance: OpenStackProvider;
 
   constructor() {
-    this.os_username = process.env.OPENSTACK_USERNAME;
-    this.os_password = process.env.OPENSTACK_PASSWORD;
-    this.os_authUrl = process.env.OPENSTACK_AUTHURL;
-    this.os_region = process.env.OPENSTACK_REGION;
-    this.os_projectId = process.env.OPENSTACK_PROJECTID;
-    this.os_domainName = process.env.OPENSTACK_DOMAINNAME;
-    this.os_imageId = process.env.OPENSTACK_P4_HOST_IMAGE;
-    this.os_flavor = process.env.OPENSTACK_FLAVOR;
-    this.os_networkId = process.env.OPENSTACK_NETWORKID;
-    this.os_keyname = process.env.OPENSTACK_KEYNAME;
     this.os_secgroup = "default";
-    this.os_floatingNetworkId = process.env.OPENSTACK_FLOATING_NETWORKID;
 
-    this.associateFloatingIP = process.env.OPENSTACK_ASSOCIATE_FLOATING_IP;
-    this.maxInstanceLifetimeMinutes = parseInt(
-      process.env.OPENSTACK_MAX_INSTANCE_LIFETIME_MINUTES,
-    );
+    // check for open stack username
+    const ENV_USERNAME = process.env.OPENSTACK_USERNAME;
+    if (ENV_USERNAME) this.os_username;
+    else {
+      throw new Error(
+        "OpenStackProvider: No username provided (OPENSTACK_USERNAME).",
+      );
+    }
+
+    // check for open stack password
+    const ENV_PASSWORD = process.env.OPENSTACK_PASSWORD;
+    if (ENV_PASSWORD) this.os_password;
+    else {
+      throw new Error(
+        "OpenStackProvider: No password provided (OPENSTACK_PASSWORD).",
+      );
+    }
+
+    // check for open stack auth url
+    const ENV_AUTHURL = process.env.OPENSTACK_AUTHURL;
+    if (ENV_AUTHURL) this.os_authUrl = ENV_AUTHURL;
+    else {
+      throw new Error(
+        "OpenStackProvider: No auth url provided (OPENSTACK_AUTHURL).",
+      );
+    }
+
+    // check for open stack region
+    const ENV_REGION = process.env.OPENSTACK_REGION;
+    if (ENV_REGION) this.os_region = ENV_REGION;
+    else {
+      throw new Error(
+        "OpenStackProvider: No region provided (OPENSTACK_REGION).",
+      );
+    }
+
+    // check for open stack project id
+    const ENV_PROJECT_ID = process.env.OPENSTACK_PROJECTID;
+    if (ENV_PROJECT_ID) this.os_projectId = ENV_PROJECT_ID;
+    else {
+      throw new Error(
+        "OpenStackProvider: No project id provided (OPENSTACK_PROJECTID).",
+      );
+    }
+
+    // check for open stack domain name
+    const ENV_DOMAIN = process.env.OPENSTACK_DOMAINNAME;
+    if (ENV_DOMAIN) this.os_domainName = ENV_DOMAIN;
+    else {
+      throw new Error(
+        "OpenStackProvider: No domain name provided (OPENSTACK_DOMAINNAME).",
+      );
+    }
+
+    // check for open stack image id
+    const ENV_IMAGE = process.env.OPENSTACK_P4_HOST_IMAGE;
+    if (ENV_IMAGE) this.os_imageId = ENV_IMAGE;
+    else {
+      throw new Error(
+        "OpenStackProvider: No p4 host image id provided (OPENSTACK_P4_HOST_IMAGE).",
+      );
+    }
+
+    // check for open stack flavor
+    const ENV_FLAVOR = process.env.OPENSTACK_FLAVOR;
+    if (ENV_FLAVOR) this.os_flavor = ENV_FLAVOR;
+    else {
+      throw new Error(
+        "OpenStackProvider: No flavor provided (OPENSTACK_FLAVOR).",
+      );
+    }
+
+    // check for open stack network id
+    const ENV_NETWORK_ID = process.env.OPENSTACK_NETWORKID;
+    if (ENV_NETWORK_ID) this.os_networkId = ENV_NETWORK_ID;
+    else {
+      throw new Error(
+        "OpenStackProvider: No network id provided (OPENSTACK_NETWORKID).",
+      );
+    }
+
+    // check for open stack keyname
+    const ENV_KEYNAME = process.env.OPENSTACK_KEYNAME;
+    if (ENV_KEYNAME) this.os_keyname = ENV_KEYNAME;
+    else {
+      throw new Error(
+        "OpenStackProvider: No keyname provided (OPENSTACK_KEYNAME).",
+      );
+    }
+
+    // check for open stack floating network id
+    const ENV_FLOATING_ID = process.env.OPENSTACK_FLOATING_NETWORKID;
+    if (ENV_FLOATING_ID) this.os_floatingNetworkId = ENV_FLOATING_ID;
+    else {
+      throw new Error(
+        "OpenStackProvider: No floating network id provided (OPENSTACK_FLOATING_NETWORKID).",
+      );
+    }
+
+    // check for open stack floating ip association
+    const ENV_FLOATING_ASSOCIATE = process.env.OPENSTACK_ASSOCIATE_FLOATING_IP;
+    if (ENV_FLOATING_ASSOCIATE)
+      this.os_floatingNetworkId = ENV_FLOATING_ASSOCIATE.toLowerCase();
+    else {
+      throw new Error(
+        "OpenStackProvider: No floating ip association provided (OPENSTACK_ASSOCIATE_FLOATING_IP).",
+      );
+    }
+
+    // check for max instance lifetime
+    const ENV_LIFETIME = process.env.OPENSTACK_MAX_INSTANCE_LIFETIME_MINUTES;
+    if (ENV_LIFETIME) {
+      const parsedLifetime = parseInt(ENV_LIFETIME);
+
+      if (!isNaN(parsedLifetime))
+        this.maxInstanceLifetimeMinutes = parsedLifetime;
+      else {
+        throw new Error(
+          "OpenStackProvider: Provided instance lifetime cannot be parsed (OPENSTACK_MAX_INSTANCE_LIFETIME_MINUTES).",
+        );
+      }
+    } else {
+      throw new Error(
+        "DockerProvider: No instance lifetime provided (OPENSTACK_MAX_INSTANCE_LIFETIME_MINUTES).",
+      );
+    }
 
     this.providerInstance = this;
 
@@ -150,9 +261,7 @@ export default class OpenStackProvider implements InstanceProvider {
     const task = new AsyncTask(
       "OpenStackProvider Instance Pruning Task",
       () => {
-        return this.pruneServerInstance().then(() => {
-          //console.log("OpenStackProvider: Pruning finished...");
-        });
+        return this.pruneServerInstance();
       },
       (err: Error) => {
         console.log(
@@ -235,20 +344,20 @@ export default class OpenStackProvider implements InstanceProvider {
               (element) => element.type === "compute",
             );
             providerInstance.endpointPublicComputeURL =
-              serviceCompute.endpoints.find(
+              serviceCompute?.endpoints.find(
                 (element) =>
                   element.interface === "public" &&
                   element.region === providerInstance.os_region,
-              ).url;
+              )?.url;
             const serviceNetwork = catalog.find(
               (element) => element.type === "network",
             );
             providerInstance.endpointPublicNetworkURL =
-              serviceNetwork.endpoints.find(
+              serviceNetwork?.endpoints.find(
                 (element) =>
                   element.interface === "public" &&
                   element.region === providerInstance.os_region,
-              ).url;
+              )?.url;
             return resolve();
           })
           .catch(function (err) {

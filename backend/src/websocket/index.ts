@@ -7,6 +7,7 @@ import LanguageServerHandler from "./LanguageServerHandler";
 import RemoteDesktopHandler from "./RemoteDesktopHandler";
 import { TokenPayload } from "../authentication/AuthenticationMiddleware";
 import jwt from "jsonwebtoken";
+
 interface WebsocketPathParams {
   environment: string;
   type: string;
@@ -41,35 +42,50 @@ export default function wrapWSWithExpressApp(server: Server): void {
         ws.send("Not authenticated.");
         return ws.close();
       }
-      let user;
+
+      let user: TokenPayload;
       try {
-        /* replace secret */
+        /* TODO: replace secret */
         user = jwt.verify(token, "some-secret") as TokenPayload;
       } catch (err) {
         ws.send("Could not authenticate with given credentials.");
         return ws.close();
       }
-      const path = url.parse(request.url).pathname;
-      const envMatchResult = envMatcher(path);
-      const lspMatchResult = lsMatcher(path);
-      const rdMatchResult = rdMatcher(path);
-      if (envMatchResult !== false) {
-        const { environment, type } = envMatchResult.params;
-        ConsoleHandler(ws, environment, user.username, type);
-      } else if (lspMatchResult !== false) {
-        const { environment, language } = lspMatchResult.params;
-        LanguageServerHandler(ws, environment, user.username, language);
-      } else if (rdMatchResult !== false) {
-        const { environment, alias } = rdMatchResult.params;
-        RemoteDesktopHandler(
-          ws,
-          environment,
-          user.username,
-          alias,
-          user.groupNumber,
-        );
+
+      const requestUrl = request.url;
+      if (requestUrl) {
+        const path = url.parse(requestUrl).pathname;
+
+        if (path) {
+          const envMatchResult = envMatcher(path);
+          const lspMatchResult = lsMatcher(path);
+          const rdMatchResult = rdMatcher(path);
+
+          if (envMatchResult !== false) {
+            const { environment, type } = envMatchResult.params;
+            ConsoleHandler(ws, environment, user.username, type);
+          } else if (lspMatchResult !== false) {
+            const { environment, language } = lspMatchResult.params;
+            LanguageServerHandler(ws, environment, user.username, language);
+          } else if (rdMatchResult !== false) {
+            const { environment, alias } = rdMatchResult.params;
+            RemoteDesktopHandler(
+              ws,
+              environment,
+              user.username,
+              alias,
+              user.groupNumber,
+            );
+          } else {
+            ws.send("No route handler.");
+            ws.close();
+          }
+        } else {
+          ws.send("No request path.");
+          ws.close();
+        }
       } else {
-        ws.send(`No route handler.`);
+        ws.send("No request url.");
         ws.close();
       }
     });

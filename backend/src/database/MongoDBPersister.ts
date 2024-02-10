@@ -36,7 +36,7 @@ interface SubmissionEntry {
 }
 
 export default class MongoDBPersister implements Persister {
-  private mongoClient: MongoClient = null;
+  private mongoClient: MongoClient;
   private connectURL: string;
   private connectPromise: Promise<MongoClient>;
 
@@ -48,16 +48,24 @@ export default class MongoDBPersister implements Persister {
     if (!this.connectPromise) {
       this.connectPromise = MongoClient.connect(this.connectURL);
     }
+
     if (!this.mongoClient) {
       const client = await this.connectPromise;
       this.mongoClient = client;
     }
+
     return this.mongoClient;
   }
 
   async GetUserAccount(username: string): Promise<UserAccount> {
     const client = await this.getClient();
-    return client.db().collection<UserEntry>("users").findOne({ username });
+    const result = await client
+      .db()
+      .collection<UserEntry>("users")
+      .findOne({ username });
+
+    if (result) return result;
+    else throw new Error("MongoDBPersister: UserAccount not found.");
   }
 
   async ChangeUserPassword(
@@ -66,14 +74,19 @@ export default class MongoDBPersister implements Persister {
   ): Promise<UserAccount> {
     const passwordHash = await hash(password, saltRounds);
     const client = await this.getClient();
-    return client
+    const result = await client
       .db()
       .collection<UserEntry>("users")
       .findOneAndUpdate(
         { username },
         { $set: { passwordHash }, $unset: { password: "" } },
-      )
-      .then(() => undefined);
+      );
+
+    if (result) return result;
+    else
+      throw new Error(
+        "MongoDBPersister: Password not changed as the user account could not be found.",
+      );
   }
 
   async GetUserEnvironments(username: string): Promise<UserEnvironment[]> {

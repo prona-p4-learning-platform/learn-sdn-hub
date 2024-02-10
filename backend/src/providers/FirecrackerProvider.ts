@@ -293,12 +293,6 @@ export default class FirecrackerProvider implements InstanceProvider {
 
   constructor() {
     this.binPath = process.env.FIRECRACKER_BIN_PATH ?? "/usr/bin/firecracker";
-    this.socketPathPrefix = process.env.FIRECRACKER_SOCKET_PATH_PREFIX;
-    this.kernelImage = process.env.FIRECRACKER_KERNEL_IMAGE;
-    this.kernelBootARGs = process.env.FIRECRACKER_KERNEL_BOOT_ARGS;
-    this.rootFSDrive = process.env.FIRECRACKER_ROOTFS_DRIVE;
-    this.networkCIDR = new Netmask(process.env.FIRECRACKER_NETWORK_CIDR);
-    this.bridgeInterface = process.env.FIRECRACKER_BRIDGE_INTERFACE;
     this.vcpuCount = parseInt(process.env.FIRECRACKER_VCPU_COUNT ?? "2");
     this.memSizeMiB = parseInt(process.env.FIRECRACKER_MEM_SIZE_MIB ?? "2048");
     this.memBalloonSizeMiB = parseInt(
@@ -306,12 +300,78 @@ export default class FirecrackerProvider implements InstanceProvider {
         new Number(this.memSizeMiB - 512).toString(),
     );
 
-    const bridgeInterfaceRegExp = new RegExp(/^[a-z0-9]+$/i);
-    if (bridgeInterfaceRegExp.test(this.bridgeInterface) === false) {
+    // check for socket path
+    const ENV_SOCKET_PATH = process.env.FIRECRACKER_SOCKET_PATH_PREFIX;
+    if (ENV_SOCKET_PATH) this.socketPathPrefix = ENV_SOCKET_PATH;
+    else {
       throw new Error(
-        "Invalid FIRECRACKER_BRIDGE_INTERFACE. Needs to be an alphanumeric string.",
+        "FirecrackerProvider: No socket path prefix provided (FIRECRACKER_SOCKET_PATH_PREFIX).",
       );
     }
+
+    // check for kernel image
+    const ENV_KERNEL_IMAGE = process.env.FIRECRACKER_KERNEL_IMAGE;
+    if (ENV_KERNEL_IMAGE) this.kernelImage = ENV_KERNEL_IMAGE;
+    else {
+      throw new Error(
+        "FirecrackerProvider: No kernel image provided (FIRECRACKER_KERNEL_IMAGE).",
+      );
+    }
+
+    // check for kernel args
+    const ENV_KERNEL_ARGS = process.env.FIRECRACKER_KERNEL_BOOT_ARGS;
+    if (ENV_KERNEL_ARGS) this.kernelBootARGs = ENV_KERNEL_ARGS;
+    else {
+      throw new Error(
+        "FirecrackerProvider: No kernel boot args provided (FIRECRACKER_KERNEL_BOOT_ARGS).",
+      );
+    }
+
+    // check for root fs drive
+    const ENV_ROOT_DRIVE = process.env.FIRECRACKER_ROOTFS_DRIVE;
+    if (ENV_ROOT_DRIVE) this.rootFSDrive = ENV_ROOT_DRIVE;
+    else {
+      throw new Error(
+        "FirecrackerProvider: No root fs drive provided (FIRECRACKER_ROOTFS_DRIVE).",
+      );
+    }
+
+    // check for bridge interface
+    const ENV_BRIDGE_INTERFACE = process.env.FIRECRACKER_BRIDGE_INTERFACE;
+    if (ENV_BRIDGE_INTERFACE) {
+      this.bridgeInterface = ENV_BRIDGE_INTERFACE;
+
+      const bridgeInterfaceRegExp = new RegExp(/^[a-z0-9]+$/i);
+      if (bridgeInterfaceRegExp.test(this.bridgeInterface) === false) {
+        throw new Error(
+          "Invalid FIRECRACKER_BRIDGE_INTERFACE. Needs to be an alphanumeric string.",
+        );
+      }
+    } else {
+      throw new Error(
+        "FirecrackerProvider: No bridge interface provided (FIRECRACKER_BRIDGE_INTERFACE).",
+      );
+    }
+
+    // check for network cidr
+    const ENV_CIDR = process.env.FIRECRACKER_NETWORK_CIDR;
+    if (ENV_CIDR) {
+      try {
+        this.networkCIDR = new Netmask(ENV_CIDR);
+      } catch (error) {
+        throw new Error(
+          "FirecrackerProvider: Network cidr address invalid (FIRECRACKER_NETWORK_CIDR).",
+          {
+            cause: error,
+          },
+        );
+      }
+    } else {
+      throw new Error(
+        "FirecrackerProvider: No network cidr provided (FIRECRACKER_NETWORK_CIDR).",
+      );
+    }
+
     this.availableIpAddresses = new Array<string>();
     this.networkCIDR.forEach((ip) => {
       // reserve the first and last IP address for the host
@@ -319,9 +379,25 @@ export default class FirecrackerProvider implements InstanceProvider {
         this.availableIpAddresses.push(ip);
     });
 
-    this.maxInstanceLifetimeMinutes = parseInt(
-      process.env.FIRECRACKER_MAX_INSTANCE_LIFETIME_MINUTES,
-    );
+    // check for max instance lifetime
+    const ENV_LIFETIME = process.env.FIRECRACKER_MAX_INSTANCE_LIFETIME_MINUTES;
+    if (ENV_LIFETIME) {
+      const parsedLifetime = parseInt(ENV_LIFETIME);
+
+      if (!isNaN(parsedLifetime))
+        this.maxInstanceLifetimeMinutes = parsedLifetime;
+      else {
+        console.log(
+          "FirecrackerProvider: Provided instance lifetime cannot be parsed (FIRECRACKER_MAX_INSTANCE_LIFETIME_MINUTES).",
+        );
+        process.exit(1);
+      }
+    } else {
+      console.log(
+        "FirecrackerProvider: No instance lifetime provided (FIRECRACKER_MAX_INSTANCE_LIFETIME_MINUTES).",
+      );
+      process.exit(1);
+    }
 
     this.providerInstance = this;
 
@@ -336,9 +412,7 @@ export default class FirecrackerProvider implements InstanceProvider {
     const task = new AsyncTask(
       "FirecrackerProvider Instance Pruning Task",
       () => {
-        return this.pruneMicroVMInstance().then(() => {
-          //console.log("FirecrackerProvider: Pruning finished...");
-        });
+        return this.pruneMicroVMInstance();
       },
       (err: Error) => {
         console.log(
@@ -454,6 +528,12 @@ export default class FirecrackerProvider implements InstanceProvider {
                               this.availableIpAddresses.length;
                             const microVMIPAddress =
                               this.availableIpAddresses.pop();
+
+                            if (!microVMIPAddress)
+                              throw new Error(
+                                "FirecrackerProvider: No ip address available (addDrive).",
+                              );
+
                             const hexStringIP = microVMIPAddress
                               .split(".")
                               .map((value) =>
@@ -783,7 +863,7 @@ export default class FirecrackerProvider implements InstanceProvider {
     });
   }
 
-  sleep(ms: number): Promise<unknown> {
+  sleep(ms: number): Promise<void> {
     return new Promise((resolve) => {
       setTimeout(resolve, ms);
     });

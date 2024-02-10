@@ -44,16 +44,24 @@ export default class LocalVMProvider implements InstanceProvider {
   }
 
   async createServer(): Promise<VMEndpoint> {
-    if (this.availableInstancesList.length > 0) {
-      return this.availableInstances.get(this.availableInstancesList.pop());
+    const instanceName = this.availableInstancesList.pop();
+
+    if (instanceName) {
+      const endpoint = this.availableInstances.get(instanceName);
+
+      if (endpoint) return endpoint;
     }
+
     throw new Error(
       "LocalVMProvider: Cannot create server. No VMs available or list of supplied one-time VM endpoints exhausted.",
     );
   }
 
   async getServer(instance: string): Promise<VMEndpoint> {
-    return this.availableInstances.get(instance);
+    const endpoint = this.availableInstances.get(instance);
+
+    if (endpoint) return endpoint;
+    else throw new Error("LocalVMProvider: VMEndpoint not found: " + instance);
   }
 
   async deleteServer(instance: string): Promise<void> {

@@ -14,9 +14,9 @@ export default class DockerProvider implements InstanceProvider {
   // Docker config
   // ssh needs username, password, key etc. to be implemented - check docker-modem/dockerode
   private protocol: "http" | "https" | "ssh";
-  private host: string;
-  private port: number;
-  private socketPath: string;
+  private host?: string;
+  private port?: number;
+  private socketPath?: string;
   private image: string;
   private cmd: string;
 
@@ -42,15 +42,58 @@ export default class DockerProvider implements InstanceProvider {
     } else {
       this.protocol = "http";
     }
-    this.host = process.env.DOCKER_HOST;
-    this.port = parseInt(process.env.DOCKER_PORT);
-    this.socketPath = process.env.DOCKER_SOCKET_PATH;
-    this.image = process.env.DOCKER_IMAGE;
-    this.cmd = process.env.DOCKER_CMD;
 
-    this.maxInstanceLifetimeMinutes = parseInt(
-      process.env.DOCKER_MAX_INSTANCE_LIFETIME_MINUTES,
-    );
+    // check for docker port
+    const ENV_PORT = process.env.DOCKER_PORT;
+    if (ENV_PORT) {
+      const parsedPort = parseInt(ENV_PORT);
+
+      if (!isNaN(parsedPort)) this.port = parsedPort;
+      else {
+        throw new Error(
+          "DockerProvider: Provided port could not be parsed (DOCKER_PORT).",
+        );
+      }
+    }
+
+    // check for docker image
+    const ENV_IMAGE = process.env.DOCKER_IMAGE;
+    if (ENV_IMAGE) this.image = ENV_IMAGE;
+    else {
+      throw new Error(
+        "DockerProvider: No default docker image provided (DOCKER_IMAGE).",
+      );
+    }
+
+    // check for docker command
+    const ENV_CMD = process.env.DOCKER_CMD;
+    if (ENV_CMD) this.cmd = ENV_CMD;
+    else {
+      throw new Error(
+        "DockerProvider: No default docker command provided (DOCKER_CMD).",
+      );
+    }
+
+    // check for max instance lifetime
+    const ENV_LIFETIME = process.env.DOCKER_MAX_INSTANCE_LIFETIME_MINUTES;
+    if (ENV_LIFETIME) {
+      const parsedLifetime = parseInt(ENV_LIFETIME);
+
+      if (!isNaN(parsedLifetime))
+        this.maxInstanceLifetimeMinutes = parsedLifetime;
+      else {
+        throw new Error(
+          "DockerProvider: Provided instance lifetime cannot be parsed (DOCKER_MAX_INSTANCE_LIFETIME_MINUTES).",
+        );
+      }
+    } else {
+      throw new Error(
+        "DockerProvider: No instance lifetime provided (DOCKER_MAX_INSTANCE_LIFETIME_MINUTES).",
+      );
+    }
+
+    this.host = process.env.DOCKER_HOST;
+    this.socketPath = process.env.DOCKER_SOCKET_PATH;
 
     this.dockerodeInstance = new Dockerode({
       socketPath: this.socketPath,
@@ -67,15 +110,12 @@ export default class DockerProvider implements InstanceProvider {
     this.remoteDesktopPort = 5900;
 
     const scheduler = new ToadScheduler();
-
     const task = new AsyncTask(
       "DockerProvider Instance Pruning Task",
       () => {
-        return this.pruneContainerInstance().then(() => {
-          //console.log("DockerProvider: Pruning finished...");
-        });
+        return this.pruneContainerInstance();
       },
-      (err: Error) => {
+      (err) => {
         console.log(
           "DockerProvider: Could not prune stale container instances..." + err,
         );
@@ -111,7 +151,7 @@ export default class DockerProvider implements InstanceProvider {
         this.remoteDesktopPort + "/tcp",
       ];
       // append additionally configured ports
-      if (dockerSupplementalPorts?.length > 0)
+      if (dockerSupplementalPorts && dockerSupplementalPorts.length > 0)
         containerPorts = containerPorts.concat(dockerSupplementalPorts);
 
       const exposedPorts = containerPorts
@@ -357,7 +397,7 @@ export default class DockerProvider implements InstanceProvider {
           deadline.toISOString(),
       );
       cri.listContainers((err, containers) => {
-        if (err !== null) {
+        if (err) {
           return reject(
             new Error(
               "DockerProvider: Failed to get list of server instances to prune. " +
@@ -365,7 +405,8 @@ export default class DockerProvider implements InstanceProvider {
             ),
           );
         }
-        containers.forEach((container) => {
+
+        containers?.forEach((container) => {
           if (container.Labels["learn_sdn_hub_user"] !== undefined) {
             // server instance has learn_sdn_hub metadata and is assumed to be created by learn-sdn-hub
             const timestampCreated = new Date(container.Created * 1000);
@@ -401,6 +442,7 @@ export default class DockerProvider implements InstanceProvider {
             }
           }
         });
+
         return resolve();
       });
     });
@@ -518,8 +560,8 @@ export default class DockerProvider implements InstanceProvider {
     });
   }
 
-  sleep(ms: number): Promise<unknown> {
-    return new Promise((resolve) => {
+  sleep(ms: number): Promise<void> {
+    return new Promise<void>((resolve) => {
       setTimeout(resolve, ms);
     });
   }
