@@ -1,25 +1,28 @@
-import { Request, RequestHandler } from "express";
+import type { Response, Request, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 
-export type TokenPayload = {
+export interface TokenPayload {
   username: string;
   id: string;
   groupNumber: number;
-};
+}
 
 export type RequestWithUser = Request & {
   user: TokenPayload;
 };
 
-const middleware: RequestHandler = (req: RequestWithUser, res, next) => {
+function middleware(req: Request, res: Response, next: NextFunction): void {
   const token = req.headers.authorization;
   try {
-    /* replace secret */
+    /* TODO: replace secret */
     const result = jwt.verify(token, "some-secret") as TokenPayload;
-    req.user = result;
-    return next();
+    const reqWithUser = req as RequestWithUser;
+
+    reqWithUser.user = result;
+    next();
   } catch (err) {
-    return res.status(401).json({ error: true, message: "Invalid token." });
+    res.status(401).json({ error: true, message: "Invalid token." });
   }
-};
+}
+
 export default middleware;

@@ -1,4 +1,4 @@
-import { RequestHandler, Router } from "express";
+import { Router } from "express";
 import bodyParser from "body-parser";
 import { AuthenticationProvider } from "../authentication/AuthenticationProvider";
 import environments from "../Configuration";
@@ -18,66 +18,63 @@ const loginValidator = celebrate({
 export default (authProviders: AuthenticationProvider[]): Router => {
   const router = Router();
 
-  router.get(
-    "/assignments",
-    authenticationMiddleware,
-    async (req: RequestWithUser, res) => {
-      const loggedInUser = req.user.username;
-      let tempAssignmentMap = new Map(environments);
-      for (const authProvider of authProviders) {
-        tempAssignmentMap = await authProvider.filterAssignmentList(
-          loggedInUser,
-          tempAssignmentMap,
-        );
-      }
-      return res.status(200).json(Array.from(tempAssignmentMap.keys()));
-    },
-  );
+  router.get("/assignments", authenticationMiddleware, async (req, res) => {
+    const reqWithUser = req as RequestWithUser;
+    const loggedInUser = reqWithUser.user.username;
+    let tempAssignmentMap = new Map(environments);
+
+    for (const authProvider of authProviders) {
+      tempAssignmentMap = await authProvider.filterAssignmentList(
+        loggedInUser,
+        tempAssignmentMap,
+      );
+    }
+
+    res.status(200).json(Array.from(tempAssignmentMap.keys()));
+  });
 
   // remove body-parser as it is included in express >=4.17
-  router.post(
-    "/login",
-    bodyParser.json() as RequestHandler,
-    loginValidator,
-    async (req, res) => {
-      const username = req.body.username as string;
-      const password = req.body.password as string;
-      for (const authProvider of authProviders) {
-        try {
-          const result = await authProvider.authenticateUser(
-            username,
-            password,
-          );
-          const token = jwt.sign(
-            {
-              username: result.username,
-              id: result.userid,
-              groupNumber: result.groupNumber,
-            },
-            /* replace secret */
-            "some-secret",
-          ) as string;
-          console.log(result, token);
-          return res
-            .status(200)
-            .json({ token, username, groupNumber: result.groupNumber });
-        } catch (err) {
-          console.log("error!", err);
-        }
+  router.post("/login", bodyParser.json(), loginValidator, async (req, res) => {
+    const username = req.body.username as string;
+    const password = req.body.password as string;
+
+    for (const authProvider of authProviders) {
+      try {
+        const result = await authProvider.authenticateUser(username, password);
+        const token = jwt.sign(
+          {
+            username: result.username,
+            id: result.userid,
+            groupNumber: result.groupNumber,
+          },
+          /* TODO: replace secret */
+          "some-secret",
+        ) as string;
+
+        console.log(result, token);
+
+        res
+          .status(200)
+          .json({ token, username, groupNumber: result.groupNumber });
+        return;
+      } catch (err) {
+        console.log("error!", err);
       }
-      return res.status(401).json({ error: "Not authenticated." });
-    },
-  );
+    }
+
+    res.status(401).json({ error: "Not authenticated." });
+  });
 
   router.post(
     "/changePassword",
     authenticationMiddleware,
-    bodyParser.json() as RequestHandler,
-    async (req: RequestWithUser, res) => {
-      const oldPassword = req.body.oldPassword;
-      const newPassword = req.body.newPassword;
-      const confirmNewPassword = req.body.confirmNewPassword;
-      const loggedInUser = req.user.username;
+    bodyParser.json(),
+    (req, res) => {
+      const reqWithUser = req as RequestWithUser;
+      const oldPassword = reqWithUser.body.oldPassword;
+      const newPassword = reqWithUser.body.newPassword;
+      const confirmNewPassword = reqWithUser.body.confirmNewPassword;
+      const loggedInUser = reqWithUser.user.username;
 
       for (const authProvider of authProviders) {
         authProvider
@@ -89,13 +86,14 @@ export default (authProviders: AuthenticationProvider[]): Router => {
           )
           .catch((err) => {
             console.log("error!", err);
-            return res.status(500).json();
+            res.status(500).json();
           })
           .then(() => {
-            return res.status(200).json();
+            res.status(200).json();
           });
       }
     },
   );
+
   return router;
 };

@@ -1,6 +1,5 @@
-import { Router, Request, RequestHandler } from "express";
+import { Router } from "express";
 import Environment, {
-  Submission,
   AliasedFile,
   TerminalType,
   AssignmentStep,
@@ -41,15 +40,16 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
   router.get(
     "/:environment/configuration",
     environmentPathParamValidator,
-    (req: Request, res) => {
+    (req, res) => {
       const environment = req.params.environment;
       const targetEnv = environments.get(String(environment));
+
       if (targetEnv === undefined) {
-        return res
-          .status(404)
-          .json({ error: true, message: "Environment not found" });
+        res.status(404).json({ error: true, message: "Environment not found" });
+        return;
       }
-      return res.status(200).json({
+
+      res.status(200).json({
         files: targetEnv.editableFiles.map((file: AliasedFile) => file.alias),
         filePaths: targetEnv.editableFiles.map(
           (file: AliasedFile) => file.absFilePath,
@@ -80,22 +80,25 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
     "/:environment/assignment",
     authenticationMiddleware,
     environmentPathParamValidator,
-    async (req: RequestWithUser, res) => {
-      const environment = req.params.environment;
+    async (req, res) => {
+      const reqWithUser = req as RequestWithUser;
+      const environment = reqWithUser.params.environment;
       const targetEnv = environments.get(String(environment));
+
       console.log("/:environment/assignment");
+
       if (targetEnv === undefined) {
-        return res
-          .status(404)
-          .json({ error: true, message: "Environment not found" });
+        res.status(404).json({ error: true, message: "Environment not found" });
+        return;
       }
-      let markdown;
+
+      let markdown: string;
       // if assignmentLabSheetLocation specified as "instance",
       // get lab sheet from instance filesystem
       if (targetEnv.assignmentLabSheetLocation === "instance") {
         const env = Environment.getActiveEnvironment(
-          req.params.environment,
-          req.user.username,
+          reqWithUser.params.environment,
+          reqWithUser.user.username,
         );
         markdown = await env.readFile(targetEnv.assignmentLabSheet, true);
       } else {
@@ -103,6 +106,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
           .readFileSync(path.resolve(__dirname, targetEnv.assignmentLabSheet))
           .toString();
       }
+
       res.send(markdown);
     },
   );
@@ -111,17 +115,19 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
     "/create",
     authenticationMiddleware,
     queryValidator,
-    (req: RequestWithUser, res) => {
-      const environment = req.query.environment;
+    (req, res) => {
+      const reqWithUser = req as RequestWithUser;
+      const environment = reqWithUser.query.environment;
       const targetEnv = environments.get(String(environment));
+
       if (targetEnv === undefined) {
-        return res
-          .status(404)
-          .json({ error: true, message: "Environment not found" });
+        res.status(404).json({ error: true, message: "Environment not found" });
+        return;
       }
+
       Environment.createEnvironment(
-        req.user.username,
-        req.user.groupNumber,
+        reqWithUser.user.username,
+        reqWithUser.user.groupNumber,
         String(environment),
         targetEnv,
         provider,
@@ -141,15 +147,20 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
     "/delete",
     authenticationMiddleware,
     queryValidator,
-    (req: RequestWithUser, res) => {
-      const environment = req.query.environment;
+    (req, res) => {
+      const reqWithUser = req as RequestWithUser;
+      const environment = reqWithUser.query.environment;
       const targetEnv = environments.get(String(environment));
+
       if (targetEnv === undefined) {
-        return res
-          .status(404)
-          .json({ error: true, message: "Environment not found" });
+        res.status(404).json({ error: true, message: "Environment not found" });
+        return;
       }
-      Environment.deleteEnvironment(req.user.username, String(environment))
+
+      Environment.deleteEnvironment(
+        reqWithUser.user.username,
+        String(environment),
+      )
         .then((deleted) => {
           if (deleted === true) {
             res.status(200).json();
@@ -174,16 +185,21 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
     "/:environment/file/:alias",
     authenticationMiddleware,
     environmentPathParamWithAliasValidator,
-    (req: RequestWithUser, res) => {
+    (req, res) => {
+      const reqWithUser = req as RequestWithUser;
       const env = Environment.getActiveEnvironment(
-        req.params.environment,
-        req.user.username,
+        reqWithUser.params.environment,
+        reqWithUser.user.username,
       );
+
       env
-        .readFile(req.params.alias)
+        .readFile(reqWithUser.params.alias)
         .then((content: string) => {
           res
-            .set("Content-Location", env.getFilePathByAlias(req.params.alias))
+            .set(
+              "Content-Location",
+              env.getFilePathByAlias(reqWithUser.params.alias),
+            )
             .set("Access-Control-Expose-Headers", "Content-Location")
             .status(200)
             .end(content);
@@ -197,16 +213,18 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
 
   router.post(
     "/:environment/file/:alias",
-    bodyParser.text({ type: "text/plain" }) as RequestHandler,
+    bodyParser.text({ type: "text/plain" }),
     authenticationMiddleware,
     environmentPathParamWithAliasValidator,
-    (req: RequestWithUser, res) => {
+    (req, res) => {
+      const reqWithUser = req as RequestWithUser;
       const env = Environment.getActiveEnvironment(
-        req.params.environment,
-        req.user.username,
+        reqWithUser.params.environment,
+        reqWithUser.user.username,
       );
+
       env
-        .writeFile(req.params.alias, req.body)
+        .writeFile(reqWithUser.params.alias, reqWithUser.body)
         .then(() => res.status(200).end())
         .catch((err: Error) =>
           res.status(400).json({ status: "error", message: err.message }),
@@ -218,11 +236,13 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
     "/:environment/collabdoc/:alias",
     authenticationMiddleware,
     environmentPathParamWithAliasValidator,
-    async (req: RequestWithUser, res) => {
+    async (req, res) => {
+      const reqWithUser = req as RequestWithUser;
+
       await Environment.getCollabDoc(
-        req.params.alias,
-        req.params.environment,
-        req.user.username,
+        reqWithUser.params.alias,
+        reqWithUser.params.environment,
+        reqWithUser.user.username,
       )
         .then((content: string) => {
           res.status(200).end(content);
@@ -238,11 +258,13 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
     "/:environment/restart",
     authenticationMiddleware,
     environmentPathParamValidator,
-    (req: RequestWithUser, res) => {
+    (req, res) => {
+      const reqWithUser = req as RequestWithUser;
       const env = Environment.getActiveEnvironment(
-        req.params.environment,
-        req.user.username,
+        reqWithUser.params.environment,
+        reqWithUser.user.username,
       );
+
       env
         .restart()
         .then(() => {
@@ -258,16 +280,18 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
 
   router.post(
     "/:environment/test",
-    bodyParser.json({ type: "application/json" }) as RequestHandler,
+    bodyParser.json({ type: "application/json" }),
     authenticationMiddleware,
     environmentPathParamValidator,
-    (req: RequestWithUser, res) => {
+    (req, res) => {
+      const reqWithUser = req as RequestWithUser;
       const env = Environment.getActiveEnvironment(
-        req.params.environment,
-        req.user.username,
+        reqWithUser.params.environment,
+        reqWithUser.user.username,
       );
+
       env
-        .test(req.body.activeStep, req.body.terminalState)
+        .test(reqWithUser.body.activeStep, reqWithUser.body.terminalState)
         .then((testResult) => {
           res.status(200).json({
             status: "finished",
@@ -283,16 +307,18 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
   // remove body-parser as it is included in express >=4.17
   router.post(
     "/:environment/submit",
-    bodyParser.json({ type: "application/json" }) as RequestHandler,
+    bodyParser.json({ type: "application/json" }),
     authenticationMiddleware,
     environmentPathParamValidator,
-    (req: RequestWithUser, res) => {
+    (req, res) => {
+      const reqWithUser = req as RequestWithUser;
       const env = Environment.getActiveEnvironment(
-        req.params.environment,
-        req.user.username,
+        reqWithUser.params.environment,
+        reqWithUser.user.username,
       );
+
       env
-        .submit(req.body.activeStep, req.body.terminalState)
+        .submit(reqWithUser.body.activeStep, reqWithUser.body.terminalState)
         .then(() => {
           res.status(200).json({
             status: "finished",
@@ -309,62 +335,64 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
   router.get(
     "/deployed-user-environments",
     authenticationMiddleware,
-    (req: RequestWithUser, res) => {
+    (req, res) => {
+      const reqWithUser = req as RequestWithUser;
       const deployedEnvList = Environment.getDeployedUserEnvironmentList(
-        req.user.username,
+        reqWithUser.user.username,
       );
-      return res.status(200).json(Array.from(deployedEnvList));
+
+      res.status(200).json(Array.from(deployedEnvList));
     },
   );
 
   router.get(
     "/deployed-group-environments",
     authenticationMiddleware,
-    (req: RequestWithUser, res) => {
+    (req, res) => {
+      const reqWithUser = req as RequestWithUser;
       const deployedEndpList = Environment.getDeployedGroupEnvironmentList(
-        req.user.groupNumber,
+        reqWithUser.user.groupNumber,
       );
-      return res.status(200).json(Array.from(deployedEndpList));
+
+      res.status(200).json(Array.from(deployedEndpList));
     },
   );
 
-  router.get(
-    "/submissions",
-    authenticationMiddleware,
-    async (req: RequestWithUser, res) => {
-      await Environment.getUserSubmissions(
-        persister,
-        req.user.username,
-        req.user.groupNumber,
-      )
-        .then((submittedEnvList) => {
-          return res
-            .status(200)
-            .json(Array.from(submittedEnvList ?? ([] as Submission[])));
-        })
-        .catch((err) => {
-          console.log("No submission found " + err);
-          return res.status(200).json(Array.from([] as Submission[]));
-        });
-    },
-  );
+  router.get("/submissions", authenticationMiddleware, async (req, res) => {
+    const reqWithUser = req as RequestWithUser;
+
+    await Environment.getUserSubmissions(
+      persister,
+      reqWithUser.user.username,
+      reqWithUser.user.groupNumber,
+    )
+      .then((submittedEnvList) => {
+        res.status(200).json(Array.from(submittedEnvList ?? []));
+      })
+      .catch((err) => {
+        console.log("No submission found " + err);
+        res.status(200).json([]);
+      });
+  });
 
   router.get(
     "/:environment/provider-instance-status",
     authenticationMiddleware,
     environmentPathParamValidator,
-    (req: RequestWithUser, res) => {
+    (req, res) => {
+      const reqWithUser = req as RequestWithUser;
       const env = Environment.getActiveEnvironment(
-        req.params.environment,
-        req.user.username,
+        reqWithUser.params.environment,
+        reqWithUser.user.username,
       );
+
       env
         .getProviderInstanceStatus()
         .then((value) => {
-          return res.status(200).json({ status: value });
+          res.status(200).json({ status: value });
         })
         .catch(() => {
-          return res.status(200).json({ status: "" });
+          res.status(200).json({ status: "" });
         });
     },
   );
