@@ -3,13 +3,11 @@ import { Client, ClientChannel } from "ssh2";
 import fs from "fs";
 
 export interface Console {
-  on(event: "ready", listener: () => void): this;
+  on(
+    event: "ready" | "close" | "closed" | "stdout" | "stderr" | "finished",
+    listener: () => void,
+  ): this;
   on(event: "data", listener: (data: string) => void): this;
-  on(event: "close", listener: () => void): this;
-  on(event: "closed", listener: () => void): this;
-  on(event: "stdout", listener: () => void): this;
-  on(event: "stderr", listener: () => void): this;
-  on(event: "finished", listener: () => void): this;
   write(data: string): void;
   writeLine(data: string): void;
   close(environmentId: string, username: string, groupNumber: number): void;
@@ -67,7 +65,7 @@ export default class SSHConsole extends EventEmitter implements Console {
     if (provideTty && sshConnection) {
       sshConsole = sshConnection;
 
-      if (sshConsole.ready === false) {
+      if (!sshConsole.ready) {
         sshConsole.on("ready", () => {
           sshConsole.ready = true;
           this.setupShellStream(sshConsole);
@@ -195,11 +193,7 @@ export default class SSHConsole extends EventEmitter implements Console {
     this.stream?.write(`${data}\n`);
   }
 
-  async close(
-    environmentId: string,
-    username: string,
-    groupNumber: number,
-  ): Promise<void> {
+  close(environmentId: string, username: string, groupNumber: number): void {
     console.log("SSH console close");
     SSHConsole.sshConnections.forEach((value, key, map) => {
       if (

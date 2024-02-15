@@ -42,10 +42,12 @@ export default function (
       wsToRemoteDesktop.on("open", () => {
         wsFromBrowser.on("message", (data) => {
           // Browser to Remote Desktop
+          // eslint-disable-next-line @typescript-eslint/no-base-to-string
           wsToRemoteDesktop.send(data.toString());
         });
         wsToRemoteDesktop.on("message", (data) => {
           // Remote Desktop to Browser
+          // eslint-disable-next-line @typescript-eslint/no-base-to-string
           wsFromBrowser.send(data.toString());
         });
       });

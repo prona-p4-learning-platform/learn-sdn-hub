@@ -1,3 +1,13 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-base-to-string */
+/* eslint-disable @typescript-eslint/restrict-plus-operands */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-floating-promises */
+/* eslint-disable @typescript-eslint/no-unnecessary-type-assertion */
+/* eslint-disable no-async-promise-executor */
+/* eslint-disable @typescript-eslint/no-misused-promises */
+// TODO: fix eslint instead of disabling rules
+
 import SSHConsole, { Console } from "./consoles/SSHConsole";
 import FileHandler from "./filehandler/SSHFileHandler";
 import {
@@ -160,15 +170,15 @@ export default class Environment {
 
   public static getDeployedGroupEnvironmentList(
     groupNumber: number,
-  ): Array<string> {
-    const deployedEnvironmentsForGroup: Array<string> = new Array<string>();
-    Environment.activeEnvironments.forEach(
-      async (value: Environment, key: string) => {
-        if (value.groupNumber == groupNumber) {
-          deployedEnvironmentsForGroup.push(key.split("-").slice(1).join("-"));
-        }
-      },
-    );
+  ): string[] {
+    const deployedEnvironmentsForGroup: string[] = [];
+
+    for (const [key, value] of Environment.activeEnvironments) {
+      if (value.groupNumber === groupNumber) {
+        deployedEnvironmentsForGroup.push(key.split("-").slice(1).join("-"));
+      }
+    }
+
     return deployedEnvironmentsForGroup;
   }
 
@@ -366,7 +376,7 @@ export default class Environment {
               Environment.activeEnvironments.forEach((env: Environment) => {
                 if (
                   env.groupNumber === groupNumber &&
-                  env.username != username
+                  env.username !== username
                 ) {
                   Environment.activeEnvironments.delete(
                     `${env.username}-${env.environmentId}`,
@@ -410,21 +420,13 @@ export default class Environment {
   }
 
   async getLanguageServerPort(): Promise<number> {
-    try {
-      const endpoint = await this.makeSureInstanceExists();
-      return endpoint.LanguageServerPort;
-    } catch (err) {
-      throw err;
-    }
+    const endpoint = await this.makeSureInstanceExists();
+    return endpoint.LanguageServerPort;
   }
 
   async getIPAddress(): Promise<string> {
-    try {
-      const endpoint = await this.makeSureInstanceExists();
-      return endpoint.IPAddress;
-    } catch (err) {
-      throw err;
-    }
+    const endpoint = await this.makeSureInstanceExists();
+    return endpoint.IPAddress;
   }
 
   async makeSureInstanceExists(createIfMissing?: boolean): Promise<VMEndpoint> {
@@ -450,7 +452,7 @@ export default class Environment {
             resolve(endpoint);
           })
           .catch(async (err) => {
-            if (err.message == InstanceNotFoundErrorMessage) {
+            if (err.message === InstanceNotFoundErrorMessage) {
               // instance is gone, remove environment
               await this.persister.RemoveUserEnvironment(
                 this.username,
@@ -493,12 +495,8 @@ export default class Environment {
     desc: EnvironmentDescription = this.configuration,
     createIfMissing: boolean,
   ): Promise<VMEndpoint> {
-    let endpoint: VMEndpoint;
-    try {
-      endpoint = await this.makeSureInstanceExists(createIfMissing);
-    } catch (err) {
-      throw err;
-    }
+    const endpoint = await this.makeSureInstanceExists(createIfMissing);
+
     await this.persister.AddUserEnvironment(
       this.username,
       this.environmentId,
@@ -729,7 +727,7 @@ export default class Environment {
         Environment.activeEnvironments.forEach((env: Environment) => {
           if (
             env.groupNumber === this.groupNumber &&
-            env.username != this.username
+            env.username !== this.username
           ) {
             activeUsers.push(env.username);
             for (const console of this.activeConsoles) {
@@ -761,7 +759,7 @@ export default class Environment {
                 command.cwd,
                 command.provideTty,
               );
-              console.on("finished", async (code: string, signal: string) => {
+              console.on("finished", (code: string, signal: string) => {
                 global.console.log(
                   "OUTPUT: " +
                     console.stdout +
@@ -831,7 +829,7 @@ export default class Environment {
       } catch (err) {
         if (
           err instanceof Error &&
-          err.message == InstanceNotFoundErrorMessage
+          err.message === InstanceNotFoundErrorMessage
         ) {
           return resolve();
         } else {
@@ -842,53 +840,50 @@ export default class Environment {
   }
 
   async restart(): Promise<void> {
-    try {
-      const endpoint = await this.makeSureInstanceExists();
-      for (const command of this.configuration.stopCommands) {
-        if (command.type === "Shell") {
-          let resolved = false;
-          await new Promise<void>((resolve, reject) => {
+    const endpoint = await this.makeSureInstanceExists();
+
+    for (const command of this.configuration.stopCommands) {
+      if (command.type === "Shell") {
+        let resolved = false;
+        await new Promise<void>((resolve, reject) => {
+          global.console.log(
+            "Executing stop command: ",
+            JSON.stringify(command),
+            JSON.stringify(endpoint),
+          );
+          const console = new SSHConsole(
+            this.environmentId,
+            this.username,
+            this.groupNumber,
+            endpoint.IPAddress,
+            endpoint.SSHPort,
+            command.executable,
+            command.params,
+            command.cwd,
+            false,
+          );
+          console.on("finished", (code: string, signal: string) => {
             global.console.log(
-              "Executing stop command: ",
-              JSON.stringify(command),
-              JSON.stringify(endpoint),
+              "OUTPUT: " +
+                console.stdout +
+                "(exit code: " +
+                code +
+                ", signal: " +
+                signal +
+                ")",
             );
-            const console = new SSHConsole(
-              this.environmentId,
-              this.username,
-              this.groupNumber,
-              endpoint.IPAddress,
-              endpoint.SSHPort,
-              command.executable,
-              command.params,
-              command.cwd,
-              false,
-            );
-            console.on("finished", (code: string, signal: string) => {
-              global.console.log(
-                "OUTPUT: " +
-                  console.stdout +
-                  "(exit code: " +
-                  code +
-                  ", signal: " +
-                  signal +
-                  ")",
-              );
-              resolved = true;
-              console.emit("closed");
-            });
-            console.on("closed", () => {
-              if (resolved === true) return resolve();
-              else
-                return reject(
-                  new Error("Unable to run stop command." + command.executable),
-                );
-            });
+            resolved = true;
+            console.emit("closed");
           });
-        }
+          console.on("closed", () => {
+            if (resolved) resolve();
+            else
+              reject(
+                new Error("Unable to run stop command." + command.executable),
+              );
+          });
+        });
       }
-    } catch (err) {
-      throw err;
     }
 
     console.log("Stop commands finished...");
@@ -913,61 +908,57 @@ export default class Environment {
     command: string,
     stdoutSuccessMatch?: string,
   ): Promise<string> {
-    try {
-      const endpoint = await this.makeSureInstanceExists();
-      let resolved = false;
+    const endpoint = await this.makeSureInstanceExists();
+    let resolved = false;
 
-      return new Promise((resolve, reject) => {
-        // run sshCommand
-        const console = new SSHConsole(
-          this.environmentId,
-          this.username,
-          this.groupNumber,
-          endpoint.IPAddress,
-          endpoint.SSHPort,
-          command,
-          [""],
-          "/",
-          false,
+    return new Promise((resolve, reject) => {
+      // run sshCommand
+      const console = new SSHConsole(
+        this.environmentId,
+        this.username,
+        this.groupNumber,
+        endpoint.IPAddress,
+        endpoint.SSHPort,
+        command,
+        [""],
+        "/",
+        false,
+      );
+      console.on("finished", (code: string, signal: string) => {
+        global.console.log(
+          "STDOUT: " +
+            console.stdout +
+            "STDERR: " +
+            console.stderr +
+            "(exit code: " +
+            code +
+            ", signal: " +
+            signal +
+            ")",
         );
-        console.on("finished", (code: string, signal: string) => {
-          global.console.log(
-            "STDOUT: " +
-              console.stdout +
-              "STDERR: " +
-              console.stderr +
-              "(exit code: " +
-              code +
-              ", signal: " +
-              signal +
-              ")",
-          );
-          if (code == "0") {
-            // if stdoutSuccessMatch was supplied, try to match stdout against it, to detect whether cmd was successfull
-            if (stdoutSuccessMatch) {
-              if (console.stdout.match(stdoutSuccessMatch)) {
-                // command was run successfully (exit code 0) and stdout matched regexp defined in test
-                resolved = true;
-              } else {
-                resolved = false;
-              }
-            } else {
-              // command was run successfully (exit code 0)
+        if (code === "0") {
+          // if stdoutSuccessMatch was supplied, try to match stdout against it, to detect whether cmd was successfull
+          if (stdoutSuccessMatch) {
+            if (console.stdout.match(stdoutSuccessMatch)) {
+              // command was run successfully (exit code 0) and stdout matched regexp defined in test
               resolved = true;
+            } else {
+              resolved = false;
             }
           } else {
-            resolved = false;
+            // command was run successfully (exit code 0)
+            resolved = true;
           }
-          console.emit("closed");
-        });
-        console.on("closed", () => {
-          if (resolved === true) return resolve(console.stdout);
-          else return reject(new Error("Unable to run SSH command " + command));
-        });
+        } else {
+          resolved = false;
+        }
+        console.emit("closed");
       });
-    } catch (err) {
-      throw err;
-    }
+      console.on("closed", () => {
+        if (resolved) resolve(console.stdout);
+        else reject(new Error("Unable to run SSH command " + command));
+      });
+    });
   }
 
   async test(
@@ -985,7 +976,7 @@ export default class Environment {
         for (const test of activeStep.tests) {
           let testPassed = false;
           // per default test result is false
-          if (test.type == "TerminalBufferSearch") {
+          if (test.type === "TerminalBufferSearch") {
             // search in terminalBuffer for match
             if (terminalStates.length === 0) {
               return reject(
@@ -1008,7 +999,7 @@ export default class Environment {
               if (testPassed !== true)
                 testOutput += "FAILED: " + test.errorHint + " ";
             }
-          } else if (test.type == "SSHCommand") {
+          } else if (test.type === "SSHCommand") {
             await this.runSSHCommand(test.command, test.stdOutMatch)
               .then(() => {
                 testOutput += "PASSED: " + test.successMessage + " ";
@@ -1138,7 +1129,7 @@ export default class Environment {
     alreadyResolved?: boolean,
   ): Promise<string> {
     let resolvedPath;
-    if (alreadyResolved === undefined || alreadyResolved === false) {
+    if (alreadyResolved === undefined || !alreadyResolved) {
       resolvedPath = this.editableFiles.get(alias);
       if (resolvedPath === undefined) {
         throw new Error("Could not resolve alias.");
@@ -1157,7 +1148,7 @@ export default class Environment {
     alreadyResolved?: boolean,
   ): Promise<void> {
     let resolvedPath;
-    if (alreadyResolved === undefined || alreadyResolved === false) {
+    if (alreadyResolved === undefined || !alreadyResolved) {
       resolvedPath = this.editableFiles.get(alias);
     } else {
       resolvedPath = alias;

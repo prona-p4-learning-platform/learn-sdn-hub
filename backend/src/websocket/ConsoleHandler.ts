@@ -31,7 +31,10 @@ export default function (
     });
 
     ws.on("message", function (message) {
-      const matchings = message.toString().match(/^\x1B\[8;(.*);(.*)t$/);
+      // eslint-disable-next-line @typescript-eslint/no-base-to-string
+      const stringified = message.toString();
+      // eslint-disable-next-line no-control-regex
+      const matchings = stringified.match(/^\x1B\[8;(.*);(.*)t$/);
 
       if (matchings && matchings[1] && matchings[2]) {
         const lines = parseInt(matchings[1]);
@@ -45,7 +48,8 @@ export default function (
         //);
         envConsole.resize(columns, lines);
       } else {
-        envConsole.write(message.toString());
+        // eslint-disable-next-line @typescript-eslint/no-base-to-string
+        envConsole.write(stringified);
         //console.log(`Received message ${message}`);
       }
     });

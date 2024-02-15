@@ -7,59 +7,68 @@ import {
   SubmissionFileType,
 } from "../Environment";
 
-const userEnvironments: Map<string, Map<string, UserEnvironment>> = new Map();
+const userEnvironments = new Map<string, Map<string, UserEnvironment>>();
+
 export default class MemoryPersister implements Persister {
-  async GetUserAccount(username: string): Promise<UserAccount> {
-    return {
-      _id: username,
-      username,
-      groupNumber: await this.getUserMapping(username),
-      password: "p4",
-    };
+  GetUserAccount(username: string): Promise<UserAccount> {
+    return new Promise((resolve, reject) => {
+      try {
+        const groupNumber = this.getUserMapping(username);
+        const account: UserAccount = {
+          _id: username,
+          username,
+          groupNumber,
+          password: "p4",
+        };
+
+        resolve(account);
+      } catch (error) {
+        if (error instanceof Error) reject(error);
+        else reject(new Error("MemoryPersister: Cannot get user account."));
+      }
+    });
   }
 
-  async getUserMapping(username: string): Promise<number> {
+  getUserMapping(username: string): number {
     if (process.env.BACKEND_USER_MAPPING) {
       const userMappingConfig = process.env.BACKEND_USER_MAPPING.split(",");
       const usermap = new Map<string, number>();
 
       for (const userMappingConfigEntry of userMappingConfig) {
-        const split = userMappingConfigEntry.split(":");
-        const login = split[0];
-        const instanceNumber = split[1];
+        const [login, instanceNumber] = userMappingConfigEntry.split(":");
 
         usermap.set(login, parseInt(instanceNumber));
       }
 
       const map = usermap.get(username);
       if (map !== undefined) {
-        console.log("Mapped user " + username + " to group number " + map);
+        console.log(
+          `MemoryPersister: Mapped user ${username} to group number ${map}`,
+        );
 
-        return Promise.resolve(map);
+        return map;
       } else {
-        return Promise.reject(
-          new Error(
-            "No mapping defined to map user " + username + " to a group.",
-          ),
+        throw new Error(
+          `MemoryPersister: No mapping defined to map user ${username} to a group.`,
         );
       }
     } else {
       console.log(
-        "No BACKEND_USER_MAPPING environment variable set. Mapping user to group 0.",
+        "MemoryPersister: No BACKEND_USER_MAPPING environment variable set. Mapping user to group 0.",
       );
 
-      return Promise.resolve(0);
+      return 0;
     }
   }
 
-  async GetUserEnvironments(username: string): Promise<UserEnvironment[]> {
+  GetUserEnvironments(username: string): Promise<UserEnvironment[]> {
     const userEnvironment = userEnvironments.get(username);
     const result = userEnvironment ? Array.from(userEnvironment.values()) : [];
 
     return Promise.resolve(result);
   }
 
-  async AddUserEnvironment(
+  AddUserEnvironment(
     username: string,
     environment: string,
     description: string,
@@ -81,16 +90,13 @@ export default class MemoryPersister implements Persister {
     return Promise.resolve();
   }
 
-  async RemoveUserEnvironment(
-    username: string,
-    environment: string,
-  ): Promise<void> {
+  RemoveUserEnvironment(username: string, environment: string): Promise<void> {
     userEnvironments.get(username)?.delete(environment);
 
     return Promise.resolve();
   }
 
-  async SubmitUserEnvironment(
+  SubmitUserEnvironment(
     username: string,
     groupNumber: number,
     environment: string,
@@ -98,12 +104,11 @@ export default class MemoryPersister implements Persister {
     submittedFiles: SubmissionFileType[],
   ): Promise<void> {
     console.log(
-      "Storing assignment result for user: " +
-        username +
-        " assignment environment: " +
-        environment +
-        " terminalStates: " +
-        terminalStates,
+      `Storing assignment result for user: ${username} assignment environment: ${environment} terminalStates: ${terminalStates
+        .map((val) => {
+          return val.state || "Unknown";
+        })
+        .join(", ")}`,
     );
     const resultPathRoot = path.resolve("src", "assignments", "results");
     !fs.existsSync(resultPathRoot) && fs.mkdirSync(resultPathRoot);
@@ -116,7 +121,7 @@ export default class MemoryPersister implements Persister {
       fs.writeFileSync(
         path.resolve(
           resultPath,
-          terminalState.endpoint.split("/").slice(-1) + "-output.txt",
+          terminalState.endpoint.split("/").slice(-1).join("-") + "-output.txt",
         ),
         terminalState.state,
         "binary",
@@ -130,9 +135,11 @@ export default class MemoryPersister implements Persister {
         "binary",
       );
     }
+
+    return Promise.resolve();
   }
 
-  async GetUserSubmissions(
+  GetUserSubmissions(
     username: string,
     groupNumber: number,
   ): Promise<Submission[]> {
@@ -172,20 +179,12 @@ export default class MemoryPersister implements Persister {
           submissions.push(submission);
         }
       }
-      // console.log(
-      //   "Retrieved submissions for user: " +
-      //     username +
-      //     " in group: " +
-      //     group +
-      //     " result: " +
-      //     JSON.stringify(submissions)
-      // );
     }
 
     return Promise.resolve(submissions);
   }
 
-  async close(): Promise<void> {
+  close(): Promise<void> {
     return Promise.resolve();
   }
 }

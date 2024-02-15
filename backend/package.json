@@ -5,15 +5,17 @@
   "private": true,
   "main": "index.js",
   "scripts": {
-    "test": "jest --config test/unit/jest.config.js",
-    "test:integration": "jest --config test/integration/jest.config.js --runInBand",
+    "test": "jest --config test/unit/jest.config.cjs",
+    "test:integration": "jest --config test/integration/jest.config.cjs --runInBand",
     "start": "ts-node src/OpenStackApplication.ts",
     "start:localvm": "ts-node src/LocalVMApplication.ts",
     "start:localmultiuservm": "ts-node src/LocalMultiuserVMApplication.ts",
     "start:openstack": "ts-node src/OpenStackApplication.ts",
     "start:docker": "ts-node src/DockerApplication.ts",
     "start:firecracker": "ts-node --files src/FirecrackerApplication.ts",
-    "lint": "eslint src/**/**/*.{js,ts,tsx}",
+    "format": "prettier . --write --ignore-unknown",
+    "format:check": "prettier . --check --ignore-unknown",
+    "lint": "eslint . --cache",
     "type-check": "tsc --noEmit"
   },
   "devDependencies": {

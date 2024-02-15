@@ -19,7 +19,9 @@ beforeAll(async () => {
   connection = await MongoClient.connect(ENV_MONGO_URL);
   try {
     await connection.db().dropCollection("users");
-  } catch (err) {}
+  } catch (err) {
+    /* */
+  }
 
   await connection.db().collection("users").insertOne({
     username: "testuser",

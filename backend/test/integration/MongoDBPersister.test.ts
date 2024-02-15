@@ -14,7 +14,9 @@ beforeAll(async () => {
   instance = new MongoDBPersister(ENV_MONGO_URL);
   try {
     await connection.db().dropCollection("users");
-  } catch (err) {}
+  } catch (err) {
+    /* */
+  }
   await connection
     .db()
     .collection("users")

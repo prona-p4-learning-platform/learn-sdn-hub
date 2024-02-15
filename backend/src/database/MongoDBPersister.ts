@@ -91,13 +91,14 @@ export default class MongoDBPersister implements Persister {
 
   async GetUserEnvironments(username: string): Promise<UserEnvironment[]> {
     const client = await this.getClient();
-    return client
+    return await client
       .db()
       .collection<UserEntry>("users")
       .findOne({ username }, { projection: { environments: 1 } })
-      .then((result) =>
-        result && result.environments ? result.environments : [],
-      );
+      .then((result) => {
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+        return result && result.environments ? result.environments : [];
+      });
   }
 
   async AddUserEnvironment(
@@ -107,7 +108,7 @@ export default class MongoDBPersister implements Persister {
     instance: string,
   ): Promise<void> {
     const client = await this.getClient();
-    return client
+    await client
       .db()
       .collection<UserEntry>("users")
       .findOneAndUpdate(
@@ -116,8 +117,7 @@ export default class MongoDBPersister implements Persister {
         {
           projection: { environments: 1 },
         },
-      )
-      .then(() => undefined);
+      );
   }
 
   async RemoveUserEnvironment(
@@ -125,7 +125,7 @@ export default class MongoDBPersister implements Persister {
     environment: string,
   ): Promise<void> {
     const client = await this.getClient();
-    return client
+    await client
       .db()
       .collection<UserEntry>("users")
       .findOneAndUpdate(
@@ -134,8 +134,7 @@ export default class MongoDBPersister implements Persister {
         {
           projection: { environments: 1 },
         },
-      )
-      .then(() => undefined);
+      );
   }
 
   async SubmitUserEnvironment(
@@ -145,114 +144,102 @@ export default class MongoDBPersister implements Persister {
     terminalStates: TerminalStateType[],
     submittedFiles: SubmissionFileType[],
   ): Promise<void> {
-    return new Promise<void>(async (resolve, reject) => {
-      console.log(
-        "Storing assignment result for user: " +
-          username +
-          " assignment environment: " +
-          environment +
-          " terminalStates: " +
-          terminalStates,
-      );
+    console.log(
+      "Storing assignment result for user: " +
+        username +
+        " assignment environment: " +
+        environment +
+        " terminalStates: " +
+        terminalStates.join(","),
+    );
 
-      const now = new Date();
+    const now = new Date();
+    const client = await this.getClient();
+    // TODO: Transactions should be used here but MongoDB only allows transactions
+    // to be used in replicated environments
+    // see: https://www.mongodb.com/docs/manual/core/transactions-production-consideration/#availability
 
-      const client = await this.getClient();
+    // delete previous submissions of user and group, to ensure that there is
+    // only one/most recent submission for the assignment
 
-      // delete previous submissions of user and group, to ensure that there is
-      // only one/most recent submission for the assignment
+    // delete all previous submissions of this environment for the current user
+    const delUser = client
+      .db()
+      .collection<SubmissionEntry>("submissions")
+      .deleteMany({
+        username: username,
+        environment: environment,
+      })
+      .catch((err) => {
+        throw new Error(
+          "Unable to delete previous submissions for this user.\n" + err,
+        );
+      });
 
-      // delete all previous submissions of this environment for the current user
-      client
-        .db()
-        .collection<SubmissionEntry>("submissions")
-        .deleteMany({
-          username: username,
-          environment: environment,
-        })
-        .catch((err) => {
-          return reject(
-            new Error(
-              "Unable to delete previous submissions for this user." + err,
-            ),
-          );
-        });
-      // delete all previous submissions of this environment for the current group
-      client
-        .db()
-        .collection<SubmissionEntry>("submissions")
-        .deleteMany({
-          groupNumber: groupNumber,
-          environment: environment,
-        })
-        .catch((err) => {
-          return reject(
-            new Error(
-              "Unable to delete previous submissions for this group." + err,
-            ),
-          );
-        });
+    // delete all previous submissions of this environment for the current group
+    const delGroup = client
+      .db()
+      .collection<SubmissionEntry>("submissions")
+      .deleteMany({
+        groupNumber: groupNumber,
+        environment: environment,
+      })
+      .catch((err) => {
+        throw new Error(
+          "Unable to delete previous submissions for this group.\n" + err,
+        );
+      });
 
-      return client
-        .db()
-        .collection<SubmissionEntry>("submissions")
-        .insertOne({
-          username: username,
-          groupNumber: groupNumber,
-          environment: environment,
-          submissionCreated: now,
-          terminalStatus: terminalStates,
-          submittedFiles: submittedFiles,
-        })
-        .then(() => {
-          return resolve();
-        })
-        .catch((err) => {
-          return reject("Failed to store submissions in mongodb " + err);
-        });
-    });
+    // wait for deletion
+    await Promise.all([delUser, delGroup]);
+
+    // add new submission after successful deletion
+    await client
+      .db()
+      .collection<SubmissionEntry>("submissions")
+      .insertOne({
+        username: username,
+        groupNumber: groupNumber,
+        environment: environment,
+        submissionCreated: now,
+        terminalStatus: terminalStates,
+        submittedFiles: submittedFiles,
+      })
+      .catch((err) => {
+        throw new Error("Failed to store submissions in mongodb.\n" + err);
+      });
   }
 
   async GetUserSubmissions(
     username: string,
     groupNumber: number,
   ): Promise<Submission[]> {
-    return new Promise<Submission[]>(async (resolve, reject) => {
-      const submissions: Array<Submission> = [];
+    const client = await this.getClient();
 
-      const client = await this.getClient();
+    // retrieve all previous submissions for the current user or group
+    return await client
+      .db()
+      .collection<SubmissionEntry>("submissions")
+      .find({
+        $or: [{ username: username }, { groupNumber: groupNumber }],
+      })
+      .toArray()
+      .then((submissionsFound) => {
+        const submissions: Submission[] = [];
+        for (const submission of submissionsFound) {
+          submissions.push({
+            assignmentName: submission.environment,
+            lastChanged: submission.submissionCreated,
+          });
+        }
 
-      // retrieve all previous submissions the current user or group
-      client
-        .db()
-        .collection<SubmissionEntry>("submissions")
-        .find({
-          $or: [{ username: username }, { groupNumber: groupNumber }],
-        })
-        .toArray()
-        .then((submissionsFound) => {
-          for (const submission of submissionsFound as Array<SubmissionEntry>) {
-            submissions.push({
-              assignmentName: submission.environment,
-              lastChanged: submission.submissionCreated,
-            });
-          }
-          // console.log(
-          //   "Retrieved submissions for user: " +
-          //     username +
-          //     " in group: " +
-          //     groupNumber +
-          //     " result: " +
-          //     JSON.stringify(submissions)
-          // );
-          return resolve(submissions);
-        })
-        .catch((err) => {
-          return reject(
-            new Error("Unable to retrieve submissions of user or group.") + err,
-          );
-        });
-    });
+        return submissions;
+      })
+      .catch((err) => {
+        throw new Error(
+          "Unable to retrieve submissions of user or group.\n" + err,
+        );
+      });
   }
 
   async close(): Promise<void> {

@@ -3,9 +3,8 @@ import { IPty } from "node-pty";
 import pty from "node-pty";
 
 export interface Console {
-  on(event: "ready", listener: () => void): this;
+  on(event: "ready" | "close", listener: () => void): this;
   on(event: "data", listener: (data: string) => void): this;
-  on(event: "close", listener: () => void): this;
   write(data: string): void;
   close(): void;
 }
@@ -17,20 +16,20 @@ export class SimpleConsole extends EventEmitter implements Console {
     super();
 
     this.console = pty.spawn(command, args, { cwd });
-    this.console.on("data", (data) => {
-      console.log(`${command}${args} stdout: ${data}`);
+    this.console.onData((data) => {
+      console.log(`${command}${args.join(" ")} stdout: ${data}`);
     });
     let ready = false;
 
-    this.console.on("data", (data: string) => {
-      if (ready === false) {
+    this.console.onData((data) => {
+      if (!ready) {
         ready = true;
         this.emit("ready");
       }
       this.emit("data", data);
     });
-    this.console.on("exit", (code) => {
-      console.log(`child process exited with code ${code}`);
+    this.console.onExit((code) => {
+      console.log(`child process exited with code ${code.exitCode}`);
       this.emit("close");
     });
   }
@@ -40,7 +39,7 @@ export class SimpleConsole extends EventEmitter implements Console {
     this.console.write(data);
   }
 
-  async close(): Promise<void> {
+  close(): void {
     this.emit("close");
     this.console.kill("SIGINT");
   }

@@ -14,7 +14,7 @@ export default class PlaintextMultiuserAuthenticationProvider
     this.persister = persister;
     if (process.env.BACKEND_USERS === undefined) {
       throw new Error(
-        "No BACKEND_USERS environment variable set. Cannot support multiple users.",
+        "PlaintextMultiuserAuthenticationProvider: No BACKEND_USERS environment variable set. Cannot support multiple users.",
       );
     }
   }
@@ -23,60 +23,68 @@ export default class PlaintextMultiuserAuthenticationProvider
     username: string,
     password: string,
   ): Promise<AuthenticationResult> {
-    const usersConfig = process.env.BACKEND_USERS?.split(",") ?? [];
-    const users = new Map<string, string>();
+    return new Promise((resolve, reject) => {
+      const usersConfig = process.env.BACKEND_USERS?.split(",") ?? [];
+      const users = new Map<string, string>();
 
-    usersConfig.forEach((user) => {
-      const split = user.split(":");
-      const login = split[0];
-      const password = split[1];
+      usersConfig.forEach((user) => {
+        const [login, password] = user.split(":");
 
-      users.set(login, password);
+        users.set(login, password);
+      });
+
+      if (users.has(username)) {
+        if (password === users.get(username)) {
+          try {
+            const groupNumber = this.persister.getUserMapping(username);
+            const user: AuthenticationResult = {
+              username,
+              userid: username,
+              groupNumber,
+              type: "plain",
+            };
+
+            resolve(user);
+          } catch (error) {
+            if (error instanceof Error) reject(error);
+            else
+              reject(
+                new Error(
+                  "PlaintextMultiuserAuthenticationProvider: Cannot get user account.",
+                ),
+              );
+          }
+        }
+      } else reject(new Error("AuthenticationError"));
     });
-
-    if (users.has(username)) {
-      if (password === users.get(username)) {
-        return {
-          username: username,
-          // plaintext provider is simplistic and does not use ids, hence use username also as ID
-          userid: username,
-          groupNumber: await this.persister.getUserMapping(username),
-          type: "plain",
-        };
-      }
-    }
-    throw new Error("AuthenticationError");
   }
 
-  /*eslint @typescript-eslint/no-unused-vars: ["error", { "argsIgnorePattern": "^_" }]*/
-  async changePassword(
+  changePassword(
     _username: string,
     _oldPassword: string,
     _newPassword: string,
     _confirmNewPassword: string,
   ): Promise<void> {
-    throw new Error(
-      "PlaintextMultiuserAuthenticationProvider does not support password changes.",
+    return Promise.reject(
+      new Error(
+        "PlaintextMultiuserAuthenticationProvider does not support password changes.",
+      ),
     );
   }
 
   // export and use filterAssignmentList from PlaintextAuthenticationProvider? Duplicate code
-  async filterAssignmentList(
+  filterAssignmentList(
     username: string,
     assignmentList: Map<string, EnvironmentDescription>,
   ): Promise<Map<string, EnvironmentDescription>> {
     const usersAllowedAssignments =
       process.env.BACKEND_USER_ALLOWED_ASSIGNMENTS;
 
-    if (usersAllowedAssignments === undefined) {
-      return assignmentList;
-    } else {
+    if (usersAllowedAssignments !== undefined) {
       const users = new Map<string, string>();
 
       for (const user of usersAllowedAssignments.split(",")) {
-        const split = user.split(":");
-        const name = split[0];
-        const regex = split[1];
+        const [name, regex] = user.split(":");
 
         users.set(name, regex);
       }
@@ -88,12 +96,11 @@ export default class PlaintextMultiuserAuthenticationProvider
             assignmentList.delete(key);
           }
         }
-
-        return assignmentList;
       } else {
         assignmentList.clear();
-        return assignmentList;
       }
     }
+
+    return Promise.resolve(assignmentList);
   }
 }

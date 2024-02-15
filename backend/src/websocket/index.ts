@@ -37,10 +37,12 @@ export default function wrapWSWithExpressApp(server: Server): void {
   const wss = new WebSocket.Server({ server });
   wss.on("connection", function (ws, request) {
     ws.once("message", (message) => {
+      // eslint-disable-next-line @typescript-eslint/no-base-to-string
       const [auth, token] = message.toString().split(" ");
       if (auth !== "auth") {
         ws.send("Not authenticated.");
-        return ws.close();
+        ws.close();
+        return;
       }
 
       let user: TokenPayload;
@@ -49,7 +51,8 @@ export default function wrapWSWithExpressApp(server: Server): void {
         user = jwt.verify(token, "some-secret") as TokenPayload;
       } catch (err) {
         ws.send("Could not authenticate with given credentials.");
-        return ws.close();
+        ws.close();
+        return;
       }
 
       const requestUrl = request.url;

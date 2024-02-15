@@ -30,7 +30,7 @@ export default class MongoDBAuthenticationProvider
     password: string,
   ): Promise<AuthenticationResult> {
     const user = await this.persister.GetUserAccount(username);
-    console.log("Authenticating user in mongodb: " + user);
+    console.log("Authenticating user in mongodb: " + user.username);
     if (
       user.password === password ||
       (await compare(password, user.passwordHash ?? ""))
@@ -38,7 +38,7 @@ export default class MongoDBAuthenticationProvider
       return {
         username: user.username,
         userid: user._id,
-        groupNumber: user.groupNumber ?? 0,
+        groupNumber: user.groupNumber,
         type: "mongodb",
       };
     }
@@ -71,7 +71,7 @@ export default class MongoDBAuthenticationProvider
     assignmentList: Map<string, EnvironmentDescription>,
   ): Promise<Map<string, EnvironmentDescription>> {
     const user = await this.persister.GetUserAccount(username);
-    if (user.assignmentListFilter != undefined) {
+    if (user.assignmentListFilter !== undefined) {
       const tempRegex = user.assignmentListFilter;
       for (const key of assignmentList.keys()) {
         if (key.match(tempRegex) == null) {
