@@ -62,10 +62,14 @@ export default class MemoryPersister implements Persister {
   }
 
   GetUserEnvironments(username: string): Promise<UserEnvironment[]> {
-    const userEnvironment = userEnvironments.get(username);
-    const result = userEnvironment ? Array.from(userEnvironment.values()) : [];
+    return new Promise((resolve) => {
+      const userEnvironment = userEnvironments.get(username);
+      const result = userEnvironment
+        ? Array.from(userEnvironment.values())
+        : [];
 
-    return Promise.resolve(result);
+      resolve(result);
+    });
   }
 
   AddUserEnvironment(
@@ -74,26 +78,30 @@ export default class MemoryPersister implements Persister {
     description: string,
     instance: string,
   ): Promise<void> {
-    let userEnv = userEnvironments.get(username);
+    return new Promise((resolve) => {
+      let userEnv = userEnvironments.get(username);
 
-    if (!userEnv) {
-      userEnv = new Map<string, UserEnvironment>();
-      userEnvironments.set(username, userEnv);
-    }
+      if (!userEnv) {
+        userEnv = new Map<string, UserEnvironment>();
+        userEnvironments.set(username, userEnv);
+      }
 
-    userEnv.set(environment, {
-      environment,
-      description,
-      instance,
+      userEnv.set(environment, {
+        environment,
+        description,
+        instance,
+      });
+
+      resolve();
     });
-
-    return Promise.resolve();
   }
 
   RemoveUserEnvironment(username: string, environment: string): Promise<void> {
-    userEnvironments.get(username)?.delete(environment);
+    return new Promise((resolve) => {
+      userEnvironments.get(username)?.delete(environment);
 
-    return Promise.resolve();
+      resolve();
+    });
   }
 
   SubmitUserEnvironment(
@@ -103,85 +111,90 @@ export default class MemoryPersister implements Persister {
     terminalStates: TerminalStateType[],
     submittedFiles: SubmissionFileType[],
   ): Promise<void> {
-    console.log(
-      `Storing assignment result for user: ${username} assignment environment: ${environment} terminalStates: ${terminalStates
-        .map((val) => {
-          return val.state || "Unknown";
-        })
-        .join(", ")}`,
-    );
-    const resultPathRoot = path.resolve("src", "assignments", "results");
-    !fs.existsSync(resultPathRoot) && fs.mkdirSync(resultPathRoot);
-
-    const resultDirName = username + "-" + groupNumber + "-" + environment;
-    const resultPath = path.resolve(resultPathRoot, resultDirName);
-    !fs.existsSync(resultPath) && fs.mkdirSync(resultPath);
-
-    for (const terminalState of terminalStates) {
-      fs.writeFileSync(
-        path.resolve(
-          resultPath,
-          terminalState.endpoint.split("/").slice(-1).join("-") + "-output.txt",
-        ),
-        terminalState.state,
-        "binary",
+    return new Promise((resolve) => {
+      console.log(
+        `Storing assignment result for user: ${username} assignment environment: ${environment} terminalStates: ${terminalStates
+          .map((val) => {
+            return val.state || "Unknown";
+          })
+          .join(", ")}`,
       );
-    }
+      const resultPathRoot = path.resolve("src", "assignments", "results");
+      !fs.existsSync(resultPathRoot) && fs.mkdirSync(resultPathRoot);
 
-    for (const submissionFile of submittedFiles) {
-      fs.writeFileSync(
-        path.resolve(resultPath, submissionFile.fileName),
-        submissionFile.fileContent,
-        "binary",
-      );
-    }
+      const resultDirName = username + "-" + groupNumber + "-" + environment;
+      const resultPath = path.resolve(resultPathRoot, resultDirName);
+      !fs.existsSync(resultPath) && fs.mkdirSync(resultPath);
 
-    return Promise.resolve();
+      for (const terminalState of terminalStates) {
+        fs.writeFileSync(
+          path.resolve(
+            resultPath,
+            terminalState.endpoint.split("/").slice(-1).join("-") +
+              "-output.txt",
+          ),
+          terminalState.state,
+          "binary",
+        );
+      }
+
+      for (const submissionFile of submittedFiles) {
+        fs.writeFileSync(
+          path.resolve(resultPath, submissionFile.fileName),
+          submissionFile.fileContent,
+          "binary",
+        );
+      }
+
+      resolve();
+    });
   }
 
   GetUserSubmissions(
     username: string,
     groupNumber: number,
   ): Promise<Submission[]> {
-    const group = "group" + groupNumber;
-    const submissions: Submission[] = [];
-    const resultPathRoot = path.resolve("src", "assignments", "results");
+    return new Promise((resolve) => {
+      const group = "group" + groupNumber;
+      const submissions: Submission[] = [];
+      const resultPathRoot = path.resolve("src", "assignments", "results");
 
-    if (fs.existsSync(resultPathRoot)) {
-      const submissionDirs = fs.readdirSync(resultPathRoot);
+      if (fs.existsSync(resultPathRoot)) {
+        const submissionDirs = fs.readdirSync(resultPathRoot);
 
-      for (const submissionDir of submissionDirs) {
-        if (
-          submissionDir.match(username + "-(.*)") ||
-          submissionDir.match("(.*)-" + group + "-(.*)")
-        ) {
-          const files = fs.readdirSync(
-            path.resolve(resultPathRoot, submissionDir),
-          );
-          const file = files.pop();
-          const lastMTime = file
-            ? fs.statSync(path.resolve(resultPathRoot, submissionDir, file))
-                .mtime
-            : new Date(0);
-          let assignmentName = submissionDir;
+        for (const submissionDir of submissionDirs) {
+          if (
+            submissionDir.match(username + "-(.*)") ||
+            submissionDir.match("(.*)-" + group + "-(.*)")
+          ) {
+            const files = fs.readdirSync(
+              path.resolve(resultPathRoot, submissionDir),
+            );
+            const file = files.pop();
+            const lastMTime = file
+              ? fs.statSync(path.resolve(resultPathRoot, submissionDir, file))
+                  .mtime
+              : new Date(0);
+            let assignmentName = submissionDir;
 
-          if (submissionDir.match(username + "-(.*)")) {
-            assignmentName = submissionDir.substring(username.length + 1);
-          } else if (submissionDir.match("(.*)-" + group + "-(.*)")) {
-            assignmentName = submissionDir.substring(username.length + 1);
+            if (submissionDir.match(username + "-(.*)")) {
+              assignmentName = submissionDir.substring(username.length + 1);
+            } else if (submissionDir.match("(.*)-" + group + "-(.*)")) {
+              assignmentName = submissionDir.substring(username.length + 1);
+            }
+
+            const submission = {
+              assignmentName: assignmentName,
+              lastChanged: lastMTime,
+            };
+
+            submissions.push(submission);
           }
-
-          const submission = {
-            assignmentName: assignmentName,
-            lastChanged: lastMTime,
-          };
-
-          submissions.push(submission);
         }
       }
-    }
 
-    return Promise.resolve(submissions);
+      resolve(submissions);
+    });
   }
 
   close(): Promise<void> {

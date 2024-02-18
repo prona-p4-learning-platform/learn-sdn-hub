@@ -19,7 +19,7 @@ export default class PlaintextMultiuserAuthenticationProvider
     }
   }
 
-  async authenticateUser(
+  authenticateUser(
     username: string,
     password: string,
   ): Promise<AuthenticationResult> {
@@ -33,8 +33,9 @@ export default class PlaintextMultiuserAuthenticationProvider
         users.set(login, password);
       });
 
-      if (users.has(username)) {
-        if (password === users.get(username)) {
+      const user = users.get(username);
+      if (user !== undefined) {
+        if (password === user) {
           try {
             const groupNumber = this.persister.getUserMapping(username);
             const user: AuthenticationResult = {
@@ -77,30 +78,32 @@ export default class PlaintextMultiuserAuthenticationProvider
     username: string,
     assignmentList: Map<string, EnvironmentDescription>,
   ): Promise<Map<string, EnvironmentDescription>> {
-    const usersAllowedAssignments =
-      process.env.BACKEND_USER_ALLOWED_ASSIGNMENTS;
+    return new Promise((resolve) => {
+      const usersAllowedAssignments =
+        process.env.BACKEND_USER_ALLOWED_ASSIGNMENTS;
 
-    if (usersAllowedAssignments !== undefined) {
-      const users = new Map<string, string>();
+      if (usersAllowedAssignments !== undefined) {
+        const users = new Map<string, string>();
 
-      for (const user of usersAllowedAssignments.split(",")) {
-        const [name, regex] = user.split(":");
+        for (const user of usersAllowedAssignments.split(",")) {
+          const [name, regex] = user.split(":");
 
-        users.set(name, regex);
-      }
-
-      const user = users.get(username);
-      if (user) {
-        for (const key of assignmentList.keys()) {
-          if (key.match(user) === null) {
-            assignmentList.delete(key);
-          }
+          users.set(name, regex);
         }
-      } else {
-        assignmentList.clear();
-      }
-    }
 
-    return Promise.resolve(assignmentList);
+        const user = users.get(username);
+        if (user) {
+          for (const key of assignmentList.keys()) {
+            if (key.match(user) === null) {
+              assignmentList.delete(key);
+            }
+          }
+        } else {
+          assignmentList.clear();
+        }
+      }
+
+      resolve(assignmentList);
+    });
   }
 }

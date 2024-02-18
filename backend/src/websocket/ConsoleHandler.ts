@@ -48,7 +48,6 @@ export default function (
         //);
         envConsole.resize(columns, lines);
       } else {
-        // eslint-disable-next-line @typescript-eslint/no-base-to-string
         envConsole.write(stringified);
         //console.log(`Received message ${message}`);
       }

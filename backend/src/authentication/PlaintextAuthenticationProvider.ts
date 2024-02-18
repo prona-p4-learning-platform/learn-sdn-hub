@@ -7,7 +7,7 @@ import {
 export default class PlaintextAuthenticationProvider
   implements AuthenticationProvider
 {
-  async authenticateUser(
+  authenticateUser(
     username: string,
     password: string,
   ): Promise<AuthenticationResult> {
@@ -38,36 +38,36 @@ export default class PlaintextAuthenticationProvider
     );
   }
 
-  async filterAssignmentList(
+  filterAssignmentList(
     username: string,
     assignmentList: Map<string, EnvironmentDescription>,
   ): Promise<Map<string, EnvironmentDescription>> {
-    const usersAllowedAssignments =
-      process.env.BACKEND_USER_ALLOWED_ASSIGNMENTS;
+    return new Promise((resolve) => {
+      const usersAllowedAssignments =
+        process.env.BACKEND_USER_ALLOWED_ASSIGNMENTS;
 
-    if (usersAllowedAssignments !== undefined) {
-      const users = new Map<string, string>();
+      if (usersAllowedAssignments !== undefined) {
+        const users = new Map<string, string>();
 
-      for (const user of usersAllowedAssignments.split(",")) {
-        const split = user.split(":");
-        const name = split[0];
-        const regex = split[1];
+        for (const user of usersAllowedAssignments.split(",")) {
+          const [name, regex] = user.split(":");
 
-        users.set(name, regex);
-      }
-
-      const user = users.get(username);
-      if (user) {
-        for (const key of assignmentList.keys()) {
-          if (key.match(user) === null) {
-            assignmentList.delete(key);
-          }
+          users.set(name, regex);
         }
-      } else {
-        assignmentList.clear();
-      }
-    }
 
-    return Promise.resolve(assignmentList);
+        const user = users.get(username);
+        if (user) {
+          for (const key of assignmentList.keys()) {
+            if (key.match(user) === null) {
+              assignmentList.delete(key);
+            }
+          }
+        } else {
+          assignmentList.clear();
+        }
+      }
+
+      resolve(assignmentList);
+    });
   }
 }

@@ -851,7 +851,8 @@ export default class FirecrackerProvider implements InstanceProvider {
           .on("error", (err) => {
             sshConn.end();
             console.log(
-              "FirecrackerProvider: SSH connection failed - retrying... " + err.message,
+              "FirecrackerProvider: SSH connection failed - retrying... " +
+                err.message,
             );
           })
           .connect({

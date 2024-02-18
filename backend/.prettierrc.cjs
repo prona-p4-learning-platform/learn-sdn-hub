@@ -7,6 +7,6 @@ module.exports = {
   singleQuote: false,
   trailingComma: "all",
   bracketSpacing: true,
-  proseWrap: "preserve",
+  proseWrap: "always", // default: preserve
   endOfLine: "auto", // default: lf
 };

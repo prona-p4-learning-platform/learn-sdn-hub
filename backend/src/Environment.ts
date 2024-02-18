@@ -168,9 +168,7 @@ export default class Environment {
     return deployedEnvironmentsForUser;
   }
 
-  public static getDeployedGroupEnvironmentList(
-    groupNumber: number,
-  ): string[] {
+  public static getDeployedGroupEnvironmentList(groupNumber: number): string[] {
     const deployedEnvironmentsForGroup: string[] = [];
 
     for (const [key, value] of Environment.activeEnvironments) {

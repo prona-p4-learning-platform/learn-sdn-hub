@@ -273,7 +273,8 @@ export default class OpenStackProvider implements InstanceProvider {
       },
       (err: Error) => {
         console.log(
-          "OpenStackProvider: Could not prune stale server instances..." + err.message,
+          "OpenStackProvider: Could not prune stale server instances..." +
+            err.message,
         );
       },
     );
@@ -869,7 +870,8 @@ export default class OpenStackProvider implements InstanceProvider {
           .on("error", (err) => {
             sshConn.end();
             console.log(
-              "OpenStackProvider: SSH connection failed - retrying... " + err.message,
+              "OpenStackProvider: SSH connection failed - retrying... " +
+                err.message,
             );
           })
           .connect({

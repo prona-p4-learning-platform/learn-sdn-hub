@@ -52,6 +52,7 @@ export default class MongoDBAuthenticationProvider
     confirmNewPassword: string,
   ): Promise<void> {
     const user = await this.persister.GetUserAccount(username);
+
     if (
       newPassword.length !== 0 &&
       (user.password === oldPassword ||
@@ -71,6 +72,7 @@ export default class MongoDBAuthenticationProvider
     assignmentList: Map<string, EnvironmentDescription>,
   ): Promise<Map<string, EnvironmentDescription>> {
     const user = await this.persister.GetUserAccount(username);
+
     if (user.assignmentListFilter !== undefined) {
       const tempRegex = user.assignmentListFilter;
       for (const key of assignmentList.keys()) {
@@ -78,19 +80,15 @@ export default class MongoDBAuthenticationProvider
           assignmentList.delete(key);
         }
       }
-      return assignmentList;
     } else {
       const usersAllowedAssignments =
         process.env.BACKEND_USER_ALLOWED_ASSIGNMENTS;
 
-      if (usersAllowedAssignments === undefined) {
-        return assignmentList;
-      } else {
+      if (usersAllowedAssignments !== undefined) {
         const users = new Map<string, string>();
 
         usersAllowedAssignments.split(",").forEach((user) => {
-          const name = user.split(":")[0];
-          const regex = user.split(":")[1];
+          const [name, regex] = user.split(":");
 
           users.set(name, regex);
         });
@@ -102,13 +100,12 @@ export default class MongoDBAuthenticationProvider
               assignmentList.delete(key);
             }
           }
-
-          return assignmentList;
         } else {
           assignmentList.clear();
-          return assignmentList;
         }
       }
     }
+
+    return assignmentList;
   }
 }
