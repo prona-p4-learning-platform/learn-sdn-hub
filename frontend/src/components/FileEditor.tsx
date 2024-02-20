@@ -1,29 +1,28 @@
 import * as React from "react";
-
-import APIRequest from "../api/Request";
-import createWebSocket from "../api/WebSocket";
-
 import { styled } from "@mui/material/styles";
 import {
-  Select,
   Box,
+  Button,
   ButtonGroup,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
   MenuItem,
+  Select,
   SelectChangeEvent,
+  Snackbar,
+  Tooltip,
+  TooltipProps,
+  tooltipClasses,
 } from "@mui/material";
-import Tooltip, { TooltipProps, tooltipClasses } from "@mui/material/Tooltip";
-import Button from "@mui/material/Button";
-import Snackbar from "@mui/material/Snackbar";
 
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import CloudDownloadIcon from "@mui/icons-material/CloudDownload";
 
-import MuiAlert, { AlertProps } from "@mui/material/Alert";
-
-import Dialog from "@mui/material/Dialog";
-import DialogActions from "@mui/material/DialogActions";
-import DialogContent from "@mui/material/DialogContent";
-import DialogContentText from "@mui/material/DialogContentText";
+import Alert from "./Alert";
+import APIRequest from "../api/Request";
+import createWebSocket from "../api/WebSocket";
 
 // monaco-editor
 import "monaco-editor/esm/vs/editor/editor.all.js";
@@ -78,7 +77,7 @@ StandaloneServices.initialize({
 buildWorkerDefinition(
   "dist",
   new URL("../../", window.location.href).href,
-  false
+  false,
 );
 
 type Severity = "error" | "success" | "info" | "warning" | undefined;
@@ -118,15 +117,8 @@ interface FileEditorProps {
   useLanguageClient: boolean;
 }
 
-const Alert = React.forwardRef<HTMLDivElement, AlertProps>(function Alert(
-  props,
-  ref
-) {
-  return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;
-});
-
 class KeepAliveAwareWebSocketMessageReader extends WebSocketMessageReader {
-  protected readMessage(message: any): void {
+  protected readMessage(message: unknown): void {
     if (message === "pong") {
       // ignore pong keep-alive message from backend
       //console.log("received pong from backend");
@@ -158,7 +150,6 @@ export default class FileEditor extends React.Component<FileEditorProps> {
   private languageClientWSTimeout: number = 10000;
 
   private languageClientWebSocket!: WebSocket;
-
 
   constructor(props: FileEditorProps) {
     super(props);
@@ -230,7 +221,7 @@ export default class FileEditor extends React.Component<FileEditorProps> {
     // maybe remove ?? part and also findCommonPathPrefix and only allow rootPath and workspaceFolders
     options.rootPath =
       this.props.rootPath ?? this.findCommonPathPrefix(this.props.filePaths);
-    let workspaceFolders = [] as WorkspaceFolder[];
+    const workspaceFolders: WorkspaceFolder[] = [];
     if (this.props.workspaceFolders?.length > 0) {
       this.props.workspaceFolders.forEach((workspaceDir) => {
         // also support \ in paths?
@@ -268,8 +259,8 @@ export default class FileEditor extends React.Component<FileEditorProps> {
                 "Content-Type": "application/json",
                 authorization: localStorage.getItem("token") || "",
               },
-            }
-          )
+            },
+          ),
         )
           .then((response) => {
             const contentLocation = response.headers.get("Content-Location");
@@ -278,23 +269,25 @@ export default class FileEditor extends React.Component<FileEditorProps> {
           .then(async (data) => {
             const fileContent = await data.text;
 
-        this.environmentFiles[fileName] = {
-          value: fileContent,
-          editorLanguage: selectLanguageForEndpoint(fileName).editorLanguage,
-          lspLanguage: selectLanguageForEndpoint(fileName).lspLanguage,
-          name: fileName,
-          fileChanged: false,
-          fileLocation: data.location ?? "",
-        }
+            this.environmentFiles[fileName] = {
+              value: fileContent,
+              editorLanguage:
+                selectLanguageForEndpoint(fileName).editorLanguage,
+              lspLanguage: selectLanguageForEndpoint(fileName).lspLanguage,
+              name: fileName,
+              fileChanged: false,
+              fileLocation: data.location ?? "",
+            };
 
-        // check number of models in editor? sometimes additional/superfluous inmemory model shows up
-        // should only contain the files that are used in the env as entries in the model?
-        console.log("finished loading editor files...");
-      })
-      .catch((err) => {
-        console.error(err);
-      })
-    }))
+            // check number of models in editor? sometimes additional/superfluous inmemory model shows up
+            // should only contain the files that are used in the env as entries in the model?
+            console.log("finished loading editor files...");
+          })
+          .catch((err) => {
+            console.error(err);
+          });
+      }),
+    );
 
     const initialFile = this.props.files[0];
     const file = this.environmentFiles[initialFile];
@@ -305,7 +298,14 @@ export default class FileEditor extends React.Component<FileEditorProps> {
       currentFileLSPLanguage: file.lspLanguage,
     });
 
-    console.log("Loading editor file: " + file.name + " with editorLanguage: " + file.editorLanguage + " and lspLanguage: " + file.lspLanguage);
+    console.log(
+      "Loading editor file: " +
+        file.name +
+        " with editorLanguage: " +
+        file.editorLanguage +
+        " and lspLanguage: " +
+        file.lspLanguage,
+    );
     this.startLanguageClient(this.editor, file.lspLanguage);
 
     this.suppressChangeDetection = true;
@@ -315,7 +315,7 @@ export default class FileEditor extends React.Component<FileEditorProps> {
 
   async editorDidMount(
     editor: monaco.editor.IStandaloneCodeEditor,
-    _monaco: Monaco
+    _monaco: Monaco,
   ) {
     this.editor = editor;
     //editor.focus();
@@ -337,7 +337,6 @@ export default class FileEditor extends React.Component<FileEditorProps> {
     max = Math.floor(max);
     return Math.floor(Math.random() * (max - min) + min); // The maximum is exclusive and the minimum is inclusive
   }
-  
 
   async startCollaborationServices(group: string, fileName: string) {
     if (!this.props.useCollaboration) {
@@ -352,7 +351,7 @@ export default class FileEditor extends React.Component<FileEditorProps> {
         " in group: " +
         group +
         " on: " +
-        collaborationId
+        collaborationId,
     );
 
     const doc = new Y.Doc();
@@ -365,8 +364,8 @@ export default class FileEditor extends React.Component<FileEditorProps> {
             "Content-Type": "application/json",
             authorization: localStorage.getItem("token") || "",
           },
-        }
-      )
+        },
+      ),
     );
     if (result.status === 200) {
       const content = await result.text();
@@ -381,7 +380,7 @@ export default class FileEditor extends React.Component<FileEditorProps> {
           `:` +
           (import.meta.env.VITE_REACT_APP_YJS_WEBSOCKET_PORT ?? `1234`),
         collaborationId,
-        doc
+        doc,
       );
 
       // WebRTC provider alternative
@@ -405,30 +404,36 @@ export default class FileEditor extends React.Component<FileEditorProps> {
       const awareness = this.collaborationProvider.awareness;
       const username = this.username;
 
-      const red = this.getRandomInt(64,192);
-      const green = this.getRandomInt(64,192);
-      const blue = this.getRandomInt(64,192);
-      let hexColor = '#' + red.toString(16).padStart(2, '0')+ green.toString(16).padStart(2, '0') + blue.toString(16).padStart(2, '0');
+      const red = this.getRandomInt(64, 192);
+      const green = this.getRandomInt(64, 192);
+      const blue = this.getRandomInt(64, 192);
+      const hexColor =
+        "#" +
+        red.toString(16).padStart(2, "0") +
+        green.toString(16).padStart(2, "0") +
+        blue.toString(16).padStart(2, "0");
       console.log("my color: " + hexColor);
 
-      awareness.on('update', ({ added = [] /*, updated = [], removed = [] */}) => {
-        added.forEach((client) => {
-          //yjs awareness debug:
-          //console.log("added client: " + client);
-          //
-          //awareness.getStates().forEach((state, clientId) => {
-          //  console.log("client state: " + clientId + " state: " + state.user.name + " color: " + state.user.color);
-          //});
+      awareness.on(
+        "update",
+        ({ added = [] /*, updated = [], removed = [] */ }) => {
+          added.forEach((client) => {
+            //yjs awareness debug:
+            //console.log("added client: " + client);
+            //
+            //awareness.getStates().forEach((state, clientId) => {
+            //  console.log("client state: " + clientId + " state: " + state.user.name + " color: " + state.user.color);
+            //});
 
-          // add css class for new client
-          if (awareness.getStates().get(client) !== undefined) {
-            const { name, color } = awareness.getStates().get(client)!.user;
-            const colorRed = parseInt(color.substring(1,3), 16);
-            const colorGreen = parseInt(color.substring(3,5), 16);
-            const colorBlue = parseInt(color.substring(5,7), 16);
-            const newClient = document.createElement("style");
-            //newClient.type = "text/css";
-            newClient.innerHTML = `
+            // add css class for new client
+            if (awareness.getStates().get(client) !== undefined) {
+              const { name, color } = awareness.getStates().get(client)!.user;
+              const colorRed = parseInt(color.substring(1, 3), 16);
+              const colorGreen = parseInt(color.substring(3, 5), 16);
+              const colorBlue = parseInt(color.substring(5, 7), 16);
+              const newClient = document.createElement("style");
+              //newClient.type = "text/css";
+              newClient.innerHTML = `
             .yRemoteSelection-${client} {
               background-color: rgb(${colorRed}, ${colorGreen}, ${colorBlue}, .5)
             }
@@ -475,17 +480,18 @@ export default class FileEditor extends React.Component<FileEditorProps> {
                 -o-transition: opacity 0.5s ease-out;
               }
             }`;
-            document.head.appendChild(newClient);
-          }
-        });
-        //no need to handle updated and removed clients for now, styles will be kept and will not change
-        //updated.forEach((client) => {
-        //  console.log("updated client: " + client);
-        //});
-        //removed.forEach((client) => {
-        //  console.log("removed client: " + client);
-        //});
-      });
+              document.head.appendChild(newClient);
+            }
+          });
+          //no need to handle updated and removed clients for now, styles will be kept and will not change
+          //updated.forEach((client) => {
+          //  console.log("updated client: " + client);
+          //});
+          //removed.forEach((client) => {
+          //  console.log("removed client: " + client);
+          //});
+        },
+      );
       console.log("my client id: " + awareness.clientID);
       awareness.setLocalStateField("user", {
         name: username,
@@ -498,7 +504,7 @@ export default class FileEditor extends React.Component<FileEditorProps> {
             type,
             this.editor.getModel()!,
             new Set([this.editor]),
-            awareness
+            awareness,
           );
         } else {
           // should not happen, since editor is mounted
@@ -526,95 +532,106 @@ export default class FileEditor extends React.Component<FileEditorProps> {
   }
 
   /*******************************
-  **
-  ** Monaco Language Client
-  **
-  *******************************/
+   **
+   ** Monaco Language Client
+   **
+   *******************************/
 
-  startLanguageClient(editor: monaco.editor.IStandaloneCodeEditor, lspLanguage: string) {
+  startLanguageClient(
+    editor: monaco.editor.IStandaloneCodeEditor,
+    lspLanguage: string,
+  ) {
     if (!this.props.useLanguageClient) {
       // languageClient disabled in config for this env do not start it and simply return
-      return
+      return;
     }
 
     if (lspLanguage !== "") {
       console.log("Starting language client for language: " + lspLanguage);
 
-      this.languageClientWebSocket = createWebSocket('/environment/' + this.props.environment + '/languageserver/' + lspLanguage);
+      this.languageClientWebSocket = createWebSocket(
+        "/environment/" +
+          this.props.environment +
+          "/languageserver/" +
+          lspLanguage,
+      );
 
       this.languageClientWebSocket.onopen = () => {
-          // create and start the language client
+        // create and start the language client
 
-          // sending auth token to backend
-          this.languageClientWebSocket.send(`auth ${localStorage.getItem("token")}`)
+        // sending auth token to backend
+        this.languageClientWebSocket.send(
+          `auth ${localStorage.getItem("token")}`,
+        );
 
-          // backend needs some time to process auth token and initiate
-          // ws conn from backend to lsp, hence, wait for backend
-          // response, otherwise language client initialization msg will
-          // be sent to early and ignored
+        // backend needs some time to process auth token and initiate
+        // ws conn from backend to lsp, hence, wait for backend
+        // response, otherwise language client initialization msg will
+        // be sent to early and ignored
 
-          // save onmessage fn
-          //const defaultOnMessage = this.languageClientWebSocket.onmessage
-          this.languageClientWebSocket.onmessage = (e) => {
-              if (e.data === "backend websocket ready") {
-                  // restore onmessage fn
-                  console.log("backend websocket ready, starting language client");
-                  //this.languageClientWebSocket.onmessage = (e) => {
-                    //console.log("received message from backend: " + e.data);
-                    //if (e.data === "pong") {
-                      // ignore pong keep-alive message from backend
-                    //}
-                    //defaultOnMessage?.call(this.languageClientWebSocket, e);
-                  //}
+        // save onmessage fn
+        //const defaultOnMessage = this.languageClientWebSocket.onmessage
+        this.languageClientWebSocket.onmessage = (e) => {
+          if (e.data === "backend websocket ready") {
+            // restore onmessage fn
+            console.log("backend websocket ready, starting language client");
+            //this.languageClientWebSocket.onmessage = (e) => {
+            //console.log("received message from backend: " + e.data);
+            //if (e.data === "pong") {
+            // ignore pong keep-alive message from backend
+            //}
+            //defaultOnMessage?.call(this.languageClientWebSocket, e);
+            //}
 
-                  // keep connection alive
-                  this.languageClientWSTimerId = setInterval(() => {
-                    this.languageClientWebSocket.send("ping");
-                  }, this.languageClientWSTimeout);
+            // keep connection alive
+            this.languageClientWSTimerId = setInterval(() => {
+              this.languageClientWebSocket.send("ping");
+            }, this.languageClientWSTimeout);
 
-                  const socket = toSocket(this.languageClientWebSocket);
-                  // need to implement own reader to ensure "pong" message is filtered...
-                  const reader = new KeepAliveAwareWebSocketMessageReader(socket);
-                  const writer = new WebSocketMessageWriter(socket);
-                  this.languageClient = createLanguageClient({
-                      reader,
-                      writer
-                  });
-                  this.languageClient.start();
-              }
+            const socket = toSocket(this.languageClientWebSocket);
+            // need to implement own reader to ensure "pong" message is filtered...
+            const reader = new KeepAliveAwareWebSocketMessageReader(socket);
+            const writer = new WebSocketMessageWriter(socket);
+            this.languageClient = createLanguageClient({
+              reader,
+              writer,
+            });
+            this.languageClient.start();
           }
+        };
       };
-
     }
 
-    function createLanguageClient(transports: MessageTransports): MonacoLanguageClient {
-      const model = editor.getModel()
-      const language = model?.getLanguageId() || ''
+    function createLanguageClient(
+      transports: MessageTransports,
+    ): MonacoLanguageClient {
+      const model = editor.getModel();
+      const language = model?.getLanguageId() || "";
       return new MonacoLanguageClient({
-          name: "Language Client",
-          clientOptions: {
-              // use a language id as a document selector
-              documentSelector: [language],
+        name: "Language Client",
+        clientOptions: {
+          // use a language id as a document selector
+          documentSelector: [language],
 
-              // workspaceFolder already set globally, no need to set it again, would only
-              // be necessary if workspaceFolders should be different for each selected file
-              //workspaceFolder: {
-              //  uri: "file:///home/p4/"
-              //},
+          // workspaceFolder already set globally, no need to set it again, would only
+          // be necessary if workspaceFolders should be different for each selected file
+          //workspaceFolder: {
+          //  uri: "file:///home/p4/"
+          //},
 
-              // disable the default error handler
-              //errorHandler: {
-                  //error: () => ({ action: ErrorAction.Continue }),
-                  // maybe use restart of language client? e.g., to recover from conn loss? 
-                  //closed: () => ({ action: CloseAction.Restart })
-              //}
+          // disable the default error handler
+          //errorHandler: {
+          //error: () => ({ action: ErrorAction.Continue }),
+          // maybe use restart of language client? e.g., to recover from conn loss?
+          //closed: () => ({ action: CloseAction.Restart })
+          //}
+        },
+        // create a language client connection from the JSON RPC connection on demand
+        connectionProvider: {
+          get: () => {
+            return Promise.resolve(transports);
           },
-          // create a language client connection from the JSON RPC connection on demand
-          connectionProvider: {
-              get: () => {
-                  return Promise.resolve(transports);
-              }
-          }
+        },
       });
     }
   }
@@ -622,7 +639,7 @@ export default class FileEditor extends React.Component<FileEditorProps> {
   stopLanguageClient() {
     if (!this.props.useLanguageClient) {
       // languageClient disabled in config for this env do not start it and simply return
-      return
+      return;
     }
 
     // if languageClient connection was closed, this.languageClient will be undefined
@@ -693,8 +710,8 @@ export default class FileEditor extends React.Component<FileEditorProps> {
               "Content-Type": "text/plain",
               authorization: localStorage.getItem("token") || "",
             },
-          }
-        )
+          },
+        ),
       );
       if (result.status === 200) {
         this.environmentFiles[this.state.currentFile].fileChanged = false;
@@ -738,8 +755,8 @@ export default class FileEditor extends React.Component<FileEditorProps> {
               "Content-Type": "application/json",
               authorization: localStorage.getItem("token") || "",
             },
-          }
-        )
+          },
+        ),
       );
       if (result.status === 200) {
         const content = await result.text();
@@ -804,7 +821,7 @@ export default class FileEditor extends React.Component<FileEditorProps> {
       this.startCollaborationServices(this.group, event.target.value);
       this.startLanguageClient(
         this.editor,
-        selectLanguageForEndpoint(event.target.value).lspLanguage
+        selectLanguageForEndpoint(event.target.value).lspLanguage,
       );
     };
 
@@ -823,7 +840,7 @@ export default class FileEditor extends React.Component<FileEditorProps> {
     const CustomWidthTooltip = styled(
       ({ className, ...props }: TooltipProps) => (
         <Tooltip {...props} classes={{ popper: className }} />
-      )
+      ),
     )({
       [`& .${tooltipClasses.tooltip}`]: {
         maxWidth: "100%",
