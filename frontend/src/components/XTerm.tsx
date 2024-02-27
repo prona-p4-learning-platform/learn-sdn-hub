@@ -151,7 +151,7 @@ export default class XTerm extends React.Component<IProps> {
     this.setupTerminal();
   }
 
-  setupTerminal() {
+  setupTerminal(): void {
     // Setup the XTerm terminal.
     this.terminal = new Terminal(this.props.options);
 
@@ -163,16 +163,16 @@ export default class XTerm extends React.Component<IProps> {
     }
 
     // Create Listeners
-    this.terminal.onBinary(this.onBinary);
-    this.terminal.onCursorMove(this.onCursorMove);
-    this.terminal.onData(this.onData);
-    this.terminal.onKey(this.onKey);
-    this.terminal.onLineFeed(this.onLineFeed);
-    this.terminal.onScroll(this.onScroll);
-    this.terminal.onSelectionChange(this.onSelectionChange);
-    this.terminal.onRender(this.onRender);
-    this.terminal.onResize(this.onResize);
-    this.terminal.onTitleChange(this.onTitleChange);
+    this.terminal.onBinary(this.onBinary.bind(this));
+    this.terminal.onCursorMove(this.onCursorMove.bind(this));
+    this.terminal.onData(this.onData.bind(this));
+    this.terminal.onKey(this.onKey.bind(this));
+    this.terminal.onLineFeed(this.onLineFeed.bind(this));
+    this.terminal.onScroll(this.onScroll.bind(this));
+    this.terminal.onSelectionChange(this.onSelectionChange.bind(this));
+    this.terminal.onRender(this.onRender.bind(this));
+    this.terminal.onResize(this.onResize.bind(this));
+    this.terminal.onTitleChange(this.onTitleChange.bind(this));
 
     // Add Custom Key Event Handler
     if (this.props.customKeyEventHandler) {
@@ -182,14 +182,14 @@ export default class XTerm extends React.Component<IProps> {
     }
   }
 
-  componentDidMount() {
+  componentDidMount(): void {
     if (this.terminalRef.current) {
       // Creates the terminal within the container element.
       this.terminal.open(this.terminalRef.current);
     }
   }
 
-  componentWillUnmount() {
+  componentWillUnmount(): void {
     // When the component unmounts dispose of the terminal and all of its listeners.
     this.terminal.dispose();
   }
@@ -234,7 +234,7 @@ export default class XTerm extends React.Component<IProps> {
     if (this.props.onTitleChange) this.props.onTitleChange(newTitle);
   }
 
-  render() {
+  render(): JSX.Element {
     return <div className={this.props.className} ref={this.terminalRef} />;
   }
 }

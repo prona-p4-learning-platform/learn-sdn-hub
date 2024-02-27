@@ -36,7 +36,7 @@ export default class XTerminal extends React.Component<TerminalProps> {
     }, 1000);
   }
 
-  componentDidMount() {
+  componentDidMount(): void {
     this.websocket.onopen = (e) => {
       if ((e.target as WebSocket).readyState !== WebSocket.OPEN) return;
       this.websocket.send(`auth ${localStorage.getItem("token")}`);
@@ -71,7 +71,7 @@ export default class XTerminal extends React.Component<TerminalProps> {
     this.fitAddon.fit();
   }
 
-  componentWillUnmount() {
+  componentWillUnmount(): void {
     if (this.resizeTimer) {
       clearTimeout(this.resizeTimer);
     }
@@ -82,10 +82,10 @@ export default class XTerminal extends React.Component<TerminalProps> {
     this.websocket.close();
   }
 
-  render() {
+  render(): JSX.Element {
     return (
       <XTerm
-        ref={this.handleTermRef}
+        ref={this.handleTermRef.bind(this)}
         addons={[this.fitAddon, this.attachAddon, this.serializeAddon]}
         className="myXtermClass"
       />

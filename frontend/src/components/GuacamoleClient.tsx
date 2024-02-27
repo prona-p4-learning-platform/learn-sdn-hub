@@ -17,7 +17,7 @@ export default class GuacamoleClient extends React.Component<GuacamoleClientProp
   private startWidth: number = 0;
   private startHeight: number = 0;
 
-  componentDidMount() {
+  componentDidMount(): void {
     const tunnel = createTunnel(this.props.wsEndpoint);
 
     this.guacaClient = new Guacamole.Client(tunnel);
@@ -85,14 +85,14 @@ export default class GuacamoleClient extends React.Component<GuacamoleClientProp
   }
 
   // Show error message in error div
-  showErrorMessage(message: string) {
+  showErrorMessage(message: string): void {
     const errorEle = document.getElementById("guacErrorMessage");
     errorEle!.innerText = message;
     errorEle!.style.display = "block";
   }
 
   // Mutation observer to detect when guacamole canvas is resized on initialization
-  observeForResize(display: Guacamole.Display) {
+  observeForResize(display: Guacamole.Display): void {
     document.getElementById("guacContainer")!.focus();
     const guacContainer = document.getElementById("guacContainer");
     const targetElement = guacContainer!.children[0];
@@ -128,7 +128,10 @@ export default class GuacamoleClient extends React.Component<GuacamoleClientProp
   }
 
   // Mutation observer to detect when guacamole canvas is resized after initialization
-  resizeHandler(eleToObserve: HTMLElement | null, display: Guacamole.Display) {
+  resizeHandler(
+    eleToObserve: HTMLElement | null,
+    display: Guacamole.Display,
+  ): void {
     if (eleToObserve === null) return;
 
     const containerEle = document.getElementsByClassName(
@@ -146,8 +149,7 @@ export default class GuacamoleClient extends React.Component<GuacamoleClientProp
       for (const entry of entries) {
         if (entry.contentBoxSize && !this.rescaling) {
           this.rescaling = true;
-          this.currentScale =
-            (eleToObserve!.offsetWidth - 10) / this.startWidth;
+          this.currentScale = (eleToObserve.offsetWidth - 10) / this.startWidth;
           // Check if height is too big, then scale to height
           if (this.startHeight * this.currentScale > maxHeight) {
             this.currentScale = maxHeight / this.startHeight;
@@ -164,12 +166,12 @@ export default class GuacamoleClient extends React.Component<GuacamoleClientProp
   }
 
   // Hide loading animation
-  hideLoading() {
+  hideLoading(): void {
     const loadingEle = document.getElementById("guacLoading");
     loadingEle!.style.display = "none";
   }
 
-  componentWillUnmount() {
+  componentWillUnmount(): void {
     console.log("GuacamoleClient will unmount...");
     try {
       // Disconnect guacamole client - this will close the websocket connection
@@ -179,7 +181,7 @@ export default class GuacamoleClient extends React.Component<GuacamoleClientProp
     }
   }
 
-  render() {
+  render(): JSX.Element {
     return (
       <>
         <div id="guacContainer"></div>

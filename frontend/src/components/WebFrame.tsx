@@ -5,13 +5,13 @@ interface WebFrameProps {
 }
 
 export default class WebFrame extends React.Component<WebFrameProps> {
-  componentDidMount() {}
+  componentDidMount(): void {}
 
-  componentWillUnmount() {
+  componentWillUnmount(): void {
     console.log("WebFrame will unmount...");
   }
 
-  render() {
+  render(): JSX.Element {
     return (
       <iframe
         width="100%"

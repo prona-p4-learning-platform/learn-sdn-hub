@@ -45,7 +45,7 @@ interface TabControlProps {
   environmentStatus: string;
 }
 
-export default function TabControl(props: TabControlProps) {
+export default function TabControl(props: TabControlProps): JSX.Element {
   const [value, setValue] = React.useState(0);
 
   const handleChange = (
@@ -61,29 +61,30 @@ export default function TabControl(props: TabControlProps) {
 
   return (
     <>
-      <Tabs value={value} onChange={handleChange} aria-label="tabs">
-        {props.tabNames &&
-          props.tabNames.map((name) => <Tab label={name} key={name} />)}
-        <Grid
-          container
-          justifyContent="flex-end"
-          direction="row"
-          alignItems="center"
-        >
-          <Grid item>
-            <Typography align="center" variant="body2">
-              Status: {props.environmentStatus}
-            </Typography>
-          </Grid>
-          <Grid item>
-            <Tooltip title="Restart environment" placement="left">
-              <IconButton color="primary" onClick={handleRestartConfirmation}>
-                <RestartAltIcon />
-              </IconButton>
-            </Tooltip>
-          </Grid>
+      <Grid
+        container
+        justifyContent="flex-end"
+        direction="row"
+        alignItems="center"
+      >
+        <Tabs value={value} onChange={handleChange} aria-label="tabs">
+          {props.tabNames &&
+            props.tabNames.map((name) => <Tab label={name} key={name} />)}
+        </Tabs>
+        <Box sx={{ mx: "auto " }} />
+        <Grid item>
+          <Typography align="center" variant="body2">
+            Status: {props.environmentStatus}
+          </Typography>
         </Grid>
-      </Tabs>
+        <Grid item>
+          <Tooltip title="Restart environment" placement="left">
+            <IconButton color="primary" onClick={handleRestartConfirmation}>
+              <RestartAltIcon />
+            </IconButton>
+          </Tooltip>
+        </Grid>
+      </Grid>
 
       {Array.isArray(props.children) &&
         props.children.map((child, index) => (

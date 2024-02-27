@@ -16,12 +16,14 @@ import {
   TooltipProps,
   tooltipClasses,
 } from "@mui/material";
+import { FetchError } from "ofetch";
+import { z } from "zod";
 
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import CloudDownloadIcon from "@mui/icons-material/CloudDownload";
 
 import Alert from "./Alert";
-import APIRequest from "../api/Request";
+import { APIRequest, getHttpError } from "../api/Request";
 import createWebSocket from "../api/WebSocket";
 
 // monaco-editor
@@ -80,7 +82,17 @@ buildWorkerDefinition(
   false,
 );
 
+const defaultValidator = z.object({});
+const contentValidator = z.object({
+  content: z.string(),
+  location: z.string().optional(),
+});
+
 type Severity = "error" | "success" | "info" | "warning" | undefined;
+
+interface Disposable {
+  dispose: () => void;
+}
 
 interface State {
   fileState: FileState;
@@ -140,6 +152,7 @@ export default class FileEditor extends React.Component<FileEditorProps> {
   private username: string;
   private group: string;
 
+  private service: Disposable;
   private binding?: MonacoBinding;
   private collaborationProvider?: WebsocketProvider;
   //private collaborationProvider?: WebrtcProvider;
@@ -245,32 +258,23 @@ export default class FileEditor extends React.Component<FileEditorProps> {
       });
     }
     options.workspaceFolders = workspaceFolders;
-    MonacoServices.install(options);
+    this.service = MonacoServices.install(options) as Disposable;
   }
 
-  async editorWillMount(_monaco: Monaco) {
-    await Promise.all(
+  async editorWillMount(_monaco: Monaco): Promise<void> {
+    await Promise.allSettled(
       this.props.files.map(async (fileName) => {
-        await fetch(
-          APIRequest(
-            `/api/environment/${this.props.environment}/file/${fileName}`,
-            {
-              headers: {
-                "Content-Type": "application/json",
-                authorization: localStorage.getItem("token") || "",
-              },
-            },
-          ),
-        )
-          .then((response) => {
-            const contentLocation = response.headers.get("Content-Location");
-            return { text: response.text(), location: contentLocation };
-          })
-          .then(async (data) => {
-            const fileContent = await data.text;
+        try {
+          const payload = await APIRequest(
+            `/environment/${this.props.environment}/file/${fileName}`,
+            contentValidator,
+          );
+
+          if (payload.success) {
+            const data = payload.data;
 
             this.environmentFiles[fileName] = {
-              value: fileContent,
+              value: data.content,
               editorLanguage:
                 selectLanguageForEndpoint(fileName).editorLanguage,
               lspLanguage: selectLanguageForEndpoint(fileName).lspLanguage,
@@ -278,14 +282,10 @@ export default class FileEditor extends React.Component<FileEditorProps> {
               fileChanged: false,
               fileLocation: data.location ?? "",
             };
-
-            // check number of models in editor? sometimes additional/superfluous inmemory model shows up
-            // should only contain the files that are used in the env as entries in the model?
-            console.log("finished loading editor files...");
-          })
-          .catch((err) => {
-            console.error(err);
-          });
+          } else throw payload.error;
+        } catch (error) {
+          console.log(error);
+        }
       }),
     );
 
@@ -313,10 +313,10 @@ export default class FileEditor extends React.Component<FileEditorProps> {
     this.suppressChangeDetection = false;
   }
 
-  async editorDidMount(
+  editorDidMount(
     editor: monaco.editor.IStandaloneCodeEditor,
     _monaco: Monaco,
-  ) {
+  ): void {
     this.editor = editor;
     //editor.focus();
   }
@@ -324,6 +324,7 @@ export default class FileEditor extends React.Component<FileEditorProps> {
   componentWillUnmount(): void {
     this.stopCollaborationServices();
     this.stopLanguageClient();
+    this.service.dispose();
   }
 
   /****************************************
@@ -332,13 +333,16 @@ export default class FileEditor extends React.Component<FileEditorProps> {
    **
    ****************************************/
 
-  getRandomInt(min: number, max: number) {
+  getRandomInt(min: number, max: number): number {
     min = Math.ceil(min);
     max = Math.floor(max);
     return Math.floor(Math.random() * (max - min) + min); // The maximum is exclusive and the minimum is inclusive
   }
 
-  async startCollaborationServices(group: string, fileName: string) {
+  async startCollaborationServices(
+    group: string,
+    fileName: string,
+  ): Promise<void> {
     if (!this.props.useCollaboration) {
       // collaboration disabled in config for this env do not start it and simply return
       return;
@@ -356,84 +360,84 @@ export default class FileEditor extends React.Component<FileEditorProps> {
 
     const doc = new Y.Doc();
 
-    const result = await fetch(
-      APIRequest(
-        `/api/environment/${this.props.environment}/collabdoc/${fileName}`,
-        {
-          headers: {
-            "Content-Type": "application/json",
-            authorization: localStorage.getItem("token") || "",
-          },
-        },
-      ),
-    );
-    if (result.status === 200) {
-      const content = await result.text();
-      Y.applyUpdate(doc, toUint8Array(content));
-
-      // Websocket provider
-      this.collaborationProvider = new WebsocketProvider(
-        `${window?.location?.protocol === "http:" || undefined ? "ws:" : "wss:"}//` +
-          (import.meta.env.VITE_REACT_APP_YJS_WEBSOCKET_HOST ??
-            window?.location?.hostname ??
-            `localhost`) +
-          `:` +
-          (import.meta.env.VITE_REACT_APP_YJS_WEBSOCKET_PORT ?? `1234`),
-        collaborationId,
-        doc,
+    try {
+      const payload = await APIRequest(
+        `/environment/${this.props.environment}/collabdoc/${fileName}`,
+        contentValidator,
       );
 
-      // WebRTC provider alternative
-      // this.collaborationProvider = new WebrtcProvider(
-      //   collaborationId,
-      //   doc,
-      //   {
-      //     signaling: [
-      //       `${window?.location?.protocol === "http:" || undefined ? "ws:" : "wss:"}//` +
-      //         (import.meta.env.VITE_REACT_APP_YJS_WEBRTC_HOST ??
-      //         window?.location?.hostname ??
-      //         `localhost`) +
-      //         `:` +
-      //         (import.meta.env.VITE_REACT_APP_YJS_WEBRTC_PORT ?? `4444`),
-      //     ],
-      //   }
-      // );
+      if (payload.success) {
+        const { data } = payload;
 
-      const type = doc.getText("monaco");
+        Y.applyUpdate(doc, toUint8Array(data.content));
 
-      const awareness = this.collaborationProvider.awareness;
-      const username = this.username;
+        // Websocket provider
+        this.collaborationProvider = new WebsocketProvider(
+          `${window?.location?.protocol === "http:" || undefined ? "ws:" : "wss:"}//` +
+            (import.meta.env.VITE_REACT_APP_YJS_WEBSOCKET_HOST ??
+              window?.location?.hostname ??
+              `localhost`) +
+            `:` +
+            (import.meta.env.VITE_REACT_APP_YJS_WEBSOCKET_PORT ?? `1234`),
+          collaborationId,
+          doc,
+        );
 
-      const red = this.getRandomInt(64, 192);
-      const green = this.getRandomInt(64, 192);
-      const blue = this.getRandomInt(64, 192);
-      const hexColor =
-        "#" +
-        red.toString(16).padStart(2, "0") +
-        green.toString(16).padStart(2, "0") +
-        blue.toString(16).padStart(2, "0");
-      console.log("my color: " + hexColor);
+        // WebRTC provider alternative
+        // this.collaborationProvider = new WebrtcProvider(
+        //   collaborationId,
+        //   doc,
+        //   {
+        //     signaling: [
+        //       `${window?.location?.protocol === "http:" || undefined ? "ws:" : "wss:"}//` +
+        //         (import.meta.env.VITE_REACT_APP_YJS_WEBRTC_HOST ??
+        //         window?.location?.hostname ??
+        //         `localhost`) +
+        //         `:` +
+        //         (import.meta.env.VITE_REACT_APP_YJS_WEBRTC_PORT ?? `4444`),
+        //     ],
+        //   }
+        // );
 
-      awareness.on(
-        "update",
-        ({ added = [] /*, updated = [], removed = [] */ }) => {
-          added.forEach((client) => {
-            //yjs awareness debug:
-            //console.log("added client: " + client);
-            //
-            //awareness.getStates().forEach((state, clientId) => {
-            //  console.log("client state: " + clientId + " state: " + state.user.name + " color: " + state.user.color);
-            //});
+        const type = doc.getText("monaco");
 
-            // add css class for new client
-            if (awareness.getStates().get(client) !== undefined) {
-              const { name, color } = awareness.getStates().get(client)!.user;
-              const colorRed = parseInt(color.substring(1, 3), 16);
-              const colorGreen = parseInt(color.substring(3, 5), 16);
-              const colorBlue = parseInt(color.substring(5, 7), 16);
-              const newClient = document.createElement("style");
-              //newClient.type = "text/css";
-              newClient.innerHTML = `
+        const awareness = this.collaborationProvider.awareness;
+        const username = this.username;
+
+        const red = this.getRandomInt(64, 192);
+        const green = this.getRandomInt(64, 192);
+        const blue = this.getRandomInt(64, 192);
+        const hexColor =
+          "#" +
+          red.toString(16).padStart(2, "0") +
+          green.toString(16).padStart(2, "0") +
+          blue.toString(16).padStart(2, "0");
+        console.log("my color: " + hexColor);
+
+        awareness.on(
+          "update",
+          ({ added = [] as number[] /*, updated = [], removed = [] */ }) => {
+            added.forEach((client) => {
+              //yjs awareness debug:
+              //console.log("added client: " + client);
+              //
+              //awareness.getStates().forEach((state, clientId) => {
+              //  console.log("client state: " + clientId + " state: " + state.user.name + " color: " + state.user.color);
+              //});
+
+              // add css class for new client
+              const awarenessState = awareness.getStates().get(client);
+              if (awarenessState) {
+                const { name, color } = awarenessState.user as {
+                  name: string;
+                  color: string;
+                }; // TODO: typings from y-websocket are really bad here
+                const colorRed = parseInt(color.substring(1, 3), 16);
+                const colorGreen = parseInt(color.substring(3, 5), 16);
+                const colorBlue = parseInt(color.substring(5, 7), 16);
+                const newClient = document.createElement("style");
+                //newClient.type = "text/css";
+                newClient.innerHTML = `
             .yRemoteSelection-${client} {
               background-color: rgb(${colorRed}, ${colorGreen}, ${colorBlue}, .5)
             }
@@ -480,47 +484,48 @@ export default class FileEditor extends React.Component<FileEditorProps> {
                 -o-transition: opacity 0.5s ease-out;
               }
             }`;
-              document.head.appendChild(newClient);
-            }
-          });
-          //no need to handle updated and removed clients for now, styles will be kept and will not change
-          //updated.forEach((client) => {
-          //  console.log("updated client: " + client);
-          //});
-          //removed.forEach((client) => {
-          //  console.log("removed client: " + client);
-          //});
-        },
-      );
-      console.log("my client id: " + awareness.clientID);
-      awareness.setLocalStateField("user", {
-        name: username,
-        color: hexColor,
-      });
+                document.head.appendChild(newClient);
+              }
+            });
+            //no need to handle updated and removed clients for now, styles will be kept and will not change
+            //updated.forEach((client) => {
+            //  console.log("updated client: " + client);
+            //});
+            //removed.forEach((client) => {
+            //  console.log("removed client: " + client);
+            //});
+          },
+        );
+        console.log("my client id: " + awareness.clientID);
+        awareness.setLocalStateField("user", {
+          name: username,
+          color: hexColor,
+        });
 
-      if (this.editor != null) {
-        if (this.editor.getModel()) {
-          this.binding = new MonacoBinding(
-            type,
-            this.editor.getModel()!,
-            new Set([this.editor]),
-            awareness,
-          );
+        if (this.editor != null) {
+          if (this.editor.getModel()) {
+            this.binding = new MonacoBinding(
+              type,
+              this.editor.getModel()!,
+              new Set([this.editor]),
+              awareness,
+            );
+          } else {
+            // should not happen, since editor is mounted
+            console.log("MonacoBinding editor model is null");
+          }
         } else {
           // should not happen, since editor is mounted
-          console.log("MonacoBinding editor model is null");
+          console.log("MonacoBinding editor is null");
         }
-      } else {
-        // should not happen, since editor is mounted
-        console.log("MonacoBinding editor is null");
-      }
-    } else {
-      console.log("Collab doc not found");
-      //throw exception? Should not happen though, since collab doc is created on first access
+      } else throw payload.error;
+    } catch (error) {
+      console.log("Starting collaboration failed...");
+      console.log(error);
     }
   }
 
-  stopCollaborationServices() {
+  stopCollaborationServices(): void {
     if (!this.props.useCollaboration) {
       // collaboration disabled in config for this env do not start it and simply return
       return;
@@ -540,7 +545,7 @@ export default class FileEditor extends React.Component<FileEditorProps> {
   startLanguageClient(
     editor: monaco.editor.IStandaloneCodeEditor,
     lspLanguage: string,
-  ) {
+  ): void {
     if (!this.props.useLanguageClient) {
       // languageClient disabled in config for this env do not start it and simply return
       return;
@@ -596,7 +601,8 @@ export default class FileEditor extends React.Component<FileEditorProps> {
               reader,
               writer,
             });
-            this.languageClient.start();
+
+            void this.languageClient.start();
           }
         };
       };
@@ -636,14 +642,14 @@ export default class FileEditor extends React.Component<FileEditorProps> {
     }
   }
 
-  stopLanguageClient() {
+  stopLanguageClient(): void {
     if (!this.props.useLanguageClient) {
       // languageClient disabled in config for this env do not start it and simply return
       return;
     }
 
     // if languageClient connection was closed, this.languageClient will be undefined
-    this.languageClient?.dispose();
+    void this.languageClient?.dispose();
     clearInterval(this.languageClientWSTimerId);
     //this.languageClientWebSocket.close()
   }
@@ -684,7 +690,7 @@ export default class FileEditor extends React.Component<FileEditorProps> {
     return commonPrefix;
   }
 
-  onChange(_value: string | undefined) {
+  onChange(_value: string | undefined): void {
     if (this.suppressChangeDetection) {
       return;
     }
@@ -700,42 +706,39 @@ export default class FileEditor extends React.Component<FileEditorProps> {
       editorNotificationOpen: true,
     });
     try {
-      const result = await fetch(
-        APIRequest(
-          `/api/environment/${this.props.environment}/file/${this.state.currentFile}`,
-          {
-            method: "post",
-            body: this.editor.getModel()?.getValue(),
-            headers: {
-              "Content-Type": "text/plain",
-              authorization: localStorage.getItem("token") || "",
-            },
-          },
-        ),
+      await APIRequest(
+        `/environment/${this.props.environment}/file/${this.state.currentFile}`,
+        defaultValidator,
+        {
+          method: "POST",
+          body: { data: this.editor.getModel()?.getValue() ?? "" },
+        },
       );
-      if (result.status === 200) {
-        this.environmentFiles[this.state.currentFile].fileChanged = false;
-        this.setState({
-          currentFileChanged: false,
-          editorResult: "Deploy successful!",
-          editorSeverity: "success",
-          editorNotificationOpen: true,
-        });
-      } else {
-        const message = await result.json();
-        this.setState({
-          editorResult: "Deploy failed! (" + message.message + ")",
-          editorSeverity: "error",
-          editorNotificationOpen: true,
-        });
-      }
-    } catch (error) {
+
+      this.environmentFiles[this.state.currentFile].fileChanged = false;
       this.setState({
-        editorResult: "Deploy failed! (" + error + ")",
+        currentFileChanged: false,
+        editorResult: "Deploy successful!",
+        editorSeverity: "success",
+        editorNotificationOpen: true,
+      });
+    } catch (error) {
+      let stateMessage = "Deploy failed!";
+
+      if (error instanceof FetchError) {
+        const httpError = await getHttpError(error);
+        stateMessage = httpError.success
+          ? httpError.data.message
+          : httpError.error.message;
+      }
+
+      this.setState({
+        editorResult: stateMessage,
         editorSeverity: "error",
         editorNotificationOpen: true,
       });
     }
+
     this.editor.focus();
   }
 
@@ -747,43 +750,43 @@ export default class FileEditor extends React.Component<FileEditorProps> {
       editorNotificationOpen: true,
     });
     try {
-      const result = await fetch(
-        APIRequest(
-          `/api/environment/${this.props.environment}/file/${this.state.currentFile}`,
-          {
-            headers: {
-              "Content-Type": "application/json",
-              authorization: localStorage.getItem("token") || "",
-            },
-          },
-        ),
+      const payload = await APIRequest(
+        `/environment/${this.props.environment}/file/${this.state.currentFile}`,
+        contentValidator,
       );
-      if (result.status === 200) {
-        const content = await result.text();
-        this.environmentFiles[this.state.currentFile].value = content;
+
+      if (payload.success) {
+        const { data } = payload;
+
+        this.environmentFiles[this.state.currentFile].value = data.content;
         this.environmentFiles[this.state.currentFile].fileChanged = false;
-        this.editor.setValue(content);
+        this.editor.setValue(data.content);
         this.setState({
           currentFileChanged: false,
           editorResult: "Retrieve successful!",
           editorSeverity: "success",
           editorNotificationOpen: true,
         });
-      } else {
-        const content = await result.json();
-        this.setState({
-          editorResult: "Retrieve failed! (" + content.message + ")",
-          editorSeverity: "error",
-          editorNotificationOpen: true,
-        });
-      }
+      } else throw payload.error;
     } catch (error) {
+      let stateMessage = "Retrieve failed!";
+
+      if (error instanceof FetchError) {
+        const httpError = await getHttpError(error);
+        stateMessage = httpError.success
+          ? httpError.data.message
+          : httpError.error.message;
+      } else if (error instanceof Error) {
+        stateMessage = error.message;
+      }
+
       this.setState({
-        editorResult: "Retrieve failed! (" + error + ")",
+        editorResult: stateMessage,
         editorSeverity: "error",
         editorNotificationOpen: true,
       });
     }
+
     this.editor.focus();
   }
 
@@ -801,7 +804,7 @@ export default class FileEditor extends React.Component<FileEditorProps> {
     };
 
     const handleEditorConfirmationDialogConfirm = () => {
-      this.load();
+      void this.load();
       this.setState({ editorConfirmationDialogOpen: false });
     };
 
@@ -818,7 +821,7 @@ export default class FileEditor extends React.Component<FileEditorProps> {
         currentFileChanged:
           this.environmentFiles[event.target.value].fileChanged,
       });
-      this.startCollaborationServices(this.group, event.target.value);
+      void this.startCollaborationServices(this.group, event.target.value);
       this.startLanguageClient(
         this.editor,
         selectLanguageForEndpoint(event.target.value).lspLanguage,
@@ -860,7 +863,9 @@ export default class FileEditor extends React.Component<FileEditorProps> {
               color="primary"
               disabled={!this.state.currentFileChanged}
               startIcon={<CloudUploadIcon />}
-              onClick={this.save}
+              onClick={() => {
+                void this.save.bind(this)();
+              }}
             >
               Deploy
             </Button>
@@ -908,9 +913,11 @@ export default class FileEditor extends React.Component<FileEditorProps> {
             this.environmentFiles[this.state.currentFile]?.editorLanguage
           }
           path={this.environmentFiles[this.state.currentFile]?.fileLocation}
-          onChange={this.onChange}
-          beforeMount={this.editorWillMount}
-          onMount={this.editorDidMount}
+          onChange={this.onChange.bind(this)}
+          beforeMount={(monaco) => {
+            void this.editorWillMount.bind(this)(monaco);
+          }}
+          onMount={this.editorDidMount.bind(this)}
         />
         <Snackbar
           open={this.state.editorNotificationOpen}

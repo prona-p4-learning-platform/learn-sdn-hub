@@ -1,5 +1,6 @@
 import { useState, useCallback, FormEvent } from "react";
 import {
+  AlertColor,
   Alert,
   Box,
   Button,
@@ -8,14 +9,15 @@ import {
   TextField,
 } from "@mui/material";
 
-import APIRequest from "../api/Request";
+import { APIRequest, httpStatusValidator } from "../api/Request";
 
-type Severity = "error" | "success" | "info" | "warning" | undefined;
+type Severity = AlertColor | undefined;
 
-function ChangePassword() {
+export default function ChangePassword(): JSX.Element {
   const [changePasswordResult, setChangePasswordResult] = useState("");
   const [notificationOpen, setNotificationOpen] = useState(false);
-  const [changePasswordSeverity, setChangePasswordSeverity] = useState("error");
+  const [changePasswordSeverity, setChangePasswordSeverity] =
+    useState<Severity>("error");
 
   const changePassword = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {
@@ -27,22 +29,22 @@ function ChangePassword() {
         confirmNewPassword: data.get("confirmNewPassword")?.toString() ?? "",
       };
 
-      // Api request
-      const request = APIRequest("/api/user/changePassword", {
-        method: "POST",
-        body: JSON.stringify(credentials),
-        headers: {
-          "Content-Type": "application/json",
-          authorization: localStorage.getItem("token") || "",
-        },
-      });
-      const result = await fetch(request);
+      try {
+        const payload = await APIRequest(
+          "/user/changePassword",
+          httpStatusValidator,
+          {
+            method: "POST",
+            body: credentials,
+          },
+        );
 
-      if (result.status === 200) {
-        setChangePasswordResult("Password change successful");
-        setChangePasswordSeverity("success");
-        setNotificationOpen(true);
-      } else {
+        if (payload.success) {
+          setChangePasswordResult("Password change successful");
+          setChangePasswordSeverity("success");
+          setNotificationOpen(true);
+        } else throw payload.error;
+      } catch (error) {
         setChangePasswordResult("Password change failed");
         setChangePasswordSeverity("error");
         setNotificationOpen(true);
@@ -67,7 +69,7 @@ function ChangePassword() {
       >
         <Box
           component="form"
-          onSubmit={changePassword}
+          onSubmit={void changePassword}
           noValidate
           sx={{ mt: 1 }}
         >
@@ -118,7 +120,7 @@ function ChangePassword() {
       >
         <Alert
           onClose={handleNotificationClose}
-          severity={changePasswordSeverity as Severity}
+          severity={changePasswordSeverity}
         >
           {changePasswordResult}
         </Alert>
@@ -126,5 +128,3 @@ function ChangePassword() {
     </Container>
   );
 }
-
-export default ChangePassword;

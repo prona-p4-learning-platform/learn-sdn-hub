@@ -1,8 +1,7 @@
-import { useState, useEffect, useCallback, forwardRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { createTheme } from "@mui/material/styles";
 import {
-  Alert as MuiAlert,
-  AlertProps,
+  AlertColor,
   Button,
   Checkbox,
   Dialog,
@@ -17,36 +16,48 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
+import { FetchError } from "ofetch";
+import { z } from "zod";
 
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import CloudOffIcon from "@mui/icons-material/CloudOff";
 import PlayCircleFilledWhiteIcon from "@mui/icons-material/PlayCircleFilledWhite";
 
-import APIRequest from "../api/Request";
+import Alert from "../components/Alert";
+import { APIRequest, getHttpError } from "../api/Request";
+import { useHistory } from "react-router-dom";
 
-type Severity = "error" | "success" | "info" | "warning" | undefined;
+type Severity = AlertColor | undefined;
 
-const Alert = forwardRef<HTMLDivElement, AlertProps>(
-  function Alert(props, ref) {
-    return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;
-  },
-);
-
-interface AssignmentOverviewProps {}
-
-type SubmissionType = {
+interface SubmissionType {
   assignmentName: string;
   lastChanged: Date;
-};
+}
 
-export default function AssignmentOverview(_props: AssignmentOverviewProps) {
-  const [assignments, setAssignments] = useState([]);
-  const [submittedAssignments, setSubmittedAssignments] = useState(
-    [] as SubmissionType[],
-  );
-  const [deployedUserAssignments, setDeployedUserAssignments] = useState([]);
-  const [deployedGroupAssignments, setDeployedGroupAssignments] = useState([]);
-  const [load, setLoad] = useState(true);
+const assignmentsValidator = z.array(z.string());
+const deployedUserEnvsValidator = z.array(z.string());
+const deployedGroupEnvsValidator = z.array(z.string());
+const submissionsValidator = z.array(
+  z.object({
+    assignmentName: z.string().min(1),
+    lastChanged: z.string().transform((value) => {
+      return new Date(value);
+    }),
+  }),
+);
+const defaultValidator = z.object({});
+
+export default function AssignmentOverview(): JSX.Element {
+  const [assignments, setAssignments] = useState<string[]>([]);
+  const [submittedAssignments, setSubmittedAssignments] = useState<
+    SubmissionType[]
+  >([]);
+  const [deployedUserAssignments, setDeployedUserAssignments] = useState<
+    string[]
+  >([]);
+  const [deployedGroupAssignments, setDeployedGroupAssignments] = useState<
+    string[]
+  >([]);
   const [deploymentNotification, setDeploymentNotification] = useState({
     result: "",
     severity: undefined as Severity,
@@ -70,7 +81,7 @@ export default function AssignmentOverview(_props: AssignmentOverviewProps) {
   };
 
   const handleConfirmationUndeployDialogConfirm = () => {
-    deleteEnvironment(confirmationUndeployDialogOpen.assignment);
+    void deleteEnvironment(confirmationUndeployDialogOpen.assignment);
     setConfirmationUndeployDialogOpen({ assignment: "", dialogOpen: false });
   };
 
@@ -110,150 +121,188 @@ export default function AssignmentOverview(_props: AssignmentOverviewProps) {
     }
   };
 
+  // regularly fetch assignments and environments as users might work
+  // in groups - an environment could be started from a different user
   useEffect(() => {
-    setLoad(false);
-    fetch(
-      APIRequest("/api/user/assignments", {
-        headers: { authorization: localStorage.getItem("token") || "" },
-      }),
-    )
-      .then((res) => res.json())
-      .then(setAssignments);
+    APIRequest("/user/assignments", assignmentsValidator)
+      .then((payload) => {
+        if (payload.success) {
+          setAssignments(payload.data);
+        } else throw payload.error;
+      })
+      .catch(() => {
+        console.log("Fetching assignments failed...");
+      });
 
     const update = () => {
-      fetch(
-        APIRequest("/api/environment/deployed-user-environments", {
-          headers: { authorization: localStorage.getItem("token") || "" },
-        }),
+      APIRequest(
+        "/environment/deployed-user-environments",
+        deployedUserEnvsValidator,
       )
-        .then((res) => res.json())
-        .then(setDeployedUserAssignments);
-      fetch(
-        APIRequest("/api/environment/deployed-group-environments", {
-          headers: { authorization: localStorage.getItem("token") || "" },
-        }),
-      )
-        .then((res) => res.json())
-        .then(setDeployedGroupAssignments);
-      fetch(
-        APIRequest("/api/environment/submissions", {
-          headers: { authorization: localStorage.getItem("token") || "" },
-        }),
-      )
-        .then((res) => res.json())
-        .then(setSubmittedAssignments);
-    };
-    update();
-    setInterval(update, 2000);
-  }, [load]);
+        .then((payload) => {
+          if (payload.success) {
+            setDeployedUserAssignments(payload.data);
+          } else throw payload.error;
+        })
+        .catch(() => {
+          console.log("Fetching deployed user environments failed...");
+        });
 
-  const createEnvironment = useCallback(async (assignment: string) => {
-    setDeploymentNotification({
-      result: "Creating virtual environment... please wait...",
-      severity: "info",
-      open: true,
-    });
-    try {
-      const result = await fetch(
-        APIRequest(`/api/environment/create?environment=${assignment}`, {
+      APIRequest(
+        "/environment/deployed-group-environments",
+        deployedGroupEnvsValidator,
+      )
+        .then((payload) => {
+          if (payload.success) {
+            setDeployedGroupAssignments(payload.data);
+          } else throw payload.error;
+        })
+        .catch(() => {
+          console.log("Fetching deployed group environments failed...");
+        });
+
+      APIRequest("/environment/submissions", submissionsValidator)
+        .then((payload) => {
+          if (payload.success) {
+            setSubmittedAssignments(payload.data);
+          } else throw payload.error;
+        })
+        .catch(() => {
+          console.log("Fetching submissions failed...");
+        });
+    };
+
+    update();
+
+    const polling = setInterval(update, 2000);
+
+    return () => {
+      clearInterval(polling);
+    };
+  }, []);
+
+  const updateDeployedEnvironments = useCallback(() => {
+    APIRequest(
+      "/environment/deployed-user-environments",
+      deployedUserEnvsValidator,
+    )
+      .then((payload) => {
+        if (payload.success) {
+          setDeployedUserAssignments(payload.data);
+        } else throw payload.error;
+      })
+      .catch(() => {
+        console.log("Fetching deployed user environments failed...");
+      });
+
+    APIRequest(
+      "/environment/deployed-group-environments",
+      deployedGroupEnvsValidator,
+    )
+      .then((payload) => {
+        if (payload.success) {
+          setDeployedGroupAssignments(payload.data);
+        } else throw payload.error;
+      })
+      .catch(() => {
+        console.log("Fetching deployed group environments failed...");
+      });
+  }, []);
+
+  const createEnvironment = useCallback(
+    async (assignment: string) => {
+      setDeploymentNotification({
+        result: "Creating virtual environment... please wait...",
+        severity: "info",
+        open: true,
+      });
+      try {
+        await APIRequest("/environment/create", defaultValidator, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            authorization: localStorage.getItem("token") || "",
+          query: {
+            environment: assignment,
           },
-        }),
-      );
-      if (result.status === 200) {
+        });
+
         setDeploymentNotification({
           result: "Deployment successful!",
           severity: "success",
           open: true,
         });
-        fetch(
-          APIRequest("/api/environment/deployed-user-environments", {
-            headers: { authorization: localStorage.getItem("token") || "" },
-          }),
-        )
-          .then((res) => res.json())
-          .then(setDeployedUserAssignments);
-        fetch(
-          APIRequest("/api/environment/deployed-group-environments", {
-            headers: { authorization: localStorage.getItem("token") || "" },
-          }),
-        )
-          .then((res) => res.json())
-          .then(setDeployedGroupAssignments);
-      } else {
-        const message = await result.json();
-        setDeploymentNotification({
-          result: "Deployment failed! (" + message.message + ")",
-          severity: "error",
-          open: true,
-        });
+
+        updateDeployedEnvironments();
+      } catch (error) {
+        if (error instanceof FetchError) {
+          const httpError = await getHttpError(error);
+          const message = httpError.success
+            ? httpError.data.message
+            : httpError.error.message;
+
+          setDeploymentNotification({
+            result: "Deployment failed! (" + message + ")",
+            severity: "error",
+            open: true,
+          });
+        } else {
+          setDeploymentNotification({
+            result: "Deployment error while connecting to backend!",
+            severity: "error",
+            open: true,
+          });
+        }
       }
-    } catch (error) {
+    },
+    [updateDeployedEnvironments],
+  );
+
+  const deleteEnvironment = useCallback(
+    async (assignment: string) => {
       setDeploymentNotification({
-        result: "Deployment error while connecting to backend!",
-        severity: "error",
+        result: "Deleting virtual environment... please wait...",
+        severity: "info",
         open: true,
       });
-    }
-  }, []);
-
-  const deleteEnvironment = useCallback(async (assignment: string) => {
-    setDeploymentNotification({
-      result: "Deleting virtual environment... please wait...",
-      severity: "info",
-      open: true,
-    });
-    try {
-      const result = await fetch(
-        APIRequest(`/api/environment/delete?environment=${assignment}`, {
+      try {
+        await APIRequest("/environment/delete", defaultValidator, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            authorization: localStorage.getItem("token") || "",
+          query: {
+            environment: assignment,
           },
-        }),
-      );
-      if (result.status === 200) {
+        });
+
         setDeploymentNotification({
           result: "Deployment deletion successful!",
           severity: "success",
           open: true,
         });
-        fetch(
-          APIRequest("/api/environment/deployed-user-environments", {
-            headers: { authorization: localStorage.getItem("token") || "" },
-          }),
-        )
-          .then((res) => res.json())
-          .then(setDeployedUserAssignments);
-        fetch(
-          APIRequest("/api/environment/deployed-group-environments", {
-            headers: { authorization: localStorage.getItem("token") || "" },
-          }),
-        )
-          .then((res) => res.json())
-          .then(setDeployedGroupAssignments);
-      } else {
-        const message = await result.json();
-        setDeploymentNotification({
-          result: "Deployment deletion failed! (" + message.message + ")",
-          severity: "error",
-          open: true,
-        });
+
+        updateDeployedEnvironments();
+      } catch (error) {
+        if (error instanceof FetchError) {
+          const httpError = await getHttpError(error);
+          const message = httpError.success
+            ? httpError.data.message
+            : httpError.error.message;
+
+          setDeploymentNotification({
+            result: "Deployment deletion failed! (" + message + ")",
+            severity: "error",
+            open: true,
+          });
+        } else {
+          setDeploymentNotification({
+            result: "Deployment deletion error while connecting to backend!",
+            severity: "error",
+            open: true,
+          });
+        }
       }
-    } catch (error) {
-      setDeploymentNotification({
-        result: "Deployment deletion error while connecting to backend!",
-        severity: "error",
-        open: true,
-      });
-    }
-  }, []);
+    },
+    [updateDeployedEnvironments],
+  );
 
   const theme = createTheme();
+  const history = useHistory();
 
   return (
     <div>
@@ -296,7 +345,9 @@ export default function AssignmentOverview(_props: AssignmentOverviewProps) {
                   ) !== -1 &&
                     resubmitAssignment !== assignment)
                 }
-                onClick={() => createEnvironment(assignment)}
+                onClick={() => {
+                  void createEnvironment(assignment);
+                }}
                 sx={{ margin: theme.spacing(1) }}
               >
                 Deploy
@@ -306,7 +357,9 @@ export default function AssignmentOverview(_props: AssignmentOverviewProps) {
                 color="secondary"
                 startIcon={<PlayCircleFilledWhiteIcon />}
                 disabled={!isActiveDeployment(assignment)}
-                href={`/environment/${assignment}`}
+                onClick={() => {
+                  history.push(`/environment/${assignment}`);
+                }}
                 sx={{ margin: theme.spacing(1) }}
               >
                 Start Assignment
@@ -347,7 +400,7 @@ export default function AssignmentOverview(_props: AssignmentOverviewProps) {
           open={deploymentNotification.open}
           anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
         >
-          <Alert severity={deploymentNotification.severity as Severity}>
+          <Alert severity={deploymentNotification.severity}>
             {deploymentNotification.result}
           </Alert>
         </Snackbar>

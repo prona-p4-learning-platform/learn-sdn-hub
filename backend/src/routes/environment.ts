@@ -5,11 +5,7 @@
 // TODO: fix eslint instead of disabling rules
 
 import { Router } from "express";
-import Environment, {
-  AliasedFile,
-  TerminalType,
-  AssignmentStep,
-} from "../Environment";
+import Environment from "../Environment";
 import bodyParser from "body-parser";
 import environments from "../Configuration";
 import { InstanceProvider } from "../providers/Provider";
@@ -51,28 +47,24 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
       const targetEnv = environments.get(String(environment));
 
       if (targetEnv === undefined) {
-        res.status(404).json({ error: true, message: "Environment not found" });
+        res.status(404).json({ status: "error", message: "Environment not found" });
         return;
       }
 
       res.status(200).json({
-        files: targetEnv.editableFiles.map((file: AliasedFile) => file.alias),
-        filePaths: targetEnv.editableFiles.map(
-          (file: AliasedFile) => file.absFilePath,
-        ),
+        files: targetEnv.editableFiles.map((file) => file.alias),
+        filePaths: targetEnv.editableFiles.map((file) => file.absFilePath),
         // first subterminal in array of subterminals will define the tab name
-        terminals: targetEnv.terminals.filter((subterminals: TerminalType[]) =>
+        terminals: targetEnv.terminals.filter((subterminals) =>
           subterminals.filter(
-            (subterminal: TerminalType) =>
+            (subterminal) =>
               (subterminal.type === "Shell" && subterminal.provideTty) ||
               subterminal.type === "Desktop" ||
               subterminal.type === "WebApp",
           ),
         ),
-        stepNames:
-          targetEnv.steps?.map((step: AssignmentStep) => step.name) ?? [],
-        stepLabels:
-          targetEnv.steps?.map((step: AssignmentStep) => step.label) ?? [],
+        stepNames: targetEnv.steps?.map((step) => step.name) ?? [],
+        stepLabels: targetEnv.steps?.map((step) => step.label) ?? [],
         rootPath: targetEnv.rootPath,
         workspaceFolders: targetEnv.workspaceFolders,
         useCollaboration: targetEnv.useCollaboration,
@@ -120,7 +112,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
           .toString();
       }
 
-      res.send(markdown);
+      res.json({ content: markdown });
     },
   );
 
@@ -209,30 +201,26 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
         env
           .readFile(reqWithUser.params.alias)
           .then((content: string) => {
-            res
-              .set(
-                "Content-Location",
-                env.getFilePathByAlias(reqWithUser.params.alias),
-              )
-              .set("Access-Control-Expose-Headers", "Content-Location")
-              .status(200)
-              .end(content);
+            res.status(200).json({
+              content,
+              location: env.getFilePathByAlias(reqWithUser.params.alias),
+            });
           })
           .catch((err) => {
             console.log(err);
-            res.status(500).json({ error: true, message: err.message });
+            res.status(500).json({ status: "error", message: err.message });
           });
       } else {
         res
           .status(500)
-          .json({ error: true, message: "No active environment found." });
+          .json({ status: "error", message: "No active environment found." });
       }
     },
   );
 
   router.post(
     "/:environment/file/:alias",
-    bodyParser.text({ type: "text/plain" }),
+    bodyParser.json(),
     authenticationMiddleware,
     environmentPathParamWithAliasValidator,
     (req, res) => {
@@ -244,15 +232,17 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
 
       if (env) {
         env
-          .writeFile(reqWithUser.params.alias, reqWithUser.body)
-          .then(() => res.status(200).end())
-          .catch((err: Error) =>
-            res.status(400).json({ status: "error", message: err.message }),
-          );
+          .writeFile(reqWithUser.params.alias, reqWithUser.body.data)
+          .then(() => {
+            res.status(200).json();
+          })
+          .catch((err: Error) => {
+            res.status(400).json({ status: "error", message: err.message });
+          });
       } else {
         res
           .status(500)
-          .json({ error: true, message: "No active environment found." });
+          .json({ status: "error", message: "No active environment found." });
       }
     },
   );
@@ -270,11 +260,11 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
         reqWithUser.user.username,
       )
         .then((content) => {
-          res.status(200).end(content);
+          res.status(200).json({ content });
         })
         .catch((err) => {
           console.log(err);
-          res.status(500).json({ error: true, message: err.message });
+          res.status(500).json({ status: "error", message: err.message });
         });
     },
   );
@@ -304,7 +294,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
       } else {
         res
           .status(500)
-          .json({ error: true, message: "No active environment found." });
+          .json({ status: "error", message: "No active environment found." });
       }
     },
   );
@@ -336,7 +326,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
       } else {
         res
           .status(500)
-          .json({ error: true, message: "No active environment found." });
+          .json({ status: "error", message: "No active environment found." });
       }
     },
   );
@@ -370,7 +360,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
       } else {
         res
           .status(500)
-          .json({ error: true, message: "No active environment found." });
+          .json({ status: "error", message: "No active environment found." });
       }
     },
   );
@@ -384,7 +374,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
         reqWithUser.user.username,
       );
 
-      res.status(200).json(Array.from(deployedEnvList));
+      res.status(200).json(deployedEnvList);
     },
   );
 
@@ -397,20 +387,20 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
         reqWithUser.user.groupNumber,
       );
 
-      res.status(200).json(Array.from(deployedEndpList));
+      res.status(200).json(deployedEndpList);
     },
   );
 
-  router.get("/submissions", authenticationMiddleware, async (req, res) => {
+  router.get("/submissions", authenticationMiddleware, (req, res) => {
     const reqWithUser = req as RequestWithUser;
 
-    await Environment.getUserSubmissions(
+    Environment.getUserSubmissions(
       persister,
       reqWithUser.user.username,
       reqWithUser.user.groupNumber,
     )
       .then((submittedEnvList) => {
-        res.status(200).json(Array.from(submittedEnvList ?? []));
+        res.status(200).json(submittedEnvList);
       })
       .catch((err) => {
         console.log("No submission found " + err);
@@ -433,15 +423,15 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
         env
           .getProviderInstanceStatus()
           .then((value) => {
-            res.status(200).json({ status: value });
+            res.status(200).json({ status: "success", message: value });
           })
           .catch(() => {
-            res.status(200).json({ status: "" });
+            res.status(200).json({ status: "success", message: "" });
           });
       } else {
         res
           .status(500)
-          .json({ error: true, message: "No active environment found." });
+          .json({ status: "error", message: "No active environment found." });
       }
     },
   );

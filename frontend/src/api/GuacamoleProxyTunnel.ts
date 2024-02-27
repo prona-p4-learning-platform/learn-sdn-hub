@@ -121,7 +121,7 @@ export class GuacamoleProxyTunnel extends Guacamole.WebSocketTunnel {
       this.socket.onmessage = (event) => {
         this.reset_timeout();
 
-        const message = event.data;
+        const message = event.data as string; // TODO: might not be a string?
         let startIndex = 0;
         // guacamole-common-js has this undefined, but needs to be set to -1 to work
         let elementEnd = -1;
@@ -177,6 +177,7 @@ export class GuacamoleProxyTunnel extends Guacamole.WebSocketTunnel {
 
             // Call instruction handler.
             if (
+              opcode !== undefined &&
               opcode !== Guacamole.Tunnel.INTERNAL_DATA_OPCODE &&
               this.tunnel.oninstruction
             )
@@ -200,7 +201,7 @@ export class GuacamoleProxyTunnel extends Guacamole.WebSocketTunnel {
     };
   }
 
-  reset_timeout() {
+  reset_timeout(): void {
     // Get rid of old timeouts (if any)
     if (this.receive_timeout !== null)
       window.clearTimeout(this.receive_timeout);
@@ -228,7 +229,7 @@ export class GuacamoleProxyTunnel extends Guacamole.WebSocketTunnel {
     }, this.tunnel.unstableThreshold);
   }
 
-  setState(state: Guacamole.Tunnel.State) {
+  setState(state: Guacamole.Tunnel.State): void {
     // Notify only if state changes
     if (state !== this.state) {
       this.state = state;
@@ -236,12 +237,12 @@ export class GuacamoleProxyTunnel extends Guacamole.WebSocketTunnel {
     }
   }
 
-  setUUID(uuid: string) {
+  setUUID(uuid: string): void {
     this.uuid = uuid;
     if (this.onuuid) this.onuuid(uuid);
   }
 
-  close_tunnel(status: Guacamole.Status) {
+  close_tunnel(status: Guacamole.Status): void {
     // Get rid of old timeouts (if any)
     if (this.receive_timeout !== null)
       window.clearTimeout(this.receive_timeout);

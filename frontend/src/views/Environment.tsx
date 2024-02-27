@@ -1,9 +1,10 @@
-import React from "react";
+import { Component } from "react";
 import { withRouter } from "react-router-dom";
 import { RouteComponentProps } from "react-router";
 import ReactMarkdown from "react-markdown";
 import mermaid from "mermaid";
 import {
+  AlertColor,
   Button,
   Dialog,
   DialogActions,
@@ -16,9 +17,11 @@ import {
   Stepper,
   Typography,
 } from "@mui/material";
+import { FetchError } from "ofetch";
+import { z } from "zod";
 
+import { APIRequest, getHttpError, httpStatusValidator } from "../api/Request";
 import Alert from "../components/Alert";
-import APIRequest from "../api/Request";
 import FileEditor from "../components/FileEditor";
 import GuacamoleClient from "../components/GuacamoleClient";
 import TabControl from "../components/TabControl";
@@ -26,7 +29,7 @@ import Terminal from "../components/Terminal";
 import TerminalTabs from "../components/TerminalTabs";
 import WebFrame from "../components/WebFrame";
 
-type Severity = "error" | "success" | "info" | "warning" | undefined;
+type Severity = AlertColor | undefined;
 
 type PathParamsType = {
   environment: string;
@@ -43,7 +46,7 @@ export interface Shell {
   type: "Shell";
   executable: string;
   cwd: string;
-  params: Array<string>;
+  params: string[];
   provideTty: boolean;
   name: string;
 }
@@ -57,7 +60,7 @@ export interface WebApp {
 export interface Desktop {
   type: "Desktop";
   name: string;
-  websocketUrl: string;
+  //websocketUrl: string;
 }
 
 export type TerminalType = Shell | Desktop | WebApp;
@@ -87,7 +90,44 @@ type StateType = {
   useLanguageClient: boolean;
 };
 
-class EnvironmentView extends React.Component<PropsType, StateType> {
+const environmentConfigurationValidator = z.object({
+  files: z.array(z.string()),
+  filePaths: z.array(z.string()),
+  terminals: z.array(
+    z.array(
+      z.union([
+        z.object({
+          type: z.literal("Shell"),
+          name: z.string(),
+          executable: z.string(),
+          cwd: z.string(),
+          params: z.array(z.string()),
+          provideTty: z.boolean(),
+        }),
+        z.object({
+          type: z.literal("WebApp"),
+          name: z.string(),
+          url: z.string(),
+        }),
+        z.object({
+          type: z.literal("Desktop"),
+          name: z.string(), // TODO: backend sends far more elements but types in frontend do not match?
+        }),
+      ]),
+    ),
+  ),
+  stepNames: z.array(z.string()),
+  stepLabels: z.array(z.string()),
+  rootPath: z.string().default(""), // TODO: setting defaults here as backend might send undefined
+  workspaceFolders: z.array(z.string()).default([]),
+  useCollaboration: z.boolean().default(false),
+  useLanguageClient: z.boolean().default(false),
+});
+const environmentAssignmentValidator = z.object({
+  content: z.string(),
+});
+
+class EnvironmentView extends Component<PropsType, StateType> {
   public state: StateType;
 
   constructor(props: PropsType) {
@@ -134,47 +174,42 @@ class EnvironmentView extends React.Component<PropsType, StateType> {
       environmentNotificationAutoHideDuration: 6000,
       environmentStatus: "restarting",
     });
+
     try {
-      const result = await fetch(
-        APIRequest(
-          `/api/environment/${this.props.match.params.environment}/restart`,
-          {
-            method: "post",
-            headers: {
-              "Content-Type": "application/json",
-              authorization: localStorage.getItem("token") || "",
-            },
-          },
-        ),
+      await APIRequest(
+        `/environment/${this.props.match.params.environment}/restart`,
+        httpStatusValidator,
+        {
+          method: "POST",
+        },
       );
-      if (result.status === 200) {
-        this.setState({
-          environmentNotificationResult: "Restart successful...",
-          environmentNotificationSeverity: "success",
-          environmentNotificationOpen: true,
-          environmentNotificationAutoHideDuration: 6000,
-          environmentStatus: "running",
-        });
-      } else {
-        const message = await result.json();
-        this.setState({
-          environmentNotificationResult:
-            "Restart failed! (" + message.message + ")",
-          environmentNotificationSeverity: "error",
-          environmentNotificationOpen: true,
-          environmentNotificationAutoHideDuration: 6000,
-          environmentStatus: "error",
-          errorMessage: message.message,
-        });
-      }
-    } catch (error) {
+
       this.setState({
-        environmentNotificationResult: "Restart failed! (" + error + ")",
+        environmentNotificationResult: "Restart successful...",
+        environmentNotificationSeverity: "success",
+        environmentNotificationOpen: true,
+        environmentNotificationAutoHideDuration: 6000,
+        environmentStatus: "running",
+      });
+    } catch (error) {
+      let errorMessage = "Unknown error";
+
+      if (error instanceof FetchError) {
+        const httpError = await getHttpError(error);
+
+        if (httpError.success) errorMessage = httpError.data.message;
+        else errorMessage = httpError.error.message;
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+
+      this.setState({
+        environmentNotificationResult: `Restart failed! (${errorMessage})`,
         environmentNotificationSeverity: "error",
         environmentNotificationOpen: true,
         environmentNotificationAutoHideDuration: 6000,
         environmentStatus: "error",
-        errorMessage: String(error),
+        errorMessage: errorMessage,
       });
     }
   }
@@ -187,27 +222,19 @@ class EnvironmentView extends React.Component<PropsType, StateType> {
       environmentNotificationAutoHideDuration: 6000,
       environmentNotificationOpen: true,
     });
+
     try {
-      const result = await fetch(
-        APIRequest(
-          `/api/environment/${this.props.match.params.environment}/test`,
-          {
-            method: "post",
-            headers: {
-              "Content-Type": "application/json",
-              authorization: localStorage.getItem("token") || "",
-            },
-            body: JSON.stringify({
-              activeStep: this.state.activeStep,
-              terminalState: this.state.terminalState,
-            }),
-          },
-        ),
+      const payload = await APIRequest(
+        `/environment/${this.props.match.params.environment}/test`,
+        httpStatusValidator,
+        {
+          method: "POST",
+        },
       );
-      if (result.status === 200) {
-        const message = await result.json();
+
+      if (payload.success) {
         this.setState({
-          environmentNotificationResult: message.message,
+          environmentNotificationResult: payload.data.message,
           environmentNotificationSeverity: "success",
           environmentNotificationAutoHideDuration: 60000,
           environmentNotificationOpen: true,
@@ -224,24 +251,25 @@ class EnvironmentView extends React.Component<PropsType, StateType> {
             stepsCompleted: true,
           });
         }
-      } else {
-        const message = await result.json();
-        this.setState({
-          environmentNotificationResult:
-            "Test failed! (" + message.message + ")",
-          environmentNotificationSeverity: "error",
-          environmentNotificationOpen: true,
-          environmentNotificationAutoHideDuration: 60000,
-          errorMessage: message.message,
-        });
-      }
+      } else throw payload.error;
     } catch (error) {
+      let errorMessage = "Unknown error";
+
+      if (error instanceof FetchError) {
+        const httpError = await getHttpError(error);
+
+        if (httpError.success) errorMessage = httpError.data.message;
+        else errorMessage = httpError.error.message;
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+
       this.setState({
-        environmentNotificationResult: "Test failed! (" + error + ")",
+        environmentNotificationResult: `Test failed! (${errorMessage})`,
         environmentNotificationSeverity: "error",
         environmentNotificationOpen: true,
         environmentNotificationAutoHideDuration: 60000,
-        errorMessage: String(error),
+        errorMessage: errorMessage,
       });
     }
   }
@@ -254,120 +282,100 @@ class EnvironmentView extends React.Component<PropsType, StateType> {
       environmentNotificationAutoHideDuration: 6000,
       environmentNotificationOpen: true,
     });
+
     try {
-      const result = await fetch(
-        APIRequest(
-          `/api/environment/${this.props.match.params.environment}/submit`,
-          {
-            method: "post",
-            headers: {
-              "Content-Type": "application/json",
-              authorization: localStorage.getItem("token") || "",
-            },
-            body: JSON.stringify({
-              activeStep: this.state.activeStep,
-              terminalState: this.state.terminalState,
-            }),
+      const payload = await APIRequest(
+        `/environment/${this.props.match.params.environment}/submit`,
+        httpStatusValidator,
+        {
+          method: "POST",
+          body: {
+            activeStep: this.state.activeStep,
+            terminalState: this.state.terminalState,
           },
-        ),
+        },
       );
-      if (result.status === 200) {
-        const message = await result.json();
+
+      if (payload.success) {
         this.setState({
           environmentNotificationResult:
-            "Submission successful! " + message.message,
+            "Submission successful! " + payload.data.message,
           environmentNotificationSeverity: "success",
           environmentNotificationAutoHideDuration: 60000,
           environmentNotificationOpen: true,
         });
-      } else {
-        const message = await result.json();
-        this.setState({
-          environmentNotificationResult:
-            "Submission failed! (" + message.message + ")",
-          environmentNotificationSeverity: "error",
-          environmentNotificationOpen: true,
-          environmentNotificationAutoHideDuration: 60000,
-          errorMessage: message.message,
-        });
-      }
+      } else throw payload.error;
     } catch (error) {
+      let errorMessage = "Unknown error";
+
+      if (error instanceof FetchError) {
+        const httpError = await getHttpError(error);
+
+        if (httpError.success) errorMessage = httpError.data.message;
+        else errorMessage = httpError.error.message;
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+
       this.setState({
-        environmentNotificationResult: "Submission failed! (" + error + ")",
+        environmentNotificationResult: `Submission failed! (${errorMessage})`,
         environmentNotificationSeverity: "error",
         environmentNotificationOpen: true,
         environmentNotificationAutoHideDuration: 60000,
-        errorMessage: String(error),
+        errorMessage,
       });
     }
   }
 
   loadEnvironmentConfig(): void {
-    fetch(
-      APIRequest(
-        `/api/environment/${this.props.match.params.environment}/configuration`,
-        {
-          headers: {
-            "Content-Type": "application/json",
-            authorization: localStorage.getItem("token") || "",
-          },
-        },
-      ),
+    APIRequest(
+      `/environment/${this.props.match.params.environment}/configuration`,
+      environmentConfigurationValidator,
     )
-      .then((response) => response.json())
-      .then((data) => {
-        if (data.error !== true) {
-          this.setState({
-            terminals: data.terminals,
-            files: data.files,
-            filePaths: data.filePaths,
-            stepNames: data.stepNames,
-            stepLabels: data.stepLabels,
-            rootPath: data.rootPath,
-            workspaceFolders: data.workspaceFolders,
-            useCollaboration: data.useCollaboration,
-            useLanguageClient: data.useLanguageClient,
-          });
-        }
-        if (this.state.stepLabels.length < 1) {
-          this.setState({ stepsCompleted: true });
-        }
+      .then((payload) => {
+        if (payload.success) {
+          this.setState(payload.data);
+
+          if (this.state.stepLabels.length < 1) {
+            this.setState({ stepsCompleted: true });
+          }
+        } else throw payload.error;
+      })
+      .catch((reason: unknown) => {
+        console.log("DEBUG: loadEnvironmentConfig failed");
+        console.log(reason);
       });
   }
 
   loadAssignment() {
-    fetch(
-      APIRequest(
-        `/api/environment/${this.props.match.params.environment}/assignment`,
-        {
-          headers: {
-            "Content-Type": "application/json",
-            authorization: localStorage.getItem("token") || "",
-          },
-        },
-      ),
+    APIRequest(
+      `/environment/${this.props.match.params.environment}/assignment`,
+      environmentAssignmentValidator,
     )
-      .then((response) => response.text())
-      .then((data) => {
-        this.setState({ assignment: data });
+      .then((payload) => {
+        if (payload.success) {
+          this.setState({ assignment: payload.data.content });
+        } else throw payload.error;
+      })
+      .catch((reason: unknown) => {
+        console.log("DEBUG: loadAssignment failed");
+        console.log(reason);
       });
   }
 
   loadProviderInstanceStatus() {
-    fetch(
-      APIRequest(
-        `/api/environment/${this.props.match.params.environment}/provider-instance-status`,
-        {
-          headers: {
-            "Content-Type": "application/json",
-            authorization: localStorage.getItem("token") || "",
-          },
-        },
-      ),
+    APIRequest(
+      `/environment/${this.props.match.params.environment}/provider-instance-status`,
+      httpStatusValidator,
     )
-      .then((response) => response.json())
-      .then((data) => {
-        this.setState({ providerInstanceStatus: data.status });
+      .then((payload) => {
+        if (payload.success) {
+          this.setState({ providerInstanceStatus: payload.data.message });
+        }
+      })
+      .catch((reason: unknown) => {
+        console.log("DEBUG: loadProviderInstanceStatus failed");
+        console.log(reason);
       });
   }
 
@@ -405,7 +413,12 @@ class EnvironmentView extends React.Component<PropsType, StateType> {
   }
 
   componentDidUpdate() {
-    mermaid.init({}, document.querySelectorAll("code.language-mermaid"));
+    mermaid
+      .init({}, document.querySelectorAll("code.language-mermaid"))
+      .catch((reason: unknown) => {
+        console.log("DEBUG: Initializing mermaid failed");
+        console.log(reason);
+      });
   }
 
   render() {
@@ -421,7 +434,7 @@ class EnvironmentView extends React.Component<PropsType, StateType> {
               terminalState={this.getTerminalState(
                 `/environment/${this.props.match.params.environment}/type/${subterminal.name}`,
               )}
-              onTerminalUnmount={this.storeTerminalState}
+              onTerminalUnmount={this.storeTerminalState.bind(this)}
             />
           );
         }
@@ -456,7 +469,7 @@ class EnvironmentView extends React.Component<PropsType, StateType> {
     };
 
     const handleConfirmationRestartDialogConfirm = () => {
-      this.restartEnvironment();
+      void this.restartEnvironment();
       this.setState({ confirmationRestartDialogOpen: false });
     };
 
@@ -469,12 +482,12 @@ class EnvironmentView extends React.Component<PropsType, StateType> {
     };
 
     const handleConfirmationSubmitDialogConfirm = () => {
-      this.submitAssignment();
+      void this.submitAssignment();
       this.setState({ confirmationSubmitDialogOpen: false });
     };
 
     const handleStepClick = () => {
-      this.checkStepTest();
+      void this.checkStepTest();
     };
 
     return (
@@ -582,7 +595,7 @@ class EnvironmentView extends React.Component<PropsType, StateType> {
         >
           <Alert
             onClose={handleEnvironmentNotificationClose}
-            severity={this.state.environmentNotificationSeverity as Severity}
+            severity={this.state.environmentNotificationSeverity}
           >
             {this.state.environmentNotificationResult}
           </Alert>

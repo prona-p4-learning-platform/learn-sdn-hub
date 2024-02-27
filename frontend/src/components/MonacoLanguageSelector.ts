@@ -34,5 +34,5 @@ export default function selectLanguageForEndpoint(
   return {
     editorLanguage: editorLanguage,
     lspLanguage: lspLanguage,
-  } as MonacoLanguageSelectionType;
+  };
 }

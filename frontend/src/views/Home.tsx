@@ -1,13 +1,11 @@
-import React from "react";
+import { Component } from "react";
 import Loginform from "../components/LoginForm";
 
 interface HomeProps {
   onUserLogin: (token: string, username: string, groupNumber: number) => void;
 }
 
-export default class Home extends React.Component {
-  declare props: HomeProps;
-
+export default class Home extends Component<HomeProps> {
   handleSuccessfulAuthentication(
     token: string,
     username: string,
@@ -16,7 +14,7 @@ export default class Home extends React.Component {
     this.props.onUserLogin(token, username, groupNumber);
   }
 
-  render(): React.ReactElement {
+  render(): JSX.Element {
     return (
       <>
         <Loginform
@@ -24,9 +22,9 @@ export default class Home extends React.Component {
             token: string,
             username: string,
             groupNumber: number,
-          ): void =>
-            this.handleSuccessfulAuthentication(token, username, groupNumber)
-          }
+          ): void => {
+            this.handleSuccessfulAuthentication(token, username, groupNumber);
+          }}
         ></Loginform>
       </>
     );

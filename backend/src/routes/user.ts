@@ -92,10 +92,15 @@ export default (authProviders: AuthenticationProvider[]): Router => {
           )
           .catch((err) => {
             console.log("error!", err);
-            res.status(500).json();
+            res.status(500).json({ status: "error", message: err.message });
           })
           .then(() => {
-            res.status(200).json();
+            res
+              .status(200)
+              .json({
+                status: "success",
+                message: "Password changed successfully!",
+              });
           });
       }
     },

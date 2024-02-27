@@ -1,6 +1,6 @@
 import ChangePassword from "../components/ChangePassword";
 
-const UserSettings = () => {
+const UserSettings = (): JSX.Element => {
   return <ChangePassword />;
 };
 

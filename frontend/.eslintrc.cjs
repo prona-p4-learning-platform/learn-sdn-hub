@@ -4,13 +4,13 @@ module.exports = {
   extends: [
     "eslint:recommended",
     "plugin:@typescript-eslint/eslint-recommended",
-    "plugin:@typescript-eslint/recommended",
+    "plugin:@typescript-eslint/recommended-type-checked",
     "plugin:react-hooks/recommended",
     "plugin:react/recommended",
     "plugin:react/jsx-runtime",
     "prettier",
   ],
-  ignorePatterns: ["build", ".eslintrc.cjs"],
+  ignorePatterns: ["build", ".eslintrc.cjs", "vite.config.ts"],
   parser: "@typescript-eslint/parser",
   plugins: ["react-refresh"],
   parserOptions: {
@@ -37,6 +37,7 @@ module.exports = {
       "warn",
       { allowConstantExport: true },
     ],
+    "@typescript-eslint/explicit-module-boundary-types": "error",
     eqeqeq: ["error", "always", { null: "ignore" }],
   },
 };
