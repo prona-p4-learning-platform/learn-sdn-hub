@@ -12,7 +12,12 @@ export default function NavigationButton(props: NavigationProps): JSX.Element {
   const { navigate, href, children } = props;
 
   return (
-    <Button color="inherit" onClick={() => navigate(href)}>
+    <Button
+      color="inherit"
+      onClick={() => {
+        navigate(href);
+      }}
+    >
       {children}
     </Button>
   );

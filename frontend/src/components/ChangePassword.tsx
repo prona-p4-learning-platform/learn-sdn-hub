@@ -1,6 +1,5 @@
 import { useState, useCallback, FormEvent } from "react";
 import {
-  AlertColor,
   Alert,
   Box,
   Button,
@@ -8,6 +7,7 @@ import {
   Snackbar,
   TextField,
 } from "@mui/material";
+import type { AlertColor } from "@mui/material";
 
 import { APIRequest, httpStatusValidator } from "../api/Request";
 

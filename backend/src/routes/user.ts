@@ -95,12 +95,10 @@ export default (authProviders: AuthenticationProvider[]): Router => {
             res.status(500).json({ status: "error", message: err.message });
           })
           .then(() => {
-            res
-              .status(200)
-              .json({
-                status: "success",
-                message: "Password changed successfully!",
-              });
+            res.status(200).json({
+              status: "success",
+              message: "Password changed successfully!",
+            });
           });
       }
     },

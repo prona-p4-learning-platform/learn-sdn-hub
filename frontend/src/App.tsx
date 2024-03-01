@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   BrowserRouter as Router,
   Route,
@@ -34,7 +34,7 @@ export default function App(): JSX.Element {
   const [authenticated, setAuthenticated] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
 
-  useMemo(() => {
+  useEffect(() => {
     if (localStorage.getItem("token") !== null) {
       setAuthenticated(true);
     }
@@ -89,72 +89,64 @@ export default function App(): JSX.Element {
 
   return (
     <ThemeProvider theme={theme}>
-      <React.Fragment>
-        <CssBaseline />
-        <Router>
-          <AppBar position="static">
-            <Toolbar>
-              <HubIcon sx={{ mr: 3 }} />
-              <Typography variant="h6">
-                learn-sdn-hub
-                {authenticated === false
-                  ? ""
-                  : ` - ${username} (group: ${groupNumber})`}
-              </Typography>
-              <Box sx={{ width: "10px" }} />
-              <Link component={NavigationButton} to="/assignments">
-                Assignments
-              </Link>
-              <Link component={NavigationButton} to="/settings">
-                Settings
-              </Link>
-              <Button color="inherit" onClick={handleUserLogout}>
-                Logout
-              </Button>
-              <Box sx={{ mx: "auto " }} />
-              <Tooltip
-                title={
-                  theme.palette.mode === "dark"
-                    ? "Switch to light mode"
-                    : "Switch to dark mode"
-                }
-              >
-                <IconButton sx={{ ml: 1 }} onClick={changeMode} color="inherit">
-                  {theme.palette.mode === "dark" ? (
-                    <Brightness7Icon />
-                  ) : (
-                    <Brightness4Icon />
-                  )}
-                </IconButton>
-              </Tooltip>
-            </Toolbar>
-          </AppBar>
-          <Route exact path="/">
-            {authenticated ? (
-              <Redirect to="/assignments" />
-            ) : (
-              <Home onUserLogin={handleUserLogin} />
-            )}
-          </Route>
-          <PrivateRoute
-            isAuthenticated={authenticated}
-            exact
-            path="/assignments"
-          >
-            <AssignmentOverview />
-          </PrivateRoute>
-          <PrivateRoute isAuthenticated={authenticated} exact path="/settings">
-            <UserSettings />
-          </PrivateRoute>
-          <PrivateRoute
-            isAuthenticated={authenticated}
-            exact
-            path="/environment/:environment"
-          >
-            <Environment />
-          </PrivateRoute>
-        </Router>
-      </React.Fragment>
+      <CssBaseline />
+      <Router>
+        <AppBar position="static">
+          <Toolbar>
+            <HubIcon sx={{ mr: 3 }} />
+            <Typography variant="h6">
+              learn-sdn-hub
+              {authenticated ? ` - ${username} (group: ${groupNumber})` : ""}
+            </Typography>
+            <Box sx={{ width: "10px" }} />
+            <Link component={NavigationButton} to="/assignments">
+              Assignments
+            </Link>
+            <Link component={NavigationButton} to="/settings">
+              Settings
+            </Link>
+            <Button color="inherit" onClick={handleUserLogout}>
+              Logout
+            </Button>
+            <Box sx={{ mx: "auto " }} />
+            <Tooltip
+              title={
+                theme.palette.mode === "dark"
+                  ? "Switch to light mode"
+                  : "Switch to dark mode"
+              }
+            >
+              <IconButton sx={{ ml: 1 }} onClick={changeMode} color="inherit">
+                {theme.palette.mode === "dark" ? (
+                  <Brightness7Icon />
+                ) : (
+                  <Brightness4Icon />
+                )}
+              </IconButton>
+            </Tooltip>
+          </Toolbar>
+        </AppBar>
+        <Route exact path="/">
+          {authenticated ? (
+            <Redirect to="/assignments" />
+          ) : (
+            <Home onUserLogin={handleUserLogin} />
+          )}
+        </Route>
+        <PrivateRoute isAuthenticated={authenticated} exact path="/assignments">
+          <AssignmentOverview />
+        </PrivateRoute>
+        <PrivateRoute isAuthenticated={authenticated} exact path="/settings">
+          <UserSettings />
+        </PrivateRoute>
+        <PrivateRoute
+          isAuthenticated={authenticated}
+          exact
+          path="/environment/:environment"
+        >
+          <Environment />
+        </PrivateRoute>
+      </Router>
     </ThemeProvider>
   );
 }

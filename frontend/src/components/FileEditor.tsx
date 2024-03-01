@@ -1,4 +1,4 @@
-import * as React from "react";
+import { Component } from "react";
 import { styled } from "@mui/material/styles";
 import {
   Box,
@@ -16,6 +16,7 @@ import {
   TooltipProps,
   tooltipClasses,
 } from "@mui/material";
+import type { AlertColor } from "@mui/material";
 import { FetchError } from "ofetch";
 import { z } from "zod";
 
@@ -88,7 +89,7 @@ const contentValidator = z.object({
   location: z.string().optional(),
 });
 
-type Severity = "error" | "success" | "info" | "warning" | undefined;
+type Severity = AlertColor | undefined;
 
 interface Disposable {
   dispose: () => void;
@@ -142,7 +143,7 @@ class KeepAliveAwareWebSocketMessageReader extends WebSocketMessageReader {
 }
 
 // maybe consider to move collaboration and languageclient to class augmentation again?
-export default class FileEditor extends React.Component<FileEditorProps> {
+export default class FileEditor extends Component<FileEditorProps> {
   public state: State;
 
   private editor!: monaco.editor.IStandaloneCodeEditor;
@@ -152,7 +153,8 @@ export default class FileEditor extends React.Component<FileEditorProps> {
   private username: string;
   private group: string;
 
-  private service: Disposable;
+  private options: MonacoServices.Options;
+  private service?: Disposable;
   private binding?: MonacoBinding;
   private collaborationProvider?: WebsocketProvider;
   //private collaborationProvider?: WebrtcProvider;
@@ -235,7 +237,7 @@ export default class FileEditor extends React.Component<FileEditorProps> {
     options.rootPath =
       this.props.rootPath ?? this.findCommonPathPrefix(this.props.filePaths);
     const workspaceFolders: WorkspaceFolder[] = [];
-    if (this.props.workspaceFolders?.length > 0) {
+    if (this.props.workspaceFolders.length > 0) {
       this.props.workspaceFolders.forEach((workspaceDir) => {
         // also support \ in paths?
         workspaceFolders.push({
@@ -258,7 +260,8 @@ export default class FileEditor extends React.Component<FileEditorProps> {
       });
     }
     options.workspaceFolders = workspaceFolders;
-    this.service = MonacoServices.install(options) as Disposable;
+
+    this.options = options;
   }
 
   async editorWillMount(_monaco: Monaco): Promise<void> {
@@ -321,10 +324,17 @@ export default class FileEditor extends React.Component<FileEditorProps> {
     //editor.focus();
   }
 
+  componentDidMount(): void {
+    // has to happen here as the lifecycle is somewhat weird
+    // if this is called in the constructor and StrictMode is enabled
+    // there will be a warning because the service will be overridden
+    this.service = MonacoServices.install(this.options) as Disposable;
+  }
+
   componentWillUnmount(): void {
     this.stopCollaborationServices();
     this.stopLanguageClient();
-    this.service.dispose();
+    this.service?.dispose();
   }
 
   /****************************************
@@ -926,7 +936,7 @@ export default class FileEditor extends React.Component<FileEditorProps> {
         >
           <Alert
             onClose={handleEditorNotificationClose}
-            severity={this.state.editorSeverity as Severity}
+            severity={this.state.editorSeverity}
           >
             {this.state.editorResult}
           </Alert>

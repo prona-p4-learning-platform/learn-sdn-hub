@@ -1,4 +1,4 @@
-import React from "react";
+import { Component } from "react";
 import Guacamole from "guacamole-common-js";
 import CircularProgress from "@mui/material/CircularProgress";
 
@@ -10,7 +10,7 @@ interface GuacamoleClientProps {
   wsEndpoint: string;
 }
 
-export default class GuacamoleClient extends React.Component<GuacamoleClientProps> {
+export default class GuacamoleClient extends Component<GuacamoleClientProps> {
   private guacaClient!: Guacamole.Client;
   private currentScale: number = 1;
   private rescaling: boolean = false;

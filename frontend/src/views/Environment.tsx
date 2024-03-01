@@ -4,7 +4,6 @@ import { RouteComponentProps } from "react-router";
 import ReactMarkdown from "react-markdown";
 import mermaid from "mermaid";
 import {
-  AlertColor,
   Button,
   Dialog,
   DialogActions,
@@ -17,6 +16,7 @@ import {
   Stepper,
   Typography,
 } from "@mui/material";
+import type { AlertColor } from "@mui/material";
 import { FetchError } from "ofetch";
 import { z } from "zod";
 
@@ -426,6 +426,7 @@ class EnvironmentView extends Component<PropsType, StateType> {
     const terminals = this.state.terminals.map((subterminals: TerminalType[]) =>
       subterminals.map((subterminal, index) => {
         terminalTabNames.push(subterminal.name);
+
         if (subterminal.type === "Shell") {
           return (
             <Terminal
@@ -438,6 +439,7 @@ class EnvironmentView extends Component<PropsType, StateType> {
             />
           );
         }
+
         if (subterminal.type === "Desktop") {
           return (
             <GuacamoleClient
@@ -448,6 +450,9 @@ class EnvironmentView extends Component<PropsType, StateType> {
             />
           );
         }
+
+        // if new types of terminals are added this condition is necessary
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         if (subterminal.type === "WebApp") {
           return <WebFrame key={subterminal.name} url={subterminal.url} />;
         } else {

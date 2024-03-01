@@ -47,7 +47,9 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
       const targetEnv = environments.get(String(environment));
 
       if (targetEnv === undefined) {
-        res.status(404).json({ status: "error", message: "Environment not found" });
+        res
+          .status(404)
+          .json({ status: "error", message: "Environment not found" });
         return;
       }
 

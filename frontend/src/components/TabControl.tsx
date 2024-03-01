@@ -1,4 +1,4 @@
-import React from "react";
+import { useState, ChangeEvent } from "react";
 import {
   Box,
   Grid,
@@ -46,12 +46,9 @@ interface TabControlProps {
 }
 
 export default function TabControl(props: TabControlProps): JSX.Element {
-  const [value, setValue] = React.useState(0);
+  const [value, setValue] = useState(0);
 
-  const handleChange = (
-    _event: React.ChangeEvent<unknown>,
-    newValue: number,
-  ) => {
+  const handleChange = (_event: ChangeEvent<unknown>, newValue: number) => {
     setValue(newValue);
   };
 
@@ -68,8 +65,9 @@ export default function TabControl(props: TabControlProps): JSX.Element {
         alignItems="center"
       >
         <Tabs value={value} onChange={handleChange} aria-label="tabs">
-          {props.tabNames &&
-            props.tabNames.map((name) => <Tab label={name} key={name} />)}
+          {props.tabNames.map((name) => (
+            <Tab label={name} key={name} />
+          ))}
         </Tabs>
         <Box sx={{ mx: "auto " }} />
         <Grid item>

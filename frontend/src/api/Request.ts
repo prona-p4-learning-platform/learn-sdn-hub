@@ -123,7 +123,7 @@ export async function getHttpError(
     const response = context.response;
 
     if (response) {
-      const body = await response.json() as unknown;
+      const body = (await response.json()) as unknown;
       const validated = httpStatusValidator.parse(body);
 
       return {
@@ -139,15 +139,15 @@ export async function getHttpError(
   }
 }
 
-export const APIPath = import.meta.env.VITE_REACT_APP_API_HOST
-  ? config.backendURL + "/api"
+export const APIBasePath = import.meta.env.VITE_REACT_APP_API_HOST
+  ? new URL("/api", config.backendURL).href
   : "/api";
 
 /**
  * Fetch method for API requests.
  */
 export const APIRequest = createCustomFetch({
-  baseURL: APIPath,
+  baseURL: APIBasePath,
   timeout: 30000,
   onRequest: (context) => {
     // inject auth token if possible

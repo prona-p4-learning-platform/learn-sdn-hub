@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { createTheme } from "@mui/material/styles";
 import {
-  AlertColor,
   Button,
   Checkbox,
   Dialog,
@@ -16,6 +15,7 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
+import type { AlertColor } from "@mui/material";
 import { FetchError } from "ofetch";
 import { z } from "zod";
 
@@ -339,7 +339,7 @@ export default function AssignmentOverview(): JSX.Element {
                 disabled={
                   deployedUserAssignments.length > 0 ||
                   (deployedGroupAssignments.length > 0 &&
-                    deployedGroupAssignments.indexOf(assignment) === -1) ||
+                    !deployedGroupAssignments.includes(assignment)) ||
                   (submittedAssignments.findIndex(
                     (element) => element.assignmentName === assignment,
                   ) !== -1 &&
@@ -369,7 +369,9 @@ export default function AssignmentOverview(): JSX.Element {
                 color="primary"
                 startIcon={<CloudOffIcon />}
                 disabled={!isActiveDeployment(assignment)}
-                onClick={() => handleConfirmationUndeployDialogOpen(assignment)}
+                onClick={() => {
+                  handleConfirmationUndeployDialogOpen(assignment);
+                }}
                 sx={{ margin: theme.spacing(1) }}
               >
                 Undeploy
@@ -388,9 +390,9 @@ export default function AssignmentOverview(): JSX.Element {
                     ) === -1
                   }
                   color="primary"
-                  onClick={() =>
-                    handleConfirmationResubmitDialogOpen(assignment)
-                  }
+                  onClick={() => {
+                    handleConfirmationResubmitDialogOpen(assignment);
+                  }}
                 />
               </Tooltip>
             </ListItemSecondaryAction>

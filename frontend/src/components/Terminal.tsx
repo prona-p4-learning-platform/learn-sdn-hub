@@ -1,7 +1,8 @@
-import React from "react";
+import { useLayoutEffect, useMemo } from "react";
 import { AttachAddon } from "xterm-addon-attach";
 import { FitAddon } from "xterm-addon-fit";
 import { SerializeAddon } from "xterm-addon-serialize";
+import type { Terminal } from "xterm";
 
 import XTerm from "./XTerm";
 import createWebSocket from "../api/WebSocket";
@@ -12,83 +13,109 @@ interface TerminalProps {
   onTerminalUnmount: (wsEndpoint: string, serializedState: string) => void;
 }
 
-export default class XTerminal extends React.Component<TerminalProps> {
-  private websocket!: WebSocket;
-  private resizeTimer!: NodeJS.Timeout;
-  private attachAddon;
-  private fitAddon;
-  private serializeAddon;
-  private xterm: XTerm | undefined;
+function sendResize(websocket: WebSocket, fitAddon: FitAddon): void {
+  if (websocket.readyState === 1) {
+    // signal window resize to ssh using SIGWINCH (\x1B[8;25;80t)
+    // running "resize" manually in the shell also fixes ncurses, tmux, screen etc. dimensions
+    const dimensions = fitAddon.proposeDimensions();
 
-  constructor(props: TerminalProps) {
-    super(props);
-    this.handleTermRef = this.handleTermRef.bind(this);
-    this.websocket = createWebSocket(this.props.wsEndpoint);
-    this.attachAddon = new AttachAddon(this.websocket);
-    this.fitAddon = new FitAddon();
-    this.serializeAddon = new SerializeAddon();
+    if (dimensions) {
+      websocket.send("\x1B[8;" + dimensions.rows + ";" + dimensions.cols + "t");
+    }
   }
+}
 
-  handleTermRef(instance: XTerm | null): void {
-    if (instance !== null) this.xterm = instance;
-    this.resizeTimer = setInterval(() => {
-      this.fitAddon.fit();
-    }, 1000);
-  }
+export default function XTerminal(props: TerminalProps): JSX.Element {
+  const { terminalState, wsEndpoint, onTerminalUnmount } = props;
+  const serAddon = useMemo(() => {
+    return new SerializeAddon();
+  }, []);
+  const fitAddon = useMemo(() => {
+    return new FitAddon();
+  }, []);
 
-  componentDidMount(): void {
-    this.websocket.onopen = (e) => {
-      if ((e.target as WebSocket).readyState !== WebSocket.OPEN) return;
-      this.websocket.send(`auth ${localStorage.getItem("token")}`);
-      //signal initial window resize to ssh using SIGWINCH (\x1B[8;25;80t)
-      //running "resize" manually in the shell also fixes ncurses, tmux, screen etc. dimensions
-      this.websocket.send(
-        "\x1B[8;" +
-          this.fitAddon.proposeDimensions().rows +
-          ";" +
-          this.fitAddon.proposeDimensions().cols +
-          "t",
-      );
-    };
-    this.xterm?.terminal.onResize((_size) => {
-      this.fitAddon.fit();
-      if (this.websocket?.readyState === 1) {
-        //signal window resize to ssh using SIGWINCH (\x1B[8;25;80t)
-        //running "resize" manually in the shell also fixes ncurses, tmux, screen etc. dimensions
-        this.websocket?.send(
-          "\x1B[8;" +
-            this.fitAddon.proposeDimensions().rows +
-            ";" +
-            this.fitAddon.proposeDimensions().cols +
-            "t",
+  let terminalRef: Terminal | null = null;
+
+  const getTerminal = (terminal: Terminal | null) => {
+    terminalRef = terminal;
+  };
+
+  // componentDidMount
+  useLayoutEffect(() => {
+    const websocket = createWebSocket(wsEndpoint);
+    let resizeInterval: NodeJS.Timeout | undefined = undefined;
+
+    let unmounted = false;
+    let socketOpen = false;
+    websocket.onopen = () => {
+      // close socket safely if component has already unmounted (strict mode)
+      if (unmounted) {
+        websocket.close();
+        return;
+      }
+
+      websocket.send(`auth ${localStorage.getItem("token")}`);
+      socketOpen = true;
+
+      // if the terminal is still available -> attach websocket
+      if (terminalRef) {
+        const attachAddon = new AttachAddon(websocket);
+
+        terminalRef.loadAddon(attachAddon);
+        sendResize(websocket, fitAddon);
+      } else {
+        console.log(
+          "Terminal: Could not attach websocket. No XTerm reference.",
         );
       }
-    });
-    this.xterm?.terminal.write(this.props?.terminalState ?? "");
-    // make sure background and foreground color are reset to default after restoring terminal state
-    this.xterm?.terminal.write("\x1B[0m");
-    this.xterm?.terminal.focus();
-    this.fitAddon.fit();
-  }
+    };
 
-  componentWillUnmount(): void {
-    if (this.resizeTimer) {
-      clearTimeout(this.resizeTimer);
+    if (terminalRef) {
+      // add resize callback
+      terminalRef.onResize(() => {
+        sendResize(websocket, fitAddon);
+      });
+
+      // restore terminal state
+      terminalRef.write(terminalState ?? "");
+      terminalRef.write("\x1B[0m");
+
+      // resize terminal
+      fitAddon.fit();
+
+      // periodically resize terminal
+      // TODO: watch div resize instead and debounce fit?
+      resizeInterval = setInterval(() => {
+        if (terminalRef) fitAddon.fit();
+      }, 1000);
+    } else {
+      console.log(
+        "Terminal: Resizing will not be handled. No XTerm reference.",
+      );
     }
-    // limit serialized scrollback to 1000 lines
-    const serializedState = this.serializeAddon.serialize({ scrollback: 1000 });
-    this.props.onTerminalUnmount(this.props.wsEndpoint, serializedState);
-    console.log("Terminal will unmount...");
-    this.websocket.close();
-  }
 
-  render(): JSX.Element {
-    return (
-      <XTerm
-        ref={this.handleTermRef.bind(this)}
-        addons={[this.fitAddon, this.attachAddon, this.serializeAddon]}
-        className="myXtermClass"
-      />
-    );
-  }
+    // componentWillUnmount
+    return () => {
+      unmounted = true;
+
+      // stop resizing
+      if (resizeInterval) clearInterval(resizeInterval);
+
+      // serialize terminal state and close websocket
+      if (socketOpen) {
+        const state = serAddon.serialize({ scrollback: 1000 });
+        onTerminalUnmount(wsEndpoint, state);
+
+        websocket.close();
+      }
+    };
+  });
+
+  return (
+    <XTerm
+      className="myXtermClass"
+      onTerminal={getTerminal}
+      addons={[fitAddon, serAddon]}
+    />
+  );
 }

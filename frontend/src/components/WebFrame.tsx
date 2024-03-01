@@ -1,10 +1,10 @@
-import React from "react";
+import { Component } from "react";
 
 interface WebFrameProps {
   url: string;
 }
 
-export default class WebFrame extends React.Component<WebFrameProps> {
+export default class WebFrame extends Component<WebFrameProps> {
   componentDidMount(): void {}
 
   componentWillUnmount(): void {

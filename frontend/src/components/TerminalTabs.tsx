@@ -1,4 +1,4 @@
-import React from "react";
+import { useState, ChangeEvent } from "react";
 import { Box, Grid, IconButton, Tab, Tabs, Tooltip } from "@mui/material";
 
 import FullscreenIcon from "@mui/icons-material/Fullscreen";
@@ -44,13 +44,10 @@ interface TabControlProps {
 }
 
 export default function TerminalTabs(props: TabControlProps): JSX.Element {
-  const [value, setValue] = React.useState(0);
-  const [fullscreen, setFullscreen] = React.useState(false);
+  const [value, setValue] = useState(0);
+  const [fullscreen, setFullscreen] = useState(false);
 
-  const handleChange = (
-    _event: React.ChangeEvent<unknown>,
-    newValue: number,
-  ) => {
+  const handleChange = (_event: ChangeEvent<unknown>, newValue: number) => {
     setValue(newValue);
   };
 
@@ -62,8 +59,9 @@ export default function TerminalTabs(props: TabControlProps): JSX.Element {
     <Grid className={fullscreen ? "myFullscreenTerminalTab" : "myTerminalTab"}>
       <Grid container justifyContent="flex-end">
         <Tabs value={value} onChange={handleChange} aria-label="terminal tabs">
-          {props.tabNames &&
-            props.tabNames.map((name) => <Tab label={name} key={name} />)}
+          {props.tabNames.map((name) => (
+            <Tab label={name} key={name} />
+          ))}
         </Tabs>
         <Box sx={{ mx: "auto " }} />
         <Tooltip title="Toggle Fullscreen" placement="left">

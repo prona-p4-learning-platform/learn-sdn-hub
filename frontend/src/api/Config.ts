@@ -1,15 +1,14 @@
-const hostname = window?.location?.hostname ?? "localhost";
+const hostname = window.location.hostname || "localhost";
 
 // set port
 const ENV_PORT = import.meta.env.VITE_REACT_APP_BACKEND_HTTP_PORT as unknown;
 const port =
   (typeof ENV_PORT === "string" ? ENV_PORT : undefined) ??
-  window.location.port ??
-  "3001";
+  (window.location.port || "3001");
 
 // set backend url
 const ENV_BACKEND_URL = import.meta.env.VITE_REACT_APP_API_HOST as unknown;
-const protocol = window?.location?.protocol ?? "http";
+const protocol = window.location.protocol || "http";
 const backendURL =
   (typeof ENV_BACKEND_URL === "string" ? ENV_BACKEND_URL : undefined) ??
   `${protocol}//${hostname}:${port}`;
