@@ -6,6 +6,7 @@ import {
   UserData,
   CourseData,
   ResponseObject,
+  AssignmentData,
 } from "./Persister";
 import fs from "fs";
 import path from "path";
@@ -197,6 +198,25 @@ export default class MemoryPersister implements Persister {
     },
     courseID: string
   ): Promise<ResponseObject> {
+    throw new Error("Method not implemented.");
+  }
+
+  async CreateAssignments(): Promise<AssignmentData[]> {
+    throw new Error("Method not implemented.");
+  }
+
+  async GetAllAssignments(): Promise<AssignmentData[] | string[]> {
+    throw new Error("Method not implemented.");
+  }
+
+  async UpdateAssignementsForCourse(
+    courseID: string,
+    assignmentIDs: string[]
+  ): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
+
+  async GetUserAssignments(userAcc: UserAccount): Promise<AssignmentData[]> {
     throw new Error("Method not implemented.");
   }
 

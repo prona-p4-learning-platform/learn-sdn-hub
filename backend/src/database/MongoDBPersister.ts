@@ -7,12 +7,14 @@ import {
   UserData,
   CourseData,
   ResponseObject,
+  AssignmentData,
 } from "./Persister";
 import {
   Submission,
   SubmissionFileType,
   TerminalStateType,
 } from "../Environment";
+import environments from "../Configuration";
 
 const saltRounds = 10;
 
@@ -337,6 +339,85 @@ export default class MongoDBPersister implements Persister {
       session.endSession();
       return response;
     }
+  }
+
+  async CreateAssignments(): Promise<AssignmentData[]> {
+    const client = await this.getClient();
+
+    const assignmentNames = Array.from(new Map(environments).keys());
+
+    const assignmentsCollection = client.db().collection("assignments");
+
+    // Create the assignments collection if it doesn't exist
+    await assignmentsCollection.createIndex({ name: 1 }, { unique: true });
+
+    // Insert assignment names into the collection
+    const bulkWriteOperations = assignmentNames.map((name) => ({
+      updateOne: {
+        filter: { name },
+        update: { $setOnInsert: { name } },
+        upsert: true,
+      },
+    }));
+
+    // Using bulkWrite as insertMany still throws errors on duplicate
+    const result = await assignmentsCollection.bulkWrite(bulkWriteOperations);
+
+    const insertedAssignments = assignmentNames.map((name, index) => ({
+      _id: result.upsertedIds[index],
+      name,
+    }));
+
+    return insertedAssignments;
+  }
+
+  async GetAllAssignments(): Promise<AssignmentData[] | string[]> {
+    const client = await this.getClient();
+    return client
+      .db()
+      .collection("assignments")
+      .find({}, { projection: { _id: 1, name: 1 } })
+      .toArray();
+  }
+
+  async UpdateAssignementsForCourse(
+    courseID: string,
+    assignmentIDs: string[]
+  ): Promise<void> {
+    const client = await this.getClient();
+    const courseObjID = new ObjectID(courseID);
+    const assignmentObjIDs = assignmentIDs.map((id) => new ObjectID(id));
+    return client
+      .db()
+      .collection("courses")
+      .updateOne(
+        { _id: courseObjID },
+        { $set: { assignments: assignmentObjIDs } }
+      )
+      .then(() => undefined);
+  }
+
+  async GetUserAssignments(userAcc: UserAccount): Promise<AssignmentData[]> {
+    const client = await this.getClient();
+    const courseObjIDs = userAcc.courses.map((id) => new ObjectID(id));
+
+    return client
+      .db()
+      .collection("courses")
+      .aggregate([
+        { $match: { _id: { $in: courseObjIDs } } },
+        {
+          $lookup: {
+            from: "assignments",
+            localField: "assignments",
+            foreignField: "_id",
+            as: "assignments",
+          },
+        },
+        { $unwind: "$assignments" },
+        { $replaceRoot: { newRoot: "$assignments" } },
+      ])
+      .toArray();
   }
 
   async close(): Promise<void> {

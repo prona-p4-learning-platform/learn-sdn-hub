@@ -12,6 +12,7 @@ export interface UserAccount {
   passwordHash?: string;
   assignmentListFilter?: string;
   role?: string;
+  courses?: string[];
 }
 
 export interface UserEnvironment {
@@ -37,6 +38,11 @@ export interface CourseData {
 export interface ResponseObject {
   error: boolean;
   message: string;
+}
+
+export interface AssignmentData {
+  _id: string;
+  name: string;
 }
 
 type CourseUserAction = {
@@ -75,4 +81,11 @@ export interface Persister {
     courseUserAction: CourseUserAction,
     courseID: string
   ): Promise<ResponseObject>;
+  CreateAssignments(): Promise<AssignmentData[]>;
+  GetAllAssignments(): Promise<AssignmentData[] | string[]>;
+  GetUserAssignments(userAcc: UserAccount): Promise<AssignmentData[]>;
+  UpdateAssignementsForCourse(
+    courseID: string,
+    assignmentIDs: string[]
+  ): Promise<void>;
 }

@@ -1,19 +1,57 @@
 import { Alert, Grid, Snackbar } from "@mui/material";
 import AdminTabs from "../components/AdminTabs";
 import UserAssignment from "../components/UserAssignment";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import APIRequest from "../api/Request";
 import type { User } from "../typings/user/UserType";
+import type { Assignment } from "../typings/assignment/AssignmentType";
+import CourseAssignments from "../components/CourseAssignments";
+
+type Severity = "error" | "success" | "info" | "warning" | undefined;
 
 const Administration = () => {
-  const [notificationOpen, setNotificationOpen] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string>("");
   const [authorized, setAuthorized] = useState(false);
+  const [load, setLoad] = useState(true);
   const [users, setUsers] = useState<User[]>([]);
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [fetchNotification, setFetchNotification] = useState({
+    result: "",
+    severity: undefined as Severity,
+    open: false,
+  });
+
+  const fetchAssignments = useCallback(() => {
+    if (authorized) {
+      fetch(
+        APIRequest("/api/admin/assignments", {
+          headers: { authorization: localStorage.getItem("token") || "" },
+        })
+      )
+        .then((response) => response.json())
+        .then((data) => {
+          console.log(data);
+          if (Array.isArray(data) && data.length > 0) {
+            if (typeof data[0] === "object" && data[0].hasOwnProperty("_id")) {
+              setAssignments(data);
+            } else {
+              addAssignmentsToDB(data);
+            }
+          }
+        })
+        .catch((error) => {
+          setFetchNotification({
+            result: error.message,
+            severity: "error",
+            open: true,
+          });
+        });
+    }
+  }, [authorized]);
 
   useEffect(() => {
+    setLoad(false);
     fetch(
-      APIRequest("/api/users", {
+      APIRequest("/api/admin/users", {
         headers: { authorization: localStorage.getItem("token") || "" },
       })
     )
@@ -22,22 +60,58 @@ const Administration = () => {
         if (data && !data.message) {
           setAuthorized(true);
           setUsers(data);
+          fetchAssignments();
           return;
         }
         handleAuthorization(false, data.message);
       })
-      .catch((error) => console.error("Error fetching users:", error));
-  }, []);
+      .catch((error) => {
+        setFetchNotification({
+          result: error.message,
+          severity: "error",
+          open: true,
+        });
+      });
+  }, [load, fetchAssignments]);
 
-  const handleNotificationClose = () => {
-    setNotificationOpen(false);
+  const addAssignmentsToDB = (assignments: string[]) => {
+    fetch(
+      APIRequest("/api/admin/assignments/create", {
+        method: "POST",
+        headers: {
+          authorization: localStorage.getItem("token") || "",
+        },
+      })
+    ).then((response) => {
+      if (response.status === 200) {
+        response.json().then((data) => {
+          setAssignments(data);
+        });
+      } else {
+        response.json().then((data) => {
+          setFetchNotification({
+            result: data.message,
+            severity: "error",
+            open: true,
+          });
+        });
+      }
+      console.log(response);
+    });
+  };
+
+  const handleSnackbarClose = () => {
+    setFetchNotification({ ...fetchNotification, open: false });
   };
 
   const handleAuthorization = (authorized: boolean, message?: string) => {
     setAuthorized(authorized);
     if (!authorized && message) {
-      setErrorMessage(message);
-      setNotificationOpen(true);
+      setFetchNotification({
+        result: message,
+        severity: "error",
+        open: true,
+      });
     }
   };
 
@@ -47,17 +121,21 @@ const Administration = () => {
         <Grid item xs={12}>
           <AdminTabs tabNames={["Assign Users", "Course Assignments"]}>
             <UserAssignment key="assignUsers" users={users}></UserAssignment>
-            <div key="courseAssignments">Course Assignments</div>
+            <CourseAssignments
+              key="assignAssignments"
+              assignments={assignments}
+            ></CourseAssignments>
           </AdminTabs>
         </Grid>
       ) : null}
       <Snackbar
-        open={notificationOpen}
+        open={fetchNotification.open}
+        anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
         autoHideDuration={6000}
-        onClose={handleNotificationClose}
+        onClose={handleSnackbarClose}
       >
-        <Alert onClose={handleNotificationClose} severity="error">
-          {errorMessage}
+        <Alert severity={fetchNotification.severity as Severity}>
+          {fetchNotification.result}
         </Alert>
       </Snackbar>
     </Grid>

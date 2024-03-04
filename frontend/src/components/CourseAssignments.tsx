@@ -10,38 +10,36 @@ import {
 } from "@mui/material";
 import { useEffect, useState } from "react";
 import APIRequest from "../api/Request";
-import type { User } from "../typings/user/UserType";
 import LoadingButton from "@mui/lab/LoadingButton";
 import SaveIcon from "@mui/icons-material/Save";
 import { not } from "../utilities/ListCompareHelper";
 import AssignmentList from "./ListAssignment";
+import type { Assignment } from "../typings/assignment/AssignmentType";
 
 interface Course {
   _id: string;
   name: string;
+  assignments?: string[];
 }
 
-interface UserAssignmentProps {
-  users: User[];
+interface AssignmentProps {
+  assignments: Assignment[];
 }
-
-type CourseUserAction = {
-  [key in "add" | "remove"]: {
-    userID: string;
-  }[];
-};
 
 type Severity = "error" | "success" | "info" | "warning" | undefined;
 
-const UserAssignment = ({ users }: UserAssignmentProps) => {
+const CourseAssignment = ({ assignments }: AssignmentProps) => {
   const [courses, setCourses] = useState<Course[]>([]);
   const [currentCourseID, setCurrentCourseID] = useState("");
-  const [checked, setChecked] = useState<readonly User[]>([]);
-  const [unassignedUsers, setUnassignedUsers] = useState<User[]>([]);
-  const [assignedUsers, setAssignedUsers] = useState<User[]>([]);
-  const [originalAssignedUsers, setOriginalAssignedUsers] = useState<User[]>(
+  const [checked, setChecked] = useState<readonly Assignment[]>([]);
+  const [unassignedAssignments, setUnassignedAssignments] = useState<
+    Assignment[]
+  >([]);
+  const [assignedAssignments, setAssignedAssignments] = useState<Assignment[]>(
     []
   );
+  const [originalAssignedAssignments, setOriginalAssignedAssignments] =
+    useState<Assignment[]>([]);
   const [hasChanges, setHasChanges] = useState<boolean>(false);
   const [waitForResponse, setWaitForResponse] = useState<boolean>(false);
   const [fetchNotification, setFetchNotification] = useState({
@@ -65,20 +63,25 @@ const UserAssignment = ({ users }: UserAssignmentProps) => {
       })
       .catch((error) => console.error("Error fetching courses:", error));
 
-    setUnassignedUsers(users);
-  }, [users]);
+    setUnassignedAssignments(assignments);
+  }, [assignments]);
 
-  const updateUsers = () => {
+  const updateAssignments = () => {
     setWaitForResponse(true);
     fetch(
-      APIRequest("/api/admin/course/" + currentCourseID + "/users/update", {
-        method: "POST",
-        headers: {
-          authorization: localStorage.getItem("token") || "",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(prepareUsersDataForSend()),
-      })
+      APIRequest(
+        "/api/admin/course/" + currentCourseID + "/assignments/update",
+        {
+          method: "POST",
+          headers: {
+            authorization: localStorage.getItem("token") || "",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(
+            assignedAssignments.map((assignment) => assignment._id)
+          ),
+        }
+      )
     )
       .then((response) => {
         if (response.status === 200) {
@@ -86,16 +89,16 @@ const UserAssignment = ({ users }: UserAssignmentProps) => {
             (course) => course._id === currentCourseID
           )?.name;
           setHasChanges(false);
-          setOriginalAssignedUsers(assignedUsers);
+          setOriginalAssignedAssignments(assignedAssignments);
           setFetchNotification({
-            result: `User(s) for course ${courseName} updated!`,
+            result: `Assignments(s) for course ${courseName} updated!`,
             severity: "success",
             open: true,
           });
         } else {
           response.json().then((data) => {
             setFetchNotification({
-              result: `Error updating users: ${data.message}`,
+              result: `Error updating assignments: ${data.message}`,
               severity: "error",
               open: true,
             });
@@ -105,33 +108,20 @@ const UserAssignment = ({ users }: UserAssignmentProps) => {
       .finally(() => setWaitForResponse(false));
   };
 
-  const prepareUsersDataForSend = (): CourseUserAction => {
-    const addedUsers = not(assignedUsers, originalAssignedUsers);
-    const removedUsers = not(originalAssignedUsers, assignedUsers);
-
-    const usersData: CourseUserAction = {
-      add: addedUsers.map((user) => ({
-        userID: user._id,
-      })),
-      remove: removedUsers.map((user) => ({
-        userID: user._id,
-      })),
-    };
-
-    return usersData;
-  };
-
-  const filterUsersInCourse = (courseId: string) => {
-    return users.filter((user) => user.courses?.includes(courseId));
+  const filterAssignmentsInCourse = (courseID: string) => {
+    const course = courses.find((course) => course._id === courseID);
+    return assignments.filter((assignment) =>
+      course?.assignments?.includes(assignment._id)
+    );
   };
 
   const handleCourseChange = (event: SelectChangeEvent) => {
     const courseID = event.target.value as string;
     setCurrentCourseID(courseID);
-    const usersInCourse = filterUsersInCourse(courseID);
-    setOriginalAssignedUsers(usersInCourse);
-    setAssignedUsers(usersInCourse);
-    setUnassignedUsers(not(users, usersInCourse));
+    const assignmentsInCourse = filterAssignmentsInCourse(courseID);
+    setOriginalAssignedAssignments(assignmentsInCourse);
+    setAssignedAssignments(assignmentsInCourse);
+    setUnassignedAssignments(not(assignments, assignmentsInCourse));
   };
 
   const handleSnackbarClose = () => {
@@ -168,19 +158,19 @@ const UserAssignment = ({ users }: UserAssignmentProps) => {
         justifyContent="center"
         alignItems="center"
       >
-        <AssignmentList<User>
-          unassignedItems={unassignedUsers}
-          assignedItems={assignedUsers}
+        <AssignmentList<Assignment>
+          unassignedItems={unassignedAssignments}
+          assignedItems={assignedAssignments}
+          displayProperty="name"
+          leftListTitle="Available Assignments"
+          rightListTitle="Assignments in Course"
           checked={checked}
           currentCourseID={currentCourseID}
-          originalAssigned={originalAssignedUsers}
-          setAssigned={setAssignedUsers}
+          originalAssigned={originalAssignedAssignments}
+          setUnassigned={setUnassignedAssignments}
+          setAssigned={setAssignedAssignments}
           setChecked={setChecked}
           setHasChanges={setHasChanges}
-          setUnassigned={setUnassignedUsers}
-          displayProperty="username"
-          leftListTitle="Available Users"
-          rightListTitle="Users in Course"
         />
         <Grid container justifyContent="center" alignItems="flex-end">
           <Grid
@@ -191,7 +181,7 @@ const UserAssignment = ({ users }: UserAssignmentProps) => {
           >
             <LoadingButton
               color="primary"
-              onClick={updateUsers}
+              onClick={updateAssignments}
               loading={waitForResponse}
               disabled={!hasChanges}
               loadingPosition="start"
@@ -217,4 +207,4 @@ const UserAssignment = ({ users }: UserAssignmentProps) => {
   );
 };
 
-export default UserAssignment;
+export default CourseAssignment;
