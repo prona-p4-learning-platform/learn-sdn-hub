@@ -504,7 +504,7 @@ export default class Environment {
     console.log(
       "Added new environment: " +
         this.environmentId +
-        "for user: " +
+        " for user: " +
         this.username +
         " using endpoint: " +
         JSON.stringify(endpoint),
@@ -737,7 +737,9 @@ export default class Environment {
             }
           }
         });
+        let stopCmdsRunning = this.configuration.stopCommands.length;
         for (const command of this.configuration.stopCommands) {
+          stopCmdsRunning
           if (command.type === "Shell") {
             let stopCmdFinished = false;
             await new Promise<void>((stopCmdSuccess, stopCmdFail) => {
@@ -768,6 +770,7 @@ export default class Environment {
                     ")",
                 );
                 stopCmdFinished = true;
+                stopCmdsRunning--;
                 console.emit("closed");
               });
               console.on("closed", () => {
@@ -780,6 +783,19 @@ export default class Environment {
               });
             });
           }
+        }
+
+        // wait for stop commands to finish
+        let timeout = 10;
+        while (timeout > 0 && stopCmdsRunning > 0) {
+          console.log("Waiting for stop cmds to finish...");
+          await new Promise((r) => setTimeout(r, 1000));
+          timeout--;
+        }
+        if (timeout === 0) {
+          throw(new Error(
+            "Timeout while waiting for stop commands to finish. Continuing with deletion.",
+          ))
         }
 
         this.environmentProvider
