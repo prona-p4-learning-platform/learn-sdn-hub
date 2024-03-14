@@ -27,7 +27,8 @@ function ChangePassword() {
             setChangePasswordSeverity("success")
             setNotificationOpen(true)
         } else {
-            setChangePasswordResult("Password change failed");
+            const message = await result.json()
+            setChangePasswordResult("Password change failed: " + message.message);
             setChangePasswordSeverity("error")
             setNotificationOpen(true)
         }

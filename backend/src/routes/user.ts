@@ -1,7 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
-/* eslint-disable @typescript-eslint/no-floating-promises */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-misused-promises */
 // TODO: fix eslint instead of disabling rules
 
@@ -40,9 +36,9 @@ export default (authProviders: AuthenticationProvider[]): Router => {
   });
 
   // remove body-parser as it is included in express >=4.17
-  router.post("/login", express.json(), loginValidator, async (req, res) => {
-    const username = req.body.username as string;
-    const password = req.body.password as string;
+  router.post("/login", express.json(), loginValidator, async (req: {body: {username: string, password: string}}, res) => {
+    const username = req.body.username;
+    const password = req.body.password;
 
     for (const authProvider of authProviders) {
       try {
@@ -75,28 +71,28 @@ export default (authProviders: AuthenticationProvider[]): Router => {
     "/changePassword",
     authenticationMiddleware,
     express.json(),
-    (req, res) => {
+    async (req, res) => {
       const reqWithUser = req as RequestWithUser;
-      const oldPassword = reqWithUser.body.oldPassword;
-      const newPassword = reqWithUser.body.newPassword;
-      const confirmNewPassword = reqWithUser.body.confirmNewPassword;
+      const { oldPassword, newPassword, confirmNewPassword } = reqWithUser.body as {
+        oldPassword: string;
+        newPassword: string;
+        confirmNewPassword: string;
+      };
       const loggedInUser = reqWithUser.user.username;
 
       for (const authProvider of authProviders) {
-        authProvider
-          .changePassword(
+        try {
+          await authProvider.changePassword(
             loggedInUser,
             oldPassword,
             newPassword,
             confirmNewPassword,
-          )
-          .catch((err) => {
-            console.log("error!", err);
-            res.status(500).json();
-          })
-          .then(() => {
-            res.status(200).json();
-          });
+          );
+          res.status(200).json();
+        } catch (err: unknown) {
+          console.log("Unable to change password: ", err);
+          res.status(500).json({ message: (err as Error).message });
+        }
       }
     },
   );

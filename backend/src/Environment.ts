@@ -1,9 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-base-to-string */
-/* eslint-disable @typescript-eslint/restrict-plus-operands */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-floating-promises */
-/* eslint-disable @typescript-eslint/no-unnecessary-type-assertion */
 /* eslint-disable no-async-promise-executor */
 /* eslint-disable @typescript-eslint/no-misused-promises */
 // TODO: fix eslint instead of disabling rules
@@ -295,7 +290,7 @@ export default class Environment {
           username,
           activeEnvironmentsForGroup[0].environmentId,
           activeEnvironmentsForGroup[0].configuration.description,
-          groupEnvironmentInstance!, // TODO: might be undefined?
+          groupEnvironmentInstance ?? ""
         );
 
         console.log(
@@ -449,15 +444,15 @@ export default class Environment {
           .then((endpoint) => {
             resolve(endpoint);
           })
-          .catch(async (err) => {
-            if (err.message === InstanceNotFoundErrorMessage) {
+          .catch(async (error: {code: string, message: string}) => {
+            if (error.message === InstanceNotFoundErrorMessage) {
               // instance is gone, remove environment
               await this.persister.RemoveUserEnvironment(
                 this.username,
                 filtered[0].environment,
               );
             }
-            return reject(err);
+            return reject(error.code + ": " + error.message);
           });
       } else if (filtered.length === 0) {
         if (createIfMissing === true) {
@@ -480,9 +475,9 @@ export default class Environment {
             "More than 1 environments exist for user " +
               this.username +
               ". Remove duplicate environments from persister " +
-              this.persister +
+              typeof this.persister +
               " envs found: " +
-              filtered,
+              filtered.join(", "),
           ),
         );
       }
@@ -658,7 +653,7 @@ export default class Environment {
                   };
 
                   console.log(
-                    "Received guacamole token " + desktop.remoteDesktopToken,
+                    "Received guacamole token for user: " + desktop.remoteDesktopToken.username,
                   );
                   this.activeDesktops.set(subterminal.name, desktop);
 
@@ -829,15 +824,15 @@ export default class Environment {
                 });
             });
           })
-          .catch((err) => {
-            if (err.message === InstanceNotFoundErrorMessage) {
+          .catch((error: {code: string, message: string}) => {
+            if (error.message === InstanceNotFoundErrorMessage) {
               // instance already gone (e.g., OpenStack instance already deleted)
               global.console.log(
                 "Error: Server Instance not found during deletion?",
               );
             } else {
-              global.console.log(err);
-              return reject(new Error("Error: Unable to delete server." + err));
+              global.console.log(error.code + ": " + error.message);
+              return reject(new Error("Error: Unable to delete server." + error.message));
             }
           });
       } catch (err) {
@@ -1067,8 +1062,8 @@ export default class Environment {
         .then((result) => {
           submissionPrepareResult = result;
         })
-        .catch((error) => {
-          submissionPrepareResult = error;
+        .catch((error: {code: string, message: string}) => {
+          submissionPrepareResult = error.code + ": " + error.message;
         });
       if (submissionPrepareResult) {
         submittedFiles.push({
@@ -1109,8 +1104,8 @@ export default class Environment {
         .then((result) => {
           submissionCleanupResult = result;
         })
-        .catch((error) => {
-          submissionCleanupResult = error;
+        .catch((error: {code: string, message: string}) => {
+          submissionCleanupResult = error.code + ": " + error.message;
         });
       if (submissionCleanupResult) {
         submittedFiles.push({
