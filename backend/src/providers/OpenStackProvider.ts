@@ -5,6 +5,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 // TODO: fix eslint instead of disabling rules
+// currently postponed, as the OpenStack provider is not actively used in our envs
 
 import {
   InstanceProvider,

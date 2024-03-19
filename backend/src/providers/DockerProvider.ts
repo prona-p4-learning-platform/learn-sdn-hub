@@ -342,14 +342,14 @@ export default class DockerProvider implements InstanceProvider {
             `${container.Names[0]} was created at ${createdAt.toISOString()} and should be deleted`,
           );
 
-          await this.deleteServer(container.Id).catch((reason) => {
-            const originalMessage =
-              reason instanceof Error ? reason.message : "Unknown error";
-            throw new Error(
-              `DockerProvider: Failed to delete container (${container.Names[0]}) to be pruned.\n` +
-                originalMessage,
-            );
-          });
+          //await this.deleteServer(container.Id).catch((reason) => {
+          //  const originalMessage =
+          //     reason instanceof Error ? reason.message : "Unknown error";
+          //   throw new Error(
+          //     `DockerProvider: Failed to delete container (${container.Names[0]}) to be pruned.\n` +
+          //       originalMessage,
+          //   );
+          // });
           await Environment.deleteInstanceEnvironments(container.Id).catch(
             (reason) => {
               const originalMessage =
@@ -482,8 +482,8 @@ export default class DockerProvider implements InstanceProvider {
    * Tries to connect via SSH to the given container.
    *
    * @param ip The ip address of the container.
-   * @param port The port of the container.
-   * @param timeout The timeout for this operation.
+   * @param port The SSH port of the container.
+   * @param timeout The timeout for the SSH connection.
    * @returns A void promise.
    */
   private async waitForContainerSSH(

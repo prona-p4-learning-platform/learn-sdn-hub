@@ -1,13 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-base-to-string */
-/* eslint-disable @typescript-eslint/restrict-plus-operands */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-floating-promises */
-/* eslint-disable @typescript-eslint/no-unnecessary-type-assertion */
-/* eslint-disable no-async-promise-executor */
-/* eslint-disable @typescript-eslint/no-misused-promises */
-// TODO: fix eslint instead of disabling rules
-
 import SSHConsole, { Console } from "./consoles/SSHConsole";
 import FileHandler from "./filehandler/SSHFileHandler";
 import {
@@ -219,7 +209,7 @@ export default class Environment {
     return this.activeDesktops.get(alias);
   }
 
-  static createEnvironment(
+  static async createEnvironment(
     username: string,
     groupNumber: number,
     environmentId: string,
@@ -227,123 +217,141 @@ export default class Environment {
     provider: InstanceProvider,
     persister: Persister,
   ): Promise<Environment> {
-    return new Promise<Environment>(async (resolve, reject) => {
-      const environment = new Environment(
-        username,
-        groupNumber,
-        environmentId,
-        env,
-        provider,
-        persister,
-      );
+    const environment = new Environment(
+      username,
+      groupNumber,
+      environmentId,
+      env,
+      provider,
+      persister,
+    );
 
-      console.log(
-        "Creating new environment: " + environmentId + " for user: " + username,
-      );
+    console.log(
+      "Creating new environment: " + environmentId + " for user: " + username,
+    );
 
-      const activeEnvironmentsForGroup = Array<Environment>();
-      for (const environment of Environment.activeEnvironments.values()) {
-        if (environment.groupNumber === groupNumber) {
-          if (environment.environmentId !== environmentId) {
-            throw new Error(
+    const activeEnvironmentsForGroup = Array<Environment>();
+    for (const environment of Environment.activeEnvironments.values()) {
+      if (environment.groupNumber === groupNumber) {
+        if (environment.environmentId !== environmentId) {
+          return Promise.reject(
+            new Error(
               "Your group already deployed another environment. Please reload assignment list.",
-            );
-          } else {
-            activeEnvironmentsForGroup.push(environment);
-          }
+            )
+          );
+        } else {
+          activeEnvironmentsForGroup.push(environment);
         }
       }
+    }
 
-      if (activeEnvironmentsForGroup.length === 0) {
-        environment
-          .start(env, true)
-          .then((endpoint) => {
-            environment.instanceId = endpoint.instance;
-            Environment.activeEnvironments.set(
-              `${username}-${environmentId}`,
-              environment,
-            );
-
-            resolve(environment);
-          })
-          .catch((err) => {
-            Environment.activeEnvironments.delete(
-              `${username}-${environmentId}`,
-            );
-
-            reject(new Error("Start of environment failed." + err));
-          });
-      } else {
-        // the group already runs an environment add this user to it
-        // and reuse instance
-        let groupEnvironmentInstance;
-        const userEnvironmentsOfOtherGroupUser =
-          await persister.GetUserEnvironments(
-            activeEnvironmentsForGroup[0].username,
+    if (activeEnvironmentsForGroup.length === 0) {
+      await environment
+        .start(env, true)
+        .then((endpoint) => {
+          environment.instanceId = endpoint.instance;
+          Environment.activeEnvironments.set(
+            `${username}-${environmentId}`,
+            environment,
           );
 
-        for (const userEnvironmentOfOtherGroupUser of userEnvironmentsOfOtherGroupUser) {
-          if (
-            userEnvironmentOfOtherGroupUser.environment ===
-            activeEnvironmentsForGroup[0].environmentId
-          ) {
-            groupEnvironmentInstance = userEnvironmentOfOtherGroupUser.instance;
-          }
+          return Promise.resolve(environment);
+        })
+        .catch((err) => {
+          Environment.activeEnvironments.delete(
+            `${username}-${environmentId}`,
+          );
+
+          return Promise.reject(new Error("Start of environment failed. " + err));
+        });
+    } else {
+      // the group already runs an environment add this user to it
+      // and reuse instance
+      let groupEnvironmentInstance;
+      const userEnvironmentsOfOtherGroupUser =
+        await persister.GetUserEnvironments(
+          activeEnvironmentsForGroup[0].username,
+        ).catch((err) => {
+          return Promise.reject(
+            new Error(
+              "Error: Unable to get UserEnvironments of group member " +
+                activeEnvironmentsForGroup[0].username +
+                "." +
+                err,
+            ),
+          );
+        });
+
+      for (const userEnvironmentOfOtherGroupUser of userEnvironmentsOfOtherGroupUser) {
+        if (
+          userEnvironmentOfOtherGroupUser.environment ===
+          activeEnvironmentsForGroup[0].environmentId
+        ) {
+          groupEnvironmentInstance = userEnvironmentOfOtherGroupUser.instance;
         }
-
-        await persister.AddUserEnvironment(
-          username,
-          activeEnvironmentsForGroup[0].environmentId,
-          activeEnvironmentsForGroup[0].configuration.description,
-          groupEnvironmentInstance!, // TODO: might be undefined?
-        );
-
-        console.log(
-          "Added existing environment: " +
-            environmentId +
-            " for user: " +
-            username +
-            " from user: " +
-            activeEnvironmentsForGroup[0].username +
-            " in group: " +
-            groupNumber +
-            " using instance: " +
-            groupEnvironmentInstance,
-        );
-
-        environment
-          .start(env, false)
-          .then((endpoint) => {
-            environment.instanceId = endpoint.instance;
-            Environment.activeEnvironments.set(
-              `${username}-${environmentId}`,
-              environment,
-            );
-            return resolve(environment);
-          })
-          .catch((err) => {
-            Environment.activeEnvironments.delete(
-              `${username}-${environmentId}`,
-            );
-            return reject(
-              new Error("Failed to join environment of your group." + err),
-            );
-          });
       }
-    });
+
+      await persister.AddUserEnvironment(
+        username,
+        activeEnvironmentsForGroup[0].environmentId,
+        activeEnvironmentsForGroup[0].configuration.description,
+        groupEnvironmentInstance ?? ""
+      ).catch((err) => {
+        return Promise.reject(
+          new Error(
+            "Error: Unable to add UserEnvironment for group member " +
+              username +
+              "." +
+              err,
+          ),
+        );
+      });
+
+      console.log(
+        "Added existing environment: " +
+          environmentId +
+          " for user: " +
+          username +
+          " from user: " +
+          activeEnvironmentsForGroup[0].username +
+          " in group: " +
+          groupNumber +
+          " using instance: " +
+          groupEnvironmentInstance,
+      );
+
+      await environment
+        .start(env, false)
+        .then((endpoint) => {
+          environment.instanceId = endpoint.instance;
+          Environment.activeEnvironments.set(
+            `${username}-${environmentId}`,
+            environment,
+          );
+          return Promise.resolve(environment);
+        })
+        .catch((err) => {
+          Environment.activeEnvironments.delete(
+            `${username}-${environmentId}`,
+          )
+          return Promise.reject(
+            new Error("Failed to join environment of your group." + err),
+          )
+        })
+    }
+    return Promise.resolve(environment);
   }
 
-  static deleteEnvironment(
+  static async deleteEnvironment(
     username: string,
     environmentId: string,
   ): Promise<boolean> {
-    return new Promise<boolean>((resolve, reject) => {
       const environment = this.getActiveEnvironment(environmentId, username);
 
       if (environment) {
         const groupNumber = environment.groupNumber;
 
-        environment
+        await environment
           .stop()
           .then(() => {
             Environment.activeEnvironments.delete(
@@ -360,10 +368,10 @@ export default class Environment {
                 );
               }
             });
-            resolve(true);
+            return Promise.resolve(true);
           })
-          .catch((err) => {
-            if (err === DenyStartOfMissingInstanceErrorMessage) {
+          .catch((err: Error) => {
+            if (err.message === DenyStartOfMissingInstanceErrorMessage) {
               console.log(
                 "Environment was already stopped. Silently deleting leftovers in user session.",
               );
@@ -381,40 +389,38 @@ export default class Environment {
                   );
                 }
               });
-              resolve(true);
+              return Promise.resolve(true);
             } else {
               console.log("Failed to stop environment. " + JSON.stringify(err));
-              reject(false);
+              return Promise.reject(false);
             }
           });
       } else {
         console.log("Environment not found.");
-        reject(false);
+        return Promise.reject(false);
       }
-    });
+      return Promise.resolve(true);
   }
 
   static async deleteInstanceEnvironments(instance: string): Promise<boolean> {
-    return new Promise<boolean>((resolve) => {
-      this.activeEnvironments.forEach((env) => {
-        if (env.instanceId === instance) {
-          // the environment uses the specified instance and should be deleted
-          this.deleteEnvironment(env.username, env.environmentId).then(
-            (result) => {
-              if (!result) {
-                // unable to delete environment
-                throw new Error(
-                  "Environment used by instance " +
-                    instance +
-                    " could not be deleted.",
-                );
-              }
-            },
-          );
-        }
-      });
-      return resolve(true);
-    });
+    for (const activeEnvironment of this.activeEnvironments.values()) {
+      if (activeEnvironment.instanceId === instance) {
+        // the environment uses the specified instance and should be deleted
+        await this.deleteEnvironment(activeEnvironment.username, activeEnvironment.environmentId).then(
+          (result) => {
+            if (!result) {
+              // unable to delete environment
+              throw new Error(
+                "Environment used by instance " +
+                  instance +
+                  " could not be deleted.",
+              );
+            }
+          },
+        ).catch((err) => { return Promise.reject(err); });
+      }
+    };
+    return Promise.resolve(true);
   }
 
   async getLanguageServerPort(): Promise<number> {
@@ -428,64 +434,63 @@ export default class Environment {
   }
 
   async makeSureInstanceExists(createIfMissing?: boolean): Promise<VMEndpoint> {
-    return new Promise<VMEndpoint>(async (resolve, reject) => {
-      const environments = await this.persister.GetUserEnvironments(
+    return new Promise<VMEndpoint>((resolve, reject) => {
+      this.persister.GetUserEnvironments(
         this.username,
-      );
-      console.log("Current user environments: " + JSON.stringify(environments));
-      const filtered = environments.filter(
-        (env) => env.environment === this.environmentId,
-      );
-      if (filtered.length === 1) {
-        console.log(
-          "Environment " +
-            this.environmentId +
-            " already deployed for user " +
-            this.username +
-            ", trying to reopen it...",
+      ).then((environments) => {;
+        console.log("Current user environments: " + JSON.stringify(environments));
+        const filtered = environments.filter(
+          (env) => env.environment === this.environmentId,
         );
-        this.environmentProvider
-          .getServer(filtered[0].instance)
-          .then((endpoint) => {
-            resolve(endpoint);
-          })
-          .catch(async (err) => {
-            if (err.message === InstanceNotFoundErrorMessage) {
-              // instance is gone, remove environment
-              await this.persister.RemoveUserEnvironment(
+        if (filtered.length === 1) {
+          console.log(
+            "Environment " + this.environmentId + " already deployed for user " +
+              this.username + ", trying to reopen it...",
+          );
+          this.environmentProvider.getServer(filtered[0].instance)
+            .then((endpoint) => {
+              return resolve(endpoint);
+            })
+            .catch(async (error: Error) => {
+              if (error.message === InstanceNotFoundErrorMessage) {
+                // instance is gone, remove environment
+                await this.persister.RemoveUserEnvironment(
+                  this.username,
+                  filtered[0].environment,
+                );
+              }
+              return reject(error.message);
+            });
+        } else if (filtered.length === 0) {
+          if (createIfMissing === true) {
+            return resolve(
+              this.environmentProvider.createServer(
                 this.username,
-                filtered[0].environment,
-              );
-            }
-            return reject(err);
-          });
-      } else if (filtered.length === 0) {
-        if (createIfMissing === true) {
-          resolve(
-            this.environmentProvider.createServer(
-              this.username,
-              this.groupNumber,
-              this.environmentId,
-              this.configuration.providerImage,
-              this.configuration.providerDockerCmd,
-              this.configuration.providerDockerSupplementalPorts,
+                this.groupNumber,
+                this.environmentId,
+                this.configuration.providerImage,
+                this.configuration.providerDockerCmd,
+                this.configuration.providerDockerSupplementalPorts,
+              ),
+            );
+          } else {
+            return reject(DenyStartOfMissingInstanceErrorMessage);
+          }
+        } else {
+          return reject(
+            new Error(
+              "More than 1 environments exist for user " +
+                this.username +
+                ". Remove duplicate environments from persister " +
+                typeof this.persister +
+                " envs found: " +
+                filtered.join(", "),
             ),
           );
-        } else {
-          return reject(DenyStartOfMissingInstanceErrorMessage);
         }
-      } else {
-        return reject(
-          new Error(
-            "More than 1 environments exist for user " +
-              this.username +
-              ". Remove duplicate environments from persister " +
-              this.persister +
-              " envs found: " +
-              filtered,
-          ),
-        );
-      }
+      }).catch((err) => {
+        return reject(new Error("Error: Unable to get UserEnvironments." + err));
+      });
     });
   }
 
@@ -504,7 +509,7 @@ export default class Environment {
     console.log(
       "Added new environment: " +
         this.environmentId +
-        "for user: " +
+        " for user: " +
         this.username +
         " using endpoint: " +
         JSON.stringify(endpoint),
@@ -658,7 +663,7 @@ export default class Environment {
                   };
 
                   console.log(
-                    "Received guacamole token " + desktop.remoteDesktopToken,
+                    "Received guacamole token for user: " + desktop.remoteDesktopToken.username,
                   );
                   this.activeDesktops.set(subterminal.name, desktop);
 
@@ -710,131 +715,155 @@ export default class Environment {
   }
 
   async stop(): Promise<void> {
-    return new Promise(async (resolve, reject) => {
-      try {
-        const endpoint = await this.makeSureInstanceExists();
+    try {
+      const endpoint = await this.makeSureInstanceExists().catch((err) => {
+        return Promise.reject(
+          new Error(
+            "Error: Unable to make sure instance exists " +
+              this.environmentId +
+              "." +
+              err,
+          )
+        );
+      });
 
-        for (const console of this.activeConsoles) {
-          console[1].close(this.environmentId, this.username, this.groupNumber);
-        }
-        this.filehandler.close();
+      for (const console of this.activeConsoles) {
+        console[1].close(this.environmentId, this.username, this.groupNumber);
+      }
+      await this.filehandler.close();
 
-        // close consoles of other users in group
-        // maybe also stop/close Desktops and WebApps later?
-        const activeUsers = new Array<string>();
-        Environment.activeEnvironments.forEach((env: Environment) => {
-          if (
-            env.groupNumber === this.groupNumber &&
-            env.username !== this.username
-          ) {
-            activeUsers.push(env.username);
-            for (const console of this.activeConsoles) {
-              console[1].close(
-                this.environmentId,
-                env.username,
-                this.groupNumber,
-              );
-            }
-          }
-        });
-        for (const command of this.configuration.stopCommands) {
-          if (command.type === "Shell") {
-            let stopCmdFinished = false;
-            await new Promise<void>((stopCmdSuccess, stopCmdFail) => {
-              global.console.log(
-                "Executing stop command: ",
-                JSON.stringify(command),
-                JSON.stringify(endpoint),
-              );
-              const console = new SSHConsole(
-                this.environmentId,
-                this.username,
-                this.groupNumber,
-                endpoint.IPAddress,
-                endpoint.SSHPort,
-                command.executable,
-                command.params,
-                command.cwd,
-                command.provideTty,
-              );
-              console.on("finished", (code: string, signal: string) => {
-                global.console.log(
-                  "OUTPUT: " +
-                    console.stdout +
-                    "(exit code: " +
-                    code +
-                    ", signal: " +
-                    signal +
-                    ")",
-                );
-                stopCmdFinished = true;
-                console.emit("closed");
-              });
-              console.on("closed", () => {
-                if (stopCmdFinished === true) {
-                  stopCmdSuccess();
-                } else {
-                  global.console.log("Stop command failed.");
-                  stopCmdFail();
-                }
-              });
-            });
-          }
-        }
-
-        this.environmentProvider
-          .deleteServer(endpoint.instance)
-          .then(() => {
-            this.persister
-              .RemoveUserEnvironment(this.username, this.environmentId)
-              .then(() => {
-                return resolve();
-              })
-              .catch((err) => {
-                return reject(
-                  new Error("Error: Unable to remove UserEnvironment." + err),
-                );
-              });
-            activeUsers.forEach((user: string) => {
-              this.persister
-                .RemoveUserEnvironment(user, this.environmentId)
-                .then(() => {
-                  return resolve();
-                })
-                .catch((err) => {
-                  return reject(
-                    new Error(
-                      "Error: Unable to remove UserEnvironment for group member " +
-                        user +
-                        "." +
-                        err,
-                    ),
-                  );
-                });
-            });
-          })
-          .catch((err) => {
-            if (err.message === InstanceNotFoundErrorMessage) {
-              // instance already gone (e.g., OpenStack instance already deleted)
-              global.console.log(
-                "Error: Server Instance not found during deletion?",
-              );
-            } else {
-              global.console.log(err);
-              return reject(new Error("Error: Unable to delete server." + err));
-            }
-          });
-      } catch (err) {
+      // close consoles of other users in group
+      // maybe also stop/close Desktops and WebApps later?
+      const activeUsers = new Array<string>();
+      Environment.activeEnvironments.forEach((env: Environment) => {
         if (
-          err instanceof Error &&
-          err.message === InstanceNotFoundErrorMessage
+          env.groupNumber === this.groupNumber &&
+          env.username !== this.username
         ) {
-          return resolve();
-        } else {
-          return reject(err);
+          activeUsers.push(env.username);
+          for (const console of this.activeConsoles) {
+            console[1].close(
+              this.environmentId,
+              env.username,
+              this.groupNumber,
+            );
+          }
+        }
+      });
+      let stopCmdsRunning = this.configuration.stopCommands.length;
+      for (const command of this.configuration.stopCommands) {
+        stopCmdsRunning
+        if (command.type === "Shell") {
+          let stopCmdFinished = false;
+          await new Promise<void>((stopCmdSuccess, stopCmdFail) => {
+            global.console.log(
+              "Executing stop command: ",
+              JSON.stringify(command),
+              JSON.stringify(endpoint),
+            );
+            const console = new SSHConsole(
+              this.environmentId,
+              this.username,
+              this.groupNumber,
+              endpoint.IPAddress,
+              endpoint.SSHPort,
+              command.executable,
+              command.params,
+              command.cwd,
+              command.provideTty,
+            );
+            console.on("finished", (code: string, signal: string) => {
+              global.console.log(
+                "OUTPUT: " +
+                  console.stdout +
+                  "(exit code: " +
+                  code +
+                  ", signal: " +
+                  signal +
+                  ")",
+              );
+              stopCmdFinished = true;
+              stopCmdsRunning--;
+              console.emit("closed");
+            });
+            console.on("closed", () => {
+              if (stopCmdFinished === true) {
+                stopCmdSuccess();
+              } else {
+                global.console.log("Stop command failed.");
+                stopCmdFail();
+              }
+            });
+          });
         }
       }
-    });
+
+      // wait for stop commands to finish
+      let timeout = 10;
+      while (timeout > 0 && stopCmdsRunning > 0) {
+        console.log("Waiting for stop cmds to finish...");
+        await new Promise((r) => setTimeout(r, 1000));
+        timeout--;
+      }
+      if (timeout === 0) {
+        throw(new Error(
+          "Timeout while waiting for stop commands to finish. Continuing with deletion.",
+        ))
+      }
+
+      this.environmentProvider
+        .deleteServer(endpoint.instance)
+        .then(() => {
+          this.persister
+            .RemoveUserEnvironment(this.username, this.environmentId)
+            .then(() => {
+              return Promise.resolve();
+            })
+            .catch((err) => {
+              return Promise.reject(
+                new Error("Error: Unable to remove UserEnvironment." + err),
+              );
+            });
+          activeUsers.forEach((user: string) => {
+            this.persister
+              .RemoveUserEnvironment(user, this.environmentId)
+              .then(() => {
+                return Promise.resolve();
+              })
+              .catch((err) => {
+                return Promise.reject(
+                  new Error(
+                    "Error: Unable to remove UserEnvironment for group member " +
+                      user +
+                      "." +
+                      err,
+                  ),
+                );
+              });
+          });
+        })
+        .catch((error: Error) => {
+          if (error.message === InstanceNotFoundErrorMessage) {
+            // instance already gone (e.g., OpenStack instance already deleted)
+            global.console.log(
+              "Error ignored: Server Instance not found during deletion?",
+            );
+            return Promise.resolve();
+          } else {
+            global.console.log(error.message);
+            return Promise.reject(new Error("Error: Unable to delete server." + error.message));
+          }
+        });
+    } catch (err) {
+      if (
+        err instanceof Error &&
+        err.message === InstanceNotFoundErrorMessage
+      ) {
+        return Promise.resolve();
+      } else {
+        return Promise.reject(err);
+      }
+    }
   }
 
   async restart(): Promise<void> {
@@ -922,7 +951,7 @@ export default class Environment {
         "/",
         false,
       );
-      console.on("finished", (code: string, signal: string) => {
+      console.on("finished", (code: number, signal: string) => {
         global.console.log(
           "STDOUT: " +
             console.stdout +
@@ -934,7 +963,7 @@ export default class Environment {
             signal +
             ")",
         );
-        if (code === "0") {
+        if (code === 0) {
           // if stdoutSuccessMatch was supplied, try to match stdout against it, to detect whether cmd was successfull
           if (stdoutSuccessMatch) {
             if (console.stdout.match(stdoutSuccessMatch)) {
@@ -965,68 +994,66 @@ export default class Environment {
   ): Promise<string> {
     console.log("TESTING step " + stepIndex);
 
-    return new Promise(async (resolve, reject) => {
-      if (this.configuration.steps && this.configuration.steps?.length > 0) {
-        const activeStep = this.configuration.steps[parseInt(stepIndex)];
-        let testOutput = "";
-        let someTestsFailed = false;
+    if (this.configuration.steps && this.configuration.steps?.length > 0) {
+      const activeStep = this.configuration.steps[parseInt(stepIndex)];
+      let testOutput = "";
+      let someTestsFailed = false;
 
-        for (const test of activeStep.tests) {
-          let testPassed = false;
-          // per default test result is false
-          if (test.type === "TerminalBufferSearch") {
-            // search in terminalBuffer for match
-            if (terminalStates.length === 0) {
-              return reject(
-                new Error(
-                  "No terminal states available. Please use the terminals to run the steps given in the assignment and check again.",
-                ),
-              );
-            } else {
-              for (const terminalState of terminalStates) {
-                const split = terminalState.endpoint.split("/");
-                const element = split.pop();
+      for (const test of activeStep.tests) {
+        let testPassed = false;
+        // per default test result is false
+        if (test.type === "TerminalBufferSearch") {
+          // search in terminalBuffer for match
+          if (terminalStates.length === 0) {
+            return Promise.reject(
+              new Error(
+                "No terminal states available. Please use the terminals to run the steps given in the assignment and check again.",
+              ),
+            );
+          } else {
+            for (const terminalState of terminalStates) {
+              const split = terminalState.endpoint.split("/");
+              const element = split.pop();
 
-                if (element !== undefined && element.match(test.terminal)) {
-                  if (terminalState.state.match(test.match)) {
-                    testOutput += "PASSED: " + test.successMessage + " ";
-                    testPassed = true;
-                  }
+              if (element !== undefined && element.match(test.terminal)) {
+                if (terminalState.state.match(test.match)) {
+                  testOutput += "PASSED: " + test.successMessage + " ";
+                  testPassed = true;
                 }
               }
-              if (testPassed !== true)
-                testOutput += "FAILED: " + test.errorHint + " ";
             }
-          } else if (test.type === "SSHCommand") {
-            await this.runSSHCommand(test.command, test.stdOutMatch)
-              .then(() => {
-                testOutput += "PASSED: " + test.successMessage + " ";
-                testPassed = true;
-              })
-              .catch(() => {
-                testOutput += "FAILED: " + test.errorHint + " ";
-              });
+            if (testPassed !== true)
+              testOutput += "FAILED: " + test.errorHint + " ";
           }
-          // if any of the terminalStates matched
-          if (testPassed === true && someTestsFailed !== true)
-            someTestsFailed = false;
-          else someTestsFailed = true;
+        } else if (test.type === "SSHCommand") {
+          await this.runSSHCommand(test.command, test.stdOutMatch)
+            .then(() => {
+              testOutput += "PASSED: " + test.successMessage + " ";
+              testPassed = true;
+            })
+            .catch(() => {
+              testOutput += "FAILED: " + test.errorHint + " ";
+            });
         }
-        if (someTestsFailed !== undefined && someTestsFailed === false)
-          return resolve("All tests passed! " + testOutput);
-        else return reject(new Error("Some Tests failed! " + testOutput));
-      } else {
-        // no tests defined
-        global.console.log(
-          "Cannot execute test. No steps defined in tasks for assignment.",
-        );
-        return reject(
-          new Error(
-            "Cannot execute test. No steps defined in tasks for assignment.",
-          ),
-        );
+        // if any of the terminalStates matched
+        if (testPassed === true && someTestsFailed !== true)
+          someTestsFailed = false;
+        else someTestsFailed = true;
       }
-    });
+      if (someTestsFailed !== undefined && someTestsFailed === false)
+        return Promise.resolve("All tests passed! " + testOutput);
+      else return Promise.reject(new Error("Some Tests failed! " + testOutput));
+    } else {
+      // no tests defined
+      global.console.log(
+        "Cannot execute test. No steps defined in tasks for assignment.",
+      );
+      return Promise.reject(
+        new Error(
+          "Cannot execute test. No steps defined in tasks for assignment.",
+        ),
+      );
+    }
   }
 
   async submit(
@@ -1051,8 +1078,8 @@ export default class Environment {
         .then((result) => {
           submissionPrepareResult = result;
         })
-        .catch((error) => {
-          submissionPrepareResult = error;
+        .catch((error: Error) => {
+          submissionPrepareResult = error.message;
         });
       if (submissionPrepareResult) {
         submittedFiles.push({
@@ -1093,8 +1120,8 @@ export default class Environment {
         .then((result) => {
           submissionCleanupResult = result;
         })
-        .catch((error) => {
-          submissionCleanupResult = error;
+        .catch((error: Error) => {
+          submissionCleanupResult = error.message;
         });
       if (submissionCleanupResult) {
         submittedFiles.push({
