@@ -1,7 +1,4 @@
-/* eslint-disable @typescript-eslint/no-misused-promises */
-// TODO: fix eslint instead of disabling rules
-
-import express, { Router } from "express";
+import express, { Router, RequestHandler } from "express";
 import { AuthenticationProvider } from "../authentication/AuthenticationProvider";
 import environments from "../Configuration";
 import jwt from "jsonwebtoken";
@@ -20,7 +17,7 @@ const loginValidator = celebrate({
 export default (authProviders: AuthenticationProvider[]): Router => {
   const router = Router();
 
-  router.get("/assignments", authenticationMiddleware, async (req, res) => {
+  router.get("/assignments", authenticationMiddleware, (async (req, res) => {
     const reqWithUser = req as RequestWithUser;
     const loggedInUser = reqWithUser.user.username;
     let tempAssignmentMap = new Map(environments);
@@ -33,10 +30,9 @@ export default (authProviders: AuthenticationProvider[]): Router => {
     }
 
     res.status(200).json(Array.from(tempAssignmentMap.keys()));
-  });
+  }) as RequestHandler);
 
-  // remove body-parser as it is included in express >=4.17
-  router.post("/login", express.json(), loginValidator, async (req: {body: {username: string, password: string}}, res) => {
+  router.post("/login", express.json(), loginValidator, (async (req: {body: {username: string, password: string}}, res) => {
     const username = req.body.username;
     const password = req.body.password;
 
@@ -65,13 +61,13 @@ export default (authProviders: AuthenticationProvider[]): Router => {
     }
 
     res.status(401).json({ error: "Not authenticated." });
-  });
+  }) as RequestHandler);
 
   router.post(
     "/changePassword",
     authenticationMiddleware,
     express.json(),
-    async (req, res) => {
+    (async (req, res) => {
       const reqWithUser = req as RequestWithUser;
       const { oldPassword, newPassword, confirmNewPassword } = reqWithUser.body as {
         oldPassword: string;
@@ -94,8 +90,7 @@ export default (authProviders: AuthenticationProvider[]): Router => {
           res.status(500).json({ message: (err as Error).message });
         }
       }
-    },
-  );
+    }) as RequestHandler);
 
   return router;
 };

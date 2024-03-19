@@ -484,7 +484,7 @@ export default class FirecrackerProvider implements InstanceProvider {
 
       // jailer is recommended for production
       const mv = new microVM(this.binPath, socketPath);
-      const process = await mv.spawn().catch((err: {message: string, stack: string}) => {
+      const process = await mv.spawn().catch((err: Error) => {
         throw(
           new Error(
             "FirecrackerProvider: Could not spawn new Firecracker process: " +
@@ -501,7 +501,7 @@ export default class FirecrackerProvider implements InstanceProvider {
         level: "debug",
         show_level: true,
         show_log_origin: true,
-      }).catch((err: {message: string, stack: string}) => {
+      }).catch((err: Error) => {
         throw(
           new Error(
             "FirecrackerProvider: Could not set Logger: " +
@@ -514,7 +514,7 @@ export default class FirecrackerProvider implements InstanceProvider {
       await mv.setMachineConfig({
         vcpu_count: this.vcpuCount,
         mem_size_mib: this.memSizeMiB,
-      }).catch((err: {message: string, stack: string}) => {
+      }).catch((err: Error) => {
         throw(
           new Error(
             "FirecrackerProvider: Could not set MachineConfig: " +
@@ -528,7 +528,7 @@ export default class FirecrackerProvider implements InstanceProvider {
         amount_mib: this.memBalloonSizeMiB,
         deflate_on_oom: true,
         stats_polling_interval_s: 1,
-      }).catch((err: {message: string, stack: string}) => {
+      }).catch((err: Error) => {
         throw(
           new Error(
             "FirecrackerProvider: Could not set BalloonMemory: " +
@@ -541,7 +541,7 @@ export default class FirecrackerProvider implements InstanceProvider {
       await mv.setBootSource({
         kernel_image_path: microVMKernelImage,
         boot_args: microVMKernelBootARGs,
-      }).catch((err: {message: string, stack: string}) => {
+      }).catch((err: Error) => {
         throw(
           new Error(
             "FirecrackerProvider: Could not set BootSource: " +
@@ -556,7 +556,7 @@ export default class FirecrackerProvider implements InstanceProvider {
         path_on_host: microVMRootFSDrive,
         is_root_device: true,
         is_read_only: false,
-      }).catch((err: {message: string, stack: string}) => {
+      }).catch((err: Error) => {
         throw(
           new Error(
             "FirecrackerProvider: Could not add Drive: " +

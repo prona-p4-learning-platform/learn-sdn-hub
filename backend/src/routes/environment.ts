@@ -1,14 +1,9 @@
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-misused-promises */
-// TODO: fix eslint instead of disabling rules
-
-import { Router } from "express";
+import { Router, RequestHandler } from "express";
 import Environment, {
   AliasedFile,
   TerminalType,
   AssignmentStep,
+  TerminalStateType,
 } from "../Environment";
 import bodyParser from "body-parser";
 import environments from "../Configuration";
@@ -85,7 +80,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
     "/:environment/assignment",
     authenticationMiddleware,
     environmentPathParamValidator,
-    async (req, res) => {
+    (async (req, res) => {
       const reqWithUser = req as RequestWithUser;
       const environment = reqWithUser.params.environment;
       const targetEnv = environments.get(String(environment));
@@ -121,8 +116,8 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
       }
 
       res.send(markdown);
-    },
-  );
+    }
+  ) as RequestHandler);
 
   router.post(
     "/create",
@@ -218,7 +213,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
               .status(200)
               .end(content);
           })
-          .catch((err) => {
+          .catch((err: Error) => {
             console.log(err);
             res.status(500).json({ error: true, message: err.message });
           });
@@ -244,7 +239,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
 
       if (env) {
         env
-          .writeFile(reqWithUser.params.alias, reqWithUser.body)
+          .writeFile(reqWithUser.params.alias, reqWithUser.body as string)
           .then(() => res.status(200).end())
           .catch((err: Error) =>
             res.status(400).json({ status: "error", message: err.message }),
@@ -272,7 +267,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
         .then((content) => {
           res.status(200).end(content);
         })
-        .catch((err) => {
+        .catch((err: Error) => {
           console.log(err);
           res.status(500).json({ error: true, message: err.message });
         });
@@ -298,7 +293,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
               .status(200)
               .json({ status: "finished", message: "Restart complete" });
           })
-          .catch((err) =>
+          .catch((err: Error) =>
             res.status(500).json({ status: "error", message: err.message }),
           );
       } else {
@@ -320,17 +315,18 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
         reqWithUser.params.environment,
         reqWithUser.user.username,
       );
+      const {activeStep, terminalState} = reqWithUser.body as {activeStep: string, terminalState: TerminalStateType[]};
 
       if (env) {
         env
-          .test(reqWithUser.body.activeStep, reqWithUser.body.terminalState)
+          .test(activeStep, terminalState)
           .then((testResult) => {
             res.status(200).json({
               status: "finished",
               message: testResult,
             });
           })
-          .catch((err) =>
+          .catch((err: Error) =>
             res.status(500).json({ status: "error", message: err.message }),
           );
       } else {
@@ -353,10 +349,11 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
         reqWithUser.params.environment,
         reqWithUser.user.username,
       );
+      const {activeStep, terminalState} = reqWithUser.body as {activeStep: string, terminalState: TerminalStateType[]};
 
       if (env) {
         env
-          .submit(reqWithUser.body.activeStep, reqWithUser.body.terminalState)
+          .submit(activeStep, terminalState)
           .then(() => {
             res.status(200).json({
               status: "finished",
@@ -364,7 +361,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
                 "Terminal content and files submitted! Assignment finished!",
             });
           })
-          .catch((err) =>
+          .catch((err: Error) =>
             res.status(500).json({ status: "error", message: err.message }),
           );
       } else {
@@ -401,7 +398,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
     },
   );
 
-  router.get("/submissions", authenticationMiddleware, async (req, res) => {
+  router.get("/submissions", authenticationMiddleware, (async (req, res) => {
     const reqWithUser = req as RequestWithUser;
 
     await Environment.getUserSubmissions(
@@ -416,7 +413,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
         console.log("No submission found " + err);
         res.status(200).json([]);
       });
-  });
+  }) as RequestHandler);
 
   router.get(
     "/:environment/provider-instance-status",
