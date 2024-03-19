@@ -1,12 +1,5 @@
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-misused-promises */
-// TODO: fix eslint instead of disabling rules
-
-import { Router } from "express";
-import Environment from "../Environment";
-import bodyParser from "body-parser";
+import { Router, json } from "express";
+import Environment, { TerminalStateType } from "../Environment";
 import environments from "../Configuration";
 import { InstanceProvider } from "../providers/Provider";
 import { Persister } from "../database/Persister";
@@ -57,7 +50,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
         files: targetEnv.editableFiles.map((file) => file.alias),
         filePaths: targetEnv.editableFiles.map((file) => file.absFilePath),
         // first subterminal in array of subterminals will define the tab name
-        terminals: targetEnv.terminals.filter((subterminals) =>
+        terminals: targetEnv.terminals.map((subterminals) =>
           subterminals.filter(
             (subterminal) =>
               (subterminal.type === "Shell" && subterminal.provideTty) ||
@@ -79,7 +72,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
     "/:environment/assignment",
     authenticationMiddleware,
     environmentPathParamValidator,
-    async (req, res) => {
+    (req, res) => {
       const reqWithUser = req as RequestWithUser;
       const environment = reqWithUser.params.environment;
       const targetEnv = environments.get(String(environment));
@@ -87,11 +80,12 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
       console.log("/:environment/assignment");
 
       if (targetEnv === undefined) {
-        res.status(404).json({ error: true, message: "Environment not found" });
+        res
+          .status(404)
+          .json({ status: "error", message: "Environment not found" });
         return;
       }
 
-      let markdown: string | undefined;
       // if assignmentLabSheetLocation specified as "instance",
       // get lab sheet from instance filesystem
       if (targetEnv.assignmentLabSheetLocation === "instance") {
@@ -101,20 +95,36 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
         );
 
         if (env) {
-          markdown = await env.readFile(targetEnv.assignmentLabSheet, true);
+          env
+            .readFile(targetEnv.assignmentLabSheet, true)
+            .then((markdown) => {
+              res.status(200).json({ content: markdown });
+            })
+            .catch((err) => {
+              let message = "Unknown error";
+              if (err instanceof Error) message = err.message;
+
+              res.status(500).json({ status: "error", message });
+            });
         } else {
           res
             .status(500)
             .send({ status: "error", message: "Environment not found." });
-          return;
         }
       } else {
-        markdown = fs
-          .readFileSync(path.resolve(__dirname, targetEnv.assignmentLabSheet))
-          .toString();
-      }
+        try {
+          const markdown = fs
+            .readFileSync(path.resolve(__dirname, targetEnv.assignmentLabSheet))
+            .toString();
 
-      res.json({ content: markdown });
+          res.status(200).json({ content: markdown });
+        } catch (err) {
+          let message = "Unknown error";
+          if (err instanceof Error) message = err.message;
+
+          res.status(500).json({ status: "error", message });
+        }
+      }
     },
   );
 
@@ -128,7 +138,9 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
       const targetEnv = environments.get(String(environment));
 
       if (targetEnv === undefined) {
-        res.status(404).json({ error: true, message: "Environment not found" });
+        res
+          .status(404)
+          .json({ status: "error", message: "Environment not found" });
         return;
       }
 
@@ -141,11 +153,13 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
         persister,
       )
         .then(() => {
-          res.status(200).json();
+          res.status(200).json({ status: "success" });
         })
-        .catch((err: Error) => {
-          console.log(err);
-          res.status(500).json({ status: "error", message: err.message });
+        .catch((err) => {
+          let message = "Unknown error";
+          if (err instanceof Error) message = err.message;
+
+          res.status(500).json({ status: "error", message });
         });
     },
   );
@@ -160,7 +174,9 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
       const targetEnv = environments.get(String(environment));
 
       if (targetEnv === undefined) {
-        res.status(404).json({ error: true, message: "Environment not found" });
+        res
+          .status(404)
+          .json({ status: "error", message: "Environment not found" });
         return;
       }
 
@@ -169,8 +185,8 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
         String(environment),
       )
         .then((deleted) => {
-          if (deleted === true) {
-            res.status(200).json();
+          if (deleted) {
+            res.status(200).json({ status: "success" });
           } else {
             res.status(500).json({
               status: "error",
@@ -178,11 +194,14 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
             });
           }
         })
-        .catch((err: Error) => {
-          console.log("Failed to delete environment " + err.message);
+        .catch((err) => {
+          let message = "Unknown error";
+          if (err instanceof Error) message = err.message;
+
+          console.log("Failed to delete environment " + message);
           res.status(500).json({
             status: "error",
-            message: "Failed to delete environment " + err.message,
+            message: "Failed to delete environment " + message,
           });
         });
     },
@@ -209,8 +228,10 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
             });
           })
           .catch((err) => {
-            console.log(err);
-            res.status(500).json({ status: "error", message: err.message });
+            let message = "Unknown error";
+            if (err instanceof Error) message = err.message;
+
+            res.status(500).json({ status: "error", message });
           });
       } else {
         res
@@ -222,7 +243,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
 
   router.post(
     "/:environment/file/:alias",
-    bodyParser.json(),
+    json(),
     authenticationMiddleware,
     environmentPathParamWithAliasValidator,
     (req, res) => {
@@ -233,13 +254,18 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
       );
 
       if (env) {
+        const body = reqWithUser.body as Record<string, unknown>; // TODO: add validator
+
         env
-          .writeFile(reqWithUser.params.alias, reqWithUser.body.data)
+          .writeFile(reqWithUser.params.alias, body.data as string)
           .then(() => {
-            res.status(200).json();
+            res.status(200).json({ status: "success" });
           })
-          .catch((err: Error) => {
-            res.status(400).json({ status: "error", message: err.message });
+          .catch((err) => {
+            let message = "Unknown error";
+            if (err instanceof Error) message = err.message;
+
+            res.status(400).json({ status: "error", message });
           });
       } else {
         res
@@ -265,8 +291,10 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
           res.status(200).json({ content });
         })
         .catch((err) => {
-          console.log(err);
-          res.status(500).json({ status: "error", message: err.message });
+          let message = "Unknown error";
+          if (err instanceof Error) message = err.message;
+
+          res.status(500).json({ status: "error", message });
         });
     },
   );
@@ -290,9 +318,12 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
               .status(200)
               .json({ status: "finished", message: "Restart complete" });
           })
-          .catch((err) =>
-            res.status(500).json({ status: "error", message: err.message }),
-          );
+          .catch((err) => {
+            let message = "Unknown error";
+            if (err instanceof Error) message = err.message;
+
+            res.status(500).json({ status: "error", message });
+          });
       } else {
         res
           .status(500)
@@ -303,7 +334,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
 
   router.post(
     "/:environment/test",
-    bodyParser.json({ type: "application/json" }),
+    json(),
     authenticationMiddleware,
     environmentPathParamValidator,
     (req, res) => {
@@ -314,17 +345,25 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
       );
 
       if (env) {
+        const body = reqWithUser.body as Record<string, unknown>; // TODO: add validator
+
         env
-          .test(reqWithUser.body.activeStep, reqWithUser.body.terminalState)
+          .test(
+            body.activeStep as string,
+            body.terminalState as TerminalStateType[],
+          )
           .then((testResult) => {
             res.status(200).json({
               status: "finished",
               message: testResult,
             });
           })
-          .catch((err) =>
-            res.status(500).json({ status: "error", message: err.message }),
-          );
+          .catch((err) => {
+            let message = "Unknown error";
+            if (err instanceof Error) message = err.message;
+
+            res.status(500).json({ status: "error", message });
+          });
       } else {
         res
           .status(500)
@@ -333,10 +372,9 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
     },
   );
 
-  // remove body-parser as it is included in express >=4.17
   router.post(
     "/:environment/submit",
-    bodyParser.json({ type: "application/json" }),
+    json(),
     authenticationMiddleware,
     environmentPathParamValidator,
     (req, res) => {
@@ -347,8 +385,13 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
       );
 
       if (env) {
+        const body = reqWithUser.body as Record<string, unknown>; // TODO: add validator
+
         env
-          .submit(reqWithUser.body.activeStep, reqWithUser.body.terminalState)
+          .submit(
+            body.activeStep as string,
+            body.terminalState as TerminalStateType[],
+          )
           .then(() => {
             res.status(200).json({
               status: "finished",
@@ -356,9 +399,12 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
                 "Terminal content and files submitted! Assignment finished!",
             });
           })
-          .catch((err) =>
-            res.status(500).json({ status: "error", message: err.message }),
-          );
+          .catch((err) => {
+            let message = "Unknown error";
+            if (err instanceof Error) message = err.message;
+
+            res.status(500).json({ status: "error", message });
+          });
       } else {
         res
           .status(500)
