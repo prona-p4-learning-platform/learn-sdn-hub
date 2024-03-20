@@ -132,11 +132,8 @@ export async function getHttpError(
           data: validated,
         };
       } else {
-        const already_parsed_data = context.data as { data: HttpError };
-        return {
-          success: true,
-          data: already_parsed_data.data
-        };
+        // if body already has been parsed -> return result directly
+        return context.data as SafeParse<HttpError>;
       }
     } else throw new Error("No response in context.");
   } catch (error) {

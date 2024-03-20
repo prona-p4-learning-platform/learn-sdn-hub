@@ -114,42 +114,51 @@ class microVM {
       }
 
       this.microVMInstance.process.on("exit", () => {
-        fs.unlink(this.socketPath).catch((err: {code: string, message: string}) => {
-          // if ENOENT, file does not exist as intended
-          if ("ENOENT" !== err.code) {
-            return reject(
-              new Error(
-                "FirecrackerProvider: Could not cleanup socketPath " + err.message,
-              ),
-            );
-          }
-        });
+        fs.unlink(this.socketPath).catch(
+          (err: { code: string; message: string }) => {
+            // if ENOENT, file does not exist as intended
+            if ("ENOENT" !== err.code) {
+              return reject(
+                new Error(
+                  "FirecrackerProvider: Could not cleanup socketPath " +
+                    err.message,
+                ),
+              );
+            }
+          },
+        );
       });
 
       this.microVMInstance.process.on("close", () => {
-        fs.unlink(this.socketPath).catch((err: {code: string, message: string}) => {
-          // if ENOENT, file does not exist as intended
-          if ("ENOENT" !== err.code) {
-            return reject(
-              new Error(
-                "FirecrackerProvider: Could not cleanup socketPath " + err.message,
-              ),
-            );
-          }
-        });
+        fs.unlink(this.socketPath).catch(
+          (err: { code: string; message: string }) => {
+            // if ENOENT, file does not exist as intended
+            if ("ENOENT" !== err.code) {
+              return reject(
+                new Error(
+                  "FirecrackerProvider: Could not cleanup socketPath " +
+                    err.message,
+                ),
+              );
+            }
+          },
+        );
       });
 
       this.microVMInstance.process.on("error", () => {
-        fs.unlink(this.socketPath).catch((err: {code: string, message: string}) => {
-          // if ENOENT, file does not exist as intended
-          if ("ENOENT" !== err.code) {
-            return reject(
-              new Error(
-                "FirecrackerProvider: Could not cleanup socketPath " + err.message,
-              ),
-            );
-          }
-        });
+        fs.unlink(this.socketPath).catch(
+          (err: { code: string; message: string }) => {
+            // if ENOENT, file does not exist as intended
+            if ("ENOENT" !== err.code) {
+              return reject(
+                new Error(
+                  "FirecrackerProvider: Could not cleanup socketPath " +
+                    err.message,
+                ),
+              );
+            }
+          },
+        );
       });
 
       resolve(this.microVMInstance.process);
@@ -164,7 +173,7 @@ class microVM {
     return new Promise((resolve, reject) => {
       this.axiosInstance
         .put(this.baseURL + "/logger", data)
-        .then((response: {data: FirecrackerLogger}) => {
+        .then((response: { data: FirecrackerLogger }) => {
           resolve(response.data);
         })
         .catch((err) => {
@@ -179,7 +188,7 @@ class microVM {
     return new Promise((resolve, reject) => {
       this.axiosInstance
         .put(this.baseURL + "/machine-config", data)
-        .then((response: {data: FirecrackerMachineConfig}) => {
+        .then((response: { data: FirecrackerMachineConfig }) => {
           resolve(response.data);
         })
         .catch((err) => {
@@ -194,7 +203,7 @@ class microVM {
     return new Promise((resolve, reject) => {
       this.axiosInstance
         .put(this.baseURL + "/balloon", data)
-        .then((response: {data: FirecrackerBalloonMemory}) => {
+        .then((response: { data: FirecrackerBalloonMemory }) => {
           resolve(response.data);
         })
         .catch((err) => {
@@ -203,13 +212,11 @@ class microVM {
     });
   }
 
-  setBootSource(
-    data: FirecrackerBootSource,
-  ): Promise<FirecrackerBootSource> {
+  setBootSource(data: FirecrackerBootSource): Promise<FirecrackerBootSource> {
     return new Promise((resolve, reject) => {
       this.axiosInstance
         .put(this.baseURL + "/boot-source", data)
-        .then((response: {data: FirecrackerBootSource}) => {
+        .then((response: { data: FirecrackerBootSource }) => {
           resolve(response.data);
         })
         .catch((err) => {
@@ -218,14 +225,11 @@ class microVM {
     });
   }
 
-  addDrive(
-    driveId: string,
-    data: FirecrackerDrive,
-  ): Promise<FirecrackerDrive> {
+  addDrive(driveId: string, data: FirecrackerDrive): Promise<FirecrackerDrive> {
     return new Promise((resolve, reject) => {
       this.axiosInstance
         .put(this.baseURL + "/drives/" + driveId, data)
-        .then((response: {data: FirecrackerDrive}) => {
+        .then((response: { data: FirecrackerDrive }) => {
           resolve(response.data);
         })
         .catch((err) => {
@@ -241,7 +245,7 @@ class microVM {
     return new Promise((resolve, reject) => {
       this.axiosInstance
         .put(this.baseURL + "/network-interfaces/" + ifId, data)
-        .then((response: {data: FirecrackerNetworkInterface}) => {
+        .then((response: { data: FirecrackerNetworkInterface }) => {
           resolve(response.data);
         })
         .catch((err) => {
@@ -254,7 +258,7 @@ class microVM {
     return new Promise((resolve, reject) => {
       this.axiosInstance
         .put(this.baseURL + "/actions", { action_type: actionType })
-        .then((response: {data: FirecrackerActionState}) => {
+        .then((response: { data: FirecrackerActionState }) => {
           resolve(response.data);
         })
         .catch((err) => {
@@ -441,247 +445,213 @@ export default class FirecrackerProvider implements InstanceProvider {
     const socketPath =
       this.socketPathPrefix + "_" + username + "-" + environment;
 
-      await fs.unlink(socketPath).catch((err: {code: string, message: string}) => {
+    await fs
+      .unlink(socketPath)
+      .catch((err: { code: string; message: string }) => {
         if ("ENOENT" !== err.code) {
-          throw(
-            new Error(
-              "FirecrackerProvider: Could not cleanup socketPath " + err.message,
-            )
+          throw new Error(
+            "FirecrackerProvider: Could not cleanup socketPath " + err.message,
           );
         }
         // if ENOENT, file does not exist as intended
       });
 
-      const microVMKernelImage = kernelImage ?? providerInstance.kernelImage;
-      const microVMKernelBootARGs =
-        kernelImage ?? providerInstance.kernelBootARGs;
-      const microVMRootFSDrive = rootFSDrive ?? providerInstance.rootFSDrive;
+    const microVMKernelImage = kernelImage ?? providerInstance.kernelImage;
+    const microVMKernelBootARGs =
+      kernelImage ?? providerInstance.kernelBootARGs;
+    const microVMRootFSDrive = rootFSDrive ?? providerInstance.rootFSDrive;
 
-      const logFileName =
-        "/tmp/firecracker.log" + "_" + username + "-" + environment;
-      const logFileTime = new Date();
+    const logFileName =
+      "/tmp/firecracker.log" + "_" + username + "-" + environment;
+    const logFileTime = new Date();
 
-      await fs.unlink(socketPath).catch((err: {code: string, message: string}) => {
+    await fs
+      .unlink(socketPath)
+      .catch((err: { code: string; message: string }) => {
         if ("ENOENT" !== err.code) {
-          throw(
-            new Error("FirecrackerProvider: Could not cleanup logFile " + err.message)
+          throw new Error(
+            "FirecrackerProvider: Could not cleanup logFile " + err.message,
           );
         }
         // if ENOENT, file does not exist as intended
       });
-      await fs
-        .utimes(logFileName, logFileTime, logFileTime)
-        .catch(async (err: {code: string, message: string}) => {
-          if ("ENOENT" !== err.code) {
-            throw(
-              new Error("FirecrackerProvider: Could not touch logfile " + err.message)
-            );
-          }
-          // if ENOENT, file does not exist as intended, open and close it to update access time
-          const fh = await fs.open(logFileName, "a");
-          await fh.close();
-        });
-
-      // jailer is recommended for production
-      const mv = new microVM(this.binPath, socketPath);
-      const process = await mv.spawn().catch((err: Error) => {
-        throw(
-          new Error(
-            "FirecrackerProvider: Could not spawn new Firecracker process: " +
-              err.message
-          )
-        );
+    await fs
+      .utimes(logFileName, logFileTime, logFileTime)
+      .catch(async (err: { code: string; message: string }) => {
+        if ("ENOENT" !== err.code) {
+          throw new Error(
+            "FirecrackerProvider: Could not touch logfile " + err.message,
+          );
+        }
+        // if ENOENT, file does not exist as intended, open and close it to update access time
+        const fh = await fs.open(logFileName, "a");
+        await fh.close();
       });
-      console.log("Started new firecracker process " + process?.pid);
 
-      // setting up logging for firecracker microVM
-      await mv.setLogger({
-        log_path:
-          "/tmp/firecracker.log" + "_" + username + "-" + environment,
+    // jailer is recommended for production
+    const mv = new microVM(this.binPath, socketPath);
+    const process = await mv.spawn().catch((err: Error) => {
+      throw new Error(
+        "FirecrackerProvider: Could not spawn new Firecracker process: " +
+          err.message,
+      );
+    });
+    console.log("Started new firecracker process " + process?.pid);
+
+    // setting up logging for firecracker microVM
+    await mv
+      .setLogger({
+        log_path: "/tmp/firecracker.log" + "_" + username + "-" + environment,
         level: "debug",
         show_level: true,
         show_log_origin: true,
-      }).catch((err: Error) => {
-        throw(
-          new Error(
-            "FirecrackerProvider: Could not set Logger: " +
-              err.message,
-          )
+      })
+      .catch((err: Error) => {
+        throw new Error(
+          "FirecrackerProvider: Could not set Logger: " + err.message,
         );
       });
 
-      // setting machine config of firecracker microVM
-      await mv.setMachineConfig({
+    // setting machine config of firecracker microVM
+    await mv
+      .setMachineConfig({
         vcpu_count: this.vcpuCount,
         mem_size_mib: this.memSizeMiB,
-      }).catch((err: Error) => {
-        throw(
-          new Error(
-            "FirecrackerProvider: Could not set MachineConfig: " +
-              err.message,
-          )
+      })
+      .catch((err: Error) => {
+        throw new Error(
+          "FirecrackerProvider: Could not set MachineConfig: " + err.message,
         );
       });
 
-      // setting balloon memory of firecracker microVM
-      await mv.setBalloonMemory({
+    // setting balloon memory of firecracker microVM
+    await mv
+      .setBalloonMemory({
         amount_mib: this.memBalloonSizeMiB,
         deflate_on_oom: true,
         stats_polling_interval_s: 1,
-      }).catch((err: Error) => {
-        throw(
-          new Error(
-            "FirecrackerProvider: Could not set BalloonMemory: " +
-              err.message,
-          )
+      })
+      .catch((err: Error) => {
+        throw new Error(
+          "FirecrackerProvider: Could not set BalloonMemory: " + err.message,
         );
       });
 
-      // setting boot source of firecracker microVM
-      await mv.setBootSource({
+    // setting boot source of firecracker microVM
+    await mv
+      .setBootSource({
         kernel_image_path: microVMKernelImage,
         boot_args: microVMKernelBootARGs,
-      }).catch((err: Error) => {
-        throw(
-          new Error(
-            "FirecrackerProvider: Could not set BootSource: " +
-              err.message,
-          )
+      })
+      .catch((err: Error) => {
+        throw new Error(
+          "FirecrackerProvider: Could not set BootSource: " + err.message,
         );
       });
 
-      // adding rootfs drive of firecracker microVM
-      await mv.addDrive("rootfs", {
+    // adding rootfs drive of firecracker microVM
+    await mv
+      .addDrive("rootfs", {
         drive_id: "rootfs",
         path_on_host: microVMRootFSDrive,
         is_root_device: true,
         is_read_only: false,
-      }).catch((err: Error) => {
-        throw(
-          new Error(
-            "FirecrackerProvider: Could not add Drive: " +
-              err.message,
-          )
+      })
+      .catch((err: Error) => {
+        throw new Error(
+          "FirecrackerProvider: Could not add Drive: " + err.message,
         );
       });
 
-      // create tap dev on host
-      const microVMIPID =
-        this.availableIpAddresses.length;
-      const microVMIPAddress =
-        this.availableIpAddresses.pop();
+    // create tap dev on host
+    const microVMIPID = this.availableIpAddresses.length;
+    const microVMIPAddress = this.availableIpAddresses.pop();
 
-      if (!microVMIPAddress)
-        throw(
-          new Error(
-            "FirecrackerProvider: No ip address available.",
-          )
-        )
+    if (!microVMIPAddress)
+      throw new Error("FirecrackerProvider: No ip address available.");
 
-      const hexStringIP = microVMIPAddress
-        .split(".")
-        .map((value) =>
-          Number(value).toString(16).padStart(2, "0"),
-        )
-        .join(":");
-      const microVMMACAddress =
-        "f6:" +
-        this.networkCIDR.bitmask.toString(16) +
-        ":" +
-        hexStringIP;
-      const iface_id = "net1";
-      const tap_id = "fctap" + microVMIPID;
-      console.log(
-        "FirecrackerProvider: creating tap device: " +
+    const hexStringIP = microVMIPAddress
+      .split(".")
+      .map((value) => Number(value).toString(16).padStart(2, "0"))
+      .join(":");
+    const microVMMACAddress =
+      "f6:" + this.networkCIDR.bitmask.toString(16) + ":" + hexStringIP;
+    const iface_id = "net1";
+    const tap_id = "fctap" + microVMIPID;
+    console.log(
+      "FirecrackerProvider: creating tap device: " +
+        tap_id +
+        " with IP: " +
+        microVMIPAddress +
+        " and MAC: " +
+        microVMMACAddress,
+    );
+
+    // create tap interface and attach it to the bridge
+    try {
+      execSync(
+        "sudo ip tuntap add " +
           tap_id +
-          " with IP: " +
-          microVMIPAddress +
-          " and MAC: " +
-          microVMMACAddress,
+          " mode tap && sudo ip link set " +
+          tap_id +
+          " up && sudo brctl addif " +
+          this.bridgeInterface +
+          " " +
+          tap_id,
       );
+    } catch (error) {
+      mv.kill();
+      throw new Error("FirecrackerProvider: Unable to create TAP device.");
+    }
+    // wait for tap dev to be setup
+    await providerInstance.sleep(1000);
 
-      // create tap interface and attach it to the bridge
-      try {
-        execSync(
-          "sudo ip tuntap add " +
-            tap_id +
-            " mode tap && sudo ip link set " +
-            tap_id +
-            " up && sudo brctl addif " +
-            this.bridgeInterface +
-            " " +
-            tap_id
-        )
-      } catch (error) {
-        mv.kill();
-        throw(
-          new Error(
-            "FirecrackerProvider: Unable to create TAP device."
-          )
-        );
-      }
-      // wait for tap dev to be setup
-      await providerInstance.sleep(1000);
+    // need to setup tap devices etc. on the host in advance
+    // fcnet-setup.sh or similar can be used in rootfs
+    //   expects mac with prefix f6:, rest of the address is used as
+    //   mask and ipv4 address in hex
+    await mv.addNetworkInterface(iface_id, {
+      iface_id: iface_id,
+      guest_mac: microVMMACAddress,
+      host_dev_name: tap_id,
+    });
 
-      // need to setup tap devices etc. on the host in advance
-      // fcnet-setup.sh or similar can be used in rootfs
-      //   expects mac with prefix f6:, rest of the address is used as
-      //   mask and ipv4 address in hex
-      await mv.addNetworkInterface(iface_id, {
-          iface_id: iface_id,
-          guest_mac: microVMMACAddress,
-          host_dev_name: tap_id,
-      })
+    // possibly wait for all previous changes (async?)
+    // see getting_started doc for firecracker
+    await mv.invokeAction("InstanceStart");
+    console.log("FirecrackerProvider: microVM started");
+    // wait for ssh
+    const expirationDate = new Date(
+      Date.now() + providerInstance.maxInstanceLifetimeMinutes * 60 * 1000,
+    );
+    await providerInstance.waitForMicroVMSSH(
+      microVMIPAddress,
+      providerInstance.sshPort,
+      providerInstance.microVMSSHTimeoutSeconds,
+    );
+    console.log("FirecrackerProvider: microVM SSH ready");
+    const vmEndpoint = {
+      instance: microVMIPAddress,
+      providerInstanceStatus:
+        "Environment will be deleted at " + expirationDate.toLocaleString(),
+      IPAddress: microVMIPAddress,
+      SSHPort: providerInstance.sshPort,
+      LanguageServerPort: providerInstance.lsPort,
+    };
+    this.firecrackers.set(microVMIPAddress, {
+      vmEndpoint: vmEndpoint,
+      microVM: mv,
+      process: process,
+      expirationDate: expirationDate,
+      tapInterfaceId: tap_id,
+      username: username,
+      groupNumber: groupNumber,
+      environment: environment,
+    });
 
-      // possibly wait for all previous changes (async?)
-      // see getting_started doc for firecracker
-      await mv.invokeAction("InstanceStart")
-      console.log(
-        "FirecrackerProvider: microVM started",
-      );
-      // wait for ssh
-      const expirationDate = new Date(
-        Date.now() +
-          providerInstance.maxInstanceLifetimeMinutes *
-            60 *
-            1000,
-      );
-      await providerInstance
-        .waitForMicroVMSSH(
-          microVMIPAddress,
-          providerInstance.sshPort,
-          providerInstance.microVMSSHTimeoutSeconds,
-        )
-        console.log(
-          "FirecrackerProvider: microVM SSH ready",
-        );
-        const vmEndpoint = {
-          instance: microVMIPAddress,
-          providerInstanceStatus:
-            "Environment will be deleted at " +
-            expirationDate.toLocaleString(),
-          IPAddress: microVMIPAddress,
-          SSHPort: providerInstance.sshPort,
-          LanguageServerPort:
-            providerInstance.lsPort,
-        };
-        this.firecrackers.set(
-          microVMIPAddress,
-          {
-            vmEndpoint: vmEndpoint,
-            microVM: mv,
-            process: process,
-            expirationDate: expirationDate,
-            tapInterfaceId: tap_id,
-            username: username,
-            groupNumber: groupNumber,
-            environment: environment,
-          },
-        );
-
-        return vmEndpoint;
+    return vmEndpoint;
   }
-  
+
   async getServer(instance: string): Promise<VMEndpoint> {
     return new Promise((resolve, reject) => {
       const vmEndpoint = this.firecrackers.get(instance)?.vmEndpoint;
@@ -704,8 +674,11 @@ export default class FirecrackerProvider implements InstanceProvider {
       await providerInstance.sleep(1000);
       // https://github.com/firecracker-microvm/firecracker/blob/main/docs/api_requests/actions.md#send-ctrlaltdel
       await fc.microVM.invokeAction("SendCtrlAltDel").catch((err) => {
-        throw(new Error("FirecrackerProvider: Could not invoke Action to stop microVM: " + err));
-      })
+        throw new Error(
+          "FirecrackerProvider: Could not invoke Action to stop microVM: " +
+            err,
+        );
+      });
 
       console.log("FirecrackerProvider: microVM stopped");
       // wait for stop tasks to end, is this still necessary after SendCtrlAltDel?
@@ -724,13 +697,11 @@ export default class FirecrackerProvider implements InstanceProvider {
             " mode tap",
           (error, stdout, stderr) => {
             if (error) {
-              throw(
-                new Error(
-                  "FirecrackerProvider: Unable to remove TAP device." +
-                    stderr +
-                    " " +
-                    stdout,
-                )
+              throw new Error(
+                "FirecrackerProvider: Unable to remove TAP device." +
+                  stderr +
+                  " " +
+                  stdout,
               );
             }
           },
@@ -738,22 +709,20 @@ export default class FirecrackerProvider implements InstanceProvider {
         this.availableIpAddresses.push(vmEndpoint.IPAddress);
         this.firecrackers.delete(instance);
 
-        return
+        return;
       } else {
-        throw(
-          new Error(
-            "FirecrackerProvider: Could not delete instance: " + instance,
-          )
+        throw new Error(
+          "FirecrackerProvider: Could not delete instance: " + instance,
         );
       }
     } else {
-      throw(new Error(InstanceNotFoundErrorMessage));
+      throw new Error(InstanceNotFoundErrorMessage);
     }
   }
 
   /**
-  * Deletes all expired microVMs.
-  */
+   * Deletes all expired microVMs.
+   */
   private async pruneMicroVMInstance(): Promise<void> {
     const deadline = new Date(Date.now());
 
@@ -762,8 +731,8 @@ export default class FirecrackerProvider implements InstanceProvider {
         deadline.toISOString(),
     );
 
-    for(const [microVMId, microVM] of this.firecrackers.entries()) {
-      if (microVM.expirationDate < deadline) {        
+    for (const [microVMId, microVM] of this.firecrackers.entries()) {
+      if (microVM.expirationDate < deadline) {
         //await this.deleteServer(microVMId).catch((reason) => {
         //  const originalMessage =
         //  reason instanceof Error ? reason.message : "Unknown error";
@@ -772,26 +741,27 @@ export default class FirecrackerProvider implements InstanceProvider {
         //        originalMessage,
         //  ));
         //})
-        await Environment.deleteInstanceEnvironments(microVMId).catch((reason) => {
-          const originalMessage =
-          reason instanceof Error ? reason.message : "Unknown error";
-          throw new Error(
+        await Environment.deleteInstanceEnvironments(microVMId).catch(
+          (reason) => {
+            const originalMessage =
+              reason instanceof Error ? reason.message : "Unknown error";
+            throw new Error(
               `FirecrackerProvider: Could not delete instance for expired microVM (${microVMId}) during pruning.\n` +
                 originalMessage,
-          );
-        })
+            );
+          },
+        );
         console.log(
-           "FirecrackerProvider: deleted expired microVM: " +
-             microVMId +
-             " expiration date: " +
-             microVM.expirationDate.toISOString(),
-         );
+          "FirecrackerProvider: deleted expired microVM: " +
+            microVMId +
+            " expiration date: " +
+            microVM.expirationDate.toISOString(),
+        );
         return;
       }
     }
     return Promise.resolve();
   }
-
 
   /**
    * Tries to connect via SSH to the given microVM.
