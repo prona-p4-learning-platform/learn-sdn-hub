@@ -123,13 +123,21 @@ export async function getHttpError(
     const response = context.response;
 
     if (response) {
-      const body = (await response.json()) as unknown;
-      const validated = httpStatusValidator.parse(body);
+      if (!response.bodyUsed) {
+        const body = (await response.json()) as unknown;
+        const validated = httpStatusValidator.parse(body);
 
-      return {
-        success: true,
-        data: validated,
-      };
+        return {
+          success: true,
+          data: validated,
+        };
+      } else {
+        const already_parsed_data = context.data as { data: HttpError };
+        return {
+          success: true,
+          data: already_parsed_data.data
+        };
+      }
     } else throw new Error("No response in context.");
   } catch (error) {
     return {

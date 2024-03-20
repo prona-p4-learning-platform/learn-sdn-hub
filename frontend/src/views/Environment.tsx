@@ -229,6 +229,10 @@ class EnvironmentView extends Component<PropsType, StateType> {
         httpStatusValidator,
         {
           method: "POST",
+          body: {
+            activeStep: this.state.activeStep,
+            terminalState: this.state.terminalState,
+          },
         },
       );
 
