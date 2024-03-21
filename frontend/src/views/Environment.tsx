@@ -237,22 +237,31 @@ class EnvironmentView extends Component<PropsType, StateType> {
       );
 
       if (payload.success) {
-        this.setState({
-          environmentNotificationResult: payload.data.message,
-          environmentNotificationSeverity: "success",
-          environmentNotificationAutoHideDuration: 60000,
-          environmentNotificationOpen: true,
-        });
-
-        if (this.state.activeStep < this.state.stepLabels.length) {
+        if (payload.data.status === "passed") {
           this.setState({
-            activeStep: this.state.activeStep + 1,
+            environmentNotificationResult: payload.data.message,
+            environmentNotificationSeverity: "success",
+            environmentNotificationAutoHideDuration: 60000,
+            environmentNotificationOpen: true,
           });
-        }
-        // if this was the last step, steps are completed and finish / submission of assignment can be enabled
-        if (this.state.activeStep === this.state.stepLabels.length) {
+
+          if (this.state.activeStep < this.state.stepLabels.length) {
+            this.setState({
+              activeStep: this.state.activeStep + 1,
+            });
+          }
+          // if this was the last step, steps are completed and finish / submission of assignment can be enabled
+          if (this.state.activeStep === this.state.stepLabels.length) {
+            this.setState({
+              stepsCompleted: true,
+            });
+          }
+        } else {
           this.setState({
-            stepsCompleted: true,
+            environmentNotificationResult: payload.data.message,
+            environmentNotificationSeverity: "error",
+            environmentNotificationAutoHideDuration: 60000,
+            environmentNotificationOpen: true,
           });
         }
       } else throw payload.error;

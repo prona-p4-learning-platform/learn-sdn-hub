@@ -90,6 +90,11 @@ export type TerminalStateType = {
   state: string;
 };
 
+export interface TestResult {
+  code: number;
+  message: string;
+}
+
 export interface Submission {
   assignmentName: string;
   lastChanged: Date;
@@ -1002,7 +1007,7 @@ export default class Environment {
   async test(
     stepIndex: string,
     terminalStates: TerminalStateType[],
-  ): Promise<string> {
+  ): Promise<TestResult> {
     console.log("TESTING step " + stepIndex);
 
     if (this.configuration.steps && this.configuration.steps?.length > 0) {
@@ -1052,13 +1057,9 @@ export default class Environment {
         else someTestsFailed = true;
       }
       if (someTestsFailed !== undefined && someTestsFailed === false)
-        return Promise.resolve("All tests passed! " + testOutput);
-      else return Promise.reject(new Error("Some Tests failed! " + testOutput));
+        return Promise.resolve({code: 201, message: "All tests passed! " + testOutput});
+      else return Promise.resolve({code: 251, message: "Some Tests failed! " + testOutput});
     } else {
-      // no tests defined
-      global.console.log(
-        "Cannot execute test. No steps defined in tasks for assignment.",
-      );
       return Promise.reject(
         new Error(
           "Cannot execute test. No steps defined in tasks for assignment.",

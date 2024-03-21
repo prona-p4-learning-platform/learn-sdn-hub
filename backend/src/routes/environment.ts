@@ -352,10 +352,17 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
         env
           .test(activeStep, terminalState)
           .then((testResult) => {
-            res.status(200).json({
-              status: "finished",
-              message: testResult,
-            });
+            if (testResult.code >= 200 && testResult.code < 251) {
+              res.status(testResult.code).json({
+                status: "passed",
+                message: testResult.message,
+              });
+            } else {
+              res.status(testResult.code).json({
+                status: "failed",
+                message: testResult.message,
+              });
+            }
           })
           .catch((err) => {
             let message = "Unknown error";
