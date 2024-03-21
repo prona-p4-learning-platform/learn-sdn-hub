@@ -54,14 +54,16 @@ export default class MongoDBAuthenticationProvider
     const user = await this.persister.GetUserAccount(username);
 
     if (newPassword.length !== 0) {
-      if (user.password === oldPassword ||
-        (await compare(oldPassword, user.passwordHash ?? ""))) {
-          if (newPassword === confirmNewPassword) {
-            console.log(`Change password in mongodb for User : ${user.username}`);
-            await this.persister.ChangeUserPassword(username, newPassword);
-          } else {
-            throw new Error("New passwords do not match");
-          }
+      if (
+        user.password === oldPassword ||
+        (await compare(oldPassword, user.passwordHash ?? ""))
+      ) {
+        if (newPassword === confirmNewPassword) {
+          console.log(`Change password in mongodb for User : ${user.username}`);
+          await this.persister.ChangeUserPassword(username, newPassword);
+        } else {
+          throw new Error("New passwords do not match");
+        }
       } else {
         throw new Error("Old password incorrect");
       }

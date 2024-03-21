@@ -1,4 +1,4 @@
-import { RequestHandler, Router, json } from "express";
+import { Router, json } from "express";
 import Environment, { TerminalStateType } from "../Environment";
 import environments from "../Configuration";
 import { InstanceProvider } from "../providers/Provider";
@@ -343,19 +343,26 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
         reqWithUser.params.environment,
         reqWithUser.user.username,
       );
-      const {activeStep, terminalState} = reqWithUser.body as {activeStep: string, terminalState: TerminalStateType[]};
+      const { activeStep, terminalState } = reqWithUser.body as {
+        activeStep: string;
+        terminalState: TerminalStateType[];
+      };
 
       if (env) {
         env
-          .test(
-            activeStep,
-            terminalState,
-          )
+          .test(activeStep, terminalState)
           .then((testResult) => {
-            res.status(200).json({
-              status: "finished",
-              message: testResult,
-            });
+            if (testResult.code >= 200 && testResult.code < 251) {
+              res.status(testResult.code).json({
+                status: "passed",
+                message: testResult.message,
+              });
+            } else {
+              res.status(testResult.code).json({
+                status: "failed",
+                message: testResult.message,
+              });
+            }
           })
           .catch((err) => {
             let message = "Unknown error";
@@ -382,14 +389,15 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
         reqWithUser.params.environment,
         reqWithUser.user.username,
       );
-      const {activeStep, terminalState} = reqWithUser.body as {activeStep: string, terminalState: TerminalStateType[]};
+      // TODO: add validator
+      const { activeStep, terminalState } = reqWithUser.body as {
+        activeStep: string;
+        terminalState: TerminalStateType[];
+      };
 
       if (env) {
         env
-          .submit(
-            activeStep,
-            terminalState,
-          )
+          .submit(activeStep, terminalState)
           .then(() => {
             res.status(200).json({
               status: "finished",
@@ -452,7 +460,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
         console.log("No submission found " + err);
         res.status(200).json([]);
       });
-  }) as RequestHandler;
+  });
 
   router.get(
     "/:environment/provider-instance-status",

@@ -7,14 +7,24 @@ import config from "./Config";
 type SafeParseSuccess<T> = {
   success: true;
   data: T;
+  rawBody: string;
 };
 
 type SafeParseError = {
   success: false;
   error: Error;
+  rawBody: string;
 };
 
 type SafeParse<T> = SafeParseSuccess<T> | SafeParseError;
+
+function isObject(data: unknown): data is object {
+  return typeof data === "object" && data !== null;
+}
+
+function isString(data: unknown): data is string {
+  return typeof data === "string";
+}
 
 /**
  * Create a new fetch method with defaults and integrated validation.
@@ -53,6 +63,7 @@ export function createCustomFetch(
           return {
             success: true,
             data: validated,
+            rawBody: defaultPayload,
           };
         } catch (error) {
           let outputError: Error;
@@ -65,6 +76,7 @@ export function createCustomFetch(
           return {
             success: false,
             error: outputError,
+            rawBody: defaultPayload,
           };
         }
       },
@@ -123,18 +135,32 @@ export async function getHttpError(
     const response = context.response;
 
     if (response) {
-      const body = (await response.json()) as unknown;
-      const validated = httpStatusValidator.parse(body);
+      let body = "";
+
+      if (!response.bodyUsed) {
+        body = (await response.text()).trim() || "{}";
+      } else {
+        const data = context.data as unknown;
+
+        if (isObject(data) && "rawBody" in data && isString(data.rawBody)) {
+          body = data.rawBody;
+        } else throw new Error("Response data is undefined.");
+      }
+
+      const parsed = destr(body, { strict: true });
+      const validated = httpStatusValidator.parse(parsed);
 
       return {
         success: true,
         data: validated,
+        rawBody: body,
       };
     } else throw new Error("No response in context.");
   } catch (error) {
     return {
       success: false,
       error: error instanceof Error ? error : new Error("Unknown error."),
+      rawBody: "{}",
     };
   }
 }
