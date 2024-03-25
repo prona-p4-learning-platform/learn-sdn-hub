@@ -84,6 +84,29 @@ export default (persister: Persister): Router => {
   );
 
   router.post(
+    "/course/create",
+    authenticationMiddleware,
+    adminRoleMiddleware,
+    bodyParser.json() as RequestHandler,
+    async (req: RequestWithUser, res) => {
+      if (
+        req.body === undefined ||
+        req.body.name === undefined ||
+        req.body.name.trim() === ""
+      ) {
+        return res.status(400).json({
+          error: true,
+          message: "Invalid request. Missing course name.",
+        });
+      }
+      const response = await persister.AddCourse(req.body.name);
+      return res
+        .status(response.code ?? (response.error ? 500 : 200))
+        .json(response);
+    }
+  );
+
+  router.post(
     "/course/:courseId/users/update",
     authenticationMiddleware,
     adminRoleMiddleware,

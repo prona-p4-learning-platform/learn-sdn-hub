@@ -299,6 +299,34 @@ export default class MongoDBPersister implements Persister {
       .then(() => undefined);
   }
 
+  async AddCourse(courseName: string): Promise<ResponseObject> {
+    const client = await this.getClient();
+
+    const result = await client
+      .db()
+      .collection("courses")
+      .updateOne(
+        { name: courseName },
+        { $setOnInsert: { name: courseName } },
+        { upsert: true }
+      );
+
+    try {
+      if (result.upsertedCount === 0) {
+        return { error: true, message: "Course already exists.", code: 409 };
+      }
+    } catch (err) {
+      return { error: true, message: err.message, code: 500 };
+    }
+
+    return {
+      error: false,
+      message: `Course ${courseName} added.`,
+      code: 200,
+      id: result.upsertedId._id.toString() ?? undefined,
+    };
+  }
+
   async UpdateCourseForUsers(
     courseUserAction: {
       add: { userID: string }[];

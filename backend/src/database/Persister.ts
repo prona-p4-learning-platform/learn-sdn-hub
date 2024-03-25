@@ -38,6 +38,8 @@ export interface CourseData {
 export interface ResponseObject {
   error: boolean;
   message: string;
+  code?: number;
+  id?: string;
 }
 
 export interface AssignmentData {
@@ -77,6 +79,7 @@ export interface Persister {
   ) => Promise<Submission[]>;
   GetAllUsers: () => Promise<UserData[]>;
   GetAllCourses: () => Promise<CourseData[]>;
+  AddCourse: (courseName: string) => Promise<ResponseObject>;
   UpdateCourseForUsers(
     courseUserAction: CourseUserAction,
     courseID: string

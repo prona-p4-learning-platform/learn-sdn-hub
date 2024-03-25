@@ -191,6 +191,10 @@ export default class MemoryPersister implements Persister {
     throw new Error("Method not implemented.");
   }
 
+  async AddCourse(courseName: string): Promise<ResponseObject> {
+    throw new Error("Method not implemented.");
+  }
+
   async UpdateCourseForUsers(
     courseUserAction: {
       add: { userID: string }[];

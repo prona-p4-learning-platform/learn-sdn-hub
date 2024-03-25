@@ -11,18 +11,16 @@ import {
 import { useEffect, useState } from "react";
 import APIRequest from "../api/Request";
 import type { User } from "../typings/user/UserType";
+import type { Course } from "../typings/course/CourseType";
 import LoadingButton from "@mui/lab/LoadingButton";
 import SaveIcon from "@mui/icons-material/Save";
 import { not } from "../utilities/ListCompareHelper";
 import AssignmentList from "./ListAssignment";
 
-interface Course {
-  _id: string;
-  name: string;
-}
-
 interface UserAssignmentProps {
   users: User[];
+  courses: Course[];
+  openAddCourseDialog: () => void;
 }
 
 type CourseUserAction = {
@@ -33,8 +31,11 @@ type CourseUserAction = {
 
 type Severity = "error" | "success" | "info" | "warning" | undefined;
 
-const UserAssignment = ({ users }: UserAssignmentProps) => {
-  const [courses, setCourses] = useState<Course[]>([]);
+const UserAssignment = ({
+  users,
+  courses,
+  openAddCourseDialog,
+}: UserAssignmentProps) => {
   const [currentCourseID, setCurrentCourseID] = useState("");
   const [checked, setChecked] = useState<readonly User[]>([]);
   const [unassignedUsers, setUnassignedUsers] = useState<User[]>([]);
@@ -51,20 +52,6 @@ const UserAssignment = ({ users }: UserAssignmentProps) => {
   });
 
   useEffect(() => {
-    fetch(
-      APIRequest("/api/admin/courses", {
-        headers: { authorization: localStorage.getItem("token") || "" },
-      })
-    )
-      .then((response) => response.json())
-      .then((data) => {
-        if (data && data.message) {
-          return;
-        }
-        setCourses(data);
-      })
-      .catch((error) => console.error("Error fetching courses:", error));
-
     setUnassignedUsers(users);
   }, [users]);
 
@@ -127,6 +114,10 @@ const UserAssignment = ({ users }: UserAssignmentProps) => {
 
   const handleCourseChange = (event: SelectChangeEvent) => {
     const courseID = event.target.value as string;
+    if (courseID === "new") {
+      openAddCourseDialog();
+      return;
+    }
     setCurrentCourseID(courseID);
     const usersInCourse = filterUsersInCourse(courseID);
     setOriginalAssignedUsers(usersInCourse);

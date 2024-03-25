@@ -15,21 +15,21 @@ import SaveIcon from "@mui/icons-material/Save";
 import { not } from "../utilities/ListCompareHelper";
 import AssignmentList from "./ListAssignment";
 import type { Assignment } from "../typings/assignment/AssignmentType";
-
-interface Course {
-  _id: string;
-  name: string;
-  assignments?: string[];
-}
+import type { Course } from "../typings/course/CourseType";
 
 interface AssignmentProps {
   assignments: Assignment[];
+  courses: Course[];
+  openAddCourseDialog: () => void;
 }
 
 type Severity = "error" | "success" | "info" | "warning" | undefined;
 
-const CourseAssignment = ({ assignments }: AssignmentProps) => {
-  const [courses, setCourses] = useState<Course[]>([]);
+const CourseAssignment = ({
+  assignments,
+  courses,
+  openAddCourseDialog,
+}: AssignmentProps) => {
   const [currentCourseID, setCurrentCourseID] = useState("");
   const [checked, setChecked] = useState<readonly Assignment[]>([]);
   const [unassignedAssignments, setUnassignedAssignments] = useState<
@@ -49,20 +49,6 @@ const CourseAssignment = ({ assignments }: AssignmentProps) => {
   });
 
   useEffect(() => {
-    fetch(
-      APIRequest("/api/admin/courses", {
-        headers: { authorization: localStorage.getItem("token") || "" },
-      })
-    )
-      .then((response) => response.json())
-      .then((data) => {
-        if (data && data.message) {
-          return;
-        }
-        setCourses(data);
-      })
-      .catch((error) => console.error("Error fetching courses:", error));
-
     setUnassignedAssignments(assignments);
   }, [assignments]);
 
@@ -117,6 +103,10 @@ const CourseAssignment = ({ assignments }: AssignmentProps) => {
 
   const handleCourseChange = (event: SelectChangeEvent) => {
     const courseID = event.target.value as string;
+    if (courseID === "new") {
+      openAddCourseDialog();
+      return;
+    }
     setCurrentCourseID(courseID);
     const assignmentsInCourse = filterAssignmentsInCourse(courseID);
     setOriginalAssignedAssignments(assignmentsInCourse);
