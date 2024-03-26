@@ -1,4 +1,4 @@
-import React, {ReactNode} from "react";
+import React, { ReactNode } from "react";
 import Grid from "@mui/material/Grid";
 import Terminal from "../components/Terminal";
 import GuacamoleClient from "../components/GuacamoleClient";
@@ -10,7 +10,7 @@ import Button from "@mui/material/Button";
 import ReactMarkdown from 'react-markdown'
 import mermaid from 'mermaid'
 import TabControl from '../components/TabControl'
-import APIRequest from '../api/Request'
+import { createApiRequest } from '@lib/Request'
 import { Typography } from "@mui/material";
 import Snackbar from '@mui/material/Snackbar';
 import MuiAlert, { AlertProps } from '@mui/material/Alert';
@@ -94,7 +94,7 @@ const Alert = React.forwardRef<HTMLDivElement, AlertProps>(function Alert(
   return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;
 });
 
-export class EnvironmentView extends React.Component<PropsType,StateType> {
+export class EnvironmentView extends React.Component<PropsType, StateType> {
   public state: StateType;
 
   constructor(props: PropsType) {
@@ -142,7 +142,7 @@ export class EnvironmentView extends React.Component<PropsType,StateType> {
       environmentStatus: "restarting"
     });
     try {
-      const result = await fetch(APIRequest(`/api/environment/${this.props.match.params.environment}/restart`, {
+      const result = await fetch(createApiRequest(`/api/environment/${this.props.match.params.environment}/restart`, {
         method: "post",
         headers: { 'Content-Type': 'application/json', authorization: localStorage.getItem("token") || "" }
       }))
@@ -162,7 +162,7 @@ export class EnvironmentView extends React.Component<PropsType,StateType> {
           environmentNotificationSeverity: "error",
           environmentNotificationOpen: true,
           environmentNotificationAutoHideDuration: 6000,
-          environmentStatus: "error", 
+          environmentStatus: "error",
           errorMessage: message.message
         });
       }
@@ -173,7 +173,7 @@ export class EnvironmentView extends React.Component<PropsType,StateType> {
         environmentNotificationSeverity: "error",
         environmentNotificationOpen: true,
         environmentNotificationAutoHideDuration: 6000,
-        environmentStatus: "error", 
+        environmentStatus: "error",
         errorMessage: String(error)
       });
     }
@@ -188,10 +188,10 @@ export class EnvironmentView extends React.Component<PropsType,StateType> {
       environmentNotificationOpen: true,
     });
     try {
-      const result = await fetch(APIRequest(`/api/environment/${this.props.match.params.environment}/test`, {
+      const result = await fetch(createApiRequest(`/api/environment/${this.props.match.params.environment}/test`, {
         method: "post",
         headers: { 'Content-Type': 'application/json', authorization: localStorage.getItem("token") || "" },
-        body: JSON.stringify({activeStep: this.state.activeStep, terminalState: this.state.terminalState})
+        body: JSON.stringify({ activeStep: this.state.activeStep, terminalState: this.state.terminalState })
       }))
       if (result.status === 200) {
         const message = await result.json()
@@ -237,52 +237,52 @@ export class EnvironmentView extends React.Component<PropsType,StateType> {
   }
 
   async submitAssignment(): Promise<void> {
-      // send state of assignment to backend and store/persist result of assignment (for user) there
-      this.setState({
-        environmentNotificationResult: "Submitting result...",
-        environmentNotificationSeverity: "info",
-        environmentNotificationAutoHideDuration: 6000,
-        environmentNotificationOpen: true,
-      });
-      try {
-        const result = await fetch(APIRequest(`/api/environment/${this.props.match.params.environment}/submit`, {
-          method: "post",
-          headers: { 'Content-Type': 'application/json', authorization: localStorage.getItem("token") || "" },
-          body: JSON.stringify({activeStep: this.state.activeStep, terminalState: this.state.terminalState})
-        }))
-        if (result.status === 200) {
-          const message = await result.json()
-          this.setState({
-            environmentNotificationResult: "Submission successful! " + message.message,
-            environmentNotificationSeverity: "success",
-            environmentNotificationAutoHideDuration: 60000,
-            environmentNotificationOpen: true,
-          });
-        }
-        else {
-          const message = await result.json()
-          this.setState({
-            environmentNotificationResult: "Submission failed! (" + message.message + ")",
-            environmentNotificationSeverity: "error",
-            environmentNotificationOpen: true,
-            environmentNotificationAutoHideDuration: 60000,
-            errorMessage: message.message
-          });
-        }
-      }
-      catch (error) {
+    // send state of assignment to backend and store/persist result of assignment (for user) there
+    this.setState({
+      environmentNotificationResult: "Submitting result...",
+      environmentNotificationSeverity: "info",
+      environmentNotificationAutoHideDuration: 6000,
+      environmentNotificationOpen: true,
+    });
+    try {
+      const result = await fetch(createApiRequest(`/api/environment/${this.props.match.params.environment}/submit`, {
+        method: "post",
+        headers: { 'Content-Type': 'application/json', authorization: localStorage.getItem("token") || "" },
+        body: JSON.stringify({ activeStep: this.state.activeStep, terminalState: this.state.terminalState })
+      }))
+      if (result.status === 200) {
+        const message = await result.json()
         this.setState({
-          environmentNotificationResult: "Submission failed! (" + error + ")",
+          environmentNotificationResult: "Submission successful! " + message.message,
+          environmentNotificationSeverity: "success",
+          environmentNotificationAutoHideDuration: 60000,
+          environmentNotificationOpen: true,
+        });
+      }
+      else {
+        const message = await result.json()
+        this.setState({
+          environmentNotificationResult: "Submission failed! (" + message.message + ")",
           environmentNotificationSeverity: "error",
           environmentNotificationOpen: true,
           environmentNotificationAutoHideDuration: 60000,
-          errorMessage: String(error)
+          errorMessage: message.message
         });
       }
+    }
+    catch (error) {
+      this.setState({
+        environmentNotificationResult: "Submission failed! (" + error + ")",
+        environmentNotificationSeverity: "error",
+        environmentNotificationOpen: true,
+        environmentNotificationAutoHideDuration: 60000,
+        errorMessage: String(error)
+      });
+    }
   }
 
   loadEnvironmentConfig(): void {
-    fetch(APIRequest(`/api/environment/${this.props.match.params.environment}/configuration`,
+    fetch(createApiRequest(`/api/environment/${this.props.match.params.environment}/configuration`,
       { headers: { 'Content-Type': 'application/json', authorization: localStorage.getItem("token") || "" } }))
       .then((response) => response.json())
       .then((data) => {
@@ -296,7 +296,8 @@ export class EnvironmentView extends React.Component<PropsType,StateType> {
             rootPath: data.rootPath,
             workspaceFolders: data.workspaceFolders,
             useCollaboration: data.useCollaboration,
-            useLanguageClient: data.useLanguageClient });
+            useLanguageClient: data.useLanguageClient
+          });
         }
         if (this.state.stepLabels.length < 1) {
           this.setState({ stepsCompleted: true })
@@ -305,7 +306,7 @@ export class EnvironmentView extends React.Component<PropsType,StateType> {
   }
 
   loadAssignment() {
-    fetch(APIRequest(`/api/environment/${this.props.match.params.environment}/assignment`,
+    fetch(createApiRequest(`/api/environment/${this.props.match.params.environment}/assignment`,
       { headers: { 'Content-Type': 'application/json', authorization: localStorage.getItem("token") || "" } }))
       .then((response) => response.text())
       .then((data) => {
@@ -314,7 +315,7 @@ export class EnvironmentView extends React.Component<PropsType,StateType> {
   }
 
   loadProviderInstanceStatus() {
-    fetch(APIRequest(`/api/environment/${this.props.match.params.environment}/provider-instance-status`,
+    fetch(createApiRequest(`/api/environment/${this.props.match.params.environment}/provider-instance-status`,
       { headers: { 'Content-Type': 'application/json', authorization: localStorage.getItem("token") || "" } }))
       .then((response) => response.json())
       .then((data) => {
@@ -329,14 +330,14 @@ export class EnvironmentView extends React.Component<PropsType,StateType> {
         state: state
       };
       const endpointIndex = prevState.terminalState.findIndex(element => element.endpoint === endpoint);
-      if ( endpointIndex === -1 ) {
-        const addedTerminalState = [...prevState.terminalState, newTerminalState];
+      if (endpointIndex === -1) {
+        const addedTerminalState = [ ...prevState.terminalState, newTerminalState ];
         return {
           terminalState: addedTerminalState
         }
       } else {
-        let changedTerminalState = [...prevState.terminalState]
-        changedTerminalState[endpointIndex] = newTerminalState;
+        let changedTerminalState = [ ...prevState.terminalState ]
+        changedTerminalState[ endpointIndex ] = newTerminalState;
         return {
           terminalState: changedTerminalState
         }
@@ -370,7 +371,7 @@ export class EnvironmentView extends React.Component<PropsType,StateType> {
             wsEndpoint={`/environment/${this.props.match.params.environment}/desktop/${subterminal.name}`} />
         }
         if (subterminal.type === "WebApp") {
-          return <WebFrame key={subterminal.name} url={subterminal.url}/>
+          return <WebFrame key={subterminal.name} url={subterminal.url} />
         }
         else {
           return <Typography>unknown terminal type</Typography>
@@ -417,7 +418,7 @@ export class EnvironmentView extends React.Component<PropsType,StateType> {
       <>
         <Grid container spacing={0}>
           <Grid item xs={6}>
-            <TabControl tabNames={["Assignment", "Terminals"]} handleRestart={handleConfirmationRestartDialogOpen} environmentStatus={this.state.environmentStatus}>
+            <TabControl tabNames={[ "Assignment", "Terminals" ]} handleRestart={handleConfirmationRestartDialogOpen} environmentStatus={this.state.environmentStatus}>
               <Grid container direction="row" justifyContent="flex-start" alignItems="center" spacing={1}>
                 <Grid item xs={12}>
                   <ReactMarkdown
@@ -429,11 +430,11 @@ export class EnvironmentView extends React.Component<PropsType,StateType> {
                     {this.state.stepLabels.length > 0 && (
                       <Grid item>
                         <Stepper activeStep={this.state.activeStep}>
-                        {Array.isArray(this.state.stepLabels) && this.state.stepLabels.length > 0 && this.state.stepLabels.map((stepLabel, index) =>
-                          <Step key={index}>
-                            <StepButton disabled={index !== this.state.activeStep} key={index} onClick={handleStepClick}>{stepLabel}</StepButton>
-                          </Step>
-                        )}
+                          {Array.isArray(this.state.stepLabels) && this.state.stepLabels.length > 0 && this.state.stepLabels.map((stepLabel, index) =>
+                            <Step key={index}>
+                              <StepButton disabled={index !== this.state.activeStep} key={index} onClick={handleStepClick}>{stepLabel}</StepButton>
+                            </Step>
+                          )}
                         </Stepper>
                       </Grid>
                     )}
@@ -461,8 +462,8 @@ export class EnvironmentView extends React.Component<PropsType,StateType> {
             </TabControl>
           </Grid>
           <Grid item xs={6}>
-            { this.state.files.length > 0
-            ?
+            {this.state.files.length > 0
+              ?
               <FileEditor
                 files={this.state.files}
                 filePaths={this.state.filePaths}
@@ -472,12 +473,12 @@ export class EnvironmentView extends React.Component<PropsType,StateType> {
                 useCollaboration={this.state.useCollaboration}
                 useLanguageClient={this.state.useLanguageClient}
               />
-            :
+              :
               <Typography>Fetching files to initialize editor...</Typography>
             }
           </Grid>
         </Grid>
-        { /* TODO evaluate, e.g., notistack (https://github.com/iamhosseindhv/notistack) to show stacked version of multiple lines with PASSED/FAILED tests */ }
+        { /* TODO evaluate, e.g., notistack (https://github.com/iamhosseindhv/notistack) to show stacked version of multiple lines with PASSED/FAILED tests */}
         <Snackbar open={this.state.environmentNotificationOpen} autoHideDuration={this.state.environmentNotificationAutoHideDuration} onClose={handleEnvironmentNotificationClose}>
           <Alert onClose={handleEnvironmentNotificationClose} severity={this.state.environmentNotificationSeverity as Severity}>
             {this.state.environmentNotificationResult}
@@ -492,15 +493,15 @@ export class EnvironmentView extends React.Component<PropsType,StateType> {
             <DialogContentText id="alert-dialog-restart-confirmation-description">
               Restart environment?
               All processes in terminals will be killed.
-          </DialogContentText>
+            </DialogContentText>
           </DialogContent>
           <DialogActions>
             <Button onClick={handleConfirmationRestartDialogClose} color="primary" autoFocus>
               No
-          </Button>
+            </Button>
             <Button onClick={handleConfirmationRestartDialogConfirm} color="primary">
               Yes
-          </Button>
+            </Button>
           </DialogActions>
         </Dialog>
         <Dialog
@@ -511,15 +512,15 @@ export class EnvironmentView extends React.Component<PropsType,StateType> {
           <DialogContent>
             <DialogContentText id="alert-dialog-submit-confirmation-description">
               Finish and submit assignment result?
-          </DialogContentText>
+            </DialogContentText>
           </DialogContent>
           <DialogActions>
             <Button onClick={handleConfirmationSubmitDialogClose} color="primary" autoFocus>
               No
-          </Button>
+            </Button>
             <Button onClick={handleConfirmationSubmitDialogConfirm} color="primary">
               Yes
-          </Button>
+            </Button>
           </DialogActions>
         </Dialog>
       </>

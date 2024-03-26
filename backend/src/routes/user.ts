@@ -8,7 +8,6 @@
 import express, { Router } from "express";
 import { AuthenticationProvider } from "../authentication/AuthenticationProvider";
 import environments from "../Configuration";
-import jwt from "jsonwebtoken";
 import { celebrate, Joi, Segments } from "celebrate";
 import authenticationMiddleware, {
   RequestWithUser,
@@ -47,21 +46,13 @@ export default (authProviders: AuthenticationProvider[]): Router => {
     for (const authProvider of authProviders) {
       try {
         const result = await authProvider.authenticateUser(username, password);
-        const token = jwt.sign(
-          {
-            username: result.username,
-            id: result.userid,
-            groupNumber: result.groupNumber,
-          },
-          /* TODO: replace secret */
-          "some-secret",
-        );
-
-        console.log(result, token);
-
         res
           .status(200)
-          .json({ token, username, groupNumber: result.groupNumber });
+          .json({
+            name: username,
+            groupNumber: result.groupNumber,
+            id: result.userid,
+          });
         return;
       } catch (err) {
         console.log("error!", err);

@@ -1,6 +1,6 @@
 import * as React from "react";
 
-import APIRequest from "../api/Request";
+import APIRequest from "../lib/Request";
 import createWebSocket from "../api/WebSocket";
 
 import { styled } from "@mui/material/styles";
@@ -96,7 +96,7 @@ interface State {
 }
 
 interface FileState {
-  [key: string]: FileStateModel;
+  [ key: string ]: FileStateModel;
 }
 
 interface FileStateModel {
@@ -164,7 +164,7 @@ export default class FileEditor extends React.Component<FileEditorProps> {
     super(props);
     this.state = {
       fileState: {} as FileState,
-      currentFile: props.files[0],
+      currentFile: props.files[ 0 ],
       currentFileChanged: false,
       currentFileLSPLanguage: "",
       currentFilePath: "",
@@ -194,20 +194,20 @@ export default class FileEditor extends React.Component<FileEditorProps> {
     // register Monaco languages
     monaco.languages.register({
       id: "c",
-      extensions: [".c", ".h"],
-      aliases: ["C", "c"],
+      extensions: [ ".c", ".h" ],
+      aliases: [ "C", "c" ],
     });
 
     monaco.languages.register({
       id: "p4",
-      extensions: [".p4"],
-      aliases: ["p4", "P4"],
+      extensions: [ ".p4" ],
+      aliases: [ "p4", "P4" ],
     });
 
     monaco.languages.register({
       id: "python",
-      extensions: [".py"],
-      aliases: ["Python", "py", "PY", "python"],
+      extensions: [ ".py" ],
+      aliases: [ "Python", "py", "PY", "python" ],
     });
 
     monaco.languages.register({
@@ -220,8 +220,8 @@ export default class FileEditor extends React.Component<FileEditorProps> {
         ".eslintrc",
         ".babelrc",
       ],
-      aliases: ["JSON", "json"],
-      mimetypes: ["application/json"],
+      aliases: [ "JSON", "json" ],
+      mimetypes: [ "application/json" ],
     });
     // additional file types? make them configurable?
 
@@ -278,26 +278,26 @@ export default class FileEditor extends React.Component<FileEditorProps> {
           .then(async (data) => {
             const fileContent = await data.text;
 
-        this.environmentFiles[fileName] = {
-          value: fileContent,
-          editorLanguage: selectLanguageForEndpoint(fileName).editorLanguage,
-          lspLanguage: selectLanguageForEndpoint(fileName).lspLanguage,
-          name: fileName,
-          fileChanged: false,
-          fileLocation: data.location ?? "",
-        }
+            this.environmentFiles[ fileName ] = {
+              value: fileContent,
+              editorLanguage: selectLanguageForEndpoint(fileName).editorLanguage,
+              lspLanguage: selectLanguageForEndpoint(fileName).lspLanguage,
+              name: fileName,
+              fileChanged: false,
+              fileLocation: data.location ?? "",
+            }
 
-        // check number of models in editor? sometimes additional/superfluous inmemory model shows up
-        // should only contain the files that are used in the env as entries in the model?
-        console.log("finished loading editor files...");
-      })
-      .catch((err) => {
-        console.error(err);
-      })
-    }))
+            // check number of models in editor? sometimes additional/superfluous inmemory model shows up
+            // should only contain the files that are used in the env as entries in the model?
+            console.log("finished loading editor files...");
+          })
+          .catch((err) => {
+            console.error(err);
+          })
+      }))
 
-    const initialFile = this.props.files[0];
-    const file = this.environmentFiles[initialFile];
+    const initialFile = this.props.files[ 0 ];
+    const file = this.environmentFiles[ initialFile ];
     this.setState({
       currentFile: file.name,
       currentFilePath: file.fileLocation,
@@ -337,7 +337,7 @@ export default class FileEditor extends React.Component<FileEditorProps> {
     max = Math.floor(max);
     return Math.floor(Math.random() * (max - min) + min); // The maximum is exclusive and the minimum is inclusive
   }
-  
+
 
   async startCollaborationServices(group: string, fileName: string) {
     if (!this.props.useCollaboration) {
@@ -348,11 +348,11 @@ export default class FileEditor extends React.Component<FileEditorProps> {
     const collaborationId = fileName + "-group" + group;
     console.log(
       "Starting collaboration for user: " +
-        this.username +
-        " in group: " +
-        group +
-        " on: " +
-        collaborationId
+      this.username +
+      " in group: " +
+      group +
+      " on: " +
+      collaborationId
     );
 
     const doc = new Y.Doc();
@@ -375,11 +375,11 @@ export default class FileEditor extends React.Component<FileEditorProps> {
       // Websocket provider
       this.collaborationProvider = new WebsocketProvider(
         `${window?.location?.protocol === "http:" || undefined ? "ws:" : "wss:"}//` +
-          (import.meta.env.VITE_REACT_APP_YJS_WEBSOCKET_HOST ??
-            window?.location?.hostname ??
-            `localhost`) +
-          `:` +
-          (import.meta.env.VITE_REACT_APP_YJS_WEBSOCKET_PORT ?? `1234`),
+        (import.meta.env.VITE_REACT_APP_YJS_WEBSOCKET_HOST ??
+          window?.location?.hostname ??
+          `localhost`) +
+        `:` +
+        (import.meta.env.VITE_REACT_APP_YJS_WEBSOCKET_PORT ?? `1234`),
         collaborationId,
         doc
       );
@@ -405,13 +405,13 @@ export default class FileEditor extends React.Component<FileEditorProps> {
       const awareness = this.collaborationProvider.awareness;
       const username = this.username;
 
-      const red = this.getRandomInt(64,192);
-      const green = this.getRandomInt(64,192);
-      const blue = this.getRandomInt(64,192);
-      let hexColor = '#' + red.toString(16).padStart(2, '0')+ green.toString(16).padStart(2, '0') + blue.toString(16).padStart(2, '0');
+      const red = this.getRandomInt(64, 192);
+      const green = this.getRandomInt(64, 192);
+      const blue = this.getRandomInt(64, 192);
+      let hexColor = '#' + red.toString(16).padStart(2, '0') + green.toString(16).padStart(2, '0') + blue.toString(16).padStart(2, '0');
       console.log("my color: " + hexColor);
 
-      awareness.on('update', ({ added = [] /*, updated = [], removed = [] */}) => {
+      awareness.on('update', ({ added = [] /*, updated = [], removed = [] */ }) => {
         added.forEach((client) => {
           //yjs awareness debug:
           //console.log("added client: " + client);
@@ -423,9 +423,9 @@ export default class FileEditor extends React.Component<FileEditorProps> {
           // add css class for new client
           if (awareness.getStates().get(client) !== undefined) {
             const { name, color } = awareness.getStates().get(client)!.user;
-            const colorRed = parseInt(color.substring(1,3), 16);
-            const colorGreen = parseInt(color.substring(3,5), 16);
-            const colorBlue = parseInt(color.substring(5,7), 16);
+            const colorRed = parseInt(color.substring(1, 3), 16);
+            const colorGreen = parseInt(color.substring(3, 5), 16);
+            const colorBlue = parseInt(color.substring(5, 7), 16);
             const newClient = document.createElement("style");
             //newClient.type = "text/css";
             newClient.innerHTML = `
@@ -497,7 +497,7 @@ export default class FileEditor extends React.Component<FileEditorProps> {
           this.binding = new MonacoBinding(
             type,
             this.editor.getModel()!,
-            new Set([this.editor]),
+            new Set([ this.editor ]),
             awareness
           );
         } else {
@@ -543,46 +543,46 @@ export default class FileEditor extends React.Component<FileEditorProps> {
       this.languageClientWebSocket = createWebSocket('/environment/' + this.props.environment + '/languageserver/' + lspLanguage);
 
       this.languageClientWebSocket.onopen = () => {
-          // create and start the language client
+        // create and start the language client
 
-          // sending auth token to backend
-          this.languageClientWebSocket.send(`auth ${localStorage.getItem("token")}`)
+        // sending auth token to backend
+        this.languageClientWebSocket.send(`auth ${localStorage.getItem("token")}`)
 
-          // backend needs some time to process auth token and initiate
-          // ws conn from backend to lsp, hence, wait for backend
-          // response, otherwise language client initialization msg will
-          // be sent to early and ignored
+        // backend needs some time to process auth token and initiate
+        // ws conn from backend to lsp, hence, wait for backend
+        // response, otherwise language client initialization msg will
+        // be sent to early and ignored
 
-          // save onmessage fn
-          //const defaultOnMessage = this.languageClientWebSocket.onmessage
-          this.languageClientWebSocket.onmessage = (e) => {
-              if (e.data === "backend websocket ready") {
-                  // restore onmessage fn
-                  console.log("backend websocket ready, starting language client");
-                  //this.languageClientWebSocket.onmessage = (e) => {
-                    //console.log("received message from backend: " + e.data);
-                    //if (e.data === "pong") {
-                      // ignore pong keep-alive message from backend
-                    //}
-                    //defaultOnMessage?.call(this.languageClientWebSocket, e);
-                  //}
+        // save onmessage fn
+        //const defaultOnMessage = this.languageClientWebSocket.onmessage
+        this.languageClientWebSocket.onmessage = (e) => {
+          if (e.data === "backend websocket ready") {
+            // restore onmessage fn
+            console.log("backend websocket ready, starting language client");
+            //this.languageClientWebSocket.onmessage = (e) => {
+            //console.log("received message from backend: " + e.data);
+            //if (e.data === "pong") {
+            // ignore pong keep-alive message from backend
+            //}
+            //defaultOnMessage?.call(this.languageClientWebSocket, e);
+            //}
 
-                  // keep connection alive
-                  this.languageClientWSTimerId = setInterval(() => {
-                    this.languageClientWebSocket.send("ping");
-                  }, this.languageClientWSTimeout);
+            // keep connection alive
+            this.languageClientWSTimerId = setInterval(() => {
+              this.languageClientWebSocket.send("ping");
+            }, this.languageClientWSTimeout);
 
-                  const socket = toSocket(this.languageClientWebSocket);
-                  // need to implement own reader to ensure "pong" message is filtered...
-                  const reader = new KeepAliveAwareWebSocketMessageReader(socket);
-                  const writer = new WebSocketMessageWriter(socket);
-                  this.languageClient = createLanguageClient({
-                      reader,
-                      writer
-                  });
-                  this.languageClient.start();
-              }
+            const socket = toSocket(this.languageClientWebSocket);
+            // need to implement own reader to ensure "pong" message is filtered...
+            const reader = new KeepAliveAwareWebSocketMessageReader(socket);
+            const writer = new WebSocketMessageWriter(socket);
+            this.languageClient = createLanguageClient({
+              reader,
+              writer
+            });
+            this.languageClient.start();
           }
+        }
       };
 
     }
@@ -591,30 +591,30 @@ export default class FileEditor extends React.Component<FileEditorProps> {
       const model = editor.getModel()
       const language = model?.getLanguageId() || ''
       return new MonacoLanguageClient({
-          name: "Language Client",
-          clientOptions: {
-              // use a language id as a document selector
-              documentSelector: [language],
+        name: "Language Client",
+        clientOptions: {
+          // use a language id as a document selector
+          documentSelector: [ language ],
 
-              // workspaceFolder already set globally, no need to set it again, would only
-              // be necessary if workspaceFolders should be different for each selected file
-              //workspaceFolder: {
-              //  uri: "file:///home/p4/"
-              //},
+          // workspaceFolder already set globally, no need to set it again, would only
+          // be necessary if workspaceFolders should be different for each selected file
+          //workspaceFolder: {
+          //  uri: "file:///home/p4/"
+          //},
 
-              // disable the default error handler
-              //errorHandler: {
-                  //error: () => ({ action: ErrorAction.Continue }),
-                  // maybe use restart of language client? e.g., to recover from conn loss? 
-                  //closed: () => ({ action: CloseAction.Restart })
-              //}
-          },
-          // create a language client connection from the JSON RPC connection on demand
-          connectionProvider: {
-              get: () => {
-                  return Promise.resolve(transports);
-              }
+          // disable the default error handler
+          //errorHandler: {
+          //error: () => ({ action: ErrorAction.Continue }),
+          // maybe use restart of language client? e.g., to recover from conn loss? 
+          //closed: () => ({ action: CloseAction.Restart })
+          //}
+        },
+        // create a language client connection from the JSON RPC connection on demand
+        connectionProvider: {
+          get: () => {
+            return Promise.resolve(transports);
           }
+        }
       });
     }
   }
@@ -633,7 +633,7 @@ export default class FileEditor extends React.Component<FileEditorProps> {
 
   findCommonPathPrefix(strings: string[]): string {
     let commonPrefix = "";
-    const stringA = strings[0];
+    const stringA = strings[ 0 ];
     // cycle thgouh remaining strings after the first and check for common prefix
     strings.forEach((stringB) => {
       let tempCommonPrefix = "";
@@ -671,7 +671,7 @@ export default class FileEditor extends React.Component<FileEditorProps> {
     if (this.suppressChangeDetection) {
       return;
     }
-    this.environmentFiles[this.state.currentFile].fileChanged = true;
+    this.environmentFiles[ this.state.currentFile ].fileChanged = true;
     this.setState({ currentFileChanged: true });
     //console.log("File changed: " + this.state.currentFile);
   }
@@ -697,7 +697,7 @@ export default class FileEditor extends React.Component<FileEditorProps> {
         )
       );
       if (result.status === 200) {
-        this.environmentFiles[this.state.currentFile].fileChanged = false;
+        this.environmentFiles[ this.state.currentFile ].fileChanged = false;
         this.setState({
           currentFileChanged: false,
           editorResult: "Deploy successful!",
@@ -743,8 +743,8 @@ export default class FileEditor extends React.Component<FileEditorProps> {
       );
       if (result.status === 200) {
         const content = await result.text();
-        this.environmentFiles[this.state.currentFile].value = content;
-        this.environmentFiles[this.state.currentFile].fileChanged = false;
+        this.environmentFiles[ this.state.currentFile ].value = content;
+        this.environmentFiles[ this.state.currentFile ].fileChanged = false;
         this.editor.setValue(content);
         this.setState({
           currentFileChanged: false,
@@ -793,13 +793,13 @@ export default class FileEditor extends React.Component<FileEditorProps> {
       this.stopLanguageClient();
       this.setState({
         currentFile: event.target.value,
-        currentFilePath: this.environmentFiles[event.target.value].fileLocation,
+        currentFilePath: this.environmentFiles[ event.target.value ].fileLocation,
         currentFileEditorLanguage:
-          this.environmentFiles[event.target.value].editorLanguage,
+          this.environmentFiles[ event.target.value ].editorLanguage,
         currentFileLSPLanguage:
-          this.environmentFiles[event.target.value].lspLanguage,
+          this.environmentFiles[ event.target.value ].lspLanguage,
         currentFileChanged:
-          this.environmentFiles[event.target.value].fileChanged,
+          this.environmentFiles[ event.target.value ].fileChanged,
       });
       this.startCollaborationServices(this.group, event.target.value);
       this.startLanguageClient(
@@ -825,7 +825,7 @@ export default class FileEditor extends React.Component<FileEditorProps> {
         <Tooltip {...props} classes={{ popper: className }} />
       )
     )({
-      [`& .${tooltipClasses.tooltip}`]: {
+      [ `& .${tooltipClasses.tooltip}` ]: {
         maxWidth: "100%",
       },
     });
@@ -886,11 +886,11 @@ export default class FileEditor extends React.Component<FileEditorProps> {
           height="100%"
           theme="vs-dark"
           options={monacoOptions}
-          defaultValue={this.environmentFiles[this.state.currentFile]?.value}
+          defaultValue={this.environmentFiles[ this.state.currentFile ]?.value}
           defaultLanguage={
-            this.environmentFiles[this.state.currentFile]?.editorLanguage
+            this.environmentFiles[ this.state.currentFile ]?.editorLanguage
           }
-          path={this.environmentFiles[this.state.currentFile]?.fileLocation}
+          path={this.environmentFiles[ this.state.currentFile ]?.fileLocation}
           onChange={this.onChange}
           beforeMount={this.editorWillMount}
           onMount={this.editorDidMount}

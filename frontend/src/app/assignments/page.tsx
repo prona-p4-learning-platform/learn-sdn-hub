@@ -1,3 +1,4 @@
+'use client';
 import { useState, useEffect, useCallback, forwardRef } from 'react'
 import { createTheme } from '@mui/material/styles';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
@@ -15,16 +16,17 @@ import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
+import { useNotification } from '@lib/context/NotificationContext';
 
-type Severity = "error" | "success" | "info" | "warning" | undefined;
+/* type Severity = "error" | "success" | "info" | "warning" | undefined;
 
 const Alert = forwardRef<HTMLDivElement, AlertProps>(function Alert(
   props,
   ref,
 ) {
   return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;
-});
-
+}); 
+*/
 interface AssignmentOverviewProps {
 };
 
@@ -33,13 +35,16 @@ type SubmissionType = {
   lastChanged: Date
 }
 
-export default function AssignmentOverview(_props: AssignmentOverviewProps) {
+const AssignmentsPage = (_props: AssignmentOverviewProps) => {
+
+  const { showNotification } = useNotification();
+
   const [ assignments, setAssignments ] = useState([])
   const [ submittedAssignments, setSubmittedAssignments ] = useState([] as SubmissionType[])
   const [ deployedUserAssignments, setDeployedUserAssignments ] = useState([])
   const [ deployedGroupAssignments, setDeployedGroupAssignments ] = useState([])
   const [ load, setLoad ] = useState(true)
-  const [ deploymentNotification, setDeploymentNotification ] = useState({ result: "", severity: undefined as Severity, open: false })
+  /* const [ deploymentNotification, setDeploymentNotification ] = useState({ result: "", severity: undefined as Severity, open: false }) */
   const [ confirmationUndeployDialogOpen, setConfirmationUndeployDialogOpen ] = useState({ assignment: "", dialogOpen: false })
   const [ confirmationResubmitDialogOpen, setConfirmationResubmitDialogOpen ] = useState({ assignment: "", dialogOpen: false })
   const [ resubmitAssignment, setResubmitAssignment ] = useState("");
@@ -105,14 +110,16 @@ export default function AssignmentOverview(_props: AssignmentOverviewProps) {
   }, [ load ])
 
   const createEnvironment = useCallback(async (assignment: string) => {
-    setDeploymentNotification({ result: "Creating virtual environment... please wait...", severity: "info", open: true })
+    showNotification("Creating virtual environment... please wait...", "info");
+    //setDeploymentNotification({ result: "Creating virtual environment... please wait...", severity: "info", open: true })
     try {
       const result = await fetch(createApiRequest(`/api/environment/create?environment=${assignment}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', authorization: localStorage.getItem("token") || "" }
       }))
       if (result.status === 200) {
-        setDeploymentNotification({ result: "Deployment successful!", severity: "success", open: true })
+        showNotification("Deployment successful!", "success");
+        //setDeploymentNotification({ result: "Deployment successful!", severity: "success", open: true })
         fetch(createApiRequest("/api/environment/deployed-user-environments", { headers: { authorization: localStorage.getItem("token") || "" } }))
           .then(res => res.json())
           .then(setDeployedUserAssignments)
@@ -121,23 +128,27 @@ export default function AssignmentOverview(_props: AssignmentOverviewProps) {
           .then(setDeployedGroupAssignments)
       } else {
         const message = await result.json()
-        setDeploymentNotification({ result: "Deployment failed! (" + message.message + ")", severity: "error", open: true })
+        showNotification(`Deployment failed! (${message.message})`, "error");
+        //setDeploymentNotification({ result: "Deployment failed! (" + message.message + ")", severity: "error", open: true })
       }
     }
     catch (error) {
-      setDeploymentNotification({ result: "Deployment error while connecting to backend!", severity: "error", open: true })
+      showNotification("Deployment error while connecting to backend!", "error");
+      //setDeploymentNotification({ result: "Deployment error while connecting to backend!", severity: "error", open: true })
     }
   }, []);
 
   const deleteEnvironment = useCallback(async (assignment: string) => {
-    setDeploymentNotification({ result: "Deleting virtual environment... please wait...", severity: "info", open: true })
+    showNotification("Deleting virtual environment... please wait...", "info");
+    //setDeploymentNotification({ result: "Deleting virtual environment... please wait...", severity: "info", open: true })
     try {
       const result = await fetch(createApiRequest(`/api/environment/delete?environment=${assignment}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', authorization: localStorage.getItem("token") || "" }
       }))
       if (result.status === 200) {
-        setDeploymentNotification({ result: "Deployment deletion successful!", severity: "success", open: true })
+        showNotification("Deployment deletion successful!", "success");
+        //setDeploymentNotification({ result: "Deployment deletion successful!", severity: "success", open: true })
         fetch(createApiRequest("/api/environment/deployed-user-environments", { headers: { authorization: localStorage.getItem("token") || "" } }))
           .then(res => res.json())
           .then(setDeployedUserAssignments)
@@ -146,11 +157,12 @@ export default function AssignmentOverview(_props: AssignmentOverviewProps) {
           .then(setDeployedGroupAssignments)
       } else {
         const message = await result.json()
-        setDeploymentNotification({ result: "Deployment deletion failed! (" + message.message + ")", severity: "error", open: true })
+        showNotification(`Deployment deletion failed! (${message.message})`, "error");
+        //setDeploymentNotification({ result: "Deployment deletion failed! (" + message.message + ")", severity: "error", open: true })
       }
-    }
-    catch (error) {
-      setDeploymentNotification({ result: "Deployment deletion error while connecting to backend!", severity: "error", open: true })
+    } catch (error) {
+      showNotification("Deployment deletion error while connecting to backend!", "error");
+      //setDeploymentNotification({ result: "Deployment deletion error while connecting to backend!", severity: "error", open: true })
     }
   }, []);
 
@@ -201,11 +213,11 @@ export default function AssignmentOverview(_props: AssignmentOverviewProps) {
             </ListItemSecondaryAction>
           </ListItem>
         ))}
-        <Snackbar open={deploymentNotification.open} anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}>
+        {/* <Snackbar open={deploymentNotification.open} anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}>
           <Alert severity={deploymentNotification.severity as Severity}>
             {deploymentNotification.result}
           </Alert>
-        </Snackbar>
+        </Snackbar> */}
         <Dialog
           open={confirmationUndeployDialogOpen.dialogOpen}
           onClose={handleConfirmationUndeployDialogClose}
@@ -254,3 +266,5 @@ export default function AssignmentOverview(_props: AssignmentOverviewProps) {
     </div>
   );
 }
+
+export default AssignmentsPage

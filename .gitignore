@@ -8,3 +8,4 @@ tools
 frontend-old
 frontend/start-frontend.sh
 backend/start-backend.sh
+.next

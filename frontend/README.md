@@ -1,46 +1,57 @@
-# Getting Started with Create React App
+# Getting started with this Next.js Project
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+## !!!IMPORTANT!!!
 
-## Available Scripts
+This commit means, this code is still in development and very unstable!
 
-In the project directory, you can run:
+## Todo
 
-### `npm start`
+- Add custom error and not found pages
+- Migrate old pages
+- Test jwt authentication through middleware to the backend
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+## How next.js works
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+### SSR
 
-### `npm test`
+Server-side-rendering is the most popular reason to use next.js.
+Next.js always renders every component and page from serverside.
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+If you need to access to the client, for example if you use `React.useState` or `React.useEffect` (just to name a few), you'll need to place `use client;` at the very top of the component's file.
+Otherwise the component won't render and next.js will cry about it ;)
 
-### `npm run build`
+### App Router
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+Every directory in the `app` directory which has a `page.tsx` file included will be a route in the frontend.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+The `api` directory is a special dir where the next.js backend could be included or the next-auth authentication.
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+The next-auth authentication is outsourced in `/src/lib/auth.ts`.
+There is the whole login logic with jwt and session generation.
 
-### `npm run eject`
+Creating a React Context is a way to handle Notifications globally.
+In `/src/lib/context` you'll find `NotificationContext.tsx` with a `useNotification()`-Hook. Use it like this:
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+```ts
+const { showNotification } = useNotification();
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+showNotification("This is the notification message!", "success");
+```
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+Use this whereever you want and you can access the MUI Snackbar with the alerts.
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+### Authentication
 
-## Learn More
+As mentioned, I use the [next-auth](https://next-auth.js.org/) library for authentication.
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+In addition to the custom credentials we use in this project, next-auth has many other providers, such as github, apple, google, discord, etc.
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+We need to create a secret key in our `.env.*.local` with the name `NEXTAUTH_SECRET`, otherwise next-auth will throw an error in production. It need's the key for generating secrets/tokens.
+
+### Environment Variables
+
+Every env variable which starts with `NEXT_PUBLIC_*` can be accessed in the frontend via `process.env.NEXT_PUBLIC_*`.
+
+To be on the safe side, please add each `.env.*.local` file to the `.gitignore`.
+
+On the other hand, you can include all `.env` files without local in their name in the repository.
