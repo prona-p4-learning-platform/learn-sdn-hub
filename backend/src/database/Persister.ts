@@ -1,5 +1,6 @@
 import {
   Submission,
+  SubmissionAdminOverviewEntry,
   SubmissionFileType,
   TerminalStateType,
 } from "../Environment";
@@ -79,6 +80,7 @@ export interface Persister {
   ) => Promise<Submission[]>;
   GetAllUsers: () => Promise<UserData[]>;
   GetAllCourses: () => Promise<CourseData[]>;
+  GetAllSubmissions: () => Promise<SubmissionAdminOverviewEntry[]>;
   AddCourse: (courseName: string) => Promise<ResponseObject>;
   UpdateCourseForUsers(
     courseUserAction: CourseUserAction,

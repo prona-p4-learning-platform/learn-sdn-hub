@@ -8,6 +8,7 @@ import type { Assignment } from "../typings/assignment/AssignmentType";
 import type { Course } from "../typings/course/CourseType";
 import CourseAssignments from "../components/CourseAssignments";
 import AddEntryDialog from "../components/AddEntryDialog";
+import SubmissionOverview from "../components/SubmissionOverview";
 
 type Severity = "error" | "success" | "info" | "warning" | undefined;
 
@@ -182,7 +183,13 @@ const Administration = () => {
     <Grid container spacing={0}>
       {authorized ? (
         <Grid item xs={12}>
-          <AdminTabs tabNames={["Assign Users", "Course Assignments"]}>
+          <AdminTabs
+            tabNames={[
+              "Assign Users",
+              "Course Assignments",
+              "Submission Overview",
+            ]}
+          >
             <UserAssignment
               key="assignUsers"
               users={users}
@@ -195,6 +202,7 @@ const Administration = () => {
               courses={courses}
               openAddCourseDialog={openCreateNewCourseModal}
             ></CourseAssignments>
+            <SubmissionOverview key="submissionOverview"></SubmissionOverview>
           </AdminTabs>
         </Grid>
       ) : null}

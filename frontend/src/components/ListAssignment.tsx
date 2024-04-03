@@ -93,7 +93,7 @@ const AssignmentList = <T extends WithId>({
       container
       spacing={2}
       justifyContent="center"
-      alignItems="center"
+      alignItems="stretch"
     >
       <Grid item>
         <TransferList

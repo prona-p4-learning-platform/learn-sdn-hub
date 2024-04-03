@@ -11,6 +11,7 @@ import {
 } from "./Persister";
 import {
   Submission,
+  SubmissionAdminOverviewEntry,
   SubmissionFileType,
   TerminalStateType,
 } from "../Environment";
@@ -18,7 +19,7 @@ import environments from "../Configuration";
 
 const saltRounds = 10;
 
-interface SubmissionEntry {
+export interface SubmissionEntry {
   username: string;
   groupNumber: number;
   environment: string;
@@ -446,6 +447,53 @@ export default class MongoDBPersister implements Persister {
         { $replaceRoot: { newRoot: "$assignments" } },
       ])
       .toArray();
+  }
+
+  async GetAllSubmissions(): Promise<SubmissionAdminOverviewEntry[]> {
+    return new Promise<SubmissionAdminOverviewEntry[]>(
+      async (resolve, reject) => {
+        try {
+          const client = await this.getClient();
+
+          const allSubmissions = await client
+            .db()
+            .collection("submissions")
+            .aggregate([
+              { $unwind: "$submittedFiles" },
+              {
+                $group: {
+                  _id: "$_id",
+                  environment: { $first: "$environment" },
+                  submissionCreated: { $first: "$submissionCreated" },
+                  username: { $first: "$username" },
+                  groupNumber: { $first: "$groupNumber" },
+                  fileNames: { $push: "$submittedFiles.fileName" },
+                },
+              },
+            ])
+            .sort({ environment: 1, groupName: 1, username: 1 })
+            .toArray();
+
+          const submissions: SubmissionAdminOverviewEntry[] =
+            allSubmissions.map((submission) => ({
+              submissionID: submission._id,
+              assignmentName: submission.environment,
+              lastChanged: submission.submissionCreated,
+              username: submission.username,
+              groupNumber: submission.groupNumber,
+              fileNames: submission.fileNames,
+            }));
+
+          resolve(submissions);
+        } catch (error) {
+          reject(
+            new Error(
+              "Unable to retrieve submissions of user or group: " + error
+            )
+          );
+        }
+      }
+    );
   }
 
   async close(): Promise<void> {

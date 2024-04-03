@@ -36,7 +36,7 @@ const CustomList = <T,>({
   checked,
   displayProperty,
 }: CustomListProps<T>) => (
-  <Card>
+  <Card style={{ height: "100%", display: "flex", flexDirection: "column" }}>
     <CardHeader
       sx={{ px: 2, py: 1 }}
       avatar={
@@ -61,8 +61,7 @@ const CustomList = <T,>({
     <Divider />
     <List
       sx={{
-        width: 250,
-        height: 230,
+        flex: 1,
         bgcolor: "background.paper",
         overflow: "auto",
       }}

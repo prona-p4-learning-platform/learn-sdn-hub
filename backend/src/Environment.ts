@@ -97,6 +97,21 @@ export interface Submission {
   lastChanged: Date;
 }
 
+export interface SubmissionAdminOverviewEntry extends Submission {
+  submissionID: string;
+  username: string;
+  groupNumber: number;
+  fileNames: string[];
+  assignmentRef?: string;
+  userRef?: string;
+}
+
+export interface SubmissionAdminEntryDetails {
+  submissionID: string;
+  terminalStatus: Array<TerminalStateType>;
+  submittedFiles: Array<SubmissionFileType>;
+}
+
 export type SubmissionFileType = {
   fileName: string;
   fileContent: string;

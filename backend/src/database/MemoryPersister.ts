@@ -14,6 +14,7 @@ import {
   TerminalStateType,
   Submission,
   SubmissionFileType,
+  SubmissionAdminOverviewEntry,
 } from "../Environment";
 
 const userEnvironments: Map<string, Map<string, UserEnvironment>> = new Map();
@@ -221,6 +222,10 @@ export default class MemoryPersister implements Persister {
   }
 
   async GetUserAssignments(userAcc: UserAccount): Promise<AssignmentData[]> {
+    throw new Error("Method not implemented.");
+  }
+
+  async GetAllSubmissions(): Promise<SubmissionAdminOverviewEntry[]> {
     throw new Error("Method not implemented.");
   }
 

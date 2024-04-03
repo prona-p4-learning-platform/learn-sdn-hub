@@ -6,6 +6,7 @@ import adminRoleMiddleware from "../admin/AdminRoleMiddleware";
 import { Persister } from "../database/Persister";
 import bodyParser from "body-parser";
 import environments from "../Configuration";
+import { SubmissionAdminOverviewEntry } from "../Environment";
 
 export default (persister: Persister): Router => {
   const router = Router();
@@ -14,7 +15,7 @@ export default (persister: Persister): Router => {
     "/users",
     authenticationMiddleware,
     adminRoleMiddleware,
-    async (req: RequestWithUser, res) => {
+    async (_, res) => {
       try {
         const userData = await persister.GetAllUsers();
         return res.status(200).json(userData);
@@ -28,7 +29,7 @@ export default (persister: Persister): Router => {
     "/assignments",
     authenticationMiddleware,
     adminRoleMiddleware,
-    async (req: RequestWithUser, res) => {
+    async (_, res) => {
       try {
         const assignments = await persister.GetAllAssignments();
         return res
@@ -48,7 +49,7 @@ export default (persister: Persister): Router => {
     "/assignments/create",
     authenticationMiddleware,
     adminRoleMiddleware,
-    async (req: RequestWithUser, res) => {
+    async (_, res) => {
       try {
         const response = await persister.CreateAssignments();
 
@@ -73,7 +74,7 @@ export default (persister: Persister): Router => {
     "/courses",
     authenticationMiddleware,
     adminRoleMiddleware,
-    async (req: RequestWithUser, res) => {
+    async (_, res) => {
       try {
         const userData = await persister.GetAllCourses();
         return res.status(200).json(userData);
@@ -139,6 +140,29 @@ export default (persister: Persister): Router => {
       } catch (err) {
         return res.status(500).json({ error: true, message: err.message });
       }
+    }
+  );
+
+  router.get(
+    "/submissions",
+    authenticationMiddleware,
+    adminRoleMiddleware,
+    async (_, res) => {
+      await persister
+        .GetAllSubmissions()
+        .then((submissions) => {
+          return res
+            .status(200)
+            .json(
+              Array.from(submissions ?? ([] as SubmissionAdminOverviewEntry[]))
+            );
+        })
+        .catch((err) => {
+          console.log("No submission found " + err);
+          return res
+            .status(200)
+            .json(Array.from([] as SubmissionAdminOverviewEntry[]));
+        });
     }
   );
 
