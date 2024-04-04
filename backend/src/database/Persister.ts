@@ -48,6 +48,11 @@ export interface AssignmentData {
   name: string;
 }
 
+export interface FileData {
+  fileName: string;
+  content: string;
+}
+
 type CourseUserAction = {
   [key in "add" | "remove"]: {
     userID: string;
@@ -93,4 +98,5 @@ export interface Persister {
     courseID: string,
     assignmentIDs: string[]
   ): Promise<void>;
+  GetSubmissionFile(submissionID: string, fileName: string): Promise<FileData>;
 }

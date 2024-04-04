@@ -1,12 +1,10 @@
 import {
-  Alert,
   FormControl,
   Grid,
   InputLabel,
   MenuItem,
   Select,
   SelectChangeEvent,
-  Snackbar,
 } from "@mui/material";
 import { useEffect, useState } from "react";
 import APIRequest from "../api/Request";
@@ -16,11 +14,13 @@ import LoadingButton from "@mui/lab/LoadingButton";
 import SaveIcon from "@mui/icons-material/Save";
 import { not } from "../utilities/ListCompareHelper";
 import AssignmentList from "./ListAssignment";
+import { Severity } from "../views/Administration";
 
 interface UserAssignmentProps {
   users: User[];
   courses: Course[];
   openAddCourseDialog: () => void;
+  handleFetchNotification: (message: string, severity: Severity) => void;
 }
 
 type CourseUserAction = {
@@ -29,12 +29,11 @@ type CourseUserAction = {
   }[];
 };
 
-type Severity = "error" | "success" | "info" | "warning" | undefined;
-
 const UserAssignment = ({
   users,
   courses,
   openAddCourseDialog,
+  handleFetchNotification,
 }: UserAssignmentProps) => {
   const [currentCourseID, setCurrentCourseID] = useState("");
   const [checked, setChecked] = useState<readonly User[]>([]);
@@ -45,11 +44,6 @@ const UserAssignment = ({
   );
   const [hasChanges, setHasChanges] = useState<boolean>(false);
   const [waitForResponse, setWaitForResponse] = useState<boolean>(false);
-  const [fetchNotification, setFetchNotification] = useState({
-    result: "",
-    severity: undefined as Severity,
-    open: false,
-  });
 
   useEffect(() => {
     setUnassignedUsers(users);
@@ -74,18 +68,16 @@ const UserAssignment = ({
           )?.name;
           setHasChanges(false);
           setOriginalAssignedUsers(assignedUsers);
-          setFetchNotification({
-            result: `User(s) for course ${courseName} updated!`,
-            severity: "success",
-            open: true,
-          });
+          handleFetchNotification(
+            `User(s) for course ${courseName} updated!`,
+            "success"
+          );
         } else {
           response.json().then((data) => {
-            setFetchNotification({
-              result: `Error updating users: ${data.message}`,
-              severity: "error",
-              open: true,
-            });
+            handleFetchNotification(
+              `Error updating users: ${data.message}`,
+              "error"
+            );
           });
         }
       })
@@ -123,10 +115,6 @@ const UserAssignment = ({
     setOriginalAssignedUsers(usersInCourse);
     setAssignedUsers(usersInCourse);
     setUnassignedUsers(not(users, usersInCourse));
-  };
-
-  const handleSnackbarClose = () => {
-    setFetchNotification({ ...fetchNotification, open: false });
   };
 
   return (
@@ -194,16 +182,6 @@ const UserAssignment = ({
           </Grid>
         </Grid>
       </Grid>
-      <Snackbar
-        open={fetchNotification.open}
-        anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
-        autoHideDuration={5000}
-        onClose={handleSnackbarClose}
-      >
-        <Alert severity={fetchNotification.severity as Severity}>
-          {fetchNotification.result}
-        </Alert>
-      </Snackbar>
     </Grid>
   );
 };

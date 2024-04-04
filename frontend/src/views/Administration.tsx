@@ -10,7 +10,7 @@ import CourseAssignments from "../components/CourseAssignments";
 import AddEntryDialog from "../components/AddEntryDialog";
 import SubmissionOverview from "../components/SubmissionOverview";
 
-type Severity = "error" | "success" | "info" | "warning" | undefined;
+export type Severity = "error" | "success" | "info" | "warning" | undefined;
 
 const Administration = () => {
   const [authorized, setAuthorized] = useState(false);
@@ -168,6 +168,14 @@ const Administration = () => {
     setFetchNotification({ ...fetchNotification, open: false });
   };
 
+  const handleFetchNotification = (message: string, severity: Severity) => {
+    setFetchNotification({
+      result: message,
+      severity: severity,
+      open: true,
+    });
+  };
+
   const handleAuthorization = (authorized: boolean, message?: string) => {
     setAuthorized(authorized);
     if (!authorized && message) {
@@ -195,14 +203,19 @@ const Administration = () => {
               users={users}
               courses={courses}
               openAddCourseDialog={openCreateNewCourseModal}
+              handleFetchNotification={handleFetchNotification}
             ></UserAssignment>
             <CourseAssignments
               key="assignAssignments"
               assignments={assignments}
               courses={courses}
               openAddCourseDialog={openCreateNewCourseModal}
+              handleFetchNotification={handleFetchNotification}
             ></CourseAssignments>
-            <SubmissionOverview key="submissionOverview"></SubmissionOverview>
+            <SubmissionOverview
+              key="submissionOverview"
+              handleFetchNotification={handleFetchNotification}
+            ></SubmissionOverview>
           </AdminTabs>
         </Grid>
       ) : null}

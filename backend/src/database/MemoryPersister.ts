@@ -7,6 +7,7 @@ import {
   CourseData,
   ResponseObject,
   AssignmentData,
+  FileData,
 } from "./Persister";
 import fs from "fs";
 import path from "path";
@@ -226,6 +227,13 @@ export default class MemoryPersister implements Persister {
   }
 
   async GetAllSubmissions(): Promise<SubmissionAdminOverviewEntry[]> {
+    throw new Error("Method not implemented.");
+  }
+
+  async GetSubmissionFile(
+    submissionID: string,
+    fileName: string
+  ): Promise<FileData> {
     throw new Error("Method not implemented.");
   }
 

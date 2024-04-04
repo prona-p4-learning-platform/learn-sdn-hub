@@ -16,19 +16,20 @@ import { not } from "../utilities/ListCompareHelper";
 import AssignmentList from "./ListAssignment";
 import type { Assignment } from "../typings/assignment/AssignmentType";
 import type { Course } from "../typings/course/CourseType";
+import { Severity } from "../views/Administration";
 
 interface AssignmentProps {
   assignments: Assignment[];
   courses: Course[];
   openAddCourseDialog: () => void;
+  handleFetchNotification: (message: string, severity: Severity) => void;
 }
-
-type Severity = "error" | "success" | "info" | "warning" | undefined;
 
 const CourseAssignment = ({
   assignments,
   courses,
   openAddCourseDialog,
+  handleFetchNotification,
 }: AssignmentProps) => {
   const [currentCourseID, setCurrentCourseID] = useState("");
   const [checked, setChecked] = useState<readonly Assignment[]>([]);
@@ -42,11 +43,6 @@ const CourseAssignment = ({
     useState<Assignment[]>([]);
   const [hasChanges, setHasChanges] = useState<boolean>(false);
   const [waitForResponse, setWaitForResponse] = useState<boolean>(false);
-  const [fetchNotification, setFetchNotification] = useState({
-    result: "",
-    severity: undefined as Severity,
-    open: false,
-  });
 
   useEffect(() => {
     setUnassignedAssignments(assignments);
@@ -76,18 +72,16 @@ const CourseAssignment = ({
           )?.name;
           setHasChanges(false);
           setOriginalAssignedAssignments(assignedAssignments);
-          setFetchNotification({
-            result: `Assignments(s) for course ${courseName} updated!`,
-            severity: "success",
-            open: true,
-          });
+          handleFetchNotification(
+            `Assignments(s) for course ${courseName} updated!`,
+            "success"
+          );
         } else {
           response.json().then((data) => {
-            setFetchNotification({
-              result: `Error updating assignments: ${data.message}`,
-              severity: "error",
-              open: true,
-            });
+            handleFetchNotification(
+              `Error updating assignments: ${data.message}`,
+              "error"
+            );
           });
         }
       })
@@ -112,10 +106,6 @@ const CourseAssignment = ({
     setOriginalAssignedAssignments(assignmentsInCourse);
     setAssignedAssignments(assignmentsInCourse);
     setUnassignedAssignments(not(assignments, assignmentsInCourse));
-  };
-
-  const handleSnackbarClose = () => {
-    setFetchNotification({ ...fetchNotification, open: false });
   };
 
   return (
@@ -183,16 +173,6 @@ const CourseAssignment = ({
           </Grid>
         </Grid>
       </Grid>
-      <Snackbar
-        open={fetchNotification.open}
-        anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
-        autoHideDuration={5000}
-        onClose={handleSnackbarClose}
-      >
-        <Alert severity={fetchNotification.severity as Severity}>
-          {fetchNotification.result}
-        </Alert>
-      </Snackbar>
     </Grid>
   );
 };

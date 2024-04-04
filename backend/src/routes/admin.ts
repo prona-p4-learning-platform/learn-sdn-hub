@@ -3,7 +3,7 @@ import authenticationMiddleware, {
   RequestWithUser,
 } from "../authentication/AuthenticationMiddleware";
 import adminRoleMiddleware from "../admin/AdminRoleMiddleware";
-import { Persister } from "../database/Persister";
+import { FileData, Persister } from "../database/Persister";
 import bodyParser from "body-parser";
 import environments from "../Configuration";
 import { SubmissionAdminOverviewEntry } from "../Environment";
@@ -162,6 +162,26 @@ export default (persister: Persister): Router => {
           return res
             .status(200)
             .json(Array.from([] as SubmissionAdminOverviewEntry[]));
+        });
+    }
+  );
+
+  router.get(
+    "/submission/:submissionID/file/download/:fileName",
+    authenticationMiddleware,
+    adminRoleMiddleware,
+    async (req: RequestWithUser, res) => {
+      await persister
+        .GetSubmissionFile(req.params.submissionID, req.params.fileName)
+        .then((file: FileData) => {
+          res
+            .set("Content-disposition", `attachment; filename=${file.fileName}`)
+            .set("Content-type", "application/octet-stream")
+            .status(200)
+            .send(file.content);
+        })
+        .catch((err) => {
+          res.status(500).json({ error: true, message: err.message });
         });
     }
   );

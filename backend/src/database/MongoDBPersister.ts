@@ -8,6 +8,7 @@ import {
   CourseData,
   ResponseObject,
   AssignmentData,
+  FileData,
 } from "./Persister";
 import {
   Submission,
@@ -494,6 +495,39 @@ export default class MongoDBPersister implements Persister {
         }
       }
     );
+  }
+
+  async GetSubmissionFile(
+    submissionID: string,
+    fileName: string
+  ): Promise<FileData> {
+    try {
+      const client = await this.getClient();
+
+      const submission = await client
+        .db()
+        .collection("submissions")
+        .findOne({ _id: new ObjectID(submissionID) });
+
+      if (!submission) {
+        throw new Error("Submission not found");
+      }
+
+      const file = submission.submittedFiles.find(
+        (file: { fileName: string }) => file.fileName === fileName
+      );
+
+      if (!file) {
+        throw new Error("File not found in submission");
+      }
+
+      return {
+        fileName: file.fileName,
+        content: file.fileContent,
+      };
+    } catch (error) {
+      throw new Error(`Unable to get submission file: ${error.message}`);
+    }
   }
 
   async close(): Promise<void> {

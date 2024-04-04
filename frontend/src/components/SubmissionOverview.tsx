@@ -14,8 +14,13 @@ import {
   Typography,
   Divider,
 } from "@mui/material";
+import { Severity } from "../views/Administration";
 
-const SubmissionOverview = () => {
+interface SubmissionProps {
+  handleFetchNotification: (message: string, severity: Severity) => void;
+}
+
+const SubmissionOverview = ({ handleFetchNotification }: SubmissionProps) => {
   const [submissions, setSubmissions] = useState<
     SubmissionAdminOverviewEntry[]
   >([]);
@@ -36,7 +41,6 @@ const SubmissionOverview = () => {
         })
       );
       const data = await response.json();
-      console.log(data);
       setExpanded([]);
       setSubmissions(data);
     } catch (error) {
@@ -100,10 +104,36 @@ const SubmissionOverview = () => {
     setSelectedSubmission(null);
   };
 
-  const downloadFile = (fileName: string, submissionID: string) => {
-    // TODO Download
-    console.log("Downloading file:", fileName);
-    console.log("For submission:", submissionID);
+  const downloadFile = async (fileName: string, submissionID: string) => {
+    fetch(
+      APIRequest(
+        `/api/admin/submission/${encodeURIComponent(
+          submissionID
+        )}/file/download/${encodeURIComponent(fileName)}`,
+        {
+          headers: { authorization: localStorage.getItem("token") || "" },
+        }
+      )
+    )
+      .then(async (response) => {
+        if (!response.ok) {
+          const messageObj = await response.json();
+          throw new Error(messageObj.message);
+        }
+        return response.blob();
+      })
+      .then((blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute("download", fileName);
+        document.body.appendChild(link);
+        link.click();
+        link.parentNode?.removeChild(link);
+      })
+      .catch((error) => {
+        handleFetchNotification(error.message, "error");
+      });
   };
 
   return (
