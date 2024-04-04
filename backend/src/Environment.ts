@@ -532,6 +532,7 @@ export default class Environment {
         this.filehandler = new FileHandler(
           endpoint.IPAddress,
           endpoint.SSHPort,
+          endpoint.SSHJumpHost,
         );
       } catch (err) {
         return reject(err);
@@ -562,6 +563,7 @@ export default class Environment {
                 subterminal.params,
                 subterminal.cwd,
                 subterminal.provideTty,
+                endpoint.SSHJumpHost,
               );
 
               const setupCloseHandler = (): void => {
@@ -785,6 +787,7 @@ export default class Environment {
               command.params,
               command.cwd,
               command.provideTty,
+              endpoint.SSHJumpHost,
             );
             console.on("finished", (code: string, signal: string) => {
               global.console.log(
@@ -904,6 +907,7 @@ export default class Environment {
             command.params,
             command.cwd,
             false,
+            endpoint.SSHJumpHost,          
           );
           console.on("finished", (code: string, signal: string) => {
             global.console.log(
@@ -966,6 +970,7 @@ export default class Environment {
         [""],
         "/",
         false,
+        endpoint.SSHJumpHost,
       );
       console.on("finished", (code: number, signal: string) => {
         global.console.log(
