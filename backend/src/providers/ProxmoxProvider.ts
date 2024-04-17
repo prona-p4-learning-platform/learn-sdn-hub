@@ -7,15 +7,26 @@ import { ToadScheduler, SimpleIntervalJob, AsyncTask } from "toad-scheduler";
 import { Client } from "ssh2";
 import Environment from "../Environment";
 import proxmoxApi, { Proxmox, ProxmoxEngineOptions } from "proxmox-api";
-import dns from "dns";
 import fs from "fs";
+import { Netmask } from "netmask";
 
-const schedulerIntervalSeconds = 5 * 60;
+const schedulerIntervalSeconds = 1 * 60;
 
 // allow self signed cert
+// TODO: add proxmox root ra certificate to trusted certificates
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 
 //TODO: possibly also support qemu instead of lxc
+enum proxmoxInstanceType {
+  lxc,
+  qemu,
+}
+
+interface proxmoxVMInstance {
+  type: proxmoxInstanceType;
+  vmid: number;
+  name: string;
+}
 
 export default class ProxmoxProvider implements InstanceProvider {
   // Proxmox API
@@ -30,15 +41,20 @@ export default class ProxmoxProvider implements InstanceProvider {
   private proxmoxTemplate: string;
   private proxmoxTargetHost: string;
 
+  // currently IPv4 only ;) what a shame ;)
+  private networkCIDR: Netmask;
+  private gatewayIP: string;
+
   // SSH and LanguageServer Port config
   private sshPort: number;
   private lsPort: number;
   private sshJumpHostIPAddress: string;
   private sshJumpHostPort: number;
-  private sshJumpHostDomain: string;
   private sshJumpHostUser: string;
   private sshJumpHostPassword: string | undefined;
   private sshJumpHostPrivateKey: string | undefined;
+
+  private proxmoxVMInstances: Map<string, proxmoxVMInstance | undefined>;
 
   private providerInstance: ProxmoxProvider;
 
@@ -58,7 +74,75 @@ export default class ProxmoxProvider implements InstanceProvider {
     this.sshJumpHostUser = process.env.PROXMOX_SSH_JUMP_HOST_USER ?? "";
     this.sshJumpHostPassword = process.env.PROXMOX_SSH_JUMP_HOST_PASSWORD ?? "";
     this.sshJumpHostPrivateKey = process.env.PROXMOX_SSH_JUMP_HOST_KEY ?? undefined;
-    this.sshJumpHostDomain = process.env.PROXMOX_SSH_JUMP_HOST_DOMAIN ?? "";
+
+    // get all existing learn-sdn-hub VMs
+    this.proxmox.nodes.$get().then(async (nodes) => {
+      for (const node of nodes) {
+        await this.proxmox.nodes.$(node.node).lxc.$get().then(async (vms) => {
+          for (const vm of vms) {
+            await this.proxmox.nodes.$(node.node).lxc.$(vm.vmid).status.current.$get().then(async (current) => {
+              // check if instance has a tag "learn-sdn-hub" and hence was created by this provider
+              if (current.tags?.split(";").find((tag) => tag === "learn-sdn-hub")) {
+                // only stopped or running instances are valid instances
+                if ((current.status === "stopped") || (current.status === "running")) {
+                  await this.proxmox.nodes.$(node.node).lxc.$(vm.vmid).config.$get().then((config) => {
+                    const net0 = config.net0;
+                    if (net0?.match(/,ip=(.*),/)) {
+                      const ip = net0?.match(/,ip=(.*),/) ?? "";
+                      const ipAddress = ip[1].split("/")[0];
+                      this.proxmoxVMInstances.set(ipAddress, {type: proxmoxInstanceType.lxc, vmid: vm.vmid, name: vm.name ?? ""});
+                    }
+                  });
+                } else {
+                  throw new Error("ProxmoxProvider: found an existing VM: " + vm.vmid + " with an unknown status: " + current.status);
+                }
+              }
+            });
+          }
+        });
+      }
+    }).catch((error) => {
+      const originalMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      throw new Error("ProxmoxProvider: unable to get all existing VMs.\n" + originalMessage);
+    });
+
+    // check for network cidr
+    const ENV_CIDR = process.env.PROXMOX_NETWORK_CIDR;
+    if (ENV_CIDR) {
+      try {
+        this.networkCIDR = new Netmask(ENV_CIDR);
+      } catch (error) {
+        const originalMessage =
+          error instanceof Error ? error.message : "Unknown error";
+        throw new Error(
+          "ProxmoxProvider: Network cidr address invalid (PROXMOX_NETWORK_CIDR).\n" +
+            originalMessage,
+        );
+      }
+    } else {
+      throw new Error(
+        "ProxmoxProvider: No network cidr provided (PROXMOX_NETWORK_CIDR).",
+      );
+    }
+
+    const ENV_GATEWAYIP = process.env.PROXMOX_NETWORK_GATEWAY_IP;
+    if (ENV_GATEWAYIP) {
+      this.gatewayIP = ENV_GATEWAYIP;
+    } else {
+      throw new Error(
+        "ProxmoxProvider: No network gateway provided (PROXMOX_NETWORK_GATEWAY_IP).",
+      );
+    }
+
+    this.proxmoxVMInstances = new Map<string, proxmoxVMInstance>();
+    this.networkCIDR.forEach((ip) => {
+      // reserve the first and last IP address for the host
+      if (ip !== this.gatewayIP)
+        if (!this.proxmoxVMInstances.has(ip)) {
+          this.proxmoxVMInstances.set(ip, undefined);
+        }
+    });
 
     // check for max instance lifetime
     const ENV_LIFETIME = process.env.PROXMOX_MAX_INSTANCE_LIFETIME_MINUTES;
@@ -106,6 +190,15 @@ export default class ProxmoxProvider implements InstanceProvider {
     );
 
     scheduler.addSimpleIntervalJob(job);
+  }
+
+  getNextAvailableIPAddress (): string | null {
+    for (const [key, value] of this.proxmoxVMInstances.entries()) {
+      if (value === undefined) {
+        return key;
+      }
+    }
+    return null;
   }
 
   async createServer(
@@ -202,6 +295,43 @@ export default class ProxmoxProvider implements InstanceProvider {
         break;
       }
     }
+
+    // set IP address for the VM
+    const vmIPAddress = this.getNextAvailableIPAddress();
+    if (!vmIPAddress)
+      throw new Error("ProxmoxProvider: No ip address available.");
+
+    const config = await this.proxmox.nodes.$(targetNode.node).lxc.$(vmID).config.$get().catch((reason) => {
+      const originalMessage =
+        reason instanceof Error ? reason.message : "Unknown error";
+      throw new Error(
+        `ProxmoxProvider: Could not get config of new VM (${vmID}).\n` +
+          originalMessage,
+      );
+    });
+
+    let new_net0 = config.net0;
+    if (config.net0?.match(/,ip=(.*),/)) {
+      new_net0 = new_net0?.replace(/,ip=(.*),/, ",ip=" + vmIPAddress + "/" + this.networkCIDR.bitmask + ",");
+    } else {
+      new_net0 = new_net0 + ",ip=" + vmIPAddress + "/" + this.networkCIDR.bitmask;
+    }
+    if (config.net0?.match(/,gw=(.*),/)) {
+      new_net0 = new_net0?.replace(/,gw=(.*),/, ",gw=" + this.gatewayIP + ",");
+    } else {
+      new_net0 = new_net0 + ",gw=" + this.gatewayIP;
+    }
+    console.log("Changing net0 config from " + config.net0 + " to " + new_net0);
+
+    await this.proxmox.nodes.$(targetNode.node).lxc.$(vmID).config.$put({net0: new_net0}).catch((reason) => {
+      const originalMessage =
+        reason instanceof Error ? reason.message : "Unknown error";
+      throw new Error(
+        `ProxmoxProvider: Could not set IP address of new VM (${vmID}).\n` +
+          originalMessage,
+      );
+    });
+    
   
     // add tag "learn-sdn-hub" to the VM
     await this.proxmox.nodes.$(targetNode.node).lxc.$(vmID).config.$put({tags: "learn-sdn-hub"}).catch((reason) => {
@@ -222,9 +352,6 @@ export default class ProxmoxProvider implements InstanceProvider {
           originalMessage,
       );
     });
-
-    // get IP address
-    const vmIPAddress = await this.resolveVMIPAddress(vmName);
 
     // wait for ssh
     const expirationDate = new Date(
@@ -266,33 +393,6 @@ export default class ProxmoxProvider implements InstanceProvider {
     return vmEndpoint;  
   }
 
-  private async resolveVMIPAddress(vmName: string) {
-    let ipTimeout = 10;
-    let vmIPAddress = "";
-    while (ipTimeout > 0 && vmIPAddress === "") {
-      dns.setServers([this.sshJumpHostIPAddress]);
-      dns.resolve4(vmName + "." + this.sshJumpHostDomain, (err: NodeJS.ErrnoException | null, addresses: string[]) => {
-        if (err) {
-          // if not found, try again
-          if (err.code !== "ENOTFOUND") {
-            throw new Error("Could not get IP address of started VM. " + err.code + " " + err.message);
-          }
-        } else {
-          if (addresses.length > 0) {
-            vmIPAddress = addresses[0];
-          }
-        }
-      });
-      console.log("Could not get IP address of started VM, retrying...");
-      await this.sleep(1000);
-      ipTimeout--;
-    }
-    if (vmIPAddress === "") {
-      throw new Error("Unable to get IP address of the started VM within timeout.");
-    }
-    return vmIPAddress;
-  }
-
   async getServer(instance: string): Promise<VMEndpoint> {
     const providerInstance = this.providerInstance;
     console.log("ProxmoxProvider: Searching for VM: " + instance);
@@ -308,12 +408,17 @@ export default class ProxmoxProvider implements InstanceProvider {
     });
     // find node containing the vm
     let vmHostname = "";
+    let vmIPAddress = "";
     for (const node of nodes) {
       await this.proxmox.nodes.$(node.node).lxc.$(parseInt(instance)).config.$get().then(async (vmConfig) => {
         if (vmConfig.tags?.split(";").find((tag) => tag === "learn-sdn-hub")) {
           await this.proxmox.nodes.$(node.node).lxc.$(parseInt(instance)).status.current.$get().then((current) => {
             if (current.status === "running") {
               vmHostname = vmConfig.hostname ?? "";
+              const ipAddress = vmConfig.net0?.match(/,ip=(.*)\/(.*),/);
+              if (ipAddress) {
+                vmIPAddress = ipAddress[1]
+              }
             }
           });
         }
@@ -326,8 +431,7 @@ export default class ProxmoxProvider implements InstanceProvider {
       throw new Error(InstanceNotFoundErrorMessage);
     }
 
-    console.log("ProxmoxProvider: VM found, hostname: " + vmHostname + " resolving IP address...");
-    const vmIPAddress = await this.resolveVMIPAddress(vmHostname);
+    console.log("ProxmoxProvider: VM found, hostname: " + vmHostname + " IP: " + vmIPAddress);
    
     // wait for ssh
     const expirationDate = new Date(
@@ -373,8 +477,13 @@ export default class ProxmoxProvider implements InstanceProvider {
     });
     // find node containing the vm
     let vmHostname = "";
+    let vmIPAddress = "";
     for (const node of nodes) {
         await this.proxmox.nodes.$(node.node).lxc.$(parseInt(instance)).config.$get().then(async (vmConfig) => {
+          const ipAddress = vmConfig.net0?.match(/,ip=(.*)\/(.*),/);
+          if (ipAddress) {
+            vmIPAddress = ipAddress[1]
+          }
           if (vmConfig.tags?.split(";").find((tag) => tag === "learn-sdn-hub")) {
             await this.proxmox.nodes.$(node.node).lxc.$(parseInt(instance)).status.current.$get().then(async (current) => {
               if (current.status === "running") {
@@ -399,8 +508,8 @@ export default class ProxmoxProvider implements InstanceProvider {
                     `ProxmoxProvider: Could not stop VM (${instance}) during deletion.\n` +
                       originalMessage,
                   );
-                });        
-
+                });
+              } else if (current.status === "stopped") {
                 // instance found
                 vmHostname = vmConfig.hostname ?? "";
 
@@ -414,6 +523,14 @@ export default class ProxmoxProvider implements InstanceProvider {
                       originalMessage,
                   );
                 });
+
+                //TODO: wait for delete to finish?
+
+                this.proxmoxVMInstances.set(vmIPAddress, undefined);
+              } else {
+                throw new Error(
+                  `ProxMox provider found VM " + instance + " to delete but state is neither running nor stopped.`
+                );
               }
             });
           }
@@ -447,9 +564,9 @@ export default class ProxmoxProvider implements InstanceProvider {
           for (const vm of vms) {
             await this.proxmox.nodes.$(node.node).lxc.$(vm.vmid).status.current.$get().then(async (current) => {
               if (current.tags?.split(";").find((tag) => tag === "learn-sdn-hub")) {
-                if (((current.uptime ?? 0) > (this.maxInstanceLifetimeMinutes * 60))) {
+                if ((current.status === "stopped") || ((current.status === "running") && ((current.uptime ?? 0) > (this.maxInstanceLifetimeMinutes * 60)))) {
                   // delete expired VM
-                  console.log("Deleting expired VM: " + vm.vmid + " " + current.tags + " " + current.uptime);
+                  console.log("Deleting expired VM: " + vm.vmid);
                   // if (current.status === "running") {
                   //   await this.proxmox.nodes.$(node.node).lxc.$(vm.vmid).status.stop.$post().then(async () => {
                   //     // wait for stop
@@ -483,7 +600,7 @@ export default class ProxmoxProvider implements InstanceProvider {
                   //       originalMessage,
                   //   );
                   // });
-                  await Environment.deleteInstanceEnvironments(vm.vmid.toString()).catch(
+                  const instanceEnvironmentFound = await Environment.deleteInstanceEnvironments(vm.vmid.toString()).catch(
                     (reason) => {
                       const originalMessage =
                         reason instanceof Error ? reason.message : "Unknown error";
@@ -493,10 +610,13 @@ export default class ProxmoxProvider implements InstanceProvider {
                       );
                     },
                   );
+                  if (!instanceEnvironmentFound) {
+                    // no environment found for instance, ensuring instance is deleted
+                    await this.deleteServer(vm.vmid.toString());
+                  }
                   console.log(
                     "ProxmoxProvider: deleted expired VM: " + vm.vmid
                   );
-                  return;          
                 };
               }
             }).catch((reason) => {
@@ -570,6 +690,9 @@ export default class ProxmoxProvider implements InstanceProvider {
                 username: process.env.SSH_USERNAME,
                 password: process.env.SSH_PASSWORD,
                 readyTimeout: 1000,
+                //debug: (debug) => {
+                //  console.log(debug)
+                //},
               });
             }
             console.log("Forwarded connection: wait?: " + wait);
@@ -586,10 +709,10 @@ export default class ProxmoxProvider implements InstanceProvider {
           privateKey: this.sshJumpHostPrivateKey
             ? fs.readFileSync(this.sshJumpHostPrivateKey)
             : undefined,
+          readyTimeout: 1000,
           //debug: (debug) => {
           //  console.log(debug)
           //},
-          readyTimeout: 1000,
         });
       });
     };

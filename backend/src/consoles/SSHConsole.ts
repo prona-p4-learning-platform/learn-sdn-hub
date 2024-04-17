@@ -144,7 +144,7 @@ export default class SSHConsole extends EventEmitter implements Console {
                 privateKey: process.env.SSH_PRIVATE_KEY_PATH
                   ? fs.readFileSync(process.env.SSH_PRIVATE_KEY_PATH)
                   : undefined,
-                readyTimeout: 10000,
+                readyTimeout: 1000,
               });
             }
           });
@@ -164,7 +164,7 @@ export default class SSHConsole extends EventEmitter implements Console {
           //debug: (debug) => {
           //  console.log(debug)
           //},
-          readyTimeout: 10000,
+          readyTimeout: 1000,
         });
       } else {
         console.log("Establishing SSH connection " + ipaddress + ":" + port);
@@ -183,7 +183,7 @@ export default class SSHConsole extends EventEmitter implements Console {
             privateKey: process.env.SSH_PRIVATE_KEY_PATH
               ? fs.readFileSync(process.env.SSH_PRIVATE_KEY_PATH)
               : undefined,
-            readyTimeout: 10000,
+            readyTimeout: 1000,
           });
       }
     }

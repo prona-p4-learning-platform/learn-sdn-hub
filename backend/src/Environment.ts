@@ -402,8 +402,10 @@ export default class Environment {
   }
 
   static async deleteInstanceEnvironments(instance: string): Promise<boolean> {
+    let instanceEnvironmentFound = false;
     for (const activeEnvironment of this.activeEnvironments.values()) {
       if (activeEnvironment.instanceId === instance) {
+        instanceEnvironmentFound = true;
         // the environment uses the specified instance and should be deleted
         await this.deleteEnvironment(
           activeEnvironment.username,
@@ -424,7 +426,7 @@ export default class Environment {
           });
       }
     }
-    return Promise.resolve(true);
+    return Promise.resolve(instanceEnvironmentFound);
   }
 
   async getLanguageServerPort(): Promise<number> {

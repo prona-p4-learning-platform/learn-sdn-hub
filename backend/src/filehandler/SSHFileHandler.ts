@@ -57,7 +57,7 @@ export default class SSHFileHandler {
                     privateKey: process.env.SSH_PRIVATE_KEY_PATH
                       ? fs.readFileSync(process.env.SSH_PRIVATE_KEY_PATH)
                       : undefined,
-                    readyTimeout: 10000,
+                    readyTimeout: 1000,
                   });
               }
             },
@@ -78,7 +78,7 @@ export default class SSHFileHandler {
           //debug: (debug) => {
           //  console.log(debug);
           //},
-          readyTimeout: 10000,
+          readyTimeout: 1000,
         });
     } else {
       console.log("Establishing SFTP connection " + ipaddress + ":" + port);
@@ -102,7 +102,7 @@ export default class SSHFileHandler {
           privateKey: process.env.SSH_PRIVATE_KEY_PATH
             ? fs.readFileSync(process.env.SSH_PRIVATE_KEY_PATH)
             : undefined,
-          readyTimeout: 10000,
+          readyTimeout: 1000,
         });
     }
   }
