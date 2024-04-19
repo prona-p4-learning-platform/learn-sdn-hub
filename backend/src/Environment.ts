@@ -830,7 +830,7 @@ export default class Environment {
         );
       }
 
-      this.environmentProvider
+      await this.environmentProvider
         .deleteServer(endpoint.instance)
         .then(() => {
           this.persister
