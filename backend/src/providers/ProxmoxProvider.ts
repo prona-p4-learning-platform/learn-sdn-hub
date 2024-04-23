@@ -20,12 +20,12 @@ if (
 ) {
   console.log(
     "\nWARNING: NODE_EXTRA_CA_CERTS is not set. \n" +
-    "Please set NODE_EXTRA_CA_CERTS environment variable to provide the CA " +
-    "certificate of your cluster, if you do not use a globally trusted " +
-    "certificate. You can also set NODE_TLS_REJECT_UNAUTHORIZED=0 to allow " +
-    "self-signed certificates, though this is risky. You can find the " +
-    "'Proxmox Virtual Environment PVE Cluster Manager CA' in the node system" +
-    "settings under Certificates.\n",
+      "Please set NODE_EXTRA_CA_CERTS environment variable to provide the CA " +
+      "certificate of your cluster, if you do not use a globally trusted " +
+      "certificate. You can also set NODE_TLS_REJECT_UNAUTHORIZED=0 to allow " +
+      "self-signed certificates, though this is risky. You can find the " +
+      "'Proxmox Virtual Environment PVE Cluster Manager CA' in the node system" +
+      "settings under Certificates.\n",
   );
 }
 
@@ -52,7 +52,7 @@ export default class ProxmoxProvider implements InstanceProvider {
   private maxInstanceLifetimeMinutes: number;
   private vmSSHTimeoutSeconds = 30;
 
-  private proxmoxTemplate: string;
+  private proxmoxTemplateTag: string;
   private proxmoxTargetHost: string;
 
   // currently IPv4 only ;) what a shame ;)
@@ -81,7 +81,8 @@ export default class ProxmoxProvider implements InstanceProvider {
 
     this.proxmox = proxmoxApi(this.auth);
 
-    this.proxmoxTemplate = process.env.PROXMOX_TEMPLATE ?? "";
+    this.proxmoxTemplateTag = process.env.PROXMOX_TEMPLATE_TAG ?? "";
+
     this.proxmoxTargetHost = process.env.PROXMOX_TARGET_HOST ?? "";
     this.sshJumpHostIPAddress = process.env.PROXMOX_SSH_JUMP_HOST ?? "";
     this.sshJumpHostPort = parseInt(
@@ -268,7 +269,7 @@ export default class ProxmoxProvider implements InstanceProvider {
     username: string,
     groupNumber: number,
     environment: string,
-    proxmoxTemplate: string,
+    proxmoxTemplateTag: string,
   ): Promise<VMEndpoint> {
     const providerInstance = this.providerInstance;
     const nodes = await this.proxmox.nodes.$get().catch((reason) => {
@@ -279,19 +280,23 @@ export default class ProxmoxProvider implements InstanceProvider {
       );
     });
 
-    // find node with least load
-    let targetNode = nodes[0];
+    let targetNode = undefined;
     if (this.proxmoxTargetHost !== "") {
       // find target node
       const foundNode = nodes.find(
         (node) => node.node === this.proxmoxTargetHost,
       );
       if (!foundNode) {
-        throw new Error("Could not find target host.");
+        throw new Error(
+          "ProxmoxProvider: Could not find target host PROXMOX_TARGET_HOST " +
+            this.proxmoxTargetHost +
+            ".",
+        );
       } else {
         targetNode = foundNode;
       }
     } else {
+      // if target host is not already defined in env var, find node with least load
       let targetNode = nodes[0];
       for (const node of nodes) {
         if ((node.cpu ?? 0) < (targetNode.cpu ?? 0)) {
@@ -300,47 +305,50 @@ export default class ProxmoxProvider implements InstanceProvider {
         }
       }
     }
-
-    // find node containing the template
-    let templateNode = "";
-    // if no template is provided, use default template
-    if (!proxmoxTemplate) {
-      proxmoxTemplate = this.proxmoxTemplate;
+    if (targetNode === undefined) {
+      throw new Error(
+        "ProxmoxProvider: Could not find a suitable target node.",
+      );
     }
-    for (const node of nodes) {
-      await this.proxmox.nodes
-        .$(node.node)
-        .lxc.$(parseInt(proxmoxTemplate))
-        .status.current.$get()
-        .then((current) => {
-          if (
-            current.tags
-              ?.split(";")
-              .find((tag) => tag === "learn-sdn-hub-template")
-          ) {
-            templateNode = node.node;
+
+    // if no template tag was provided in assignment config, use template tag from env var
+    if (!proxmoxTemplateTag) {
+      if (this.proxmoxTemplateTag !== "") {
+        proxmoxTemplateTag = this.proxmoxTemplateTag;
+      } else {
+        throw new Error(
+          "ProxmoxProvider: No template tag provided. Neither in assignment nor env var PROXMOX_TEMPLATE_TAG.",
+        );
+      }
+    }
+
+    // find the template
+    let templateID: number | undefined = undefined;
+    await this.proxmox.nodes
+      .$(targetNode.node)
+      .lxc.$get()
+      .then((lxcs) => {
+        for (const lxc of lxcs) {
+          if (lxc.tags?.split(";").find((tag) => tag === proxmoxTemplateTag)) {
+            templateID = lxc.vmid;
+            break;
           }
-        })
-        .catch(() => {
-          // ignore the case that the template is not found on this node and continue with the next node
-        });
-      if (templateNode !== "") break;
-    }
-    if (templateNode === "") {
-      throw new Error("Could not find template node.");
+        }
+      })
+      .catch(() => {
+        // ignore the case that the template is not found on this node and continue with the next node
+      });
+    if (templateID === undefined) {
+      throw new Error(
+        `ProxmoxProvider: Could not find a template with tag (${proxmoxTemplateTag} on node ${targetNode.node}`,
+      );
     }
 
-    // create VM by cloning template
-    const templateID = proxmoxTemplate ?? this.proxmoxTemplate;
-    if (!templateID) {
-      console.log("ProxmoxProvider: No template provided.");
-      throw new Error("No template provided.");
-    }
     const vmName = `${username}-${groupNumber}-${environment}`;
     // get next available VM ID
     const vmID = await this.proxmox.cluster.nextid.$get();
     await this.proxmox.nodes
-      .$(templateNode)
+      .$(targetNode.node)
       .lxc.$(parseInt(templateID))
       .clone.$post({
         newid: vmID,
@@ -385,7 +393,7 @@ export default class ProxmoxProvider implements InstanceProvider {
     // set IP address for the VM
     const vmIPAddress = this.getNextAvailableIPAddress();
     if (!vmIPAddress)
-      throw new Error("ProxmoxProvider: No ip address available.");
+      throw new Error("ProxmoxProvider: No IP address available.");
 
     const config = await this.proxmox.nodes
       .$(targetNode.node)
@@ -649,7 +657,9 @@ export default class ProxmoxProvider implements InstanceProvider {
                         stopTimeout--;
                       }
                       if (stopTimeout === 0) {
-                        throw new Error("Could not stop VM: " + instance);
+                        throw new Error(
+                          "ProxmoxProvider: Could not stop VM: " + instance,
+                        );
                       }
                     })
                     .catch((reason) => {
@@ -748,7 +758,7 @@ export default class ProxmoxProvider implements InstanceProvider {
   }
 
   /**
-   * Deletes all expired microVMs.
+   * Deletes all expired instances.
    */
   private async pruneVMInstance(): Promise<void> {
     const deadline = new Date(
@@ -797,7 +807,7 @@ export default class ProxmoxProvider implements InstanceProvider {
                                 ? reason.message
                                 : "Unknown error";
                             throw new Error(
-                              `ProxmoxProvider: Could not delete instance for expired microVM (${vm.vmid}) during pruning.\n` +
+                              `ProxmoxProvider: Could not delete instance for expired VM (${vm.vmid}) during pruning.\n` +
                                 originalMessage,
                             );
                           });
@@ -846,10 +856,10 @@ export default class ProxmoxProvider implements InstanceProvider {
   }
 
   /**
-   * Tries to connect via SSH to the given microVM.
+   * Tries to connect via SSH to the given VM.
    *
-   * @param ip The ip address of the microVM.
-   * @param port The SSH port of the microVM.
+   * @param ip The ip address of the VM.
+   * @param port The SSH port of the VM.
    * @param timeout The timeout for the SSH connection.
    * @returns A void promise.
    */
