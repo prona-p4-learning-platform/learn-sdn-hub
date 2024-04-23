@@ -402,8 +402,10 @@ export default class Environment {
   }
 
   static async deleteInstanceEnvironments(instance: string): Promise<boolean> {
+    let instanceEnvironmentFound = false;
     for (const activeEnvironment of this.activeEnvironments.values()) {
       if (activeEnvironment.instanceId === instance) {
+        instanceEnvironmentFound = true;
         // the environment uses the specified instance and should be deleted
         await this.deleteEnvironment(
           activeEnvironment.username,
@@ -424,7 +426,7 @@ export default class Environment {
           });
       }
     }
-    return Promise.resolve(true);
+    return Promise.resolve(instanceEnvironmentFound);
   }
 
   async getLanguageServerPort(): Promise<number> {
@@ -532,6 +534,7 @@ export default class Environment {
         this.filehandler = new FileHandler(
           endpoint.IPAddress,
           endpoint.SSHPort,
+          endpoint.SSHJumpHost,
         );
       } catch (err) {
         return reject(err);
@@ -562,6 +565,7 @@ export default class Environment {
                 subterminal.params,
                 subterminal.cwd,
                 subterminal.provideTty,
+                endpoint.SSHJumpHost,
               );
 
               const setupCloseHandler = (): void => {
@@ -785,6 +789,7 @@ export default class Environment {
               command.params,
               command.cwd,
               command.provideTty,
+              endpoint.SSHJumpHost,
             );
             console.on("finished", (code: string, signal: string) => {
               global.console.log(
@@ -825,7 +830,7 @@ export default class Environment {
         );
       }
 
-      this.environmentProvider
+      await this.environmentProvider
         .deleteServer(endpoint.instance)
         .then(() => {
           this.persister
@@ -904,6 +909,7 @@ export default class Environment {
             command.params,
             command.cwd,
             false,
+            endpoint.SSHJumpHost,          
           );
           console.on("finished", (code: string, signal: string) => {
             global.console.log(
@@ -966,6 +972,7 @@ export default class Environment {
         [""],
         "/",
         false,
+        endpoint.SSHJumpHost,
       );
       console.on("finished", (code: number, signal: string) => {
         global.console.log(

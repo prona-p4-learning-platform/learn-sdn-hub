@@ -1,8 +1,11 @@
+import { JumpHost } from "../consoles/SSHConsole";
+
 export interface VMEndpoint {
   instance: string;
   providerInstanceStatus: string;
   IPAddress: string;
   SSHPort: number;
+  SSHJumpHost?: JumpHost,
   LanguageServerPort: number;
   RemoteDesktopPort?: number;
 }

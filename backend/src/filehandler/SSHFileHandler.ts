@@ -1,4 +1,5 @@
 import { Client } from "ssh2";
+import { JumpHost } from "../consoles/SSHConsole";
 import fs from "fs";
 
 export default class SSHFileHandler {
@@ -6,28 +7,104 @@ export default class SSHFileHandler {
   private hasClosed = false;
   private hasErrored = false;
 
-  constructor(ipaddress: string, port: number) {
-    console.log("Establishing SFTP connection " + ipaddress + ":" + port);
+  constructor(
+    ipaddress: string,
+    port: number,
+    jumpHost?: JumpHost,
+  ) {
     this.client = new Client();
-    this.client
-      .on("error", (err) => {
-        console.log(err);
-        this.hasErrored = true;
-      })
-      .on("close", () => {
-        console.log("SSHFileHandler has been closed.");
-        this.hasClosed = true;
-      })
-      .connect({
-        host: ipaddress,
-        port,
-        username: "p4",
-        password: "p4",
-        privateKey: process.env.SSH_PRIVATE_KEY_PATH
-          ? fs.readFileSync(process.env.SSH_PRIVATE_KEY_PATH)
-          : undefined,
-        readyTimeout: 10000,
-      });
+    if (jumpHost?.ipaddress !== undefined) {
+      console.log(
+        "Establishing SFTP connection " +
+          ipaddress +
+          ":" +
+          port +
+          " via jump host " +
+          jumpHost.ipaddress +
+          ":" +
+          jumpHost.port,
+      );
+      const sshJumpHostConnection = new Client();
+      sshJumpHostConnection
+        .on("ready", () => {
+          sshJumpHostConnection.forwardOut(
+            "127.0.0.1",
+            0,
+            ipaddress,
+            port,
+            (err, stream) => {
+              if (err) {
+                console.log("Unable to forward connection on jump host");
+                this.client.end();
+                sshJumpHostConnection.end();
+                console.log(err);
+                this.hasErrored = true;
+              } else {
+                this.client
+                  .on("ready", () => {
+                    console.log("SFTP connection via jump host :: ready");
+                  })
+                  .on("error", (err) => {
+                    this.client.end();
+                    sshJumpHostConnection.end();
+                    console.log(err);
+                    this.hasErrored = true;
+                  })
+                  .connect({
+                    sock: stream,
+                    username: process.env.SSH_USERNAME,
+                    password: process.env.SSH_PASSWORD,
+                    privateKey: process.env.SSH_PRIVATE_KEY_PATH
+                      ? fs.readFileSync(process.env.SSH_PRIVATE_KEY_PATH)
+                      : undefined,
+                    readyTimeout: 1000,
+                  });
+              }
+            },
+          );
+        })
+        .on("error", (err) => {
+          this.client.end();
+          sshJumpHostConnection.end();
+          console.log(err);
+          this.hasErrored = true;
+        })
+        .connect({
+          host: jumpHost.ipaddress,
+          port: jumpHost.port,
+          username: jumpHost.username,
+          password: jumpHost.password,
+          privateKey: jumpHost.privateKey ? fs.readFileSync(jumpHost.privateKey) : undefined,
+          //debug: (debug) => {
+          //  console.log(debug);
+          //},
+          readyTimeout: 1000,
+        });
+    } else {
+      console.log("Establishing SFTP connection " + ipaddress + ":" + port);
+      this.client
+        .on("ready", () => {
+          console.log("SFTP connection :: ready");
+        })
+        .on("error", (err) => {
+          console.log(err);
+          this.hasErrored = true;
+        })
+        .on("close", () => {
+          console.log("SSHFileHandler has been closed.");
+          this.hasClosed = true;
+        })
+        .connect({
+          host: ipaddress,
+          port,
+          username: process.env.SSH_USERNAME,
+          password: process.env.SSH_PASSWORD,
+          privateKey: process.env.SSH_PRIVATE_KEY_PATH
+            ? fs.readFileSync(process.env.SSH_PRIVATE_KEY_PATH)
+            : undefined,
+          readyTimeout: 1000,
+        });
+    }
   }
 
   readFile(absolutePath: string, encoding?: BufferEncoding): Promise<string> {
