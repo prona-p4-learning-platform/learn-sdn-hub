@@ -651,4 +651,57 @@ environments.set("Example-p4env", {
   assignmentLabSheet: "../assignments/p4env.md",
 });
 
+//sudo clab inspect &>/dev/null; if [ $? -eq 1 ]; then sudo clab deploy &>/dev/null; fi; docker exec -it clab-kommprot-lab-transport-host1 bash;
+environments.set("KommProt-Ue1-Test", {
+  terminals: [
+    [
+      {
+        type: "Shell",
+        name: "bash",
+        cwd: "/home/p4/kommprot-labs/kommprot-lab-application-layer",
+        executable: "while [ true ]; do clear && sudo clab inspect &>/dev/null; if [ $? -eq 1 ]; then sudo clab deploy &>/dev/null; fi; docker exec -it clab-kommprot-lab-transport-host1 bash; done",
+        params: [],
+        provideTty: true,
+      },
+      {
+        type: "Shell",
+        name: "bash2",
+        cwd: "/home/p4/kommprot-labs/kommprot-lab-application-layer",
+        executable: "while [ true ]; do clear && sudo clab inspect &>/dev/null; if [ $? -eq 1 ]; then sudo clab deploy &>/dev/null; fi; docker exec -it clab-kommprot-lab-transport-host2 bash; done",
+        params: [],
+        provideTty: true,
+      },
+    ],
+  ],
+  editableFiles: [
+    {
+      absFilePath:
+        "/home/p4/kommprot-labs/kommprot-lab-application-layer",
+      alias: "l2_forwarding_static.p4",
+    },
+  ],
+  stopCommands: [
+    {
+      type: "Shell",
+      name: "bash",
+      cwd: "/home/p4/kommprot-labs/kommprot-lab-application-layer",
+      executable: "sudo clab destroy",
+      params: [],
+      provideTty: false,
+    },
+    {
+      type: "Shell",
+      name: "bash2",
+      cwd: "/home/p4/kommprot-labs/kommprot-lab-application-layer",
+      executable: "",
+      params: [],
+      provideTty: false,
+    },
+  ],
+  description: "KommProt-Ue1 description",
+  assignmentLabSheetLocation: "instance",
+  assignmentLabSheet: "/home/p4/kommprot-ue1.md",
+});
+
+
 export default environments;
