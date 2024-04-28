@@ -438,9 +438,16 @@ export default class FirecrackerProvider implements InstanceProvider {
     username: string,
     groupNumber: number,
     environment: string,
-    kernelImage?: string,
-    rootFSDrive?: string,
+    options?: {
+      kernelImage?: string,
+      kernelBootARGs?: string,
+      rootFSDrive?: string,
+    }
   ): Promise<VMEndpoint> {
+    const kernelImage = options?.kernelImage;
+    const kernelBootARGs = options?.kernelBootARGs;
+    const rootFSDrive = options?.rootFSDrive;
+
     const providerInstance = this.providerInstance;
     const socketPath =
       this.socketPathPrefix + "_" + username + "-" + environment;
@@ -458,7 +465,7 @@ export default class FirecrackerProvider implements InstanceProvider {
 
     const microVMKernelImage = kernelImage ?? providerInstance.kernelImage;
     const microVMKernelBootARGs =
-      kernelImage ?? providerInstance.kernelBootARGs;
+      kernelBootARGs ?? providerInstance.kernelBootARGs;
     const microVMRootFSDrive = rootFSDrive ?? providerInstance.rootFSDrive;
 
     const logFileName =

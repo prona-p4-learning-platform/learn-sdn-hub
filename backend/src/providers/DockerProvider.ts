@@ -161,12 +161,14 @@ export default class DockerProvider implements InstanceProvider {
     username: string,
     groupNumber: number,
     environment: string,
-    image?: string,
-    dockerCmd?: string,
-    dockerSupplementalPorts?: string[],
+    options: {
+        image?: string,
+        dockerCmd?: string,
+        dockerSupplementalPorts?: string[],
+      },
   ): Promise<VMEndpoint> {
-    const containerImage = image ?? this.image;
-    const containerCmd = dockerCmd ?? this.cmd;
+    const containerImage = options.image ?? this.image;
+    const containerCmd = options.dockerCmd ?? this.cmd;
 
     // default ports to be exposed and bound are SSH, LSP and RDP
     let containerPorts = [
@@ -176,8 +178,8 @@ export default class DockerProvider implements InstanceProvider {
     ];
 
     // append additionally configured ports
-    if (dockerSupplementalPorts && dockerSupplementalPorts.length > 0)
-      containerPorts = containerPorts.concat(dockerSupplementalPorts);
+    if (options.dockerSupplementalPorts && options.dockerSupplementalPorts.length > 0)
+      containerPorts = containerPorts.concat(options.dockerSupplementalPorts);
 
     const exposedPorts: Record<string, object> = {};
     const portBindings: Record<string, object> = {};

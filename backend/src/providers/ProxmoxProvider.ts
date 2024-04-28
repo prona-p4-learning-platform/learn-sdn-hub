@@ -269,8 +269,12 @@ export default class ProxmoxProvider implements InstanceProvider {
     username: string,
     groupNumber: number,
     environment: string,
-    proxmoxTemplateTag: string,
+    options: {
+      proxmoxTemplateTag?: string,
+    },
   ): Promise<VMEndpoint> {
+    let proxmoxTemplateTag = options.proxmoxTemplateTag;
+
     const providerInstance = this.providerInstance;
     const nodes = await this.proxmox.nodes.$get().catch((reason) => {
       const originalMessage =
@@ -384,6 +388,12 @@ export default class ProxmoxProvider implements InstanceProvider {
       if (current.lock === "create") {
         await this.sleep(1000);
         lockTimeout--;
+        if (lockTimeout === 0) {
+          throw new Error(
+            "ProxmoxProvider: Timeout waiting for create lock of new VM: " +
+              vmID,
+          );
+        }
       } else {
         vmIsLocked = false;
         break;
@@ -409,17 +419,20 @@ export default class ProxmoxProvider implements InstanceProvider {
       });
 
     let new_net0 = config.net0;
-    if (config.net0?.match(/,ip=(.*),/)) {
-      new_net0 = new_net0?.replace(
-        /,ip=(.*),/,
-        ",ip=" + vmIPAddress + "/" + this.networkCIDR.bitmask + ",",
+    if (new_net0?.match(/ip=(?:[0-9]{1,3}\.){3}[0-9]{1,3}\/[0-9]*/)) {
+      new_net0 = new_net0?.replace(/ip=(?:[0-9]{1,3}\.){3}[0-9]{1,3}\/[0-9]*/,
+        "ip=" + vmIPAddress + "/" + this.networkCIDR.bitmask,
+      );
+    } else if (new_net0?.match(/ip=dhcp/)) {
+      new_net0 = new_net0?.replace(/ip=dhcp/,
+        "ip=" + vmIPAddress + "/" + this.networkCIDR.bitmask,
       );
     } else {
       new_net0 =
         new_net0 + ",ip=" + vmIPAddress + "/" + this.networkCIDR.bitmask;
     }
-    if (config.net0?.match(/,gw=(.*),/)) {
-      new_net0 = new_net0?.replace(/,gw=(.*),/, ",gw=" + this.gatewayIP + ",");
+    if (new_net0?.match(/gw=(?:[0-9]{1,3}\.){3}[0-9]{1,3}/)) {
+      new_net0 = new_net0?.replace(/gw=(?:[0-9]{1,3}\.){3}[0-9]{1,3}/, "gw=" + this.gatewayIP);
     } else {
       new_net0 = new_net0 + ",gw=" + this.gatewayIP;
     }
@@ -876,28 +889,24 @@ export default class ProxmoxProvider implements InstanceProvider {
 
         sshJumpHostConnection
           .on("ready", () => {
-            //console.log("ProxmoxProvider: SSH jump host connection ready. Forwarding connection.");
-            sshJumpHostConnection.forwardOut(
-              "127.0.0.1",
-              0,
-              ip,
-              port,
-              (err, stream) => {
+            console.log("ProxmoxProvider: SSH jump host connection ready. Trying to forward and connect to instance.");
+
+            sshJumpHostConnection.exec('nc -w 1 '+ip+' '+port, (err, stream) => {
                 if (err) {
-                  //console.log("ProxmoxProvider: SSH connection ForwardOut failed." + err.message);
+                  console.log("ProxmoxProvider: SSH connection forward failed. " + err.message);
                   sshConnection.end();
                   sshJumpHostConnection.end();
                   reject(err);
                 } else {
                   sshConnection
                     .on("ready", () => {
-                      //console.log("ProxmoxProvider: SSH connection ready.");
+                      console.log("ProxmoxProvider: SSH instance connection ready.");
                       sshConnection.end();
                       sshJumpHostConnection.end();
                       resolve(true);
                     })
                     .on("error", (err) => {
-                      //console.log("ProxmoxProvider: SSH connection error." + err.message);
+                      console.log("ProxmoxProvider: SSH instance connection error. " + err.message);
                       sshConnection.end();
                       sshJumpHostConnection.end();
                       reject(err);
@@ -906,18 +915,20 @@ export default class ProxmoxProvider implements InstanceProvider {
                       sock: stream,
                       username: process.env.SSH_USERNAME,
                       password: process.env.SSH_PASSWORD,
+                      privateKey: process.env.SSH_PRIVATE_KEY_PATH
+                        ? fs.readFileSync(process.env.SSH_PRIVATE_KEY_PATH)
+                        : undefined,
                       readyTimeout: 1000,
                       //debug: (debug) => {
                       //  console.log(debug)
                       //},
                     });
                 }
-                //console.log("Forwarded connection: wait?: " + wait);
               },
-            );
+            );  
           })
           .on("error", (err) => {
-            //console.log("ProxmoxProvider: SSH jump host connection error." + err.message);
+            console.log("ProxmoxProvider: SSH jump host connection error. " + err.message);
             sshConnection.end();
             sshJumpHostConnection.end();
             reject(err);
