@@ -13,3 +13,9 @@ serverCreator(
     new DockerProvider()
   )
 );
+console.log("Attempting to add missing assignments to persister");
+try {
+  persister.CreateAssignments();
+} catch (err) {
+  console.error(err);
+}
