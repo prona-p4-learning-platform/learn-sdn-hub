@@ -97,7 +97,6 @@ const SubmissionOverview = ({
         })
       );
       const data = await response.json();
-      console.log(data);
       setExpanded([]);
       setSubmissions(data);
     } catch (error) {

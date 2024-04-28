@@ -97,7 +97,6 @@ const Administration = () => {
 
   const openCreateNewCourseModal = () => {
     setOpenDialog(true);
-    console.log("create new course");
   };
 
   const addLocalAssignmentsToDB = () => {
