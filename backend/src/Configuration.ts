@@ -657,15 +657,17 @@ environments.set("KommProt-Ue1-Test", {
     [
       {
         type: "Shell",
-        name: "bash",
+        name: "host1",
         cwd: "/home/p4/kommprot-labs/kommprot-lab-application-layer",
         executable: "while [ true ]; do clear && sudo clab inspect &>/dev/null; if [ $? -eq 1 ]; then sudo clab deploy &>/dev/null; fi; docker exec -it clab-kommprot-lab-transport-host1 bash; done",
         params: [],
         provideTty: true,
       },
+    ],
+    [
       {
         type: "Shell",
-        name: "bash2",
+        name: "host2",
         cwd: "/home/p4/kommprot-labs/kommprot-lab-application-layer",
         executable: "while [ true ]; do clear && sudo clab inspect &>/dev/null; if [ $? -eq 1 ]; then sudo clab deploy &>/dev/null; fi; docker exec -it clab-kommprot-lab-transport-host2 bash; done",
         params: [],
@@ -676,14 +678,14 @@ environments.set("KommProt-Ue1-Test", {
   editableFiles: [
     {
       absFilePath:
-        "/home/p4/kommprot-labs/kommprot-lab-application-layer",
-      alias: "l2_forwarding_static.p4",
+        "/home/p4/kommprot-labs/kommprot-lab-application-layer/README.md",
+      alias: "README",
     },
   ],
   stopCommands: [
     {
       type: "Shell",
-      name: "bash",
+      name: "host1",
       cwd: "/home/p4/kommprot-labs/kommprot-lab-application-layer",
       executable: "sudo clab destroy",
       params: [],
@@ -691,7 +693,7 @@ environments.set("KommProt-Ue1-Test", {
     },
     {
       type: "Shell",
-      name: "bash2",
+      name: "host2",
       cwd: "/home/p4/kommprot-labs/kommprot-lab-application-layer",
       executable: "",
       params: [],
@@ -700,7 +702,7 @@ environments.set("KommProt-Ue1-Test", {
   ],
   description: "KommProt-Ue1 description",
   assignmentLabSheetLocation: "instance",
-  assignmentLabSheet: "/home/p4/kommprot-ue1.md",
+  assignmentLabSheet: "/home/p4/kommprot-labs/kommprot-lab-application-layer/README.md",
 });
 
 

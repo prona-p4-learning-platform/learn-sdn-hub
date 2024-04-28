@@ -119,6 +119,10 @@ export interface EnvironmentDescription {
   providerImage?: string;
   providerDockerCmd?: string;
   providerDockerSupplementalPorts?: string[];
+  providerKernelImage?: string;
+  providerKernelBootARGs?: string;
+  providerRootDrive?: string;
+  providerProxmoxTemplateTag?: string;
   rootPath?: string;
   workspaceFolders?: string[];
   useCollaboration?: boolean;
@@ -480,9 +484,15 @@ export default class Environment {
                   this.username,
                   this.groupNumber,
                   this.environmentId,
-                  this.configuration.providerImage,
-                  this.configuration.providerDockerCmd,
-                  this.configuration.providerDockerSupplementalPorts,
+                  {
+                    image: this.configuration.providerImage,
+                    dockerCmd: this.configuration.providerDockerCmd,
+                    dockerSupplementalPorts: this.configuration.providerDockerSupplementalPorts,
+                    kernelImage: this.configuration.providerKernelImage,
+                    kernelBootARGs: this.configuration.providerKernelBootARGs,
+                    rootDrive: this.configuration.providerRootDrive,
+                    proxmoxTemplateTag: this.configuration.providerProxmoxTemplateTag,
+                  }
                 ),
               );
             } else {

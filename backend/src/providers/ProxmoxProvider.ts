@@ -269,8 +269,12 @@ export default class ProxmoxProvider implements InstanceProvider {
     username: string,
     groupNumber: number,
     environment: string,
-    proxmoxTemplateTag: string,
+    options: {
+      proxmoxTemplateTag?: string,
+    },
   ): Promise<VMEndpoint> {
+    let proxmoxTemplateTag = options.proxmoxTemplateTag;
+
     const providerInstance = this.providerInstance;
     const nodes = await this.proxmox.nodes.$get().catch((reason) => {
       const originalMessage =
@@ -384,6 +388,12 @@ export default class ProxmoxProvider implements InstanceProvider {
       if (current.lock === "create") {
         await this.sleep(1000);
         lockTimeout--;
+        if (lockTimeout === 0) {
+          throw new Error(
+            "ProxmoxProvider: Timeout waiting for create lock of new VM: " +
+              vmID,
+          );
+        }
       } else {
         vmIsLocked = false;
         break;
@@ -411,6 +421,10 @@ export default class ProxmoxProvider implements InstanceProvider {
     let new_net0 = config.net0;
     if (new_net0?.match(/ip=(?:[0-9]{1,3}\.){3}[0-9]{1,3}\/[0-9]*/)) {
       new_net0 = new_net0?.replace(/ip=(?:[0-9]{1,3}\.){3}[0-9]{1,3}\/[0-9]*/,
+        "ip=" + vmIPAddress + "/" + this.networkCIDR.bitmask,
+      );
+    } else if (new_net0?.match(/ip=dhcp/)) {
+      new_net0 = new_net0?.replace(/ip=dhcp/,
         "ip=" + vmIPAddress + "/" + this.networkCIDR.bitmask,
       );
     } else {
