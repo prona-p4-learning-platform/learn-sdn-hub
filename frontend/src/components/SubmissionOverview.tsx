@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import APIRequest from "../api/Request";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
@@ -15,6 +15,8 @@ import {
   Divider,
 } from "@mui/material";
 import { Severity } from "../views/Administration";
+import XTerm from "./XTerm";
+import { FitAddon } from "xterm-addon-fit";
 
 interface SubmissionProps {
   handleFetchNotification: (message: string, severity: Severity) => void;
@@ -29,9 +31,44 @@ const SubmissionOverview = ({ handleFetchNotification }: SubmissionProps) => {
   const [selectedSubmission, setSelectedSubmission] =
     useState<SubmissionAdminOverviewEntry | null>(null);
 
+  const terminalFitAddons = useRef<FitAddon[]>([]);
+  const xTermRefs = useRef<Record<string, XTerm | null>>({});
+  const xTermContents = useRef<Record<string, string>>({});
+
+  const handleXTermRef = (
+    submissionID: string,
+    endpoint: string,
+    index: number,
+    instance: XTerm | null
+  ) => {
+    const key = `${submissionID}_${endpoint}`;
+    if (xTermRefs.current[key]) {
+      return;
+    }
+    xTermRefs.current[key] = instance;
+    terminalFitAddons.current.push(new FitAddon());
+    xTermRefs.current[key]?.terminal.loadAddon(
+      terminalFitAddons.current[index]
+    );
+    resizeTerminals();
+    handleXTermWrite(key);
+    if (index !== 0) return;
+    fetchTerminalsOfSubmission(submissionID);
+  };
+
+  const resizeTerminals = useCallback(() => {
+    terminalFitAddons.current.forEach((fitAddon) => {
+      fitAddon.fit();
+    });
+  }, []);
+
   useEffect(() => {
     fetchSubmissions();
-  }, []);
+    window.addEventListener("resize", resizeTerminals);
+    return () => {
+      window.removeEventListener("resize", resizeTerminals);
+    };
+  }, [resizeTerminals]);
 
   const fetchSubmissions = async () => {
     try {
@@ -45,6 +82,30 @@ const SubmissionOverview = ({ handleFetchNotification }: SubmissionProps) => {
       setSubmissions(data);
     } catch (error) {
       console.error("Error fetching submissions:", error);
+    }
+  };
+
+  const fetchTerminalsOfSubmission = async (submissionID: string) => {
+    try {
+      const response = await fetch(
+        APIRequest(
+          `/api/admin/submission/${encodeURIComponent(submissionID)}/terminals`,
+          {
+            headers: { authorization: localStorage.getItem("token") || "" },
+          }
+        )
+      );
+      const data = await response.json();
+      for (const terminal of data) {
+        xTermContents.current[submissionID + "_" + terminal.endpoint] =
+          terminal.state;
+        handleXTermWrite(
+          submissionID + "_" + terminal.endpoint,
+          terminal.state
+        );
+      }
+    } catch (error) {
+      console.error("Error fetching terminals:", error);
     }
   };
 
@@ -72,9 +133,22 @@ const SubmissionOverview = ({ handleFetchNotification }: SubmissionProps) => {
   };
 
   const accordionClicked = (index: string) => {
-    if (expanded.includes(index))
+    if (expanded.includes(index)) {
       setExpanded(expanded.filter((indexParam) => indexParam !== index));
-    else setExpanded([...expanded, index]);
+    } else {
+      setExpanded([...expanded, index]);
+    }
+  };
+
+  const handleXTermWrite = (index: string, text: string | null = null) => {
+    if (text) {
+      xTermRefs.current[index]?.terminal.clear();
+    } else {
+      text = "Retrieving terminal input...\n";
+    }
+    if (xTermRefs.current[index]) {
+      xTermRefs.current[index]?.terminal.write(text);
+    }
   };
 
   const handleExpandAll = () => {
@@ -134,6 +208,20 @@ const SubmissionOverview = ({ handleFetchNotification }: SubmissionProps) => {
       .catch((error) => {
         handleFetchNotification(error.message, "error");
       });
+  };
+
+  const downloadTerminalAsTextFile = async (
+    index: string,
+    fileName: string
+  ) => {
+    const element = document.createElement("a");
+    const file = new Blob([xTermContents.current[index]], {
+      type: "text/plain",
+    });
+    element.href = URL.createObjectURL(file);
+    element.download = fileName + ".txt";
+    document.body.appendChild(element);
+    element.click();
   };
 
   return (
@@ -226,6 +314,58 @@ const SubmissionOverview = ({ handleFetchNotification }: SubmissionProps) => {
                                 Download Files
                               </Button>
                             </Box>
+                            {submission.terminalEndpoints
+                              .sort((a, b) => a.localeCompare(b))
+                              .map(
+                                (endpoint, index) =>
+                                  (expanded.includes(
+                                    assignmentName + groupNumber
+                                  ) ||
+                                    xTermRefs.current[
+                                      `${submission.submissionID}_${endpoint}`
+                                    ]) && (
+                                    <Box
+                                      mb={1}
+                                      key={`${submission.submissionID}_${index}`}
+                                    >
+                                      <Box
+                                        mb={1}
+                                        display="flex"
+                                        justifyContent="space-between"
+                                        alignItems="center"
+                                        width="100%"
+                                      >
+                                        <Box flex="1">
+                                          <Typography>
+                                            <strong>{endpoint}</strong>
+                                          </Typography>
+                                        </Box>
+                                        <Button
+                                          variant="outlined"
+                                          onClick={() =>
+                                            downloadTerminalAsTextFile(
+                                              `${submission.submissionID}_${endpoint}`,
+                                              `${assignmentName}_${groupNumber}_${submission.username}_terminal_${index}`
+                                            )
+                                          }
+                                        >
+                                          Download as Text File
+                                        </Button>
+                                      </Box>
+                                      <XTerm
+                                        ref={(instance) =>
+                                          handleXTermRef(
+                                            submission.submissionID,
+                                            endpoint,
+                                            index,
+                                            instance
+                                          )
+                                        }
+                                        className="myXtermClass"
+                                      />
+                                    </Box>
+                                  )
+                              )}
                             {index < groupSubmissions.length - 1 && (
                               <Divider style={{ marginBottom: "8px" }} />
                             )}

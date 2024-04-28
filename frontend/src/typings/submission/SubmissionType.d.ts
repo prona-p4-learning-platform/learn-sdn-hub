@@ -5,6 +5,7 @@ export type SubmissionAdminOverviewEntry = {
   username: string;
   groupNumber: number;
   fileNames: string[];
+  terminalEndpoints: string[];
   assignmentRef?: string;
   userRef?: string;
 };

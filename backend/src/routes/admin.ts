@@ -6,7 +6,10 @@ import adminRoleMiddleware from "../admin/AdminRoleMiddleware";
 import { FileData, Persister } from "../database/Persister";
 import bodyParser from "body-parser";
 import environments from "../Configuration";
-import { SubmissionAdminOverviewEntry } from "../Environment";
+import {
+  SubmissionAdminOverviewEntry,
+  TerminalStateType,
+} from "../Environment";
 
 export default (persister: Persister): Router => {
   const router = Router();
@@ -179,6 +182,22 @@ export default (persister: Persister): Router => {
             .set("Content-type", "application/octet-stream")
             .status(200)
             .send(file.content);
+        })
+        .catch((err) => {
+          res.status(500).json({ error: true, message: err.message });
+        });
+    }
+  );
+
+  router.get(
+    "/submission/:submissionID/terminals",
+    authenticationMiddleware,
+    adminRoleMiddleware,
+    async (req: RequestWithUser, res) => {
+      await persister
+        .GetTerminalData(req.params.submissionID)
+        .then((data: TerminalStateType[]) => {
+          res.status(200).json(data);
         })
         .catch((err) => {
           res.status(500).json({ error: true, message: err.message });

@@ -461,6 +461,7 @@ export default class MongoDBPersister implements Persister {
             .collection("submissions")
             .aggregate([
               { $unwind: "$submittedFiles" },
+              { $unwind: "$terminalStatus" },
               {
                 $group: {
                   _id: "$_id",
@@ -468,11 +469,17 @@ export default class MongoDBPersister implements Persister {
                   submissionCreated: { $first: "$submissionCreated" },
                   username: { $first: "$username" },
                   groupNumber: { $first: "$groupNumber" },
-                  fileNames: { $push: "$submittedFiles.fileName" },
+                  fileNames: { $addToSet: "$submittedFiles.fileName" },
+                  terminalEndpoints: { $addToSet: "$terminalStatus.endpoint" },
                 },
               },
             ])
-            .sort({ environment: 1, groupName: 1, username: 1 })
+            .sort({
+              environment: 1,
+              groupName: 1,
+              username: 1,
+              terminalEndpoints: 1,
+            })
             .toArray();
 
           const submissions: SubmissionAdminOverviewEntry[] =
@@ -483,6 +490,7 @@ export default class MongoDBPersister implements Persister {
               username: submission.username,
               groupNumber: submission.groupNumber,
               fileNames: submission.fileNames,
+              terminalEndpoints: submission.terminalEndpoints,
             }));
 
           resolve(submissions);
@@ -527,6 +535,38 @@ export default class MongoDBPersister implements Persister {
       };
     } catch (error) {
       throw new Error(`Unable to get submission file: ${error.message}`);
+    }
+  }
+
+  async GetTerminalData(submissionID: string): Promise<TerminalStateType[]> {
+    try {
+      const client = await this.getClient();
+
+      const submission = await client
+        .db()
+        .collection("submissions")
+        .findOne({ _id: new ObjectID(submissionID) });
+
+      if (!submission) {
+        throw new Error("Submission not found");
+      }
+
+      const terminalStatusArray = submission.terminalStatus;
+
+      if (!terminalStatusArray || terminalStatusArray.length === 0) {
+        throw new Error("Terminal status data not found in submission");
+      }
+
+      const terminalData: TerminalStateType[] = terminalStatusArray.map(
+        (status: TerminalStateType) => ({
+          endpoint: status.endpoint,
+          state: status.state,
+        })
+      );
+
+      return terminalData;
+    } catch (error) {
+      throw new Error(`Unable to get terminal  file: ${error.message}`);
     }
   }
 

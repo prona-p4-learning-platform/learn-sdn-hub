@@ -237,6 +237,10 @@ export default class MemoryPersister implements Persister {
     throw new Error("Method not implemented.");
   }
 
+  async GetTerminalData(submissionID: string): Promise<TerminalStateType[]> {
+    throw new Error("Method not implemented.");
+  }
+
   async close(): Promise<void> {
     return undefined;
   }

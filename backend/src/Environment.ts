@@ -102,6 +102,7 @@ export interface SubmissionAdminOverviewEntry extends Submission {
   username: string;
   groupNumber: number;
   fileNames: string[];
+  terminalEndpoints: string[];
   assignmentRef?: string;
   userRef?: string;
 }
