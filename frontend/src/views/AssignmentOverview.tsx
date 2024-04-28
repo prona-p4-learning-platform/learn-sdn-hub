@@ -4,7 +4,7 @@ import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import CloudOffIcon from '@mui/icons-material/CloudOff';
 import PlayCircleFilledWhiteIcon from '@mui/icons-material/PlayCircleFilledWhite';
 import Button from "@mui/material/Button";
-import { Checkbox, ListItemSecondaryAction, Tooltip, Typography } from '@mui/material';
+import { Box, Checkbox, LinearProgress, ListItemSecondaryAction, Tooltip, Typography } from '@mui/material';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import ListItemText from '@mui/material/ListItemText';
@@ -29,9 +29,14 @@ const Alert = forwardRef<HTMLDivElement, AlertProps>(function Alert(
 interface AssignmentOverviewProps {
 };
 
+interface PointLimits {
+  [assignment: string]: number;
+}
+
 type SubmissionType = {
   assignmentName: string,
-  lastChanged: Date
+  lastChanged: Date,
+  points?: number,
 }
 
 const CONVERGENCE_URL = process.env.REACT_APP_CONVERGENCE_URL ?? "http://localhost:8000/api/realtime/convergence/default";
@@ -41,6 +46,7 @@ export default function AssignmentOverview(props: AssignmentOverviewProps) {
   const [submittedAssignments, setSubmittedAssignments] = useState([] as SubmissionType[])
   const [deployedUserAssignments, setDeployedUserAssignments] = useState([])
   const [deployedGroupAssignments, setDeployedGroupAssignments] = useState([])
+  const [pointLimits, setPointLimits] = useState<PointLimits>({});
   const [load, setLoad] = useState(true)
   const [deploymentNotification, setDeploymentNotification] = useState({ result: "", severity: undefined as Severity, open: false })
   const [confirmationUndeployDialogOpen, setConfirmationUndeployDialogOpen] = useState({ assignment: "", dialogOpen: false})
@@ -86,11 +92,32 @@ export default function AssignmentOverview(props: AssignmentOverviewProps) {
     }
   };
 
+  const showPointsTooltip = (assignment: string) => {
+    const submission = submittedAssignments.find(element => element.assignmentName === assignment)
+    if (submission !== undefined && submission.points) {
+      return "You have earned " + submission.points + " out of " + pointLimits[assignment] + " bonus points."
+    } else if (submission !== undefined && !submission.points) {
+      return "The submission was not graded yet."
+    } else if (pointLimits[assignment] !== undefined && pointLimits[assignment] !== 0) {
+      return "You can earn bonus points by submitting this assignment!"
+    } else {
+      return "No bonus points available for this assignment."
+    }
+  };
+
   useEffect(() => {
     setLoad(false)
     fetch(APIRequest("/api/user/assignments", { headers: { authorization: localStorage.getItem("token") || "" } }))
       .then(res => res.json())
       .then(setAssignments)
+
+    fetch(
+      APIRequest("/api/user/point-limits", {
+        headers: { authorization: localStorage.getItem("token") || "" },
+      })
+    )
+      .then((res) => res.json())
+      .then(setPointLimits);
     
     const update = () => {
       fetch(APIRequest("/api/environment/deployed-user-environments", { headers: { authorization: localStorage.getItem("token") || "" } }))
@@ -200,7 +227,7 @@ export default function AssignmentOverview(props: AssignmentOverviewProps) {
       { (deployedUserAssignments.length === 0 && deployedGroupAssignments.length > 0) &&
         <Typography>Your group is working on {deployedGroupAssignments[0]}. You can join and open a connection by clicking deploy.</Typography>
       }
-      <List component="nav" aria-label="assignment list" style={{ width: 800 }}>
+      <List component="nav" aria-label="assignment list" style={{ width: 940 }}>
         {assignments.map(assignment => (
             <ListItem key={assignment}>
             <ListItemText primary={assignment}/>
@@ -237,6 +264,48 @@ export default function AssignmentOverview(props: AssignmentOverviewProps) {
                   onClick={() => handleConfirmationResubmitDialogOpen(assignment)}
                 />
               </Tooltip>
+              {pointLimits[assignment] ? (
+                <Tooltip title={showPointsTooltip(assignment)}>
+                  <Box sx={{ display: "inline-flex", alignItems: "center", ml: 2 }}>
+                    {
+                      (() => {
+                        const submission = submittedAssignments.find(submission => submission.assignmentName === assignment);
+                        const hasSubmission = !!submission;
+                        let percentage = 0;
+                        if (hasSubmission && submission.points !== undefined && pointLimits[assignment] !== undefined && pointLimits[assignment] !== 0) {
+                          percentage = submission.points / pointLimits[assignment] * 100;
+                        }
+              
+                        return (
+                          <>
+                            <Box sx={{ width: "100px"}}>
+                              <LinearProgress 
+                                variant={((hasSubmission && submission.points) || !hasSubmission) ? "determinate" : undefined} 
+                                value={((hasSubmission && submission.points) || !hasSubmission) ? percentage : undefined} 
+                                color={hasSubmission ? "primary" : "warning"} 
+                              />
+                            </Box>
+                            <Box sx={{ width: "50px", ml: 1 }}>
+                              <Typography variant="body2" color="text.secondary">
+                                {hasSubmission 
+                                  ? `${submission?.points ? submission?.points : "?"} / ${pointLimits[assignment]}`
+                                  : `0 / ${pointLimits[assignment]}`
+                                }
+                              </Typography>
+                            </Box>
+                          </>
+                        );
+                      })()
+                    }
+                  </Box>
+                </Tooltip>
+              ) : (
+                <Box sx={{ display: "inline-flex", alignItems: "center", ml: 2 }}>
+                  <Box sx={{ width: "158px"}}>
+                    <Typography variant="body2" color="text.secondary">No bonus points</Typography>
+                  </Box>
+                </Box>
+              )}
             </ListItemSecondaryAction>
           </ListItem>
         ))}

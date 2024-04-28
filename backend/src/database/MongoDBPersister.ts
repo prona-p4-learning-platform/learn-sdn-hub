@@ -28,6 +28,7 @@ export interface SubmissionEntry {
   submissionCreated: Date;
   terminalStatus: TerminalStateType[];
   submittedFiles: SubmissionFileType[];
+  points?: number;
 }
 
 export default class MongoDBPersister implements Persister {
@@ -38,7 +39,6 @@ export default class MongoDBPersister implements Persister {
   constructor(url: string) {
     this.connectURL = url;
   }
-
   private async getClient(): Promise<MongoClient> {
     if (!this.connectPromise) {
       this.connectPromise = MongoClient.connect(this.connectURL, {
@@ -219,6 +219,7 @@ export default class MongoDBPersister implements Persister {
             submissions.push({
               assignmentName: submission.environment,
               lastChanged: submission.submissionCreated,
+              points: submission.points,
             });
           }
           // console.log(
@@ -444,7 +445,7 @@ export default class MongoDBPersister implements Persister {
     return client
       .db()
       .collection("assignments")
-      .find({}, { projection: { _id: 1, name: 1 } })
+      .find({}, { projection: { _id: 1, name: 1, maxBonusPoints: 1 } })
       .toArray();
   }
 
@@ -498,8 +499,18 @@ export default class MongoDBPersister implements Persister {
             .db()
             .collection("submissions")
             .aggregate([
-              { $unwind: "$submittedFiles" },
-              { $unwind: "$terminalStatus" },
+              {
+                $unwind: {
+                  path: "$submittedFiles",
+                  preserveNullAndEmptyArrays: true,
+                },
+              },
+              {
+                $unwind: {
+                  path: "$terminalStatus",
+                  preserveNullAndEmptyArrays: true,
+                },
+              },
               {
                 $group: {
                   _id: "$_id",
@@ -509,6 +520,7 @@ export default class MongoDBPersister implements Persister {
                   groupNumber: { $first: "$groupNumber" },
                   fileNames: { $addToSet: "$submittedFiles.fileName" },
                   terminalEndpoints: { $addToSet: "$terminalStatus.endpoint" },
+                  points: { $first: { $ifNull: ["$points", null] } },
                 },
               },
             ])
@@ -529,6 +541,7 @@ export default class MongoDBPersister implements Persister {
               groupNumber: submission.groupNumber,
               fileNames: submission.fileNames,
               terminalEndpoints: submission.terminalEndpoints,
+              ...(submission.points !== null && { points: submission.points }),
             }));
 
           resolve(submissions);
@@ -574,6 +587,23 @@ export default class MongoDBPersister implements Persister {
     } catch (error) {
       throw new Error(`Unable to get submission file: ${error.message}`);
     }
+  }
+
+  async UpdateSubmissionPoints(
+    submissionID: string,
+    points: number
+  ): Promise<void> {
+    const client = await this.getClient();
+    const courseObjID = new ObjectID(submissionID);
+    return client
+      .db()
+      .collection("submissions")
+      .updateOne({ _id: courseObjID }, { $set: { points: points } })
+      .then((data) => {
+        if (data.modifiedCount === 0) {
+          throw new Error("Could not update points for submission");
+        }
+      });
   }
 
   async GetTerminalData(submissionID: string): Promise<TerminalStateType[]> {

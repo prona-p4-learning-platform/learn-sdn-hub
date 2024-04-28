@@ -46,6 +46,7 @@ export interface ResponseObject {
 export interface AssignmentData {
   _id: string;
   name: string;
+  maxBonusPoints?: number;
 }
 
 export interface FileData {
@@ -99,6 +100,7 @@ export interface Persister {
     assignmentIDs: string[]
   ): Promise<void>;
   GetSubmissionFile(submissionID: string, fileName: string): Promise<FileData>;
+  UpdateSubmissionPoints(submissionID: string, points: number): Promise<void>;
   GetTerminalData(submissionID: string): Promise<TerminalStateType[]>;
   LoadEnvironments(): Promise<void>;
 }

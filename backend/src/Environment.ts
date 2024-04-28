@@ -95,6 +95,7 @@ export type TerminalStateType = {
 export interface Submission {
   assignmentName: string;
   lastChanged: Date;
+  points?: number;
 }
 
 export interface SubmissionAdminOverviewEntry extends Submission {
@@ -136,6 +137,7 @@ export interface EnvironmentDescription {
   workspaceFolders?: string[];
   useCollaboration?: boolean;
   useLanguageClient?: boolean;
+  maxBonusPoints?: number;
 }
 
 const DenyStartOfMissingInstanceErrorMessage =

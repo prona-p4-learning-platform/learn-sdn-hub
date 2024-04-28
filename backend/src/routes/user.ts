@@ -34,6 +34,38 @@ export default (authProviders: AuthenticationProvider[]): Router => {
     }
   );
 
+  router.get(
+    "/point-limits",
+    authenticationMiddleware,
+    async (req: RequestWithUser, res) => {
+      const loggedInUser = req.user.username;
+
+      let tempAssignmentMap = new Map(environments);
+      let pointsMap = new Map();
+      for (const authProvider of authProviders) {
+        tempAssignmentMap = await authProvider.filterAssignmentList(
+          loggedInUser,
+          tempAssignmentMap
+        );
+
+        // Only include entries that have maxBonusPoints set
+        pointsMap = new Map(
+          Array.from(tempAssignmentMap.entries()).reduce(
+            (acc, [key, value]) => {
+              if (value.maxBonusPoints !== undefined) {
+                acc.set(key, value.maxBonusPoints);
+              }
+              return acc;
+            },
+            new Map()
+          )
+        );
+      }
+
+      return res.status(200).json(Object.fromEntries(pointsMap));
+    }
+  );
+
   // remove body-parser as it is included in express >=4.17
   router.post(
     "/login",

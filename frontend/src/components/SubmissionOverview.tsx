@@ -13,16 +13,30 @@ import {
   AccordionDetails,
   Typography,
   Divider,
+  TextField,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from "@mui/material";
 import { Severity } from "../views/Administration";
 import XTerm from "./XTerm";
 import { FitAddon } from "xterm-addon-fit";
+import { Assignment } from "../typings/assignment/AssignmentType";
 
 interface SubmissionProps {
+  assignments: Assignment[];
   handleFetchNotification: (message: string, severity: Severity) => void;
 }
 
-const SubmissionOverview = ({ handleFetchNotification }: SubmissionProps) => {
+interface PointsError {
+  [submission: string]: boolean;
+}
+
+const SubmissionOverview = ({
+  assignments,
+  handleFetchNotification,
+}: SubmissionProps) => {
   const [submissions, setSubmissions] = useState<
     SubmissionAdminOverviewEntry[]
   >([]);
@@ -30,6 +44,11 @@ const SubmissionOverview = ({ handleFetchNotification }: SubmissionProps) => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedSubmission, setSelectedSubmission] =
     useState<SubmissionAdminOverviewEntry | null>(null);
+  const [pointsErrors, setPointsErrors] = useState<PointsError>({});
+  const [submissionIDDialog, setSubmissionIDDialog] = useState<string>("");
+  const [assignmentNameDialog, setAssignmentNameDialog] = useState<string>("");
+  const [pointsDialog, setPointsDialog] = useState<number>(0);
+  const [openDialog, setOpenDialog] = useState(false);
 
   const terminalFitAddons = useRef<FitAddon[]>([]);
   const xTermRefs = useRef<Record<string, XTerm | null>>({});
@@ -78,6 +97,7 @@ const SubmissionOverview = ({ handleFetchNotification }: SubmissionProps) => {
         })
       );
       const data = await response.json();
+      console.log(data);
       setExpanded([]);
       setSubmissions(data);
     } catch (error) {
@@ -106,6 +126,43 @@ const SubmissionOverview = ({ handleFetchNotification }: SubmissionProps) => {
       }
     } catch (error) {
       console.error("Error fetching terminals:", error);
+    }
+  };
+
+  const assignPoints = async () => {
+    try {
+      fetch(
+        APIRequest(`/api/admin/submission/${submissionIDDialog}/points`, {
+          method: "POST",
+          headers: {
+            authorization: localStorage.getItem("token") || "",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            points: pointsDialog,
+          }),
+        })
+      ).then(() => {
+        handleFetchNotification(
+          `Successfully awarded ${pointsDialog} bonus points to ${getUserOfSubmission(
+            submissionIDDialog
+          )} for ${assignmentNameDialog}`,
+          "success"
+        );
+        setSubmissions((prevSubmissions) =>
+          prevSubmissions.map((submission) =>
+            submission.submissionID === submissionIDDialog
+              ? { ...submission, points: pointsDialog }
+              : submission
+          )
+        );
+      });
+    } catch (error: any) {
+      if (error.message) {
+        handleFetchNotification(error.message, "error");
+      } else {
+        console.log(error);
+      }
     }
   };
 
@@ -138,6 +195,126 @@ const SubmissionOverview = ({ handleFetchNotification }: SubmissionProps) => {
     } else {
       setExpanded([...expanded, index]);
     }
+  };
+
+  // Assignment has maxBonusPoints but not all submissions have been awarded points
+  const hasAssignmentOpenPoints = (assignmentName: string) => {
+    const assignment = getAssignmentByName(assignmentName);
+    if (assignment?.maxBonusPoints == null) {
+      return false;
+    }
+    const submissionsOfAssignment = submissions.filter(
+      (submission) => submission.assignmentName === assignmentName
+    );
+    return submissionsOfAssignment.some(
+      (submission) => submission.points == null
+    );
+  };
+
+  // Group has open points if at least one submission has no points awarded
+  const hasGroupOpenPoints = (
+    assignmentName: string,
+    groupSubmissions: SubmissionAdminOverviewEntry[]
+  ) => {
+    const assignment = getAssignmentByName(assignmentName);
+    if (assignment?.maxBonusPoints == null) {
+      return false;
+    }
+    return groupSubmissions.some((submission) => submission.points == null);
+  };
+
+  const getUserOfSubmission = (submissionID: string) => {
+    const submission = submissions.find(
+      (submission) => submission.submissionID === submissionID
+    );
+    return submission?.username || "";
+  };
+
+  const submissionAlreadyAwardedPoints = (submissionID: string) => {
+    return submissions.some(
+      (submission) =>
+        submission.submissionID === submissionID && submission.points != null
+    );
+  };
+
+  const getPointsOfSubmission = (submissionID: string) => {
+    const submission = submissions.find(
+      (submission) => submission.submissionID === submissionID
+    );
+    return submission?.points || 0;
+  };
+
+  const getMaxPointsOfAssignment = (assignmentName: string) => {
+    const assignment = getAssignmentByName(assignmentName);
+    return assignment?.maxBonusPoints || undefined;
+  };
+
+  const getAssignmentByName = (assignmentName: string) => {
+    return assignments.find((assignment) => assignment.name === assignmentName);
+  };
+
+  const handlePointsChange = (
+    event: React.ChangeEvent<HTMLInputElement>,
+    assignmentName: string
+  ) => {
+    const value = event.target.value;
+    const submissionID = event.target.id.split("_")[2];
+    const curAssignment = getAssignmentByName(assignmentName);
+    let curValue = false;
+    if (
+      value === "" ||
+      isNaN(Number(value)) ||
+      Number(value) < 0 ||
+      (curAssignment?.maxBonusPoints !== undefined &&
+        Number(value) > curAssignment.maxBonusPoints)
+    ) {
+      curValue = true;
+    }
+    setPointsErrors((prevErrors) => ({
+      ...prevErrors,
+      [submissionID]: curValue,
+    }));
+  };
+
+  const handlePointsSubmit = async (
+    event: React.FormEvent<HTMLFormElement>,
+    submissionID: string,
+    assignmentName: string,
+    points: string
+  ) => {
+    event.preventDefault();
+    const maxPoints = getMaxPointsOfAssignment(assignmentName);
+    if (maxPoints === undefined) {
+      handleFetchNotification(
+        "Error awarding bonus points: Assignment has no max points set",
+        "error"
+      );
+      return;
+    } else if (
+      isNaN(Number(points)) ||
+      Number(points) > maxPoints ||
+      Number(points) < 0
+    ) {
+      handleFetchNotification(
+        `Error awarding bonus points: Points must be between 0 and ${maxPoints}`,
+        "error"
+      );
+      return;
+    } else if (
+      Number(points) ===
+      submissions.find((s) => s.submissionID === submissionID)?.points
+    ) {
+      handleFetchNotification(
+        `Error awarding bonus points: Points are the same as before`,
+        "error"
+      );
+      return;
+    }
+
+    setSubmissionIDDialog(submissionID);
+    setAssignmentNameDialog(assignmentName);
+    setPointsDialog(Number(points));
+    setOpenDialog(true);
   };
 
   const handleXTermWrite = (index: string, text: string | null = null) => {
@@ -176,6 +353,18 @@ const SubmissionOverview = ({ handleFetchNotification }: SubmissionProps) => {
   const handleMenuClose = () => {
     setAnchorEl(null);
     setSelectedSubmission(null);
+  };
+
+  const handleDialogConfirm = () => {
+    assignPoints();
+    handleDialogClose();
+  };
+
+  const handleDialogClose = () => {
+    setOpenDialog(false);
+    setSubmissionIDDialog("");
+    setAssignmentNameDialog("");
+    setPointsDialog(0);
   };
 
   const downloadFile = async (fileName: string, submissionID: string) => {
@@ -250,7 +439,12 @@ const SubmissionOverview = ({ handleFetchNotification }: SubmissionProps) => {
               aria-controls={`panel${assignmentName}-content`}
               id={`panel${assignmentName}-header`}
             >
-              <Typography>{assignmentName}</Typography>
+              <Typography variant="body1">
+                {assignmentName}{" "}
+                {hasAssignmentOpenPoints(assignmentName)
+                  ? "(Some bonus points are still open)"
+                  : ""}
+              </Typography>
             </AccordionSummary>
             <AccordionDetails>
               {Object.entries(groupData).map(
@@ -267,7 +461,12 @@ const SubmissionOverview = ({ handleFetchNotification }: SubmissionProps) => {
                       aria-controls={`panel${assignmentName}-content-${groupNumber}`}
                       id={`panel${assignmentName}-header-${groupNumber}`}
                     >
-                      <Typography>Group {groupNumber}</Typography>
+                      <Typography variant="body1">
+                        Group {groupNumber}{" "}
+                        {hasGroupOpenPoints(assignmentName, groupSubmissions)
+                          ? "(Some bonus points are still open)"
+                          : ""}
+                      </Typography>
                     </AccordionSummary>
                     <AccordionDetails>
                       <Box width="100%">
@@ -281,16 +480,18 @@ const SubmissionOverview = ({ handleFetchNotification }: SubmissionProps) => {
                               width="100%"
                             >
                               <Box flex="0 0 120px">
-                                <Typography>
+                                <Typography variant="body1">
                                   <strong>Username:</strong>
                                 </Typography>
-                                <Typography>
+                                <Typography variant="body1">
                                   <strong>Last Changed:</strong>
                                 </Typography>
                               </Box>
                               <Box flex="1">
-                                <Typography>{submission.username}</Typography>
-                                <Typography>
+                                <Typography variant="body1">
+                                  {submission.username}
+                                </Typography>
+                                <Typography variant="body1">
                                   {new Date(
                                     submission.lastChanged
                                   ).toLocaleString(undefined, {
@@ -336,7 +537,7 @@ const SubmissionOverview = ({ handleFetchNotification }: SubmissionProps) => {
                                         width="100%"
                                       >
                                         <Box flex="1">
-                                          <Typography>
+                                          <Typography variant="body1">
                                             <strong>{endpoint}</strong>
                                           </Typography>
                                         </Box>
@@ -366,8 +567,70 @@ const SubmissionOverview = ({ handleFetchNotification }: SubmissionProps) => {
                                     </Box>
                                   )
                               )}
+                            {getMaxPointsOfAssignment(assignmentName) !==
+                              undefined && (
+                              <Box
+                                flex="1"
+                                component="form"
+                                onSubmit={(event) =>
+                                  handlePointsSubmit(
+                                    event,
+                                    submission.submissionID,
+                                    assignmentName,
+                                    (
+                                      document.getElementById(
+                                        `bonusPoints_input_${submission.submissionID}`
+                                      ) as HTMLInputElement
+                                    )?.value
+                                  )
+                                }
+                              >
+                                <Typography variant="body1">
+                                  Award bonus points for submission:
+                                </Typography>
+                                <Box
+                                  mb={1}
+                                  display="flex"
+                                  justifyContent="flex-start"
+                                  alignItems="center"
+                                  width="100%"
+                                >
+                                  <TextField
+                                    required
+                                    error={
+                                      pointsErrors[submission.submissionID]
+                                    }
+                                    id={`bonusPoints_input_${submission.submissionID}`}
+                                    label="Points"
+                                    onChange={(
+                                      event: React.ChangeEvent<HTMLInputElement>
+                                    ) =>
+                                      handlePointsChange(event, assignmentName)
+                                    }
+                                    helperText={`Points must be between 0 and ${getMaxPointsOfAssignment(
+                                      assignmentName
+                                    )}`}
+                                    variant="standard"
+                                    defaultValue={submission.points || ""}
+                                  />
+                                  <Button
+                                    variant="contained"
+                                    color="primary"
+                                    type="submit"
+                                    sx={{ ml: 3 }}
+                                  >
+                                    Submit
+                                  </Button>
+                                </Box>
+                              </Box>
+                            )}
                             {index < groupSubmissions.length - 1 && (
-                              <Divider style={{ marginBottom: "8px" }} />
+                              <Divider
+                                style={{
+                                  marginBottom: "8px",
+                                  marginTop: "8px",
+                                }}
+                              />
                             )}
                           </div>
                         ))}
@@ -397,6 +660,37 @@ const SubmissionOverview = ({ handleFetchNotification }: SubmissionProps) => {
             </MenuItem>
           ))}
       </Menu>
+      <Dialog open={openDialog} onClose={handleDialogClose}>
+        <DialogTitle>Confirm Bonus Points</DialogTitle>
+        <DialogContent>
+          {submissionAlreadyAwardedPoints(submissionIDDialog) && (
+            <Typography variant="body1" sx={{ color: "red", mb: 1 }}>
+              This submission has already been awarded{" "}
+              <strong>{getPointsOfSubmission(submissionIDDialog) || 0}</strong>{" "}
+              bonus points. Submitting this form will overwrite the existing
+              points.
+            </Typography>
+          )}
+          <Typography variant="body1">
+            Are you sure you want to award{" "}
+            <strong>
+              {pointsDialog} out of{" "}
+              {getMaxPointsOfAssignment(assignmentNameDialog)}
+            </strong>{" "}
+            bonus points to{" "}
+            <strong>{getUserOfSubmission(submissionIDDialog)}</strong> for{" "}
+            <strong>{assignmentNameDialog}</strong>?
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleDialogConfirm} color="primary">
+            Confirm
+          </Button>
+          <Button onClick={handleDialogClose} color="secondary">
+            Cancel
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 };

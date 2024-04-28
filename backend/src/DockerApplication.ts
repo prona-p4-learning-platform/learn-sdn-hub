@@ -14,7 +14,7 @@ serverCreator(
   )
 );
 if (process.env.BACKEND_ASSIGNMENT_TYPE == "mongodb") {
-  console.log("Attempting to add missing assignments to persister");
+  console.log("Attempting to add missing assignments to persister.");
   try {
     persister.CreateAssignments().then(() => {
       console.log("Attempting to load environments from persister.");

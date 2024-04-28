@@ -205,5 +205,23 @@ export default (persister: Persister): Router => {
     }
   );
 
+  router.post(
+    "/submission/:submissionID/points",
+    authenticationMiddleware,
+    adminRoleMiddleware,
+    bodyParser.json() as RequestHandler,
+    async (req: RequestWithUser, res) => {
+      try {
+        const response = await persister.UpdateSubmissionPoints(
+          req.params.submissionID,
+          req.body.points
+        );
+        return res.status(200).json(response);
+      } catch (err) {
+        return res.status(500).json({ error: true, message: err.message });
+      }
+    }
+  );
+
   return router;
 };

@@ -214,6 +214,7 @@ const Administration = () => {
             ></CourseAssignments>
             <SubmissionOverview
               key="submissionOverview"
+              assignments={assignments}
               handleFetchNotification={handleFetchNotification}
             ></SubmissionOverview>
           </AdminTabs>

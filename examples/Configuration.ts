@@ -55,6 +55,7 @@ environments.set("Example1-Repeater", {
   ],
   description: "Example1-Repeater",
   assignmentLabSheet: "../assignments/prona-repeater.md",
+  maxBonusPoints: 5,
 });
 
 environments.set("Example2-MinimalisticSwitch", {
