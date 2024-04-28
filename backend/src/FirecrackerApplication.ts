@@ -13,9 +13,14 @@ serverCreator(
     new FirecrackerProvider()
   )
 );
-console.log("Attempting to add missing assignments to persister");
-try {
-  persister.CreateAssignments();
-} catch (err) {
-  console.error(err);
+if (process.env.BACKEND_ASSIGNMENT_TYPE == "mongodb") {
+  console.log("Attempting to add missing assignments to persister");
+  try {
+    persister.CreateAssignments().then(() => {
+      console.log("Attempting to load environments from persister.");
+      persister.LoadEnvironments();
+    });
+  } catch (err) {
+    console.error(err);
+  }
 }

@@ -241,6 +241,10 @@ export default class MemoryPersister implements Persister {
     throw new Error("Method not implemented.");
   }
 
+  async LoadEnvironments(): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
+
   async close(): Promise<void> {
     return undefined;
   }

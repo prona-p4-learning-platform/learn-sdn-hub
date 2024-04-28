@@ -11,12 +11,13 @@ import {
   FileData,
 } from "./Persister";
 import {
+  EnvironmentDescription,
   Submission,
   SubmissionAdminOverviewEntry,
   SubmissionFileType,
   TerminalStateType,
 } from "../Environment";
-import environments from "../Configuration";
+import environments, { updateEnvironments } from "../Configuration";
 
 const saltRounds = 10;
 
@@ -371,6 +372,36 @@ export default class MongoDBPersister implements Persister {
     }
   }
 
+  async LoadEnvironments(): Promise<void> {
+    const client = await this.getClient();
+    const environmentsCollection = client.db().collection("assignments");
+
+    const environmentDocs = await environmentsCollection.find().toArray();
+
+    const environmentMap = new Map<string, EnvironmentDescription>();
+
+    // Transform the MongoDB documents into a Map<string, EnvironmentDescription>
+    environmentDocs.forEach((doc) => {
+      const name = doc.name;
+      const environmentDescription: EnvironmentDescription =
+        {} as EnvironmentDescription;
+
+      // Dynamically assign fields from MongoDB document
+      Object.keys(doc).forEach((key) => {
+        // Exclude _id and name fields
+        if (key !== "_id" && key !== "name") {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (environmentDescription as any)[key] = doc[key];
+        }
+      });
+
+      environmentMap.set(name, environmentDescription);
+    });
+
+    // Update the global environments map
+    updateEnvironments(environmentMap);
+  }
+
   async CreateAssignments(): Promise<AssignmentData[]> {
     const client = await this.getClient();
 
@@ -381,11 +412,18 @@ export default class MongoDBPersister implements Persister {
     // Create the assignments collection if it doesn't exist
     await assignmentsCollection.createIndex({ name: 1 }, { unique: true });
 
-    // Insert assignment names into the collection
-    const bulkWriteOperations = assignmentNames.map((name) => ({
+    const assignmentsToInsert = Array.from(environments.entries()).map(
+      ([name, env]) => ({
+        name: name,
+        ...env,
+      })
+    );
+
+    // Insert assignments into the collection
+    const bulkWriteOperations = assignmentsToInsert.map((assignment) => ({
       updateOne: {
-        filter: { name },
-        update: { $setOnInsert: { name } },
+        filter: { name: assignment.name },
+        update: { $setOnInsert: assignment },
         upsert: true,
       },
     }));

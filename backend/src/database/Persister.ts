@@ -100,4 +100,5 @@ export interface Persister {
   ): Promise<void>;
   GetSubmissionFile(submissionID: string, fileName: string): Promise<FileData>;
   GetTerminalData(submissionID: string): Promise<TerminalStateType[]>;
+  LoadEnvironments(): Promise<void>;
 }

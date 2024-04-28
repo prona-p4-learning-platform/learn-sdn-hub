@@ -654,3 +654,13 @@ environments.set("Example-p4env", {
 });
 
 export default environments;
+
+export function updateEnvironments(
+  updatedEnvironments: Map<string, EnvironmentDescription>
+): void {
+  environments.clear();
+
+  updatedEnvironments.forEach((value, key) => {
+    environments.set(key, value);
+  });
+}
