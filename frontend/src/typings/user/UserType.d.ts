@@ -1,7 +1,7 @@
 export type User = {
   _id: string;
   username: string;
-  groupNumber: string;
+  groupNumber: number;
   role?: string;
   courses?: string[];
 };

@@ -1,11 +1,11 @@
-import React from "react";
+import React, { ChangeEvent } from "react";
 import Tabs from "@mui/material/Tabs";
 import Tab from "@mui/material/Tab";
 import Grid from "@mui/material/Grid";
 import Box from "@mui/material/Box";
 
 interface TabsProps {
-  index: any;
+  index: number;
   value: number;
   children?: JSX.Element;
 }
@@ -36,10 +36,10 @@ interface TabControlProps {
   children?: JSX.Element[];
 }
 
-export default function AdminTabs(props: TabControlProps) {
+export default function AdminTabs(props: TabControlProps): JSX.Element {
   const [value, setValue] = React.useState(0);
 
-  const handleChange = (event: React.ChangeEvent<{}>, newValue: number) => {
+  const handleChange = (_event: ChangeEvent<unknown>, newValue: number) => {
     setValue(newValue);
   };
 

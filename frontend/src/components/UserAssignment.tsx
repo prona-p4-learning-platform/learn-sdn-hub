@@ -7,7 +7,7 @@ import {
   SelectChangeEvent,
 } from "@mui/material";
 import { useEffect, useState } from "react";
-import APIRequest from "../api/Request";
+import { APIRequest } from "../api/Request";
 import type { User } from "../typings/user/UserType";
 import type { Course } from "../typings/course/CourseType";
 import LoadingButton from "@mui/lab/LoadingButton";
@@ -15,6 +15,7 @@ import SaveIcon from "@mui/icons-material/Save";
 import { not } from "../utilities/ListCompareHelper";
 import AssignmentList from "./ListAssignment";
 import { Severity } from "../views/Administration";
+import { z } from "zod";
 
 interface UserAssignmentProps {
   users: User[];
@@ -29,18 +30,23 @@ type CourseUserAction = {
   }[];
 };
 
+const responseValidator = z.object({
+  message: z.string(),
+  error: z.boolean(),
+});
+
 const UserAssignment = ({
   users,
   courses,
   openAddCourseDialog,
   handleFetchNotification,
-}: UserAssignmentProps) => {
+}: UserAssignmentProps): JSX.Element => {
   const [currentCourseID, setCurrentCourseID] = useState("");
   const [checked, setChecked] = useState<readonly User[]>([]);
   const [unassignedUsers, setUnassignedUsers] = useState<User[]>([]);
   const [assignedUsers, setAssignedUsers] = useState<User[]>([]);
   const [originalAssignedUsers, setOriginalAssignedUsers] = useState<User[]>(
-    []
+    [],
   );
   const [hasChanges, setHasChanges] = useState<boolean>(false);
   const [waitForResponse, setWaitForResponse] = useState<boolean>(false);
@@ -49,39 +55,85 @@ const UserAssignment = ({
     setUnassignedUsers(users);
   }, [users]);
 
-  const updateUsers = () => {
+  const updateUsers = async () => {
     setWaitForResponse(true);
-    fetch(
-      APIRequest("/api/admin/course/" + currentCourseID + "/users/update", {
-        method: "POST",
-        headers: {
-          authorization: localStorage.getItem("token") || "",
-          "Content-Type": "application/json",
+    const dataToSend = prepareUsersDataForSend();
+
+    try {
+      const result = await APIRequest(
+        `/admin/course/${currentCourseID}/users/update`,
+        responseValidator,
+        {
+          method: "POST",
+          headers: {
+            authorization: localStorage.getItem("token") || "",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(dataToSend),
         },
-        body: JSON.stringify(prepareUsersDataForSend()),
-      })
-    )
-      .then((response) => {
-        if (response.status === 200) {
-          const courseName = courses.find(
-            (course) => course._id === currentCourseID
-          )?.name;
-          setHasChanges(false);
-          setOriginalAssignedUsers(assignedUsers);
-          handleFetchNotification(
-            `User(s) for course ${courseName} updated!`,
-            "success"
-          );
-        } else {
-          response.json().then((data) => {
-            handleFetchNotification(
-              `Error updating users: ${data.message}`,
-              "error"
-            );
-          });
-        }
-      })
-      .finally(() => setWaitForResponse(false));
+      );
+
+      if (result.success) {
+        const courseName = courses.find(
+          (course) => course._id === currentCourseID,
+        )?.name;
+        setHasChanges(false);
+        setOriginalAssignedUsers(assignedUsers);
+        handleFetchNotification(
+          `User(s) for course ${courseName} updated!`,
+          "success",
+        );
+        refreshUsersArray(currentCourseID, dataToSend);
+      } else {
+        handleFetchNotification(
+          `Error updating users: ${result.error.message}`,
+          "error",
+        );
+      }
+    } catch (error) {
+      if (error instanceof Error)
+        handleFetchNotification(error.message, "error");
+      else handleFetchNotification("An unknown error occurred", "error");
+    } finally {
+      setWaitForResponse(false);
+    }
+    // fetch(
+    //   APIRequest("/admin/course/" + currentCourseID + "/users/update", {
+    //     method: "POST",
+    //     headers: {
+    //       authorization: localStorage.getItem("token") || "",
+    //       "Content-Type": "application/json",
+    //     },
+    //     body: JSON.stringify(prepareUsersDataForSend()),
+    //   }),
+    // )
+    //   .then((response) => {
+    //     if (response.status === 200) {
+    //       const courseName = courses.find(
+    //         (course) => course._id === currentCourseID,
+    //       )?.name;
+    //       setHasChanges(false);
+    //       setOriginalAssignedUsers(assignedUsers);
+    //       handleFetchNotification(
+    //         `User(s) for course ${courseName} updated!`,
+    //         "success",
+    //       );
+    //     } else {
+    //       response.json().then((data) => {
+    //         handleFetchNotification(
+    //           `Error updating users: ${data.message}`,
+    //           "error",
+    //         );
+    //       });
+    //     }
+    //   })
+    //   .finally(() => setWaitForResponse(false));
+  };
+
+  const handleUpdateUsers = () => {
+    updateUsers().catch((error) => {
+      console.error("Error updating users:", error);
+    });
   };
 
   const prepareUsersDataForSend = (): CourseUserAction => {
@@ -104,8 +156,27 @@ const UserAssignment = ({
     return users.filter((user) => user.courses?.includes(courseId));
   };
 
+  const refreshUsersArray = (
+    courseId: string,
+    usersToRefresh: CourseUserAction,
+  ) => {
+    // Add users to course
+    for (const user of usersToRefresh.add) {
+      const userIndex = users.findIndex((u) => u._id === user.userID);
+      users[userIndex].courses?.push(courseId);
+    }
+
+    // Remove users from course
+    for (const user of usersToRefresh.remove) {
+      const userIndex = users.findIndex((u) => u._id === user.userID);
+      users[userIndex].courses = users[userIndex].courses?.filter(
+        (course) => course !== courseId,
+      );
+    }
+  };
+
   const handleCourseChange = (event: SelectChangeEvent) => {
-    const courseID = event.target.value as string;
+    const courseID = event.target.value;
     if (courseID === "new") {
       openAddCourseDialog();
       return;
@@ -170,7 +241,7 @@ const UserAssignment = ({
           >
             <LoadingButton
               color="primary"
-              onClick={updateUsers}
+              onClick={handleUpdateUsers}
               loading={waitForResponse}
               disabled={!hasChanges}
               loadingPosition="start"

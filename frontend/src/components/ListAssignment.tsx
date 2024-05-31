@@ -40,7 +40,7 @@ const AssignmentList = <T extends WithId>({
   displayProperty,
   leftListTitle,
   rightListTitle,
-}: AssignmentListProps<T>) => {
+}: AssignmentListProps<T>): JSX.Element => {
   const unassignedChecked = intersection(checked, unassignedItems);
   const assignedChecked = intersection(checked, assignedItems);
 

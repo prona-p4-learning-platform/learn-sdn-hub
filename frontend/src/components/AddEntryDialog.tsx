@@ -39,7 +39,7 @@ const AddEntryDialog: React.FC<AddEntryDialogProps> = ({
     const formData = new FormData(event.currentTarget);
     const formJson: Record<string, string> = {};
     formData.forEach((value, key) => {
-      formJson[key] = value.toString();
+      if (!(value instanceof File)) formJson[key] = value.toString();
     });
     onSubmit(formJson);
     handleClose();

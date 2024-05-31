@@ -54,7 +54,7 @@ export interface FileData {
   content: string;
 }
 
-type CourseUserAction = {
+export type CourseUserAction = {
   [key in "add" | "remove"]: {
     userID: string;
   }[];
@@ -90,14 +90,14 @@ export interface Persister {
   AddCourse: (courseName: string) => Promise<ResponseObject>;
   UpdateCourseForUsers(
     courseUserAction: CourseUserAction,
-    courseID: string
+    courseID: string,
   ): Promise<ResponseObject>;
   CreateAssignments(): Promise<AssignmentData[]>;
   GetAllAssignments(): Promise<AssignmentData[] | string[]>;
   GetUserAssignments(userAcc: UserAccount): Promise<AssignmentData[]>;
   UpdateAssignementsForCourse(
     courseID: string,
-    assignmentIDs: string[]
+    assignmentIDs: string[],
   ): Promise<void>;
   GetSubmissionFile(submissionID: string, fileName: string): Promise<FileData>;
   UpdateSubmissionPoints(submissionID: string, points: number): Promise<void>;

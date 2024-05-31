@@ -70,7 +70,7 @@ const CustomList = <T,>({
       role="list"
     >
       {items.map((value) => {
-        const labelId = `transfer-list-all-item-${value}-label`;
+        const labelId = `transfer-list-all-item-${value._id}-label`;
 
         return (
           <ListItemButton
@@ -88,7 +88,10 @@ const CustomList = <T,>({
                 }}
               />
             </ListItemIcon>
-            <ListItemText id={labelId} primary={`${value[displayProperty]}`} />
+            <ListItemText
+              id={labelId}
+              primary={`${String(value[displayProperty])}`}
+            />
           </ListItemButton>
         );
       })}
@@ -100,7 +103,9 @@ type TransferList<T> = {
   customListProps: CustomListProps<T>;
 };
 
-const TransferListComponent = <T,>({ customListProps }: TransferList<T>) => (
+const TransferListComponent = <T,>({
+  customListProps,
+}: TransferList<T>): JSX.Element => (
   <Grid container spacing={2} justifyContent="center" alignItems="center">
     <Grid item>{CustomList(customListProps)}</Grid>
   </Grid>

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import APIRequest from "../api/Request";
+import { APIRequest, APIRequestNV } from "../api/Request";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import type { SubmissionAdminOverviewEntry } from "../typings/submission/SubmissionType";
@@ -20,9 +20,10 @@ import {
   DialogActions,
 } from "@mui/material";
 import { Severity } from "../views/Administration";
-import XTerm from "./XTerm";
+import XTerm, { XTermRef } from "./XTerm";
 import { FitAddon } from "xterm-addon-fit";
 import { Assignment } from "../typings/assignment/AssignmentType";
+import { z } from "zod";
 
 interface SubmissionProps {
   assignments: Assignment[];
@@ -33,10 +34,36 @@ interface PointsError {
   [submission: string]: boolean;
 }
 
+const submissionAdminOverviewEntrySchema = z.object({
+  submissionID: z.string(),
+  assignmentName: z.string(),
+  lastChanged: z.string().transform((value) => {
+    return new Date(value);
+  }),
+  username: z.string(),
+  groupNumber: z.number().nonnegative(),
+  fileNames: z.array(z.string()),
+  terminalEndpoints: z.array(z.string()),
+  points: z.number().optional(),
+  assignmentRef: z.string().optional(),
+  userRef: z.string().optional(),
+});
+const submissionAdminOverviewEntryValidator = z.array(
+  submissionAdminOverviewEntrySchema,
+);
+
+const terminalStateSchema = z.object({
+  endpoint: z.string(),
+  state: z.string(),
+});
+const terminalStateValidator = z.array(terminalStateSchema);
+
+const defaultValidator = z.object({});
+
 const SubmissionOverview = ({
   assignments,
   handleFetchNotification,
-}: SubmissionProps) => {
+}: SubmissionProps): JSX.Element => {
   const [submissions, setSubmissions] = useState<
     SubmissionAdminOverviewEntry[]
   >([]);
@@ -51,14 +78,14 @@ const SubmissionOverview = ({
   const [openDialog, setOpenDialog] = useState(false);
 
   const terminalFitAddons = useRef<FitAddon[]>([]);
-  const xTermRefs = useRef<Record<string, XTerm | null>>({});
+  const xTermRefs = useRef<Record<string, XTermRef | null>>({});
   const xTermContents = useRef<Record<string, string>>({});
 
   const handleXTermRef = (
     submissionID: string,
     endpoint: string,
     index: number,
-    instance: XTerm | null
+    instance: XTermRef | null,
   ) => {
     const key = `${submissionID}_${endpoint}`;
     if (xTermRefs.current[key]) {
@@ -66,13 +93,15 @@ const SubmissionOverview = ({
     }
     xTermRefs.current[key] = instance;
     terminalFitAddons.current.push(new FitAddon());
-    xTermRefs.current[key]?.terminal.loadAddon(
-      terminalFitAddons.current[index]
+    xTermRefs.current[key]?.terminal?.loadAddon(
+      terminalFitAddons.current[index],
     );
     resizeTerminals();
     handleXTermWrite(key);
     if (index !== 0) return;
-    fetchTerminalsOfSubmission(submissionID);
+    fetchTerminalsOfSubmission(submissionID).catch((error) => {
+      console.error("Error fetching terminals:", error);
+    });
   };
 
   const resizeTerminals = useCallback(() => {
@@ -82,7 +111,13 @@ const SubmissionOverview = ({
   }, []);
 
   useEffect(() => {
-    fetchSubmissions();
+    const fetchInitialSubmissions = () => {
+      fetchSubmissions().catch((error) => {
+        console.error("Error fetching submissions:", error);
+      });
+    };
+
+    fetchInitialSubmissions();
     window.addEventListener("resize", resizeTerminals);
     return () => {
       window.removeEventListener("resize", resizeTerminals);
@@ -91,14 +126,17 @@ const SubmissionOverview = ({
 
   const fetchSubmissions = async () => {
     try {
-      const response = await fetch(
-        APIRequest("/api/admin/submissions", {
-          headers: { authorization: localStorage.getItem("token") || "" },
-        })
+      const result = await APIRequest(
+        "/admin/submissions",
+        submissionAdminOverviewEntryValidator,
       );
-      const data = await response.json();
-      setExpanded([]);
-      setSubmissions(data);
+
+      if (result.success) {
+        setExpanded([]);
+        setSubmissions(result.data);
+      } else {
+        console.error("Validation error fetching submissions:", result.error);
+      }
     } catch (error) {
       console.error("Error fetching submissions:", error);
     }
@@ -106,67 +144,71 @@ const SubmissionOverview = ({
 
   const fetchTerminalsOfSubmission = async (submissionID: string) => {
     try {
-      const response = await fetch(
-        APIRequest(
-          `/api/admin/submission/${encodeURIComponent(submissionID)}/terminals`,
-          {
-            headers: { authorization: localStorage.getItem("token") || "" },
-          }
-        )
+      const result = await APIRequest(
+        `/admin/submission/${encodeURIComponent(submissionID)}/terminals`,
+        terminalStateValidator,
       );
-      const data = await response.json();
-      for (const terminal of data) {
-        xTermContents.current[submissionID + "_" + terminal.endpoint] =
-          terminal.state;
-        handleXTermWrite(
-          submissionID + "_" + terminal.endpoint,
-          terminal.state
-        );
+
+      if (result.success) {
+        for (const terminal of result.data) {
+          xTermContents.current[submissionID + "_" + terminal.endpoint] =
+            terminal.state;
+          handleXTermWrite(
+            submissionID + "_" + terminal.endpoint,
+            terminal.state,
+          );
+        }
+      } else {
+        console.error("Validation error fetching terminals:", result.error);
       }
     } catch (error) {
-      console.error("Error fetching terminals:", error);
+      console.error("Error fetching submissions:", error);
     }
   };
 
   const assignPoints = async () => {
     try {
-      fetch(
-        APIRequest(`/api/admin/submission/${submissionIDDialog}/points`, {
+      const result = await APIRequest(
+        `/admin/submission/${submissionIDDialog}/points`,
+        defaultValidator,
+        {
           method: "POST",
           headers: {
-            authorization: localStorage.getItem("token") || "",
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
             points: pointsDialog,
           }),
-        })
-      ).then(() => {
+        },
+      );
+
+      if (result.success) {
         handleFetchNotification(
-          `Successfully awarded ${pointsDialog} bonus points to ${getUserOfSubmission(
-            submissionIDDialog
-          )} for ${assignmentNameDialog}`,
-          "success"
+          `Successfully awarded ${pointsDialog} bonus points to ${getUserOfSubmission(submissionIDDialog)} for ${assignmentNameDialog}`,
+          "success",
         );
+
         setSubmissions((prevSubmissions) =>
           prevSubmissions.map((submission) =>
             submission.submissionID === submissionIDDialog
               ? { ...submission, points: pointsDialog }
-              : submission
-          )
+              : submission,
+          ),
         );
-      });
-    } catch (error: any) {
-      if (error.message) {
-        handleFetchNotification(error.message, "error");
       } else {
-        console.log(error);
+        console.error("Validation error assigning points:", result.error);
+        handleFetchNotification(result.error.message, "error");
       }
+    } catch (error) {
+      console.error("Error assigning points:", error);
+      if (error instanceof Error)
+        handleFetchNotification(error.message, "error");
+      else console.error(error);
     }
   };
 
   const groupSubmissionsByAssignmentAndGroup = (
-    submissions: SubmissionAdminOverviewEntry[]
+    submissions: SubmissionAdminOverviewEntry[],
   ) => {
     const groupedSubmissions: {
       [assignmentName: string]: {
@@ -203,17 +245,17 @@ const SubmissionOverview = ({
       return false;
     }
     const submissionsOfAssignment = submissions.filter(
-      (submission) => submission.assignmentName === assignmentName
+      (submission) => submission.assignmentName === assignmentName,
     );
     return submissionsOfAssignment.some(
-      (submission) => submission.points == null
+      (submission) => submission.points == null,
     );
   };
 
   // Group has open points if at least one submission has no points awarded
   const hasGroupOpenPoints = (
     assignmentName: string,
-    groupSubmissions: SubmissionAdminOverviewEntry[]
+    groupSubmissions: SubmissionAdminOverviewEntry[],
   ) => {
     const assignment = getAssignmentByName(assignmentName);
     if (assignment?.maxBonusPoints == null) {
@@ -224,7 +266,7 @@ const SubmissionOverview = ({
 
   const getUserOfSubmission = (submissionID: string) => {
     const submission = submissions.find(
-      (submission) => submission.submissionID === submissionID
+      (submission) => submission.submissionID === submissionID,
     );
     return submission?.username || "";
   };
@@ -232,13 +274,13 @@ const SubmissionOverview = ({
   const submissionAlreadyAwardedPoints = (submissionID: string) => {
     return submissions.some(
       (submission) =>
-        submission.submissionID === submissionID && submission.points != null
+        submission.submissionID === submissionID && submission.points != null,
     );
   };
 
   const getPointsOfSubmission = (submissionID: string) => {
     const submission = submissions.find(
-      (submission) => submission.submissionID === submissionID
+      (submission) => submission.submissionID === submissionID,
     );
     return submission?.points || 0;
   };
@@ -254,7 +296,7 @@ const SubmissionOverview = ({
 
   const handlePointsChange = (
     event: React.ChangeEvent<HTMLInputElement>,
-    assignmentName: string
+    assignmentName: string,
   ) => {
     const value = event.target.value;
     const submissionID = event.target.id.split("_")[2];
@@ -275,18 +317,18 @@ const SubmissionOverview = ({
     }));
   };
 
-  const handlePointsSubmit = async (
+  const handlePointsSubmit = (
     event: React.FormEvent<HTMLFormElement>,
     submissionID: string,
     assignmentName: string,
-    points: string
+    points: string,
   ) => {
     event.preventDefault();
     const maxPoints = getMaxPointsOfAssignment(assignmentName);
     if (maxPoints === undefined) {
       handleFetchNotification(
         "Error awarding bonus points: Assignment has no max points set",
-        "error"
+        "error",
       );
       return;
     } else if (
@@ -296,7 +338,7 @@ const SubmissionOverview = ({
     ) {
       handleFetchNotification(
         `Error awarding bonus points: Points must be between 0 and ${maxPoints}`,
-        "error"
+        "error",
       );
       return;
     } else if (
@@ -305,7 +347,7 @@ const SubmissionOverview = ({
     ) {
       handleFetchNotification(
         `Error awarding bonus points: Points are the same as before`,
-        "error"
+        "error",
       );
       return;
     }
@@ -318,18 +360,18 @@ const SubmissionOverview = ({
 
   const handleXTermWrite = (index: string, text: string | null = null) => {
     if (text) {
-      xTermRefs.current[index]?.terminal.clear();
+      xTermRefs.current[index]?.terminal?.clear();
     } else {
       text = "Retrieving terminal input...\n";
     }
     if (xTermRefs.current[index]) {
-      xTermRefs.current[index]?.terminal.write(text);
+      xTermRefs.current[index]?.terminal?.write(text);
     }
   };
 
   const handleExpandAll = () => {
     const expandedArray = submissions.map(
-      (submission) => submission.assignmentName
+      (submission) => submission.assignmentName,
     );
     submissions.forEach((submission) => {
       expandedArray.push(submission.assignmentName + submission.groupNumber);
@@ -343,7 +385,7 @@ const SubmissionOverview = ({
 
   const handleMenuOpen = (
     event: React.MouseEvent<HTMLButtonElement>,
-    submission: SubmissionAdminOverviewEntry
+    submission: SubmissionAdminOverviewEntry,
   ) => {
     setAnchorEl(event.currentTarget);
     setSelectedSubmission(submission);
@@ -355,7 +397,9 @@ const SubmissionOverview = ({
   };
 
   const handleDialogConfirm = () => {
-    assignPoints();
+    assignPoints().catch((error) => {
+      console.error("Error assigning points:", error);
+    });
     handleDialogClose();
   };
 
@@ -366,42 +410,38 @@ const SubmissionOverview = ({
     setPointsDialog(0);
   };
 
+  const handleDownloadFile = (fileName: string, submissionID: string) => {
+    downloadFile(fileName, submissionID).catch((error) => {
+      console.error("Error downloading file:", error);
+    });
+  };
+
   const downloadFile = async (fileName: string, submissionID: string) => {
-    fetch(
-      APIRequest(
+    try {
+      const result = await APIRequestNV(
         `/api/admin/submission/${encodeURIComponent(
-          submissionID
+          submissionID,
         )}/file/download/${encodeURIComponent(fileName)}`,
         {
           headers: { authorization: localStorage.getItem("token") || "" },
-        }
-      )
-    )
-      .then(async (response) => {
-        if (!response.ok) {
-          const messageObj = await response.json();
-          throw new Error(messageObj.message);
-        }
-        return response.blob();
-      })
-      .then((blob) => {
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.setAttribute("download", fileName);
-        document.body.appendChild(link);
-        link.click();
-        link.parentNode?.removeChild(link);
-      })
-      .catch((error) => {
+          responseType: "blob",
+        },
+      );
+
+      const url = window.URL.createObjectURL(result);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", fileName);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode?.removeChild(link);
+    } catch (error) {
+      if (error instanceof Error)
         handleFetchNotification(error.message, "error");
-      });
+    }
   };
 
-  const downloadTerminalAsTextFile = async (
-    index: string,
-    fileName: string
-  ) => {
+  const downloadTerminalAsTextFile = (index: string, fileName: string) => {
     const element = document.createElement("a");
     const file = new Blob([xTermContents.current[index]], {
       type: "text/plain",
@@ -492,7 +532,7 @@ const SubmissionOverview = ({
                                 </Typography>
                                 <Typography variant="body1">
                                   {new Date(
-                                    submission.lastChanged
+                                    submission.lastChanged,
                                   ).toLocaleString(undefined, {
                                     day: "2-digit",
                                     month: "2-digit",
@@ -519,7 +559,7 @@ const SubmissionOverview = ({
                               .map(
                                 (endpoint, index) =>
                                   (expanded.includes(
-                                    assignmentName + groupNumber
+                                    assignmentName + groupNumber,
                                   ) ||
                                     xTermRefs.current[
                                       `${submission.submissionID}_${endpoint}`
@@ -545,7 +585,7 @@ const SubmissionOverview = ({
                                           onClick={() =>
                                             downloadTerminalAsTextFile(
                                               `${submission.submissionID}_${endpoint}`,
-                                              `${assignmentName}_${groupNumber}_${submission.username}_terminal_${index}`
+                                              `${assignmentName}_${groupNumber}_${submission.username}_terminal_${index}`,
                                             )
                                           }
                                         >
@@ -558,13 +598,13 @@ const SubmissionOverview = ({
                                             submission.submissionID,
                                             endpoint,
                                             index,
-                                            instance
+                                            instance,
                                           )
                                         }
                                         className="myXtermClass"
                                       />
                                     </Box>
-                                  )
+                                  ),
                               )}
                             {getMaxPointsOfAssignment(assignmentName) !==
                               undefined && (
@@ -578,9 +618,9 @@ const SubmissionOverview = ({
                                     assignmentName,
                                     (
                                       document.getElementById(
-                                        `bonusPoints_input_${submission.submissionID}`
+                                        `bonusPoints_input_${submission.submissionID}`,
                                       ) as HTMLInputElement
-                                    )?.value
+                                    )?.value,
                                   )
                                 }
                               >
@@ -602,12 +642,12 @@ const SubmissionOverview = ({
                                     id={`bonusPoints_input_${submission.submissionID}`}
                                     label="Points"
                                     onChange={(
-                                      event: React.ChangeEvent<HTMLInputElement>
+                                      event: React.ChangeEvent<HTMLInputElement>,
                                     ) =>
                                       handlePointsChange(event, assignmentName)
                                     }
                                     helperText={`Points must be between 0 and ${getMaxPointsOfAssignment(
-                                      assignmentName
+                                      assignmentName,
                                     )}`}
                                     variant="standard"
                                     defaultValue={submission.points || ""}
@@ -636,11 +676,11 @@ const SubmissionOverview = ({
                       </Box>
                     </AccordionDetails>
                   </Accordion>
-                )
+                ),
               )}
             </AccordionDetails>
           </Accordion>
-        )
+        ),
       )}
       <Menu
         anchorEl={anchorEl}
@@ -652,7 +692,7 @@ const SubmissionOverview = ({
             <MenuItem
               key={index}
               onClick={() =>
-                downloadFile(fileName, selectedSubmission.submissionID)
+                handleDownloadFile(fileName, selectedSubmission.submissionID)
               }
             >
               {fileName}

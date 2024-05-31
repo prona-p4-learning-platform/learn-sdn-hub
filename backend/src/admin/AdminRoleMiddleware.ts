@@ -1,21 +1,18 @@
-import { Response, NextFunction, RequestHandler } from "express";
+import { Response, Request, NextFunction } from "express";
 import { RequestWithUser } from "../authentication/AuthenticationMiddleware";
 
-const middleware: RequestHandler = (
-  req: RequestWithUser,
-  res: Response,
-  next: NextFunction
-) => {
-  const role = req.user.role;
+function middleware(req: Request, res: Response, next: NextFunction): void {
+  const reqWithUser = req as RequestWithUser;
+  const role = reqWithUser.user.role;
 
   if (!role || role !== "admin") {
-    return res
+    res
       .status(401)
       .json({ error: true, message: "Not authorized to view this resource." });
+  } else {
+    // If the user has the "admin" role, proceed to the next middleware or route handler
+    next();
   }
-
-  // If the user has the "admin" role, proceed to the next middleware or route handler
-  next();
-};
+}
 
 export default middleware;

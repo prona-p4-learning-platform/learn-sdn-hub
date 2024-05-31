@@ -1,4 +1,4 @@
-import { $fetch, FetchError, FetchOptions } from "ofetch";
+import { $fetch, FetchError, FetchOptions, ofetch } from "ofetch";
 import { destr } from "destr";
 import { z } from "zod";
 
@@ -173,6 +173,21 @@ export const APIBasePath = import.meta.env.VITE_REACT_APP_API_HOST
  * Fetch method for API requests.
  */
 export const APIRequest = createCustomFetch({
+  baseURL: APIBasePath,
+  timeout: 30000,
+  onRequest: (context) => {
+    // inject auth token if possible
+    const token = localStorage.getItem("token") ?? undefined;
+    context.options.headers ??= {};
+
+    addRequestHeader(context.options.headers, "authorization", token);
+  },
+});
+
+/**
+ * Fetch method for API requests without validation.
+ */
+export const APIRequestNV = ofetch.create({
   baseURL: APIBasePath,
   timeout: 30000,
   onRequest: (context) => {
