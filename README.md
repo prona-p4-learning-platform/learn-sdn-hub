@@ -230,7 +230,7 @@ BACKEND_USER_ALLOWED_ASSIGNMENTS
 ### Assigning points to submissions
 
 If you want to be able to assign points to subimssions, you need to set ``maxBonusPoints`` in the assignment configuration file. The points can then be assigned in the admin panel.
-For MongoDB you can also set the ``maxBonusPoints`` in the assignment document of the ``assignments`` collection.
+For MongoDB you can also set the ``maxBonusPoints`` in the assignment document of the ``assignments`` collection as an ``Int32``.
 
 ### Enable Collaboration
 
