@@ -227,28 +227,6 @@ Ommitting this environment variable or providing another value will use the defa
 BACKEND_USER_ALLOWED_ASSIGNMENTS
 ```
 
-### MongoDB Default Structure
-
-The default configuration for MongoDB is to use the following collections:
-- assignments
-- courses
-- submissions
-- users
-
-### Using MongoDB to filter assignments
-
-If you want to use MongoDB to filter assignments based on the assigned courses in the admin panel, you can use the following environment variable:
-
-```sh
-export BACKEND_ASSIGNMENT_TYPE="mongodb"
-```
-
-Ommitting this environment variable or providing another value will use the default filtering provided by a Regex String or by the assignments configured in the environment variable:
-
-```sh
-BACKEND_USER_ALLOWED_ASSIGNMENTS
-```
-
 ### Enable Collaboration
 
 Users in the same group can use collaboration to work in the editor together.
