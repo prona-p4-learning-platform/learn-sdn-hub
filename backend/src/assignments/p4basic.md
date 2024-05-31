@@ -2,9 +2,9 @@
 
 ## Est vento pectora dominos percepitque ruunt
 
-Lorem markdownum votoque quidem atque contendere tollere at taurum! [Meta
-nunc](http://www.dolorem.net/esthunc.php) factum Aglauros pleno ira summo; ferro
-vano verba caelum sic.
+Lorem markdownum votoque quidem atque contendere tollere at taurum!
+[Meta nunc](http://www.dolorem.net/esthunc.php) factum Aglauros pleno ira summo;
+ferro vano verba caelum sic.
 
 Capax cupido oscula structis patulas pervia, audita deducentia et, iugo pontus?
 Et ante certe, ipso verba minor; solo Ithacus **fortibus inpositum** faciem
@@ -13,10 +13,9 @@ fugit, hoc iocosa, vinclo.
 > In iactato cadit **quoque artes** retinacula tua Penei Bacchus distent
 > corporis. Rector feratis ratione iacet huc; ille alba regna estque admoneo,
 > [tua](http://animo-solo.org/diuque-quibus.php)! Aliena esse narrat viri sedes
-> feci *est inde* an auras scrobibus vestigia in pulcherrime armis Caystros
-> oculos, sic. *Vertuntur* nymphe erile nata Styge munera exsangui cladibus
+> feci _est inde_ an auras scrobibus vestigia in pulcherrime armis Caystros
+> oculos, sic. _Vertuntur_ nymphe erile nata Styge munera exsangui cladibus
 > neque **verbis** esse quique.
-
 
 ```mermaid
     graph TD;
@@ -26,11 +25,10 @@ fugit, hoc iocosa, vinclo.
         C-->D;
 ```
 
-
 ## Lenta sagitta
 
 Cornu pallentemque lucis lateat. Ita incubat intremuit prodesse et, e brevis
-vesica! Haec ipse cum non ire venire velleribus *et aquas aut*, habent nostris
+vesica! Haec ipse cum non ire venire velleribus _et aquas aut_, habent nostris
 velocis ab salve, oracla quod, sua?
 
     subnet(vci_xhtml_cycle(4), vpnMasterIsp);
@@ -68,4 +66,3 @@ sequenceDiagram
     John->>Bob: How about you?
     Bob-->>John: Jolly good!
 ```
-

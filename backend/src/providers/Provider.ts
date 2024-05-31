@@ -1,8 +1,11 @@
+import { JumpHost } from "../consoles/SSHConsole";
+
 export interface VMEndpoint {
   instance: string;
   providerInstanceStatus: string;
   IPAddress: string;
   SSHPort: number;
+  SSHJumpHost?: JumpHost,
   LanguageServerPort: number;
   RemoteDesktopPort?: number;
 }
@@ -16,9 +19,15 @@ export interface InstanceProvider {
     username: string,
     groupNumber: number,
     environment: string,
-    image?: string,
-    dockerCmd?: string,
-    dockerSupplementalPorts?: string[]
+    options?: {
+        image?: string,
+        dockerCmd?: string,
+        dockerSupplementalPorts?: string[],
+        kernelImage?: string,
+        kernelBootARGs?: string,
+        rootDrive?: string,
+        proxmoxTemplateTag?: string,
+    }
   ): Promise<VMEndpoint>;
   getServer(instance: string): Promise<VMEndpoint>;
   deleteServer(instance: string): Promise<void>;

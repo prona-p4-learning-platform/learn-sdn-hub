@@ -5,13 +5,13 @@ import PlaintextMultiuserAuthenticationProvider from "./authentication/Plaintext
 import LocalMultiuserVMProvider from "./providers/LocalMultiuserVMProvider";
 
 console.log(
-  "Attempting to start Local Multiuser VM Application using static user to host mapping."
+  "Attempting to start Local Multiuser VM Application using static user to host mapping.",
 );
 const persister = new MemoryPersister();
 serverCreator(
   api(
     persister,
     [new PlaintextMultiuserAuthenticationProvider(persister)],
-    new LocalMultiuserVMProvider()
-  )
+    new LocalMultiuserVMProvider(),
+  ),
 );

@@ -1,67 +1,68 @@
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
+    "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+  font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
     monospace;
 }
 
-.myGlyphMarginClass {
-	background: red;
-}
-
 .myContentClass {
-	background: lightblue;
+  background: lightblue;
 }
 
+/* mermaid */
 .myMarkdownContainer {
-	overflow-y: scroll;
-	height: calc(100vh - 210px);
-	width: calc(50vw - 20px);
+  overflow-y: scroll;
+  height: calc(100vh - 210px);
+  width: calc(50vw - 20px);
 }
 
+/* xterm.js and terminal classes */
 .myTerminalTab {
-	overflow-y: auto;
-	overflow-x: hidden;
-	height: calc(100vh - 130px);
-	width: calc(50vw - 20px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  height: calc(100vh - 130px);
+  width: calc(50vw - 20px);
 }
 
 .myTerminalTabPanel {
-	height: calc(100vh - 180px);
+  height: calc(100vh - 180px);
 }
 
 .myTerminalTabFullscreenPanel {
-	height: calc(100vh - 50px);
+  height: calc(100vh - 50px);
 }
 
 .myTerminalContainer {
-	display: flex;
-	flex-direction: column;
-	height: inherit;
+  display: flex;
+  flex-direction: column;
+  height: inherit;
 }
 
 .myTerminal {
-	flex: 1;
-	height: inherit;
-	min-height: 0;
+  flex: 1;
+  height: inherit;
+  min-height: 0;
 }
 
 .myXtermClass {
-	height: 100%;
-	padding: 2px;
+  height: 100%;
+  padding: 2px;
 }
 
 .myFullscreenTerminalTab {
-  z-index: 200;  
-  position: fixed; 
-  top: 0; right: 0; bottom: 0; left: 0;
+  z-index: 200;
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   width: 100%;
   height: 100%;
   background: #fff;
@@ -71,60 +72,44 @@ code {
   z-index: 255;
 }
 
-.myEditorTabContainer {
-	height: calc(100vh - 220px);
-	width: calc(50vw - 20px);
-}
-
+/* monaco & editor classes */
 .myMonacoClass {
-	width: calc(50vw - 20px);
-	height: calc(100vh - 130px);
-	padding: 2px;
-}
-
-.monaco-remote-cursor {
-  position: absolute;
-  pointer-events: none;
-  z-index: 4000;
-  width: 2px;
-}
-
-.monaco-remote-cursor:before {
-  content: "";
-  width: 6px;
-  height: 5px;
-  display: block;
-  margin-left: -2px;
-  margin-top: 0;
-  z-index: 4000;
-  background: inherit;
-}
-
-.monaco-remote-cursor-tooltip {
-  position: absolute;
-  white-space: nowrap;
-  color: #FFFFFF;
-  text-shadow: 0 0 1px #000000;
-  opacity: 1.0;
-  font-size: 12px;
+  width: calc(50vw - 20px);
+  height: calc(100vh - 130px);
   padding: 2px;
-  font-family: sans-serif;
-  z-index: 4000;
-
-  transition: opacity 0.5s ease-out;
-  -webkit-transition: opacity 0.5s ease-out;
-  -moz-transition: opacity 0.5s ease-out;
-  -ms-transition: opacity 0.5s ease-out;
-  -o-transition: opacity 0.5s ease-out;
 }
 
-.monaco-remote-selection {
+.myGlyphMarginClass {
+  background: red;
+}
+
+.myEditorTabContainer {
+  height: calc(100vh - 220px);
+  width: calc(50vw - 20px);
+}
+
+/* yjs */
+.yRemoteSelection {
+  background-color: rgb(250, 129, 0, 0.5);
+}
+.yRemoteSelectionHead {
   position: absolute;
-  pointer-events: auto;
-  opacity: 0.3;
-  background: blue;
+  border-left: orange solid 2px;
+  border-top: orange solid 2px;
+  border-bottom: orange solid 2px;
+  height: 100%;
+  box-sizing: border-box;
+}
+.yRemoteSelectionHead::after {
+  position: absolute;
+  content: " ";
+  border: 3px solid orange;
+  border-radius: 4px;
+  left: -4px;
+  top: -5px;
 }
 
+/* guacamole */
 #guacContainer {
   overflow: hidden;
   cursor: none;

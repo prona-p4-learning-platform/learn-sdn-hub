@@ -1,14 +1,11 @@
-import React from "react";
-import Tabs from "@mui/material/Tabs";
-import Tab from "@mui/material/Tab";
-import IconButton from "@mui/material/IconButton";
-import FullscreenIcon from '@mui/icons-material/Fullscreen';
-import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
-import Grid from "@mui/material/Grid";
-import Tooltip from '@mui/material/Tooltip';
+import { useState, ChangeEvent } from "react";
+import { Box, Grid, IconButton, Tab, Tabs, Tooltip } from "@mui/material";
+
+import FullscreenIcon from "@mui/icons-material/Fullscreen";
+import FullscreenExitIcon from "@mui/icons-material/FullscreenExit";
 
 interface TabsProps {
-  index: any;
+  index: number;
   value: number;
   fullscreen: boolean;
   children?: JSX.Element[];
@@ -22,16 +19,20 @@ function TabPanel(props: TabsProps) {
       hidden={value !== index}
       id={`terminal-tabpanel-${index}`}
       key={`terminal-tabpanel-${index}`}
-      className={fullscreen ? "myTerminalTabFullscreenPanel" : "myTerminalTabPanel"}
+      className={
+        fullscreen ? "myTerminalTabFullscreenPanel" : "myTerminalTabPanel"
+      }
       aria-labelledby={`terminal-tab-${index}`}
       {...other}
     >
       <div className="myTerminalContainer">
-      {value === index &&
-        Array.isArray(children) && children.map((child, id) =>
-          <div key={id} className="myTerminal">{child}</div>
-        )
-      }
+        {value === index &&
+          Array.isArray(children) &&
+          children.map((child, id) => (
+            <div key={id} className="myTerminal">
+              {child}
+            </div>
+          ))}
       </div>
     </div>
   );
@@ -42,42 +43,49 @@ interface TabControlProps {
   children?: JSX.Element[][];
 }
 
-export default function TerminalTabs(props: TabControlProps) {
-  const [value, setValue] = React.useState(0);
-  const [fullscreen, setFullscreen] = React.useState(false);
+export default function TerminalTabs(props: TabControlProps): JSX.Element {
+  const [value, setValue] = useState(0);
+  const [fullscreen, setFullscreen] = useState(false);
 
-  const handleChange = (event: React.ChangeEvent<{}>, newValue: number) => {
+  const handleChange = (_event: ChangeEvent<unknown>, newValue: number) => {
     setValue(newValue);
   };
 
-  const toggleFullscreen = (event: React.ChangeEvent<{}>) => {
+  const toggleFullscreen = () => {
     setFullscreen(!fullscreen);
   };
 
   return (
     <Grid className={fullscreen ? "myFullscreenTerminalTab" : "myTerminalTab"}>
-      <Tabs
-        value={value}
-        onChange={handleChange}
-        aria-label="terminal tabs"
-      >
-        {props.tabNames && props.tabNames.map((name) => (
-          <Tab label={name} key={name} />
-        ))}
-        <Grid container justifyContent="flex-end">
-          <Tooltip title="Toggle Fullscreen" placement="left">
-            <IconButton onClick={toggleFullscreen} color="primary" className="myFullscreenButton">
-              {fullscreen ? <FullscreenExitIcon /> : <FullscreenIcon />}
-            </IconButton>
-          </Tooltip>
-        </Grid>
-      </Tabs>
+      <Grid container justifyContent="flex-end">
+        <Tabs value={value} onChange={handleChange} aria-label="terminal tabs">
+          {props.tabNames.map((name) => (
+            <Tab label={name} key={name} />
+          ))}
+        </Tabs>
+        <Box sx={{ mx: "auto " }} />
+        <Tooltip title="Toggle Fullscreen" placement="left">
+          <IconButton
+            onClick={toggleFullscreen}
+            color="primary"
+            className="myFullscreenButton"
+          >
+            {fullscreen ? <FullscreenExitIcon /> : <FullscreenIcon />}
+          </IconButton>
+        </Tooltip>
+      </Grid>
 
-      {Array.isArray(props.children) && props.children.map((child, index) =>
-        <TabPanel value={value} fullscreen={fullscreen} index={index} key={index}>
-          {child}
-        </TabPanel>
-      )}
+      {Array.isArray(props.children) &&
+        props.children.map((child, index) => (
+          <TabPanel
+            value={value}
+            fullscreen={fullscreen}
+            index={index}
+            key={index}
+          >
+            {child}
+          </TabPanel>
+        ))}
     </Grid>
   );
 }

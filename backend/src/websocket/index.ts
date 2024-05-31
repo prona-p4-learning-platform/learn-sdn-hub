@@ -7,6 +7,7 @@ import LanguageServerHandler from "./LanguageServerHandler";
 import RemoteDesktopHandler from "./RemoteDesktopHandler";
 import { TokenPayload } from "../authentication/AuthenticationMiddleware";
 import jwt from "jsonwebtoken";
+
 interface WebsocketPathParams {
   environment: string;
   type: string;
@@ -23,53 +24,71 @@ interface RDPathParams {
 }
 
 const envMatcher = match<WebsocketPathParams>(
-  "/environment/:environment/type/:type"
+  "/ws/environment/:environment/type/:type",
 );
 const lsMatcher = match<LSPathParams>(
-  "/environment/:environment/languageserver/:language"
+  "/ws/environment/:environment/languageserver/:language",
 );
 const rdMatcher = match<RDPathParams>(
-  "/environment/:environment/desktop/:alias"
+  "/ws/environment/:environment/desktop/:alias",
 );
 
 export default function wrapWSWithExpressApp(server: Server): void {
   const wss = new WebSocket.Server({ server });
   wss.on("connection", function (ws, request) {
     ws.once("message", (message) => {
+      // eslint-disable-next-line @typescript-eslint/no-base-to-string
       const [auth, token] = message.toString().split(" ");
       if (auth !== "auth") {
         ws.send("Not authenticated.");
-        return ws.close();
+        ws.close();
+        return;
       }
-      let user;
+
+      let user: TokenPayload;
       try {
-        /* replace secret */
+        /* TODO: replace secret */
         user = jwt.verify(token, "some-secret") as TokenPayload;
       } catch (err) {
         ws.send("Could not authenticate with given credentials.");
-        return ws.close();
+        ws.close();
+        return;
       }
-      const path = url.parse(request.url).pathname;
-      const envMatchResult = envMatcher(path);
-      const lspMatchResult = lsMatcher(path);
-      const rdMatchResult = rdMatcher(path);
-      if (envMatchResult !== false) {
-        const { environment, type } = envMatchResult.params;
-        ConsoleHandler(ws, environment, user.username, type);
-      } else if (lspMatchResult !== false) {
-        const { environment, language } = lspMatchResult.params;
-        LanguageServerHandler(ws, environment, user.username, language);
-      } else if (rdMatchResult !== false) {
-        const { environment, alias } = rdMatchResult.params;
-        RemoteDesktopHandler(
-          ws,
-          environment,
-          user.username,
-          alias,
-          user.groupNumber
-        );
+
+      const requestUrl = request.url;
+      if (requestUrl) {
+        const path = url.parse(requestUrl).pathname;
+
+        if (path) {
+          const envMatchResult = envMatcher(path);
+          const lspMatchResult = lsMatcher(path);
+          const rdMatchResult = rdMatcher(path);
+
+          if (envMatchResult !== false) {
+            const { environment, type } = envMatchResult.params;
+            ConsoleHandler(ws, environment, user.username, type);
+          } else if (lspMatchResult !== false) {
+            const { environment, language } = lspMatchResult.params;
+            LanguageServerHandler(ws, environment, user.username, language);
+          } else if (rdMatchResult !== false) {
+            const { environment, alias } = rdMatchResult.params;
+            RemoteDesktopHandler(
+              ws,
+              environment,
+              user.username,
+              alias,
+              user.groupNumber,
+            );
+          } else {
+            ws.send("No route handler.");
+            ws.close();
+          }
+        } else {
+          ws.send("No request path.");
+          ws.close();
+        }
       } else {
-        ws.send(`No route handler.`);
+        ws.send("No request url.");
         ws.close();
       }
     });

@@ -8,30 +8,33 @@ import LocalVMProvider from "../../src/providers/LocalVMProvider";
 import { beforeAll, describe, it, expect, afterAll } from "@jest/globals";
 
 const app = express();
-let connection: MongoClient = null;
-let instance: MongoDBPersister = null;
+let connection: MongoClient;
+let instance: MongoDBPersister;
 
 beforeAll(async () => {
-  connection = await MongoClient.connect(process.env.MONGO_URL, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  });
+  const ENV_MONGO_URL = process.env.MONGO_URL;
+
+  if (!ENV_MONGO_URL) throw new Error("MongoDB url not provided (MONGO_URL).");
+
+  connection = await MongoClient.connect(ENV_MONGO_URL);
   try {
     await connection.db().dropCollection("users");
-  } catch (err) {}
+  } catch (err) {
+    /* */
+  }
 
   await connection.db().collection("users").insertOne({
     username: "testuser",
     password: "testpassword",
     environments: [],
   });
-  instance = new MongoDBPersister(process.env.MONGO_URL);
+  instance = new MongoDBPersister(ENV_MONGO_URL);
   app.use(
     APIRoutes(
       instance,
       [new MongoDBAuthenticationProvider(instance)],
-      new LocalVMProvider()
-    )
+      new LocalVMProvider(),
+    ),
   );
 });
 

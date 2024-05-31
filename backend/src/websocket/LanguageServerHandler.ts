@@ -5,7 +5,7 @@ export default function (
   wsFromBrowser: WebSocket,
   environment: string,
   username: string,
-  language: string
+  language: string,
 ): void {
   const envInstance = Environment.getActiveEnvironment(environment, username);
   if (envInstance !== undefined) {
@@ -16,18 +16,25 @@ export default function (
       .then((result) => {
         const [port, ipAddress] = result;
         const wsToLanguageServer = new WebSocket(
-          "ws://" + ipAddress + ":" + port + "/" + language
+          "ws://" + ipAddress + ":" + port + "/" + language,
         );
         wsToLanguageServer.on("open", () => {
           wsFromBrowser.send("backend websocket ready");
           wsFromBrowser.on("message", (data) => {
             //console.log(data.toString());
-            wsToLanguageServer.send(data);
+            // eslint-disable-next-line @typescript-eslint/no-base-to-string
+            if (data.toString() === "ping") {
+              wsFromBrowser.send("pong");
+              return;
+            } else {
+              wsToLanguageServer.send(data);
+            }
           });
           wsToLanguageServer.on("message", (data) => {
             //console.log(data.toString());
             // apparently new vscode-ws-jsonrpc needs string and cannot handle a blob,
             // otherwise exception from JSON.parse will be thrown
+            // eslint-disable-next-line @typescript-eslint/no-base-to-string
             wsFromBrowser.send(data.toString());
           });
         });
@@ -47,7 +54,7 @@ export default function (
       .catch((err) => {
         console.log(err);
         wsFromBrowser.send(
-          "Could not connect to environment language server, closing connection."
+          "Could not connect to environment language server, closing connection.",
         );
         wsFromBrowser.close();
       });

@@ -2,18 +2,21 @@ import { MongoClient } from "mongodb";
 import MongoDBPersister from "../../src/database/MongoDBPersister";
 import { beforeAll, it, expect, afterAll } from "@jest/globals";
 
-let instance: MongoDBPersister = null;
-let connection: MongoClient = null;
+let instance: MongoDBPersister;
+let connection: MongoClient;
 
 beforeAll(async () => {
-  connection = await MongoClient.connect(process.env.MONGO_URL, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  });
-  instance = new MongoDBPersister(process.env.MONGO_URL);
+  const ENV_MONGO_URL = process.env.MONGO_URL;
+
+  if (!ENV_MONGO_URL) throw new Error("MongoDB url not provided (MONGO_URL).");
+
+  connection = await MongoClient.connect(ENV_MONGO_URL);
+  instance = new MongoDBPersister(ENV_MONGO_URL);
   try {
     await connection.db().dropCollection("users");
-  } catch (err) {}
+  } catch (err) {
+    /* */
+  }
   await connection
     .db()
     .collection("users")
@@ -42,13 +45,13 @@ it("successfully adds a new environment to a user's existing list of environment
     "testuser",
     "some-uuid",
     "some-description",
-    "some-instance"
+    "some-instance",
   );
   const result = await connection
     .db()
     .collection("users")
     .findOne({ username: "testuser" });
-  expect(result.environments).toEqual([
+  expect(result?.environments).toEqual([
     { identifier: "environmentXYZ" },
     { identifier: "some-uuid", description: "some-description" },
   ]);

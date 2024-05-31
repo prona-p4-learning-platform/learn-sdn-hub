@@ -32,8 +32,6 @@ environments.set("p4basic-with-guacamole", {
         remoteDesktopProtocol: "vnc",
         remoteDesktopPort: 5900,
         remoteDesktopPassword: "vncpassword",
-        remoteDesktopUsername: null,
-        remoteDesktopHostname: null,
       },
     ],
     [
@@ -243,7 +241,7 @@ environments.set("python-test", {
     "/home/p4/p4-boilerplate/Example0-SDN-Intro/",
   ],
   useCollaboration: true,
-  useLanguageClient: true,
+  useLanguageClient: false,
 });
 
 environments.set("Example0-SDN-Intro", {
@@ -652,6 +650,61 @@ environments.set("Example-p4env", {
   description: "Example-p4env description",
   assignmentLabSheet: "../assignments/p4env.md",
 });
+
+//sudo clab inspect &>/dev/null; if [ $? -eq 1 ]; then sudo clab deploy &>/dev/null; fi; docker exec -it clab-kommprot-lab-transport-host1 bash;
+environments.set("KommProt-Ue1-Test", {
+  terminals: [
+    [
+      {
+        type: "Shell",
+        name: "host1",
+        cwd: "/home/p4/kommprot-labs/kommprot-lab-application-layer",
+        executable: "while [ true ]; do clear && sudo clab inspect &>/dev/null; if [ $? -eq 1 ]; then sudo clab deploy &>/dev/null; fi; docker exec -it clab-kommprot-lab-transport-host1 bash; done",
+        params: [],
+        provideTty: true,
+      },
+    ],
+    [
+      {
+        type: "Shell",
+        name: "host2",
+        cwd: "/home/p4/kommprot-labs/kommprot-lab-application-layer",
+        executable: "while [ true ]; do clear && sudo clab inspect &>/dev/null; if [ $? -eq 1 ]; then sudo clab deploy &>/dev/null; fi; docker exec -it clab-kommprot-lab-transport-host2 bash; done",
+        params: [],
+        provideTty: true,
+      },
+    ],
+  ],
+  editableFiles: [
+    {
+      absFilePath:
+        "/home/p4/kommprot-labs/kommprot-lab-application-layer/README.md",
+      alias: "README",
+    },
+  ],
+  stopCommands: [
+    {
+      type: "Shell",
+      name: "host1",
+      cwd: "/home/p4/kommprot-labs/kommprot-lab-application-layer",
+      executable: "sudo clab destroy",
+      params: [],
+      provideTty: false,
+    },
+    {
+      type: "Shell",
+      name: "host2",
+      cwd: "/home/p4/kommprot-labs/kommprot-lab-application-layer",
+      executable: "",
+      params: [],
+      provideTty: false,
+    },
+  ],
+  description: "KommProt-Ue1 description",
+  assignmentLabSheetLocation: "instance",
+  assignmentLabSheet: "/home/p4/kommprot-labs/kommprot-lab-application-layer/README.md",
+});
+
 
 export default environments;
 

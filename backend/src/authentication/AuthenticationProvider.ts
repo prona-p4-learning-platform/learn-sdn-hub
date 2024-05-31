@@ -11,16 +11,16 @@ export interface AuthenticationResult {
 export interface AuthenticationProvider {
   authenticateUser(
     username: string,
-    password: string
+    password: string,
   ): Promise<AuthenticationResult>;
   filterAssignmentList(
     username: string,
-    assignmentMap: Map<string, EnvironmentDescription>
+    assignmentMap: Map<string, EnvironmentDescription>,
   ): Promise<Map<string, EnvironmentDescription>>;
   changePassword(
     username: string,
     oldPassword: string,
     newPassword: string,
-    confirmNewPassword: string
+    confirmNewPassword: string,
   ): Promise<void>;
 }

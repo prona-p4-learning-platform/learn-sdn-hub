@@ -27,10 +27,10 @@ export default class MongoDBAuthenticationProvider
 
   async authenticateUser(
     username: string,
-    password: string
+    password: string,
   ): Promise<AuthenticationResult> {
     const user = await this.persister.GetUserAccount(username);
-    console.log("Authenticating user in mongodb: " + user);
+    console.log("Authenticating user in mongodb: " + user.username);
     if (
       user.password === password ||
       (await compare(password, user.passwordHash ?? ""))
@@ -38,7 +38,7 @@ export default class MongoDBAuthenticationProvider
       return {
         username: user.username,
         userid: user._id,
-        groupNumber: user.groupNumber ?? 0,
+        groupNumber: user.groupNumber,
         type: "mongodb",
         role: user.role,
       };
@@ -50,37 +50,44 @@ export default class MongoDBAuthenticationProvider
     username: string,
     oldPassword: string,
     newPassword: string,
-    confirmNewPassword: string
+    confirmNewPassword: string,
   ): Promise<void> {
     const user = await this.persister.GetUserAccount(username);
-    if (
-      newPassword.length !== 0 &&
-      (user.password === oldPassword ||
-        (await compare(oldPassword, user.passwordHash ?? ""))) &&
-      newPassword === confirmNewPassword
-    ) {
-      console.log(`Change password in mongodb for User : ${user.username}`);
-      await this.persister.ChangeUserPassword(username, newPassword);
+
+    if (newPassword.length !== 0) {
+      if (
+        user.password === oldPassword ||
+        (await compare(oldPassword, user.passwordHash ?? ""))
+      ) {
+        if (newPassword === confirmNewPassword) {
+          console.log(`Change password in mongodb for User : ${user.username}`);
+          await this.persister.ChangeUserPassword(username, newPassword);
+        } else {
+          throw new Error("New passwords do not match");
+        }
+      } else {
+        throw new Error("Old password incorrect");
+      }
     } else {
-      throw new Error("ChangePasswordError");
+      throw new Error("New password too short");
     }
   }
 
   // enhance to allow overiding with filter defined for the user in mongodb?
   async filterAssignmentList(
     username: string,
-    assignmentList: Map<string, EnvironmentDescription>
+    assignmentList: Map<string, EnvironmentDescription>,
   ): Promise<Map<string, EnvironmentDescription>> {
     const user = await this.persister.GetUserAccount(username);
     if (
-      process.env.BACKEND_ASSIGNMENT_TYPE != undefined &&
-      process.env.BACKEND_ASSIGNMENT_TYPE == "mongodb"
+      process.env.BACKEND_ASSIGNMENT_TYPE !== undefined &&
+      process.env.BACKEND_ASSIGNMENT_TYPE === "mongodb"
     ) {
       try {
-        if (user.courses != undefined) {
+        if (user.courses !== undefined) {
           const assignments = await this.persister.GetUserAssignments(user);
           const assignmentNames = assignments.map(
-            (assignment) => assignment.name
+            (assignment) => assignment.name,
           );
           for (const key of assignmentList.keys()) {
             if (!assignmentNames.includes(key)) {
@@ -95,39 +102,39 @@ export default class MongoDBAuthenticationProvider
         console.log(e);
       }
       return assignmentList;
-    } else if (user.assignmentListFilter != undefined) {
+    } else if (user.assignmentListFilter !== undefined) {
       const tempRegex = user.assignmentListFilter;
       for (const key of assignmentList.keys()) {
         if (key.match(tempRegex) == null) {
           assignmentList.delete(key);
         }
       }
-      return assignmentList;
     } else {
       const usersAllowedAssignments =
         process.env.BACKEND_USER_ALLOWED_ASSIGNMENTS;
-      if (usersAllowedAssignments == undefined) {
-        return assignmentList;
-      } else {
-        const users: Map<string, string> = new Map();
+
+      if (usersAllowedAssignments !== undefined) {
+        const users = new Map<string, string>();
+
         usersAllowedAssignments.split(",").forEach((user) => {
-          const name = user.split(":")[0];
-          const regex = user.split(":")[1];
+          const [name, regex] = user.split(":");
+
           users.set(name, regex);
         });
-        if (users.has(username)) {
-          const tempRegex = users.get(username);
+
+        const user = users.get(username);
+        if (user) {
           for (const key of assignmentList.keys()) {
-            if (key.match(tempRegex) == null) {
+            if (key.match(user) === null) {
               assignmentList.delete(key);
             }
           }
-          return assignmentList;
         } else {
           assignmentList.clear();
-          return assignmentList;
         }
       }
     }
+
+    return assignmentList;
   }
 }

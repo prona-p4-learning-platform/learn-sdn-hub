@@ -1,5 +1,4 @@
-import { RequestHandler, Router } from "express";
-import bodyParser from "body-parser";
+import { Router, json } from "express";
 import { AuthenticationProvider } from "../authentication/AuthenticationProvider";
 import environments from "../Configuration";
 import jwt from "jsonwebtoken";
@@ -18,34 +17,44 @@ const loginValidator = celebrate({
 export default (authProviders: AuthenticationProvider[]): Router => {
   const router = Router();
 
-  router.get(
-    "/assignments",
-    authenticationMiddleware,
-    async (req: RequestWithUser, res) => {
-      const loggedInUser = req.user.username;
+  router.get("/assignments", authenticationMiddleware, (req, res) => {
+    const getAssignments = async () => {
+      const reqWithUser = req as RequestWithUser;
+      const loggedInUser = reqWithUser.user.username;
       let tempAssignmentMap = new Map(environments);
+
       for (const authProvider of authProviders) {
         tempAssignmentMap = await authProvider.filterAssignmentList(
           loggedInUser,
-          tempAssignmentMap
+          tempAssignmentMap,
         );
       }
-      return res.status(200).json(Array.from(tempAssignmentMap.keys()));
-    }
-  );
+      return tempAssignmentMap;
+    };
 
-  router.get(
-    "/point-limits",
-    authenticationMiddleware,
-    async (req: RequestWithUser, res) => {
-      const loggedInUser = req.user.username;
+    getAssignments()
+      .then((map) => {
+        res.status(200).json(Array.from(map.keys()));
+      })
+      .catch((err) => {
+        let message = "Unknown error";
+        if (err instanceof Error) message = err.message;
+
+        res.status(500).json({ status: "error", message });
+      });
+  });
+
+  router.get("/point-limits", authenticationMiddleware, (req, res) => {
+    (async () => {
+      const reqWithUser = req as RequestWithUser;
+      const loggedInUser = reqWithUser.user.username;
 
       let tempAssignmentMap = new Map(environments);
       let pointsMap = new Map();
       for (const authProvider of authProviders) {
         tempAssignmentMap = await authProvider.filterAssignmentList(
           loggedInUser,
-          tempAssignmentMap
+          tempAssignmentMap,
         );
 
         // Only include entries that have maxBonusPoints set
@@ -57,28 +66,31 @@ export default (authProviders: AuthenticationProvider[]): Router => {
               }
               return acc;
             },
-            new Map()
-          )
+            new Map(),
+          ),
         );
       }
 
       return res.status(200).json(Object.fromEntries(pointsMap));
-    }
-  );
+    })().catch((err) => {
+      let message = "Unknown error";
+      if (err instanceof Error) message = err.message;
 
-  // remove body-parser as it is included in express >=4.17
-  router.post(
-    "/login",
-    bodyParser.json() as RequestHandler,
-    loginValidator,
-    async (req, res) => {
-      const username = req.body.username as string;
-      const password = req.body.password as string;
+      return res.status(500).json({ status: "error", message });
+    });
+  });
+
+  router.post("/login", json(), loginValidator, (req, res) => {
+    const login = async () => {
+      const body = req.body as Record<string, string>;
+      const username = body.username;
+      const password = body.password;
+
       for (const authProvider of authProviders) {
         try {
           const result = await authProvider.authenticateUser(
             username,
-            password
+            password,
           );
           const token = jwt.sign(
             {
@@ -87,51 +99,83 @@ export default (authProviders: AuthenticationProvider[]): Router => {
               groupNumber: result.groupNumber,
               ...(result.role && { role: result.role }),
             },
-            /* replace secret */
-            "some-secret"
-          ) as string;
+            /* TODO: replace secret */
+            "some-secret",
+          );
+
           console.log(result, token);
-          return res.status(200).json({
+
+          res.status(200).json({
             token,
             username,
             groupNumber: result.groupNumber,
             ...(result.role && { role: result.role }),
           });
+          return;
         } catch (err) {
           console.log("error!", err);
         }
       }
-      return res.status(401).json({ error: "Not authenticated." });
-    }
-  );
+
+      res.status(401).json({ status: "error", error: "Not authenticated." });
+    };
+
+    login().catch(() => {}); // should not throw
+  });
 
   router.post(
     "/changePassword",
     authenticationMiddleware,
-    bodyParser.json() as RequestHandler,
-    async (req: RequestWithUser, res) => {
-      const oldPassword = req.body.oldPassword;
-      const newPassword = req.body.newPassword;
-      const confirmNewPassword = req.body.confirmNewPassword;
-      const loggedInUser = req.user.username;
+    json(),
+    (req, res) => {
+      const change = async () => {
+        const reqWithUser = req as RequestWithUser;
+        const body = reqWithUser.body as Record<string, string>;
+        const oldPassword = body.oldPassword;
+        const newPassword = body.newPassword;
+        const confirmNewPassword = body.confirmNewPassword;
+        const loggedInUser = reqWithUser.user.username;
+        const errors = {
+          hasErrors: false,
+          message: "Unknown error",
+        };
 
-      for (const authProvider of authProviders) {
-        authProvider
-          .changePassword(
-            loggedInUser,
-            oldPassword,
-            newPassword,
-            confirmNewPassword
-          )
-          .catch((err) => {
-            console.log("error!", err);
-            return res.status(500).json();
-          })
-          .then(() => {
-            return res.status(200).json();
+        for (const authProvider of authProviders) {
+          await authProvider
+            .changePassword(
+              loggedInUser,
+              oldPassword,
+              newPassword,
+              confirmNewPassword,
+            )
+            .catch((err) => {
+              let message = "Unknown error";
+              if (err instanceof Error) message = err.message;
+
+              errors.hasErrors = true;
+              errors.message = message;
+            });
+        }
+
+        if (errors.hasErrors) throw new Error(errors.message);
+      };
+
+      // TODO: if one provider fails passwords are changed partially
+      change()
+        .then(() => {
+          res.status(200).json({
+            status: "success",
+            message: "Password changed successfully!",
           });
-      }
-    }
+        })
+        .catch((err) => {
+          let message = "Unknown error";
+          if (err instanceof Error) message = err.message;
+
+          res.status(500).json({ status: "error", message });
+        });
+    },
   );
+
   return router;
 };

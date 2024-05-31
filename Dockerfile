@@ -13,13 +13,15 @@ EXPOSE 3001/tcp
 RUN useradd -m -s /bin/bash p4
 WORKDIR /home/p4/learn-sdn-hub
 
-# copy frontend and backend files to the image
+# copy necessary files to image
 COPY frontend frontend
 COPY backend backend
+COPY package.json .
+COPY package-lock.json .
 
-# build backend and frontend, create static backend
-RUN cd backend && npm install && npm run compile
-RUN cd frontend && npm install && npm run build && npm run create-static-backend
+# build frontend and create static backend
+RUN npm clean-install
+RUN cd frontend && npm run build && npm run create-static-backend
 
 # copy example startup script and use it as the entrypoint when running the container
 COPY examples/start-learn-sdn-hub.sh start-learn-sdn-hub.sh
