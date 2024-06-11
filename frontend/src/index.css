@@ -1,67 +1,68 @@
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
+    "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+  font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
     monospace;
 }
 
 .myContentClass {
-	background: lightblue;
+  background: lightblue;
 }
-
 
 /* mermaid */
 .myMarkdownContainer {
-	overflow-y: scroll;
-	height: calc(100vh - 210px);
-	width: calc(50vw - 20px);
+  overflow-y: scroll;
+  height: calc(100vh - 210px);
+  width: calc(50vw - 20px);
 }
-
 
 /* xterm.js and terminal classes */
 .myTerminalTab {
-	overflow-y: auto;
-	overflow-x: hidden;
-	height: calc(100vh - 130px);
-	width: calc(50vw - 20px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  height: calc(100vh - 130px);
+  width: calc(50vw - 20px);
 }
 
 .myTerminalTabPanel {
-	height: calc(100vh - 180px);
+  height: calc(100vh - 180px);
 }
 
 .myTerminalTabFullscreenPanel {
-	height: calc(100vh - 50px);
+  height: calc(100vh - 50px);
 }
 
 .myTerminalContainer {
-	display: flex;
-	flex-direction: column;
-	height: inherit;
+  display: flex;
+  flex-direction: column;
+  height: inherit;
 }
 
 .myTerminal {
-	flex: 1;
-	height: inherit;
-	min-height: 0;
+  flex: 1;
+  height: inherit;
+  min-height: 0;
 }
 
 .myXtermClass {
-	height: 100%;
-	padding: 2px;
+  height: 100%;
+  padding: 2px;
 }
 
 .myFullscreenTerminalTab {
-  z-index: 200;  
-  position: fixed; 
-  top: 0; right: 0; bottom: 0; left: 0;
+  z-index: 200;
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   width: 100%;
   height: 100%;
   background: #fff;
@@ -71,27 +72,25 @@ code {
   z-index: 255;
 }
 
-
 /* monaco & editor classes */
 .myMonacoClass {
-	width: calc(50vw - 20px);
-	height: calc(100vh - 130px);
-	padding: 2px;
+  width: calc(50vw - 20px);
+  height: calc(100vh - 130px);
+  padding: 2px;
 }
 
 .myGlyphMarginClass {
-	background: red;
+  background: red;
 }
 
 .myEditorTabContainer {
-	height: calc(100vh - 220px);
-	width: calc(50vw - 20px);
+  height: calc(100vh - 220px);
+  width: calc(50vw - 20px);
 }
-
 
 /* yjs */
 .yRemoteSelection {
-  background-color: rgb(250, 129, 0, .5)
+  background-color: rgb(250, 129, 0, 0.5);
 }
 .yRemoteSelectionHead {
   position: absolute;
@@ -103,13 +102,12 @@ code {
 }
 .yRemoteSelectionHead::after {
   position: absolute;
-  content: ' ';
+  content: " ";
   border: 3px solid orange;
   border-radius: 4px;
   left: -4px;
   top: -5px;
 }
-
 
 /* guacamole */
 #guacContainer {

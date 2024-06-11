@@ -7,62 +7,67 @@ import {
 export default class PlaintextAuthenticationProvider
   implements AuthenticationProvider
 {
-  async authenticateUser(
+  authenticateUser(
     username: string,
     password: string,
   ): Promise<AuthenticationResult> {
-    if (password === "p4") {
-      return {
-        username: username,
-        // plaintext provider is simplistic and does not use ids,
-        // use username also as ID and set group to be 0 always
-        userid: username,
-        groupNumber: 0,
-        type: "plain",
-      };
-    }
-    throw new Error("AuthenticationError");
+    return new Promise((resolve, reject) => {
+      if (password === "p4") {
+        const user: AuthenticationResult = {
+          username,
+          userid: username,
+          groupNumber: 0,
+          type: "plain",
+        };
+
+        resolve(user);
+      } else reject(new Error("AuthenticationError"));
+    });
   }
 
-  /*eslint @typescript-eslint/no-unused-vars: ["error", { "argsIgnorePattern": "^_" }]*/
-  async changePassword(
+  changePassword(
     _username: string,
     _oldPassword: string,
     _newPassword: string,
     _confirmNewPassword: string,
   ): Promise<void> {
-    throw new Error(
-      "PlaintextAuthenticationProvider does not support password changes.",
+    return Promise.reject(
+      new Error(
+        "PlaintextAuthenticationProvider does not support password changes.",
+      ),
     );
   }
 
-  async filterAssignmentList(
+  filterAssignmentList(
     username: string,
     assignmentList: Map<string, EnvironmentDescription>,
   ): Promise<Map<string, EnvironmentDescription>> {
-    const usersAllowedAssignments =
-      process.env.BACKEND_USER_ALLOWED_ASSIGNMENTS;
-    if (usersAllowedAssignments == undefined) {
-      return assignmentList;
-    } else {
-      const users: Map<string, string> = new Map();
-      usersAllowedAssignments.split(",").forEach((user) => {
-        const name = user.split(":")[0];
-        const regex = user.split(":")[1];
-        users.set(name, regex);
-      });
-      if (users.has(username)) {
-        const tempRegex = users.get(username);
-        for (const key of assignmentList.keys()) {
-          if (key.match(tempRegex) == null) {
-            assignmentList.delete(key);
-          }
+    return new Promise((resolve) => {
+      const usersAllowedAssignments =
+        process.env.BACKEND_USER_ALLOWED_ASSIGNMENTS;
+
+      if (usersAllowedAssignments !== undefined) {
+        const users = new Map<string, string>();
+
+        for (const user of usersAllowedAssignments.split(",")) {
+          const [name, regex] = user.split(":");
+
+          users.set(name, regex);
         }
-        return assignmentList;
-      } else {
-        assignmentList.clear();
-        return assignmentList;
+
+        const user = users.get(username);
+        if (user) {
+          for (const key of assignmentList.keys()) {
+            if (key.match(user) === null) {
+              assignmentList.delete(key);
+            }
+          }
+        } else {
+          assignmentList.clear();
+        }
       }
-    }
+
+      resolve(assignmentList);
+    });
   }
 }

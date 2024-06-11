@@ -5,7 +5,9 @@ interface PrivateRouteProps {
   isAuthenticated: boolean;
 }
 
-export default function PrivateRoute(props: PrivateRouteProps & RouteProps) {
+export default function PrivateRoute(
+  props: PrivateRouteProps & RouteProps,
+): JSX.Element {
   const { children, isAuthenticated, ...rest } = props;
   return (
     <Route

@@ -22,6 +22,7 @@ export default function (
           wsFromBrowser.send("backend websocket ready");
           wsFromBrowser.on("message", (data) => {
             //console.log(data.toString());
+            // eslint-disable-next-line @typescript-eslint/no-base-to-string
             if (data.toString() === "ping") {
               wsFromBrowser.send("pong");
               return;
@@ -33,6 +34,7 @@ export default function (
             //console.log(data.toString());
             // apparently new vscode-ws-jsonrpc needs string and cannot handle a blob,
             // otherwise exception from JSON.parse will be thrown
+            // eslint-disable-next-line @typescript-eslint/no-base-to-string
             wsFromBrowser.send(data.toString());
           });
         });

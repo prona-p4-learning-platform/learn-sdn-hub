@@ -1,39 +1,53 @@
-import React, { useMemo, useState } from "react";
-import AppBar from "@mui/material/AppBar";
-import Toolbar from "@mui/material/Toolbar";
-import IconButton from "@mui/material/IconButton";
-import MenuIcon from "@mui/icons-material/Menu";
-import Typography from "@mui/material/Typography";
-import { BrowserRouter as Router, Route } from "react-router-dom";
+import { useEffect, useState } from "react";
+import {
+  BrowserRouter as Router,
+  Route,
+  Link,
+  Redirect,
+} from "react-router-dom";
+import { createTheme, ThemeProvider } from "@mui/material/styles";
+import {
+  AppBar,
+  Box,
+  Button,
+  CssBaseline,
+  IconButton,
+  Toolbar,
+  Tooltip,
+  Typography,
+} from "@mui/material";
+
+import HubIcon from "@mui/icons-material/Hub";
+import Brightness4Icon from "@mui/icons-material/Brightness4";
+import Brightness7Icon from "@mui/icons-material/Brightness7";
+
 import Home from "./views/Home";
 import Environment from "./views/Environment";
 import PrivateRoute from "./components/PrivateRoute";
 import AssignmentOverview from "./views/AssignmentOverview";
 import UserSettings from "./views/UserSettings";
-import "@fontsource/roboto";
-import { Box, Button } from "@mui/material";
-import CssBaseline from "@mui/material/CssBaseline";
-import { createTheme, ThemeProvider } from "@mui/material/styles";
-import Brightness4Icon from "@mui/icons-material/Brightness4";
-import Brightness7Icon from "@mui/icons-material/Brightness7";
-import Tooltip from "@mui/material/Tooltip";
+import NavigationButton from "./components/NavigationButton";
 
-function App() {
+export default function App(): JSX.Element {
   const [username, setUsername] = useState("");
   const [groupNumber, setGroupNumber] = useState(0);
   const [authenticated, setAuthenticated] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
 
-  useMemo(() => {
+  useEffect(() => {
     if (localStorage.getItem("token") !== null) {
       setAuthenticated(true);
     }
-    if (localStorage.getItem("username") !== null) {
-      setUsername(localStorage.getItem("username") as string);
+
+    const username = localStorage.getItem("username");
+    if (username !== null) {
+      setUsername(username);
     }
+
     if (localStorage.getItem("group") !== null) {
       setGroupNumber(parseInt(localStorage.getItem("group") ?? "0"));
     }
+
     if (localStorage.getItem("darkMode") === "true") {
       setDarkMode(true);
     }
@@ -42,7 +56,7 @@ function App() {
   function handleUserLogin(
     token: string,
     username: string,
-    groupNumber: number
+    groupNumber: number,
   ): void {
     setUsername(username);
     setGroupNumber(groupNumber);
@@ -53,14 +67,13 @@ function App() {
     localStorage.setItem("group", groupNumber.toString());
   }
 
-  function handleUserLogout(_username: string | null): void {
+  function handleUserLogout(): void {
     setUsername("");
     setGroupNumber(0);
     setAuthenticated(false);
     localStorage.removeItem("token");
     localStorage.removeItem("username");
     localStorage.removeItem("group");
-    window.location.reload();
   }
 
   function changeMode() {
@@ -76,76 +89,64 @@ function App() {
 
   return (
     <ThemeProvider theme={theme}>
-      <React.Fragment>
-        <CssBaseline />
-        <Router>
-          <AppBar position="static">
-            <Toolbar>
-              <IconButton edge="start" color="inherit" aria-label="menu">
-                <MenuIcon />
-              </IconButton>
-              <Typography variant="h6">
-                learn-sdn-hub
-                {authenticated === false
-                  ? ""
-                  : ` - ${username} (group: ${groupNumber})`}
-              </Typography>
-              <Box sx={{ width: "10px" }} />
-              <Button color="inherit" href={`/assignments`}>
-                Assignments
-              </Button>
-              <Button color="inherit" href={`/settings`}>
-                Settings
-              </Button>
-              <Button
-                color="inherit"
-                onClick={() =>
-                  handleUserLogout(localStorage.getItem("username"))
-                }
-              >
-                Logout
-              </Button>
-              <Tooltip
-                title={
-                  theme.palette.mode === "dark"
-                    ? "Switch to light mode"
-                    : "Switch to dark mode"
-                }
-              >
-                <IconButton
-                  sx={{ ml: 1 }}
-                  onClick={() => changeMode()}
-                  color="inherit"
-                >
-                  {theme.palette.mode === "dark" ? (
-                    <Brightness7Icon />
-                  ) : (
-                    <Brightness4Icon />
-                  )}
-                </IconButton>
-              </Tooltip>
-            </Toolbar>
-          </AppBar>
-          <Route exact path="/">
-            <Home
-              onUserLogin={(token, username, groupNumber) =>
-                handleUserLogin(token, username, groupNumber)
+      <CssBaseline />
+      <Router>
+        <AppBar position="static">
+          <Toolbar>
+            <HubIcon sx={{ mr: 3 }} />
+            <Typography variant="h6">
+              learn-sdn-hub
+              {authenticated ? ` - ${username} (group: ${groupNumber})` : ""}
+            </Typography>
+            <Box sx={{ width: "10px" }} />
+            <Link component={NavigationButton} to="/assignments">
+              Assignments
+            </Link>
+            <Link component={NavigationButton} to="/settings">
+              Settings
+            </Link>
+            <Button color="inherit" onClick={handleUserLogout}>
+              Logout
+            </Button>
+            <Box sx={{ mx: "auto " }} />
+            <Tooltip
+              title={
+                theme.palette.mode === "dark"
+                  ? "Switch to light mode"
+                  : "Switch to dark mode"
               }
-            />
-          </Route>
-          <PrivateRoute isAuthenticated={authenticated} exact path="/assignments">
-            <AssignmentOverview />
-          </PrivateRoute>
-          <PrivateRoute  isAuthenticated={authenticated}  exact  path="/settings">
-            <UserSettings />
-          </PrivateRoute>
-          <PrivateRoute isAuthenticated={authenticated} exact path="/environment/:environment">
-            <Environment />
-          </PrivateRoute>
-        </Router>
-      </React.Fragment>
+            >
+              <IconButton sx={{ ml: 1 }} onClick={changeMode} color="inherit">
+                {theme.palette.mode === "dark" ? (
+                  <Brightness7Icon />
+                ) : (
+                  <Brightness4Icon />
+                )}
+              </IconButton>
+            </Tooltip>
+          </Toolbar>
+        </AppBar>
+        <Route exact path="/">
+          {authenticated ? (
+            <Redirect to="/assignments" />
+          ) : (
+            <Home onUserLogin={handleUserLogin} />
+          )}
+        </Route>
+        <PrivateRoute isAuthenticated={authenticated} exact path="/assignments">
+          <AssignmentOverview />
+        </PrivateRoute>
+        <PrivateRoute isAuthenticated={authenticated} exact path="/settings">
+          <UserSettings />
+        </PrivateRoute>
+        <PrivateRoute
+          isAuthenticated={authenticated}
+          exact
+          path="/environment/:environment"
+        >
+          <Environment />
+        </PrivateRoute>
+      </Router>
     </ThemeProvider>
   );
 }
-
-export default App;

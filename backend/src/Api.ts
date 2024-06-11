@@ -11,11 +11,14 @@ export default (
   provider: InstanceProvider,
 ): Router => {
   const router = Router();
+
   router.use("/api/environment", environmentRoutes(persister, provider));
   router.use("/api/user", userRoutes(authenticationProviders));
-  router.use("/api*", (req, res) => {
+  router.use("/api*", (_req, res) => {
     res.status(404).json({ error: "not_found" });
   });
+
   console.log("API setup finished");
+
   return router;
 };

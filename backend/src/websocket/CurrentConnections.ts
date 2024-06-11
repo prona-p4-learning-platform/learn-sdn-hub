@@ -1,21 +1,22 @@
 // Tracks how many connections are currently active to a specific environment
 // Environment: connectedUsers
-interface ConnectionData {
-  [environment: string]: number;
-}
-
-const connectionData: ConnectionData = {};
+const connectionData = new Map<string, number>();
 
 function changeConnection(environment: string, change: number): number {
-  if (connectionData[environment] !== undefined) {
-    connectionData[environment] += change;
-    return connectionData[environment];
+  const connections = connectionData.get(environment);
+
+  if (connections !== undefined) {
+    const changed = connections + change;
+
+    connectionData.set(environment, changed);
+    return changed;
   } else {
     let initValue = 0;
     if (change > 0) {
       initValue = 1;
     }
-    connectionData[environment] = initValue;
+
+    connectionData.set(environment, initValue);
     return initValue;
   }
 }
@@ -29,8 +30,10 @@ export function removeConnection(environment: string): number {
 }
 
 export function getConnectedCount(environment: string): number {
-  if (connectionData[environment] !== undefined) {
-    return connectionData[environment];
+  const connections = connectionData.get(environment);
+
+  if (connections !== undefined) {
+    return connections;
   } else {
     return 0;
   }
