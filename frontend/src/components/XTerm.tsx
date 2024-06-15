@@ -1,11 +1,5 @@
 import { Terminal, ITerminalAddon, ITerminalOptions } from "xterm";
-import {
-  createRef,
-  forwardRef,
-  useImperativeHandle,
-  useLayoutEffect,
-  useRef,
-} from "react";
+import { createRef, useLayoutEffect } from "react";
 
 import "xterm/css/xterm.css";
 
@@ -107,21 +101,11 @@ interface XTermProps {
   customKeyEventHandler?(this: void, event: KeyboardEvent): boolean;
 }
 
-export interface XTermRef {
-  terminal: Terminal | null;
-}
-
-const XTerm = forwardRef<XTermRef, XTermProps>((props, ref) => {
+export default function XTerm(props: XTermProps): JSX.Element {
   const terminalRef = createRef<HTMLDivElement>();
-  const terminalInstance = useRef<Terminal | null>(null);
-
-  useImperativeHandle(ref, () => ({
-    terminal: terminalInstance.current,
-  }));
 
   useLayoutEffect(() => {
     const terminal = new Terminal(props.options);
-    terminalInstance.current = terminal;
 
     if (terminalRef.current) {
       // open terminal
@@ -160,11 +144,7 @@ const XTerm = forwardRef<XTermRef, XTermProps>((props, ref) => {
       props.onTerminal?.(null);
       terminal.dispose();
     };
-  }, [props, terminalRef]);
+  });
 
   return <div className={props.className} ref={terminalRef} />;
-});
-
-XTerm.displayName = "XTerm";
-
-export default XTerm;
+}

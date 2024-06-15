@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { APIRequest, APIRequestNV } from "../api/Request";
+import TerminalObserver from "../utilities/TerminalObserver";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import type { SubmissionAdminOverviewEntry } from "../typings/submission/SubmissionType";
@@ -20,10 +21,10 @@ import {
   DialogActions,
 } from "@mui/material";
 import { Severity } from "../views/Administration";
-import XTerm, { XTermRef } from "./XTerm";
-import { FitAddon } from "xterm-addon-fit";
 import { Assignment } from "../typings/assignment/AssignmentType";
 import { z } from "zod";
+import SubmissionTerminal from "./SubmissionTerminal";
+import { Terminal } from "xterm";
 
 interface SubmissionProps {
   assignments: Assignment[];
@@ -77,38 +78,7 @@ const SubmissionOverview = ({
   const [pointsDialog, setPointsDialog] = useState<number>(0);
   const [openDialog, setOpenDialog] = useState(false);
 
-  const terminalFitAddons = useRef<FitAddon[]>([]);
-  const xTermRefs = useRef<Record<string, XTermRef | null>>({});
   const xTermContents = useRef<Record<string, string>>({});
-
-  const handleXTermRef = (
-    submissionID: string,
-    endpoint: string,
-    index: number,
-    instance: XTermRef | null,
-  ) => {
-    const key = `${submissionID}_${endpoint}`;
-    if (xTermRefs.current[key]) {
-      return;
-    }
-    xTermRefs.current[key] = instance;
-    terminalFitAddons.current.push(new FitAddon());
-    xTermRefs.current[key]?.terminal?.loadAddon(
-      terminalFitAddons.current[index],
-    );
-    resizeTerminals();
-    handleXTermWrite(key);
-    if (index !== 0) return;
-    fetchTerminalsOfSubmission(submissionID).catch((error) => {
-      console.error("Error fetching terminals:", error);
-    });
-  };
-
-  const resizeTerminals = useCallback(() => {
-    terminalFitAddons.current.forEach((fitAddon) => {
-      fitAddon.fit();
-    });
-  }, []);
 
   useEffect(() => {
     const fetchInitialSubmissions = () => {
@@ -118,11 +88,7 @@ const SubmissionOverview = ({
     };
 
     fetchInitialSubmissions();
-    window.addEventListener("resize", resizeTerminals);
-    return () => {
-      window.removeEventListener("resize", resizeTerminals);
-    };
-  }, [resizeTerminals]);
+  }, []);
 
   const fetchSubmissions = async () => {
     try {
@@ -144,6 +110,14 @@ const SubmissionOverview = ({
 
   const fetchTerminalsOfSubmission = async (submissionID: string) => {
     try {
+      if (
+        Object.keys(xTermContents.current).some((key) =>
+          key.startsWith(submissionID),
+        )
+      ) {
+        return;
+      }
+
       const result = await APIRequest(
         `/admin/submission/${encodeURIComponent(submissionID)}/terminals`,
         terminalStateValidator,
@@ -151,19 +125,26 @@ const SubmissionOverview = ({
 
       if (result.success) {
         for (const terminal of result.data) {
-          xTermContents.current[submissionID + "_" + terminal.endpoint] =
-            terminal.state;
-          handleXTermWrite(
-            submissionID + "_" + terminal.endpoint,
-            terminal.state,
-          );
+          const key = submissionID + "_" + terminal.endpoint;
+          xTermContents.current[key] = terminal.state;
+          TerminalObserver.notify(key, terminal.state);
         }
       } else {
         console.error("Validation error fetching terminals:", result.error);
       }
     } catch (error) {
-      console.error("Error fetching submissions:", error);
+      console.error("Error fetching terminals:", error);
     }
+  };
+
+  const handleFetchTerminalsOfSubmission = (
+    groupSubmissions: SubmissionAdminOverviewEntry[],
+  ) => {
+    groupSubmissions.forEach((submission) => {
+      fetchTerminalsOfSubmission(submission.submissionID).catch((error) => {
+        console.error("Error updating users:", error);
+      });
+    });
   };
 
   const assignPoints = async () => {
@@ -358,17 +339,6 @@ const SubmissionOverview = ({
     setOpenDialog(true);
   };
 
-  const handleXTermWrite = (index: string, text: string | null = null) => {
-    if (text) {
-      xTermRefs.current[index]?.terminal?.clear();
-    } else {
-      text = "Retrieving terminal input...\n";
-    }
-    if (xTermRefs.current[index]) {
-      xTermRefs.current[index]?.terminal?.write(text);
-    }
-  };
-
   const handleExpandAll = () => {
     const expandedArray = submissions.map(
       (submission) => submission.assignmentName,
@@ -491,9 +461,16 @@ const SubmissionOverview = ({
                   <Accordion
                     key={assignmentName + groupNumber}
                     expanded={expanded.includes(assignmentName + groupNumber)}
-                    onChange={() =>
-                      accordionClicked(assignmentName + groupNumber)
-                    }
+                    onChange={() => {
+                      accordionClicked(assignmentName + groupNumber);
+
+                      const firstTimeOpen = !expanded.includes(
+                        assignmentName + groupNumber,
+                      );
+                      if (firstTimeOpen) {
+                        handleFetchTerminalsOfSubmission(groupSubmissions);
+                      }
+                    }}
                   >
                     <AccordionSummary
                       expandIcon={<ExpandMoreIcon />}
@@ -558,12 +535,9 @@ const SubmissionOverview = ({
                               .sort((a, b) => a.localeCompare(b))
                               .map(
                                 (endpoint, index) =>
-                                  (expanded.includes(
+                                  expanded.includes(
                                     assignmentName + groupNumber,
-                                  ) ||
-                                    xTermRefs.current[
-                                      `${submission.submissionID}_${endpoint}`
-                                    ]) && (
+                                  ) && (
                                     <Box
                                       mb={1}
                                       key={`${submission.submissionID}_${index}`}
@@ -592,16 +566,24 @@ const SubmissionOverview = ({
                                           Download as Text File
                                         </Button>
                                       </Box>
-                                      <XTerm
-                                        ref={(instance) =>
-                                          handleXTermRef(
-                                            submission.submissionID,
-                                            endpoint,
-                                            index,
-                                            instance,
-                                          )
-                                        }
-                                        className="myXtermClass"
+                                      <SubmissionTerminal
+                                        key={`${submission.submissionID}_${endpoint}`}
+                                        onTerminalReady={(
+                                          terminal: Terminal,
+                                        ) => {
+                                          if (
+                                            xTermContents.current[
+                                              `${submission.submissionID}_${endpoint}`
+                                            ]
+                                          ) {
+                                            terminal.write(
+                                              xTermContents.current[
+                                                `${submission.submissionID}_${endpoint}`
+                                              ],
+                                            );
+                                          }
+                                        }}
+                                        terminalKey={`${submission.submissionID}_${endpoint}`}
                                       />
                                     </Box>
                                   ),
