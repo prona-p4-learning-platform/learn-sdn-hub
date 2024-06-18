@@ -349,6 +349,7 @@ export default class ProxmoxProvider implements InstanceProvider {
     }
 
     const vmName = `${username}-${groupNumber}-${environment}`;
+    const vmHostname = vmName.replace(/[^a-zA-Z0-9-]/g, "");
     // get next available VM ID
     const vmID = await this.proxmox.cluster.nextid.$get();
     await this.proxmox.nodes
@@ -356,7 +357,7 @@ export default class ProxmoxProvider implements InstanceProvider {
       .lxc.$(parseInt(templateID))
       .clone.$post({
         newid: vmID,
-        hostname: vmName,
+        hostname: vmHostname,
         pool: "learn-sdn-hub",
         target: targetNode.node,
       })
