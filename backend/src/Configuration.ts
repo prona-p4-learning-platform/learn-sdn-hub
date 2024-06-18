@@ -707,3 +707,13 @@ environments.set("KommProt-Ue1-Test", {
 
 
 export default environments;
+
+export function updateEnvironments(
+  updatedEnvironments: Map<string, EnvironmentDescription>
+): void {
+  environments.clear();
+
+  updatedEnvironments.forEach((value, key) => {
+    environments.set(key, value);
+  });
+}

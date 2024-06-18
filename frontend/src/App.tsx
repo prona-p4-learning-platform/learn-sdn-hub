@@ -26,11 +26,13 @@ import Environment from "./views/Environment";
 import PrivateRoute from "./components/PrivateRoute";
 import AssignmentOverview from "./views/AssignmentOverview";
 import UserSettings from "./views/UserSettings";
+import Administration from "./views/Administration";
 import NavigationButton from "./components/NavigationButton";
 
 export default function App(): JSX.Element {
   const [username, setUsername] = useState("");
   const [groupNumber, setGroupNumber] = useState(0);
+  const [role, setRole] = useState("");
   const [authenticated, setAuthenticated] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
 
@@ -51,29 +53,38 @@ export default function App(): JSX.Element {
     if (localStorage.getItem("darkMode") === "true") {
       setDarkMode(true);
     }
+    if (localStorage.getItem("role")) {
+      setRole(localStorage.getItem("role") as string);
+    }
   }, []);
 
   function handleUserLogin(
     token: string,
     username: string,
     groupNumber: number,
+    role?: string,
   ): void {
     setUsername(username);
     setGroupNumber(groupNumber);
     setAuthenticated(true);
+    setRole(role ?? "");
 
     localStorage.setItem("token", token);
     localStorage.setItem("username", username);
     localStorage.setItem("group", groupNumber.toString());
+    if (role) localStorage.setItem("role", role ?? "");
   }
 
   function handleUserLogout(): void {
     setUsername("");
     setGroupNumber(0);
     setAuthenticated(false);
+    setRole("");
     localStorage.removeItem("token");
     localStorage.removeItem("username");
     localStorage.removeItem("group");
+    localStorage.removeItem("role");
+    window.location.reload();
   }
 
   function changeMode() {
@@ -105,6 +116,11 @@ export default function App(): JSX.Element {
             <Link component={NavigationButton} to="/settings">
               Settings
             </Link>
+            {role && role === "admin" && (
+              <Link component={NavigationButton} to="/admin">
+                Administration
+              </Link>
+            )}
             <Button color="inherit" onClick={handleUserLogout}>
               Logout
             </Button>
@@ -145,6 +161,9 @@ export default function App(): JSX.Element {
           path="/environment/:environment"
         >
           <Environment />
+        </PrivateRoute>
+        <PrivateRoute isAuthenticated={authenticated} exact path="/admin">
+          <Administration />
         </PrivateRoute>
       </Router>
     </ThemeProvider>

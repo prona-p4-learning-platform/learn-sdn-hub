@@ -98,6 +98,23 @@ export interface TestResult {
 export interface Submission {
   assignmentName: string;
   lastChanged: Date;
+  points?: number;
+}
+
+export interface SubmissionAdminOverviewEntry extends Submission {
+  submissionID: string;
+  username: string;
+  groupNumber: number;
+  fileNames: string[];
+  terminalEndpoints: string[];
+  assignmentRef?: string;
+  userRef?: string;
+}
+
+export interface SubmissionAdminEntryDetails {
+  submissionID: string;
+  terminalStatus: Array<TerminalStateType>;
+  submittedFiles: Array<SubmissionFileType>;
 }
 
 export type SubmissionFileType = {
@@ -127,6 +144,7 @@ export interface EnvironmentDescription {
   workspaceFolders?: string[];
   useCollaboration?: boolean;
   useLanguageClient?: boolean;
+  maxBonusPoints?: number;
 }
 
 const DenyStartOfMissingInstanceErrorMessage =
