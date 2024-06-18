@@ -122,7 +122,7 @@ export default class SSHConsole extends EventEmitter implements Console {
         sshJumpHostConnection.on("ready", () => {
           sshJumpHostConnection.forwardOut("127.0.0.1", 0, ipaddress, port, (err, stream) => {
             if (err) {
-              console.log("Unable to forward connection on jump host: " + err);
+              console.log("Unable to forward connection on jump host: " + err.message);
               sshConsole.end();
               sshJumpHostConnection.end();
               this.emit("error", err);
