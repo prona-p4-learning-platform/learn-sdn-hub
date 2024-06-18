@@ -122,20 +122,25 @@ export default class SSHConsole extends EventEmitter implements Console {
         sshJumpHostConnection.on("ready", () => {
           sshJumpHostConnection.forwardOut("127.0.0.1", 0, ipaddress, port, (err, stream) => {
             if (err) {
-              console.log("Unable to forward connection on jump host");
+              console.log("Unable to forward connection on jump host: " + err.message);
               sshConsole.end();
               sshJumpHostConnection.end();
-              console.log(err);
               this.emit("error", err);
             } else {
               sshConsole
               .on("ready", () => {
                 console.log("SSH Client connection via jump host :: ready");
               })
-              .on("error", (err) => {
+              .on("close", () => {
+                console.log("SSH Client connection via jump host :: close");
                 sshConsole.end();
                 sshJumpHostConnection.end();
+                this.emit("close");
+              })
+              .on("error", (err) => {
                 console.log(err);
+                sshConsole.end();
+                sshJumpHostConnection.end();
                 this.emit("error", err);
               }).connect({
                 sock: stream,
@@ -148,10 +153,15 @@ export default class SSHConsole extends EventEmitter implements Console {
               });
             }
           });
-        }).on("error", (err) => {
+        }).on("close", () => {
+          console.log("SFTP connection close");
           sshConsole.end();
           sshJumpHostConnection.end();
+          this.emit("close");
+        }).on("error", (err) => {
           console.log(err);
+          sshConsole.end();
+          sshJumpHostConnection.end();
           this.emit("error", err);
         }).connect({
           host: jumpHost.ipaddress,

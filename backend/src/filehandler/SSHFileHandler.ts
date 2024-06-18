@@ -44,10 +44,16 @@ export default class SSHFileHandler {
                   .on("ready", () => {
                     console.log("SFTP connection via jump host :: ready");
                   })
-                  .on("error", (err) => {
+                  .on("close", () => {
+                    console.log("SFTP connection via jump host :: close");
                     this.client.end();
                     sshJumpHostConnection.end();
+                    this.hasClosed = true;
+                  })
+                  .on("error", (err) => {
                     console.log(err);
+                    this.client.end();
+                    sshJumpHostConnection.end();
                     this.hasErrored = true;
                   })
                   .connect({
