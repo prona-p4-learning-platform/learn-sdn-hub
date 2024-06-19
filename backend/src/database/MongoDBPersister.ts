@@ -1,5 +1,5 @@
 import { ClientSession, MongoClient, ObjectId, PullOperator } from "mongodb";
-import { hash } from "bcrypt";
+import { hash } from "@node-rs/bcrypt";
 import {
   Persister,
   UserEnvironment,

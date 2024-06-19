@@ -397,7 +397,7 @@ const Administration = (): JSX.Element => {
         autoHideDuration={6000}
         onClose={handleSnackbarClose}
       >
-        <Alert severity={fetchNotification.severity as Severity}>
+        <Alert severity={fetchNotification.severity}>
           {fetchNotification.result}
         </Alert>
       </Snackbar>

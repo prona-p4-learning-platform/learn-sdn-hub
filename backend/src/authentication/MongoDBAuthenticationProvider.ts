@@ -3,7 +3,7 @@ import {
   AuthenticationResult,
 } from "./AuthenticationProvider";
 import MongoDBPersister from "../database/MongoDBPersister";
-import { compare } from "bcrypt";
+import { compare } from "@node-rs/bcrypt";
 import { EnvironmentDescription } from "../Environment";
 
 /*

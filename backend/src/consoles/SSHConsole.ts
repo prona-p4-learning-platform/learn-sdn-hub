@@ -4,7 +4,7 @@ import fs from "fs";
 
 export interface Console {
   on(
-    event: "ready" | "close" | "closed" | "stdout" | "stderr" | "finished",
+    event: "ready" | "close" | "closed" | "finished",
     listener: () => void,
   ): this;
   on(event: "data", listener: (data: string) => void): this;
@@ -27,6 +27,8 @@ export interface JumpHost {
 }
 
 type CustomizedSSHClient = Client & {
+  on(event: "stdout" | "stderr", listener: (data: string) => void): CustomizedSSHClient;
+  on(event: "finished", listener: (code: string, signal: string) => void): CustomizedSSHClient;
   ready: boolean;
   environmentId: string;
   username: string;
