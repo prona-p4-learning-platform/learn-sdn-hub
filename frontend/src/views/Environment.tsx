@@ -428,7 +428,7 @@ class EnvironmentView extends Component<PropsType, StateType> {
   componentDidUpdate() {
     mermaid.initialize({});
     mermaid
-      .run({nodes: document.querySelectorAll("code.language-mermaid")})
+      .run({ nodes: document.querySelectorAll("code.language-mermaid") })
       .catch((reason: unknown) => {
         console.log("DEBUG: Initializing mermaid failed\n", reason);
       });

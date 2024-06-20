@@ -270,7 +270,7 @@ export default class ProxmoxProvider implements InstanceProvider {
     groupNumber: number,
     environment: string,
     options: {
-      proxmoxTemplateTag?: string,
+      proxmoxTemplateTag?: string;
     },
   ): Promise<VMEndpoint> {
     let proxmoxTemplateTag = options.proxmoxTemplateTag;
@@ -421,11 +421,13 @@ export default class ProxmoxProvider implements InstanceProvider {
 
     let new_net0 = config.net0;
     if (new_net0?.match(/ip=(?:[0-9]{1,3}\.){3}[0-9]{1,3}\/[0-9]*/)) {
-      new_net0 = new_net0?.replace(/ip=(?:[0-9]{1,3}\.){3}[0-9]{1,3}\/[0-9]*/,
+      new_net0 = new_net0?.replace(
+        /ip=(?:[0-9]{1,3}\.){3}[0-9]{1,3}\/[0-9]*/,
         "ip=" + vmIPAddress + "/" + this.networkCIDR.bitmask,
       );
     } else if (new_net0?.match(/ip=dhcp/)) {
-      new_net0 = new_net0?.replace(/ip=dhcp/,
+      new_net0 = new_net0?.replace(
+        /ip=dhcp/,
         "ip=" + vmIPAddress + "/" + this.networkCIDR.bitmask,
       );
     } else {
@@ -433,7 +435,10 @@ export default class ProxmoxProvider implements InstanceProvider {
         new_net0 + ",ip=" + vmIPAddress + "/" + this.networkCIDR.bitmask;
     }
     if (new_net0?.match(/gw=(?:[0-9]{1,3}\.){3}[0-9]{1,3}/)) {
-      new_net0 = new_net0?.replace(/gw=(?:[0-9]{1,3}\.){3}[0-9]{1,3}/, "gw=" + this.gatewayIP);
+      new_net0 = new_net0?.replace(
+        /gw=(?:[0-9]{1,3}\.){3}[0-9]{1,3}/,
+        "gw=" + this.gatewayIP,
+      );
     } else {
       new_net0 = new_net0 + ",gw=" + this.gatewayIP;
     }
@@ -890,24 +895,36 @@ export default class ProxmoxProvider implements InstanceProvider {
 
         sshJumpHostConnection
           .on("ready", () => {
-            console.log("ProxmoxProvider: SSH jump host connection ready. Trying to forward and connect to instance.");
+            console.log(
+              "ProxmoxProvider: SSH jump host connection ready. Trying to forward and connect to instance.",
+            );
 
-            sshJumpHostConnection.exec('nc -w 1 '+ip+' '+port, (err, stream) => {
+            sshJumpHostConnection.exec(
+              "nc -w 1 " + ip + " " + port,
+              (err, stream) => {
                 if (err) {
-                  console.log("ProxmoxProvider: SSH connection forward failed. " + err.message);
+                  console.log(
+                    "ProxmoxProvider: SSH connection forward failed. " +
+                      err.message,
+                  );
                   sshConnection.end();
                   sshJumpHostConnection.end();
                   reject(err);
                 } else {
                   sshConnection
                     .on("ready", () => {
-                      console.log("ProxmoxProvider: SSH instance connection ready.");
+                      console.log(
+                        "ProxmoxProvider: SSH instance connection ready.",
+                      );
                       sshConnection.end();
                       sshJumpHostConnection.end();
                       resolve(true);
                     })
                     .on("error", (err) => {
-                      console.log("ProxmoxProvider: SSH instance connection error. " + err.message);
+                      console.log(
+                        "ProxmoxProvider: SSH instance connection error. " +
+                          err.message,
+                      );
                       sshConnection.end();
                       sshJumpHostConnection.end();
                       reject(err);
@@ -926,10 +943,12 @@ export default class ProxmoxProvider implements InstanceProvider {
                     });
                 }
               },
-            );  
+            );
           })
           .on("error", (err) => {
-            console.log("ProxmoxProvider: SSH jump host connection error. " + err.message);
+            console.log(
+              "ProxmoxProvider: SSH jump host connection error. " + err.message,
+            );
             sshConnection.end();
             sshJumpHostConnection.end();
             reject(err);

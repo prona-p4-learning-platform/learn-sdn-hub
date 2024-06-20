@@ -5,7 +5,7 @@ export interface VMEndpoint {
   providerInstanceStatus: string;
   IPAddress: string;
   SSHPort: number;
-  SSHJumpHost?: JumpHost,
+  SSHJumpHost?: JumpHost;
   LanguageServerPort: number;
   RemoteDesktopPort?: number;
 }
@@ -20,14 +20,14 @@ export interface InstanceProvider {
     groupNumber: number,
     environment: string,
     options?: {
-        image?: string,
-        dockerCmd?: string,
-        dockerSupplementalPorts?: string[],
-        kernelImage?: string,
-        kernelBootARGs?: string,
-        rootDrive?: string,
-        proxmoxTemplateTag?: string,
-    }
+      image?: string;
+      dockerCmd?: string;
+      dockerSupplementalPorts?: string[];
+      kernelImage?: string;
+      kernelBootARGs?: string;
+      rootDrive?: string;
+      proxmoxTemplateTag?: string;
+    },
   ): Promise<VMEndpoint>;
   getServer(instance: string): Promise<VMEndpoint>;
   deleteServer(instance: string): Promise<void>;

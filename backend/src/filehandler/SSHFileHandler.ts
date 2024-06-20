@@ -7,11 +7,7 @@ export default class SSHFileHandler {
   private hasClosed = false;
   private hasErrored = false;
 
-  constructor(
-    ipaddress: string,
-    port: number,
-    jumpHost?: JumpHost,
-  ) {
+  constructor(ipaddress: string, port: number, jumpHost?: JumpHost) {
     this.client = new Client();
     if (jumpHost?.ipaddress !== undefined) {
       console.log(
@@ -80,7 +76,9 @@ export default class SSHFileHandler {
           port: jumpHost.port,
           username: jumpHost.username,
           password: jumpHost.password,
-          privateKey: jumpHost.privateKey ? fs.readFileSync(jumpHost.privateKey) : undefined,
+          privateKey: jumpHost.privateKey
+            ? fs.readFileSync(jumpHost.privateKey)
+            : undefined,
           //debug: (debug) => {
           //  console.log(debug);
           //},
