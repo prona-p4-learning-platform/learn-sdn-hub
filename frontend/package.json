@@ -37,7 +37,7 @@
     "react-router-dom": "^5.3.4",
     "vscode-ws-jsonrpc": "^1.0.2",
     "web-vitals": "^2.1.4",
-    "xterm": "^5.2.0",
+    "xterm": "5.2.1",
     "xterm-addon-attach": "^0.9.0",
     "xterm-addon-fit": "^0.8.0",
     "xterm-addon-serialize": "^0.11.0",
