@@ -32,7 +32,7 @@ import { useHistory } from "react-router-dom";
 type Severity = AlertColor | undefined;
 
 interface PointLimits {
-  [assignment: string]: number;
+  [assignment: string]: number | undefined;
 }
 
 interface SubmissionType {
@@ -450,15 +450,16 @@ export default function AssignmentOverview(): JSX.Element {
                           submission.assignmentName === assignment,
                       );
                       const hasSubmission = !!submission;
+                      const pointLimit = pointLimits[assignment];
                       let percentage = 0;
+
                       if (
                         hasSubmission &&
                         submission.points !== undefined &&
-                        pointLimits[assignment] !== undefined &&
-                        pointLimits[assignment] !== 0
+                        pointLimit !== undefined &&
+                        pointLimit !== 0
                       ) {
-                        percentage =
-                          (submission.points / pointLimits[assignment]) * 100;
+                        percentage = (submission.points / pointLimit) * 100;
                       }
 
                       return (
@@ -483,8 +484,8 @@ export default function AssignmentOverview(): JSX.Element {
                           <Box sx={{ width: "50px", ml: 1 }}>
                             <Typography variant="body2" color="text.secondary">
                               {hasSubmission
-                                ? `${submission?.points ? submission?.points : "?"} / ${pointLimits[assignment]}`
-                                : `0 / ${pointLimits[assignment]}`}
+                                ? `${submission?.points ? submission?.points : "?"} / ${pointLimit}`
+                                : `0 / ${pointLimit}`}
                             </Typography>
                           </Box>
                         </>

@@ -1,4 +1,5 @@
 import { Alert, Grid, Snackbar } from "@mui/material";
+import type { AlertColor } from "@mui/material";
 import AdminTabs from "../components/AdminTabs";
 import UserAssignment from "../components/UserAssignment";
 import { useCallback, useEffect, useState } from "react";
@@ -11,7 +12,7 @@ import AddEntryDialog from "../components/AddEntryDialog";
 import SubmissionOverview from "../components/SubmissionOverview";
 import { z } from "zod";
 
-export type Severity = "error" | "success" | "info" | "warning" | undefined;
+export type Severity = AlertColor | undefined;
 
 const assignmentValidator = z.object({
   _id: z.string(),

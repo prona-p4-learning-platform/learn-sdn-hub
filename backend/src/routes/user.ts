@@ -50,7 +50,8 @@ export default (authProviders: AuthenticationProvider[]): Router => {
       const loggedInUser = reqWithUser.user.username;
 
       let tempAssignmentMap = new Map(environments);
-      let pointsMap = new Map();
+      let pointsMap = new Map<string, number>();
+
       for (const authProvider of authProviders) {
         tempAssignmentMap = await authProvider.filterAssignmentList(
           loggedInUser,
@@ -66,7 +67,7 @@ export default (authProviders: AuthenticationProvider[]): Router => {
               }
               return acc;
             },
-            new Map(),
+            new Map<string, number>(),
           ),
         );
       }

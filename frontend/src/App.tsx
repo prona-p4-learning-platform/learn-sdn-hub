@@ -46,15 +46,19 @@ export default function App(): JSX.Element {
       setUsername(username);
     }
 
-    if (localStorage.getItem("group") !== null) {
-      setGroupNumber(parseInt(localStorage.getItem("group") ?? "0"));
+    const group = localStorage.getItem("group");
+    if (group !== null) {
+      const parsedGroup = parseInt(group, 10);
+      setGroupNumber(isNaN(parsedGroup) ? 0 : parsedGroup);
     }
 
     if (localStorage.getItem("darkMode") === "true") {
       setDarkMode(true);
     }
-    if (localStorage.getItem("role")) {
-      setRole(localStorage.getItem("role") as string);
+
+    const roleName = localStorage.getItem("role");
+    if (roleName !== null) {
+      setRole(roleName);
     }
   }, []);
 
@@ -62,17 +66,17 @@ export default function App(): JSX.Element {
     token: string,
     username: string,
     groupNumber: number,
-    role?: string,
+    role = "",
   ): void {
     setUsername(username);
     setGroupNumber(groupNumber);
     setAuthenticated(true);
-    setRole(role ?? "");
+    setRole(role);
 
     localStorage.setItem("token", token);
     localStorage.setItem("username", username);
-    localStorage.setItem("group", groupNumber.toString());
-    if (role) localStorage.setItem("role", role ?? "");
+    localStorage.setItem("group", groupNumber.toString(10));
+    localStorage.setItem("role", role);
   }
 
   function handleUserLogout(): void {
@@ -80,11 +84,11 @@ export default function App(): JSX.Element {
     setGroupNumber(0);
     setAuthenticated(false);
     setRole("");
+
     localStorage.removeItem("token");
     localStorage.removeItem("username");
     localStorage.removeItem("group");
     localStorage.removeItem("role");
-    window.location.reload();
   }
 
   function changeMode() {
@@ -110,20 +114,24 @@ export default function App(): JSX.Element {
               {authenticated ? ` - ${username} (group: ${groupNumber})` : ""}
             </Typography>
             <Box sx={{ width: "10px" }} />
-            <Link component={NavigationButton} to="/assignments">
-              Assignments
-            </Link>
-            <Link component={NavigationButton} to="/settings">
-              Settings
-            </Link>
-            {role && role === "admin" && (
-              <Link component={NavigationButton} to="/admin">
-                Administration
-              </Link>
+            {authenticated && (
+              <>
+                <Link component={NavigationButton} to="/assignments">
+                  Assignments
+                </Link>
+                <Link component={NavigationButton} to="/settings">
+                  Settings
+                </Link>
+                {role === "admin" && (
+                  <Link component={NavigationButton} to="/admin">
+                    Administration
+                  </Link>
+                )}
+                <Button color="inherit" onClick={handleUserLogout}>
+                  Logout
+                </Button>
+              </>
             )}
-            <Button color="inherit" onClick={handleUserLogout}>
-              Logout
-            </Button>
             <Box sx={{ mx: "auto " }} />
             <Tooltip
               title={
