@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { createTheme } from "@mui/material/styles";
 import {
   Box,
@@ -13,11 +14,10 @@ import {
   ListItem,
   ListItemText,
   ListItemSecondaryAction,
-  Snackbar,
   Tooltip,
   Typography,
 } from "@mui/material";
-import type { AlertColor } from "@mui/material";
+import { useSnackbar } from "notistack";
 import { FetchError } from "ofetch";
 import { z } from "zod";
 
@@ -25,11 +25,7 @@ import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import CloudOffIcon from "@mui/icons-material/CloudOff";
 import PlayCircleFilledWhiteIcon from "@mui/icons-material/PlayCircleFilledWhite";
 
-import Alert from "../components/Alert";
 import { APIRequest, getHttpError } from "../api/Request";
-import { useHistory } from "react-router-dom";
-
-type Severity = AlertColor | undefined;
 
 interface PointLimits {
   [assignment: string]: number | undefined;
@@ -56,7 +52,8 @@ const submissionsValidator = z.array(
 );
 const defaultValidator = z.object({});
 
-export default function AssignmentOverview(): JSX.Element {
+function Assignments(): JSX.Element {
+  const { enqueueSnackbar, closeSnackbar } = useSnackbar();
   const [assignments, setAssignments] = useState<string[]>([]);
   const [submittedAssignments, setSubmittedAssignments] = useState<
     SubmissionType[]
@@ -68,11 +65,6 @@ export default function AssignmentOverview(): JSX.Element {
     string[]
   >([]);
   const [pointLimits, setPointLimits] = useState<PointLimits>({});
-  const [deploymentNotification, setDeploymentNotification] = useState({
-    result: "",
-    severity: undefined as Severity,
-    open: false,
-  });
   const [confirmationUndeployDialogOpen, setConfirmationUndeployDialogOpen] =
     useState({ assignment: "", dialogOpen: false });
   const [confirmationResubmitDialogOpen, setConfirmationResubmitDialogOpen] =
@@ -255,11 +247,11 @@ export default function AssignmentOverview(): JSX.Element {
 
   const createEnvironment = useCallback(
     async (assignment: string) => {
-      setDeploymentNotification({
-        result: "Creating virtual environment... please wait...",
-        severity: "info",
-        open: true,
+      const creatingSnack = enqueueSnackbar("Creating virtual environment...", {
+        variant: "info",
+        persist: true,
       });
+
       try {
         await APIRequest("/environment/create", defaultValidator, {
           method: "POST",
@@ -268,12 +260,7 @@ export default function AssignmentOverview(): JSX.Element {
           },
         });
 
-        setDeploymentNotification({
-          result: "Deployment successful!",
-          severity: "success",
-          open: true,
-        });
-
+        enqueueSnackbar("Deployment successful!", { variant: "success" });
         updateDeployedEnvironments();
       } catch (error) {
         if (error instanceof FetchError) {
@@ -282,30 +269,28 @@ export default function AssignmentOverview(): JSX.Element {
             ? httpError.data.message
             : httpError.error.message;
 
-          setDeploymentNotification({
-            result: "Deployment failed! (" + message + ")",
-            severity: "error",
-            open: true,
+          enqueueSnackbar("Deployment failed! (" + message + ")", {
+            variant: "error",
           });
         } else {
-          setDeploymentNotification({
-            result: "Deployment error while connecting to backend!",
-            severity: "error",
-            open: true,
+          enqueueSnackbar("Deployment error while connecting to backend!", {
+            variant: "error",
           });
         }
       }
+
+      closeSnackbar(creatingSnack);
     },
-    [updateDeployedEnvironments],
+    [updateDeployedEnvironments, enqueueSnackbar, closeSnackbar],
   );
 
   const deleteEnvironment = useCallback(
     async (assignment: string) => {
-      setDeploymentNotification({
-        result: "Deleting virtual environment... please wait...",
-        severity: "info",
-        open: true,
+      const deletingSnack = enqueueSnackbar("Deleting virtual environment...", {
+        variant: "info",
+        persist: true,
       });
+
       try {
         await APIRequest("/environment/delete", defaultValidator, {
           method: "POST",
@@ -314,12 +299,9 @@ export default function AssignmentOverview(): JSX.Element {
           },
         });
 
-        setDeploymentNotification({
-          result: "Deployment deletion successful!",
-          severity: "success",
-          open: true,
+        enqueueSnackbar("Deployment deletion successful!", {
+          variant: "success",
         });
-
         updateDeployedEnvironments();
       } catch (error) {
         if (error instanceof FetchError) {
@@ -328,25 +310,26 @@ export default function AssignmentOverview(): JSX.Element {
             ? httpError.data.message
             : httpError.error.message;
 
-          setDeploymentNotification({
-            result: "Deployment deletion failed! (" + message + ")",
-            severity: "error",
-            open: true,
+          enqueueSnackbar("Deployment deletion failed! (" + message + ")", {
+            variant: "error",
           });
         } else {
-          setDeploymentNotification({
-            result: "Deployment deletion error while connecting to backend!",
-            severity: "error",
-            open: true,
-          });
+          enqueueSnackbar(
+            "Deployment deletion error while connecting to backend!",
+            {
+              variant: "error",
+            },
+          );
         }
       }
+
+      closeSnackbar(deletingSnack);
     },
-    [updateDeployedEnvironments],
+    [updateDeployedEnvironments, enqueueSnackbar, closeSnackbar],
   );
 
   const theme = createTheme();
-  const history = useHistory();
+  const navigate = useNavigate();
 
   return (
     <div>
@@ -402,7 +385,7 @@ export default function AssignmentOverview(): JSX.Element {
                 startIcon={<PlayCircleFilledWhiteIcon />}
                 disabled={!isActiveDeployment(assignment)}
                 onClick={() => {
-                  history.push(`/environment/${assignment}`);
+                  navigate(`/environment/${assignment}`);
                 }}
                 sx={{ margin: theme.spacing(1) }}
               >
@@ -507,14 +490,6 @@ export default function AssignmentOverview(): JSX.Element {
             </ListItemSecondaryAction>
           </ListItem>
         ))}
-        <Snackbar
-          open={deploymentNotification.open}
-          anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
-        >
-          <Alert severity={deploymentNotification.severity}>
-            {deploymentNotification.result}
-          </Alert>
-        </Snackbar>
         <Dialog
           open={confirmationUndeployDialogOpen.dialogOpen}
           onClose={handleConfirmationUndeployDialogClose}
@@ -580,3 +555,6 @@ export default function AssignmentOverview(): JSX.Element {
     </div>
   );
 }
+
+export const Component = Assignments;
+export default Assignments;

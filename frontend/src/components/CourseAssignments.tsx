@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import {
   FormControl,
   Grid,
@@ -6,22 +7,23 @@ import {
   Select,
   SelectChangeEvent,
 } from "@mui/material";
-import { useEffect, useState } from "react";
-import { APIRequest } from "../api/Request";
-import LoadingButton from "@mui/lab/LoadingButton";
-import SaveIcon from "@mui/icons-material/Save";
-import { not } from "../utilities/ListCompareHelper";
-import AssignmentList from "./ListAssignment";
+import { LoadingButton } from "@mui/lab";
+import { Save as SaveIcon } from "@mui/icons-material";
+import { useSnackbar } from "notistack";
+import { z } from "zod";
+
 import type { Assignment } from "../typings/assignment/AssignmentType";
 import type { Course } from "../typings/course/CourseType";
-import { Severity } from "../views/Administration";
-import { z } from "zod";
+
+import AssignmentList from "./ListAssignment";
+
+import { not } from "../utilities/ListCompareHelper";
+import { APIRequest } from "../api/Request";
 
 interface AssignmentProps {
   assignments: Assignment[];
   courses: Course[];
   openAddCourseDialog: () => void;
-  handleFetchNotification: (message: string, severity: Severity) => void;
 }
 
 const defaultValidator = z.object({});
@@ -30,8 +32,8 @@ const CourseAssignment = ({
   assignments,
   courses,
   openAddCourseDialog,
-  handleFetchNotification,
 }: AssignmentProps): JSX.Element => {
+  const { enqueueSnackbar } = useSnackbar();
   const [currentCourseID, setCurrentCourseID] = useState("");
   const [checked, setChecked] = useState<readonly Assignment[]>([]);
   const [unassignedAssignments, setUnassignedAssignments] = useState<
@@ -73,23 +75,20 @@ const CourseAssignment = ({
         )?.name;
         setHasChanges(false);
         setOriginalAssignedAssignments(assignedAssignments);
-        handleFetchNotification(
-          `Assignments(s) for course ${courseName} updated!`,
-          "success",
-        );
+        enqueueSnackbar(`Assignments(s) for course ${courseName} updated!`, {
+          variant: "success",
+        });
         refreshAssignmentsArray(currentCourseID, assignmentIDs);
       } else {
-        handleFetchNotification(
-          `Error updating assignments: ${result.error.message}`,
-          "error",
-        );
+        enqueueSnackbar(`Error updating assignments: ${result.error.message}`, {
+          variant: "error",
+        });
       }
     } catch (error) {
       if (error instanceof Error)
-        handleFetchNotification(
-          `Error updating assignments: ${error.message}`,
-          "error",
-        );
+        enqueueSnackbar(`Error updating assignments: ${error.message}`, {
+          variant: "error",
+        });
     } finally {
       setWaitForResponse(false);
     }

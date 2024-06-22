@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import {
   FormControl,
   Grid,
@@ -6,22 +7,23 @@ import {
   Select,
   SelectChangeEvent,
 } from "@mui/material";
-import { useEffect, useState } from "react";
-import { APIRequest } from "../api/Request";
+import { LoadingButton } from "@mui/lab";
+import { Save as SaveIcon } from "@mui/icons-material";
+import { useSnackbar } from "notistack";
+import { z } from "zod";
+
 import type { User } from "../typings/user/UserType";
 import type { Course } from "../typings/course/CourseType";
-import LoadingButton from "@mui/lab/LoadingButton";
-import SaveIcon from "@mui/icons-material/Save";
-import { not } from "../utilities/ListCompareHelper";
+
 import AssignmentList from "./ListAssignment";
-import { Severity } from "../views/Administration";
-import { z } from "zod";
+
+import { not } from "../utilities/ListCompareHelper";
+import { APIRequest } from "../api/Request";
 
 interface UserAssignmentProps {
   users: User[];
   courses: Course[];
   openAddCourseDialog: () => void;
-  handleFetchNotification: (message: string, severity: Severity) => void;
 }
 
 type CourseUserAction = {
@@ -39,8 +41,8 @@ const UserAssignment = ({
   users,
   courses,
   openAddCourseDialog,
-  handleFetchNotification,
 }: UserAssignmentProps): JSX.Element => {
+  const { enqueueSnackbar } = useSnackbar();
   const [currentCourseID, setCurrentCourseID] = useState("");
   const [checked, setChecked] = useState<readonly User[]>([]);
   const [unassignedUsers, setUnassignedUsers] = useState<User[]>([]);
@@ -79,21 +81,19 @@ const UserAssignment = ({
         )?.name;
         setHasChanges(false);
         setOriginalAssignedUsers(assignedUsers);
-        handleFetchNotification(
-          `User(s) for course ${courseName} updated!`,
-          "success",
-        );
+        enqueueSnackbar(`User(s) for course ${courseName} updated!`, {
+          variant: "success",
+        });
         refreshUsersArray(currentCourseID, dataToSend);
       } else {
-        handleFetchNotification(
-          `Error updating users: ${result.error.message}`,
-          "error",
-        );
+        enqueueSnackbar(`Error updating users: ${result.error.message}`, {
+          variant: "error",
+        });
       }
     } catch (error) {
       if (error instanceof Error)
-        handleFetchNotification(error.message, "error");
-      else handleFetchNotification("An unknown error occurred", "error");
+        enqueueSnackbar(error.message, { variant: "error" });
+      else enqueueSnackbar("An unknown error occurred", { variant: "error" });
     } finally {
       setWaitForResponse(false);
     }

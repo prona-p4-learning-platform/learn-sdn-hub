@@ -1,18 +1,19 @@
-import { Alert, Grid, Snackbar } from "@mui/material";
-import type { AlertColor } from "@mui/material";
-import AdminTabs from "../components/AdminTabs";
-import UserAssignment from "../components/UserAssignment";
 import { useCallback, useEffect, useState } from "react";
-import { APIRequest } from "../api/Request";
+import { Grid } from "@mui/material";
+import { useSnackbar } from "notistack";
+import { z } from "zod";
+
 import type { User } from "../typings/user/UserType";
 import type { Assignment } from "../typings/assignment/AssignmentType";
 import type { Course } from "../typings/course/CourseType";
+
+import AdminTabs from "../components/AdminTabs";
+import UserAssignment from "../components/UserAssignment";
 import CourseAssignments from "../components/CourseAssignments";
 import AddEntryDialog from "../components/AddEntryDialog";
 import SubmissionOverview from "../components/SubmissionOverview";
-import { z } from "zod";
 
-export type Severity = AlertColor | undefined;
+import { APIRequest } from "../api/Request";
 
 const assignmentValidator = z.object({
   _id: z.string(),
@@ -52,18 +53,27 @@ const messageValidator = z.object({
   id: z.string().optional(),
 });
 
-const Administration = (): JSX.Element => {
+function Administration(): JSX.Element {
+  console.log("Administration");
+  const { enqueueSnackbar } = useSnackbar();
   const [authorized, setAuthorized] = useState(false);
   const [load, setLoad] = useState(true);
   const [users, setUsers] = useState<User[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
-  const [fetchNotification, setFetchNotification] = useState({
-    result: "",
-    severity: undefined as Severity,
-    open: false,
-  });
   const [openDialog, setOpenDialog] = useState<boolean>(false);
+
+  const showError = useCallback(
+    (error: unknown) => {
+      if (error instanceof Error) {
+        enqueueSnackbar(error.message, { variant: "error" });
+      } else {
+        enqueueSnackbar("An unknown error occurred", { variant: "error" });
+      }
+      console.error("Error fetching data:", error);
+    },
+    [enqueueSnackbar],
+  );
 
   const addLocalAssignmentsToDB = useCallback(async () => {
     try {
@@ -83,7 +93,7 @@ const Administration = (): JSX.Element => {
     } catch (error) {
       showError(error);
     }
-  }, []);
+  }, [showError]);
 
   const fetchAssignments = useCallback(async () => {
     if (!authorized) return;
@@ -132,7 +142,7 @@ const Administration = (): JSX.Element => {
     //       open: true,
     //     });
     //   });
-  }, [addLocalAssignmentsToDB, authorized]);
+  }, [addLocalAssignmentsToDB, authorized, showError]);
 
   const fetchCourses = useCallback(async () => {
     if (!authorized) return;
@@ -161,7 +171,17 @@ const Administration = (): JSX.Element => {
     //     setCourses([...data, { _id: "new", name: "Create New Course" }]);
     //   })
     //   .catch((error) => console.error("Error fetching courses:", error));
-  }, [authorized]);
+  }, [authorized, showError]);
+
+  const handleAuthorization = useCallback(
+    (authorized: boolean, message?: string) => {
+      setAuthorized(authorized);
+      if (!authorized && message) {
+        enqueueSnackbar(message, { variant: "error" });
+      }
+    },
+    [enqueueSnackbar],
+  );
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -214,24 +234,14 @@ const Administration = (): JSX.Element => {
     //       open: true,
     //     });
     //   });
-  }, [load, fetchAssignments, fetchCourses]);
-
-  const showError = (error: unknown) => {
-    if (error instanceof Error) {
-      setFetchNotification({
-        result: error.message,
-        severity: "error",
-        open: true,
-      });
-    } else {
-      setFetchNotification({
-        result: "An unknown error occurred",
-        severity: "error",
-        open: true,
-      });
-    }
-    console.error("Error fetching data:", error);
-  };
+  }, [
+    load,
+    fetchAssignments,
+    fetchCourses,
+    handleAuthorization,
+    showError,
+    enqueueSnackbar,
+  ]);
 
   const openCreateNewCourseModal = () => {
     setOpenDialog(true);
@@ -277,12 +287,7 @@ const Administration = (): JSX.Element => {
       );
 
       if (result.success) {
-        setFetchNotification({
-          result: result.data.message,
-          severity: "success",
-          open: true,
-        });
-
+        enqueueSnackbar(result.data.message, { variant: "success" });
         setCourses((prevCourses) => {
           const secondToLastIndex = prevCourses.length - 1;
           if (result.data.id === undefined) return prevCourses;
@@ -336,28 +341,13 @@ const Administration = (): JSX.Element => {
     // });
   };
 
-  const handleSnackbarClose = () => {
-    setFetchNotification({ ...fetchNotification, open: false });
-  };
-
-  const handleFetchNotification = (message: string, severity: Severity) => {
-    setFetchNotification({
-      result: message,
-      severity: severity,
-      open: true,
-    });
-  };
-
-  const handleAuthorization = (authorized: boolean, message?: string) => {
-    setAuthorized(authorized);
-    if (!authorized && message) {
-      setFetchNotification({
-        result: message,
-        severity: "error",
-        open: true,
-      });
-    }
-  };
+  // const handleFetchNotification = (message: string, severity: Severity) => {
+  //   setFetchNotification({
+  //     result: message,
+  //     severity: severity,
+  //     open: true,
+  //   });
+  // };
 
   return (
     <Grid container spacing={0}>
@@ -375,33 +365,20 @@ const Administration = (): JSX.Element => {
               users={users}
               courses={courses}
               openAddCourseDialog={openCreateNewCourseModal}
-              handleFetchNotification={handleFetchNotification}
             ></UserAssignment>
             <CourseAssignments
               key="assignAssignments"
               assignments={assignments}
               courses={courses}
               openAddCourseDialog={openCreateNewCourseModal}
-              handleFetchNotification={handleFetchNotification}
             ></CourseAssignments>
             <SubmissionOverview
               key="submissionOverview"
               assignments={assignments}
-              handleFetchNotification={handleFetchNotification}
             ></SubmissionOverview>
           </AdminTabs>
         </Grid>
       ) : null}
-      <Snackbar
-        open={fetchNotification.open}
-        anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
-        autoHideDuration={6000}
-        onClose={handleSnackbarClose}
-      >
-        <Alert severity={fetchNotification.severity}>
-          {fetchNotification.result}
-        </Alert>
-      </Snackbar>
       <AddEntryDialog
         open={openDialog}
         onClose={() => setOpenDialog(false)}
@@ -416,6 +393,7 @@ const Administration = (): JSX.Element => {
       ></AddEntryDialog>
     </Grid>
   );
-};
+}
 
+export const Component = Administration;
 export default Administration;

@@ -1,22 +1,10 @@
-import { useState, useCallback, FormEvent } from "react";
-import { Box, Button, Container, Snackbar, TextField } from "@mui/material";
-import type { AlertColor } from "@mui/material";
+import { useCallback, FormEvent } from "react";
+import { Box, Button, Container, TextField } from "@mui/material";
+import { useSnackbar } from "notistack";
 import { z } from "zod";
-import { useHistory } from "react-router-dom";
 
-import Alert from "./Alert";
+import { useAuthStore } from "../stores/authStore";
 import { APIRequest } from "../api/Request";
-
-type Severity = AlertColor | undefined;
-
-export interface LoginFormProps {
-  onSuccessfulAuthentication: (
-    token: string,
-    username: string,
-    groupNumber: number,
-    role?: string,
-  ) => void;
-}
 
 const loginValidator = z.object({
   token: z.string().min(1),
@@ -25,14 +13,9 @@ const loginValidator = z.object({
   role: z.string().optional(),
 });
 
-export default function LoginForm(props: LoginFormProps): JSX.Element {
-  const history = useHistory();
-
-  const { onSuccessfulAuthentication } = props;
-
-  const [notificationOpen, setNotificationOpen] = useState(false);
-  const [loginResult, setLoginResult] = useState("");
-  const [loginSeverity, setLoginSeverity] = useState<Severity>("error");
+export default function Login(): JSX.Element {
+  const { enqueueSnackbar } = useSnackbar();
+  const { setAuthentication } = useAuthStore();
 
   const loginRequest = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {
@@ -52,31 +35,21 @@ export default function LoginForm(props: LoginFormProps): JSX.Element {
         if (request.success) {
           const data = request.data;
 
-          setLoginResult("Auth successful!");
-          setLoginSeverity("success");
-          setNotificationOpen(true);
-          onSuccessfulAuthentication(
-            data.token,
+          enqueueSnackbar("Authentication successful!", { variant: "success" });
+          setAuthentication(
             data.username,
             data.groupNumber,
+            data.token,
             data.role,
           );
-
-          history.push("/assignments");
         } else throw request.error;
       } catch (error) {
         console.error(error);
-        setLoginResult("Auth failed!");
-        setLoginSeverity("error");
-        setNotificationOpen(true);
+        enqueueSnackbar("Authentication failed!", { variant: "error" });
       }
     },
-    [onSuccessfulAuthentication, history],
+    [enqueueSnackbar, setAuthentication],
   );
-
-  const handleNotificationClose = () => {
-    setNotificationOpen(false);
-  };
 
   return (
     <Container component="main" maxWidth="xs">
@@ -124,15 +97,6 @@ export default function LoginForm(props: LoginFormProps): JSX.Element {
           </Button>
         </Box>
       </Box>
-      <Snackbar
-        open={notificationOpen}
-        autoHideDuration={6000}
-        onClose={handleNotificationClose}
-      >
-        <Alert onClose={handleNotificationClose} severity={loginSeverity}>
-          {loginResult}
-        </Alert>
-      </Snackbar>
     </Container>
   );
 }

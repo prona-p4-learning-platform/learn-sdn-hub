@@ -1,8 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { APIRequest, APIRequestNV } from "../api/Request";
-import TerminalObserver from "../utilities/TerminalObserver";
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
-import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import type { SubmissionAdminOverviewEntry } from "../typings/submission/SubmissionType";
 import {
   Menu,
@@ -20,15 +16,23 @@ import {
   DialogContent,
   DialogActions,
 } from "@mui/material";
-import { Severity } from "../views/Administration";
-import { Assignment } from "../typings/assignment/AssignmentType";
+import {
+  ExpandMore as ExpandMoreIcon,
+  KeyboardArrowDown as KeyboardArrowDownIcon,
+} from "@mui/icons-material";
+import { useSnackbar } from "notistack";
 import { z } from "zod";
-import SubmissionTerminal from "./SubmissionTerminal";
 import { Terminal } from "xterm";
+
+import { Assignment } from "../typings/assignment/AssignmentType";
+
+import SubmissionTerminal from "./SubmissionTerminal";
+
+import TerminalObserver from "../utilities/TerminalObserver";
+import { APIRequest, APIRequestNV } from "../api/Request";
 
 interface SubmissionProps {
   assignments: Assignment[];
-  handleFetchNotification: (message: string, severity: Severity) => void;
 }
 
 interface PointsError {
@@ -61,10 +65,8 @@ const terminalStateValidator = z.array(terminalStateSchema);
 
 const defaultValidator = z.object({});
 
-const SubmissionOverview = ({
-  assignments,
-  handleFetchNotification,
-}: SubmissionProps): JSX.Element => {
+const SubmissionOverview = ({ assignments }: SubmissionProps): JSX.Element => {
+  const { enqueueSnackbar } = useSnackbar();
   const [submissions, setSubmissions] = useState<
     SubmissionAdminOverviewEntry[]
   >([]);
@@ -164,11 +166,10 @@ const SubmissionOverview = ({
       );
 
       if (result.success) {
-        handleFetchNotification(
+        enqueueSnackbar(
           `Successfully awarded ${pointsDialog} bonus points to ${getUserOfSubmission(submissionIDDialog)} for ${assignmentNameDialog}`,
-          "success",
+          { variant: "success" },
         );
-
         setSubmissions((prevSubmissions) =>
           prevSubmissions.map((submission) =>
             submission.submissionID === submissionIDDialog
@@ -178,12 +179,12 @@ const SubmissionOverview = ({
         );
       } else {
         console.error("Validation error assigning points:", result.error);
-        handleFetchNotification(result.error.message, "error");
+        enqueueSnackbar(result.error.message, { variant: "error" });
       }
     } catch (error) {
       console.error("Error assigning points:", error);
       if (error instanceof Error)
-        handleFetchNotification(error.message, "error");
+        enqueueSnackbar(error.message, { variant: "error" });
       else console.error(error);
     }
   };
@@ -307,9 +308,9 @@ const SubmissionOverview = ({
     event.preventDefault();
     const maxPoints = getMaxPointsOfAssignment(assignmentName);
     if (maxPoints === undefined) {
-      handleFetchNotification(
+      enqueueSnackbar(
         "Error awarding bonus points: Assignment has no max points set",
-        "error",
+        { variant: "error" },
       );
       return;
     } else if (
@@ -317,18 +318,18 @@ const SubmissionOverview = ({
       Number(points) > maxPoints ||
       Number(points) < 0
     ) {
-      handleFetchNotification(
+      enqueueSnackbar(
         `Error awarding bonus points: Points must be between 0 and ${maxPoints}`,
-        "error",
+        { variant: "error" },
       );
       return;
     } else if (
       Number(points) ===
       submissions.find((s) => s.submissionID === submissionID)?.points
     ) {
-      handleFetchNotification(
+      enqueueSnackbar(
         `Error awarding bonus points: Points are the same as before`,
-        "error",
+        { variant: "error" },
       );
       return;
     }
@@ -407,7 +408,7 @@ const SubmissionOverview = ({
       link.parentNode?.removeChild(link);
     } catch (error) {
       if (error instanceof Error)
-        handleFetchNotification(error.message, "error");
+        enqueueSnackbar(error.message, { variant: "error" });
     }
   };
 
