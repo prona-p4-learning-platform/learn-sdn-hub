@@ -15,7 +15,6 @@ import {
   TooltipProps,
   tooltipClasses,
 } from "@mui/material";
-import type { AlertColor } from "@mui/material";
 import { enqueueSnackbar, closeSnackbar } from "notistack";
 import { FetchError } from "ofetch";
 import { z } from "zod";
@@ -89,8 +88,6 @@ const contentValidator = z.object({
   location: z.string().optional(),
 });
 
-type Severity = AlertColor | undefined;
-
 interface Disposable {
   dispose: () => void;
 }
@@ -101,9 +98,6 @@ interface State {
   currentFileChanged: boolean;
   currentFileLSPLanguage: string;
   currentFilePath: string;
-  editorResult: string;
-  editorSeverity: Severity;
-  editorNotificationOpen: boolean;
   editorConfirmationDialogOpen: boolean;
 }
 
@@ -174,9 +168,6 @@ export default class FileEditor extends Component<FileEditorProps> {
       currentFileChanged: false,
       currentFileLSPLanguage: "",
       currentFilePath: "",
-      editorResult: "",
-      editorSeverity: "info",
-      editorNotificationOpen: false,
       editorConfirmationDialogOpen: false,
     };
 
