@@ -394,7 +394,6 @@ const SubmissionOverview = ({ assignments }: SubmissionProps): JSX.Element => {
           submissionID,
         )}/file/download/${encodeURIComponent(fileName)}`,
         {
-          headers: { authorization: localStorage.getItem("token") || "" },
           responseType: "blob",
         },
       );

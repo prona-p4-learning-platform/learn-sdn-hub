@@ -54,7 +54,6 @@ const messageValidator = z.object({
 });
 
 function Administration(): JSX.Element {
-  console.log("Administration");
   const { enqueueSnackbar } = useSnackbar();
   const [authorized, setAuthorized] = useState(false);
   const [load, setLoad] = useState(true);

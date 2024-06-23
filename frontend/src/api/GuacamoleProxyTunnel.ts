@@ -1,5 +1,7 @@
 import Guacamole from "guacamole-common-js";
 
+import { useAuthStore } from "../stores/authStore";
+
 /**
  * Guacamole Tunnel implemented over WebSocket Proxy.
  * Based on Guacamole WebSocket Tunnel (guacamole-common.js).
@@ -80,7 +82,7 @@ export class GuacamoleProxyTunnel extends Guacamole.WebSocketTunnel {
       this.socket.onopen = (event) => {
         if ((event.target as WebSocket).readyState !== WebSocket.OPEN) return;
         // Send authentication token to backend
-        this.socket?.send(`auth ${localStorage.getItem("token")}`);
+        this.socket?.send(`auth ${useAuthStore.getState().token}`);
 
         this.reset_timeout();
 

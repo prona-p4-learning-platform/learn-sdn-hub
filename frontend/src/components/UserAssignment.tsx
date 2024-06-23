@@ -68,7 +68,6 @@ const UserAssignment = ({
         {
           method: "POST",
           headers: {
-            authorization: localStorage.getItem("token") || "",
             "Content-Type": "application/json",
           },
           body: JSON.stringify(dataToSend),
