@@ -1,7 +1,7 @@
 import { ThemeProvider } from "@emotion/react";
 import { CssBaseline } from "@mui/material";
-import { SnackbarProvider } from "notistack";
-import { createTheme } from "@mui/material/styles";
+import { SnackbarProvider, MaterialDesignContent } from "notistack";
+import { createTheme, styled } from "@mui/material/styles";
 
 import { useOptionsStore } from "./stores/optionsStore";
 
@@ -20,13 +20,40 @@ export default function Theme(): JSX.Element {
       mode: darkMode ? "dark" : "light",
     },
   });
+  const ColorSwitchingSnackbar = styled(MaterialDesignContent)(() => ({
+    "&.notistack-MuiContent-success": {
+      backgroundColor: darkMode
+        ? theme.palette.success.dark
+        : theme.palette.success.light,
+    },
+    "&.notistack-MuiContent-error": {
+      backgroundColor: darkMode
+        ? theme.palette.error.dark
+        : theme.palette.error.light,
+    },
+    "&.notistack-MuiContent-info": {
+      backgroundColor: darkMode
+        ? theme.palette.info.dark
+        : theme.palette.info.light,
+    },
+    "&.notistack-MuiContent-warning": {
+      backgroundColor: darkMode
+        ? theme.palette.warning.dark
+        : theme.palette.warning.light,
+    },
+  }));
 
-  // TODO: handle dark mode for notistack
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <SnackbarProvider
         anchorOrigin={{ horizontal: "left", vertical: "bottom" }}
+        Components={{
+          info: ColorSwitchingSnackbar,
+          success: ColorSwitchingSnackbar,
+          error: ColorSwitchingSnackbar,
+          warning: ColorSwitchingSnackbar,
+        }}
       >
         <Routings />
       </SnackbarProvider>
