@@ -110,6 +110,7 @@ function Environment(): JSX.Element {
   const { environmentName } = useParams();
   const { enqueueSnackbar, closeSnackbar } = useSnackbar();
   const { darkMode } = useOptionsStore();
+  const [prevDarkMode, setPrevDarkMode] = useState<boolean>(darkMode);
   const [graphs, setGraphs] = useState<string[]>([]);
   const [assignment, setAssignment] = useState<string>("");
   const [instanceStatus, setInstanceStatus] = useState<string>("");
@@ -398,25 +399,36 @@ function Environment(): JSX.Element {
   }, [assignment]);
 
   useEffect(() => {
-    // render mermaid graphs in every render call
-    const elements = document.querySelectorAll<HTMLElement>("code.language-mermaid");
+    // replace mermaid graphs in markdown with saved graphs when dark mode changes
+    if (darkMode !== prevDarkMode) {
+      const elements = document.querySelectorAll<HTMLElement>(
+        "code.language-mermaid",
+      );
 
-    // remove processed data attribute and replace content with saved graph code
-    for (let i = 0; i < elements.length; i++) {
-      const currentElement = elements[i];
-      const isTagged = currentElement.hasAttribute("data-processed");
+      // remove processed data attribute and replace content with saved graph code
+      for (let i = 0; i < elements.length; i++) {
+        const currentElement = elements[i];
+        const isTagged = currentElement.hasAttribute("data-processed");
 
-      if (isTagged) {
-        currentElement.removeAttribute("data-processed");
-        currentElement.innerHTML = graphs[i];
+        if (isTagged) {
+          currentElement.removeAttribute("data-processed");
+          currentElement.innerHTML = graphs[i];
+        }
       }
-    }
 
-    // after code blocks are restored, render mermaid graphs
+      setPrevDarkMode(darkMode);
+    }
+  }, [darkMode, prevDarkMode, graphs]);
+
+  useEffect(() => {
+    // render mermaid graphs in every render call
+    // already processed code blocks are tagged so it should be quite fast
     mermaid
-      .run({ nodes: elements })
+      .run({
+        nodes: document.querySelectorAll<HTMLElement>("code.language-mermaid"),
+      })
       .catch((reason: unknown) => {
-        console.log("DEBUG: Initializing mermaid failed\n", reason);
+        console.log("DEBUG: Failed to render mermaid graphs\n", reason);
       });
   });
 
