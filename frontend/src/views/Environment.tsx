@@ -110,6 +110,7 @@ function Environment(): JSX.Element {
   const { environmentName } = useParams();
   const { enqueueSnackbar, closeSnackbar } = useSnackbar();
   const { darkMode } = useOptionsStore();
+  const [graphs, setGraphs] = useState<string[]>([]);
   const [assignment, setAssignment] = useState<string>("");
   const [instanceStatus, setInstanceStatus] = useState<string>("");
   const [environmentStatus, setEnvironmentStatus] = useState<string>("running");
@@ -369,7 +370,6 @@ function Environment(): JSX.Element {
       ?.state;
   }
 
-  // component did mount
   useEffect(() => {
     // TODO: offload into router loader
     loadEnvironmentConfig();
@@ -377,18 +377,48 @@ function Environment(): JSX.Element {
     loadProviderInstanceStatus();
   }, [loadEnvironmentConfig, loadAssignment, loadProviderInstanceStatus]);
 
-  // handle mermaid rendering
   useEffect(() => {
-    // TODO: switching color mode does not re-render mermaid graphs
+    // initialize mermaid with every color mode change
     mermaid.initialize({
       theme: darkMode ? "dark" : "default",
     });
+  }, [darkMode]);
+
+  useEffect(() => {
+    // save mermaid graphs from markdown as code blocks are removed from the DOM...
+    // -> we do this every time the assignment changes (best case scenario: only once)
+    const elements = document.querySelectorAll("code.language-mermaid");
+    const newGraphs: string[] = [];
+
+    for (const element of elements) {
+      newGraphs.push(element.innerHTML);
+    }
+
+    setGraphs(newGraphs);
+  }, [assignment]);
+
+  useEffect(() => {
+    // render mermaid graphs in every render call
+    const elements = document.querySelectorAll<HTMLElement>("code.language-mermaid");
+
+    // remove processed data attribute and replace content with saved graph code
+    for (let i = 0; i < elements.length; i++) {
+      const currentElement = elements[i];
+      const isTagged = currentElement.hasAttribute("data-processed");
+
+      if (isTagged) {
+        currentElement.removeAttribute("data-processed");
+        currentElement.innerHTML = graphs[i];
+      }
+    }
+
+    // after code blocks are restored, render mermaid graphs
     mermaid
-      .run({ nodes: document.querySelectorAll("code.language-mermaid") })
+      .run({ nodes: elements })
       .catch((reason: unknown) => {
         console.log("DEBUG: Initializing mermaid failed\n", reason);
       });
-  }, [darkMode, assignment]);
+  });
 
   return (
     <>
