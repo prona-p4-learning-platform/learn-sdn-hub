@@ -1,8 +1,8 @@
 import { useState, useCallback, FormEvent } from "react";
-import { useHistory } from "react-router-dom";
 import { Box, Button, Container, Snackbar, TextField } from "@mui/material";
 import type { AlertColor } from "@mui/material";
 import { z } from "zod";
+import { useHistory } from "react-router-dom";
 
 import Alert from "./Alert";
 import { APIRequest } from "../api/Request";
@@ -14,6 +14,7 @@ export interface LoginFormProps {
     token: string,
     username: string,
     groupNumber: number,
+    role?: string,
   ) => void;
 }
 
@@ -21,6 +22,7 @@ const loginValidator = z.object({
   token: z.string().min(1),
   username: z.string().min(1),
   groupNumber: z.number().nonnegative(),
+  role: z.string().optional(),
 });
 
 export default function LoginForm(props: LoginFormProps): JSX.Element {
@@ -57,11 +59,13 @@ export default function LoginForm(props: LoginFormProps): JSX.Element {
             data.token,
             data.username,
             data.groupNumber,
+            data.role,
           );
 
           history.push("/assignments");
         } else throw request.error;
-      } catch {
+      } catch (error) {
+        console.error(error);
         setLoginResult("Auth failed!");
         setLoginSeverity("error");
         setNotificationOpen(true);

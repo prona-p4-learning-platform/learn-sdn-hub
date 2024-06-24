@@ -18,6 +18,23 @@ if (MONGODB_URL) {
       new OpenStackProvider(),
     ),
   );
+
+  if (process.env.BACKEND_ASSIGNMENT_TYPE === "mongodb") {
+    console.log("Attempting to add missing assignments to persister.");
+    try {
+      persister
+        .CreateAssignments()
+        .then(async () => {
+          console.log("Attempting to load environments from persister.");
+          await persister.LoadEnvironments();
+        })
+        .catch((error) => {
+          console.error("Error creating assignments:", error);
+        });
+    } catch (err) {
+      console.error(err);
+    }
+  }
 } else {
   console.log("MongoDB URL not set. Aborting...");
   process.exit(1);

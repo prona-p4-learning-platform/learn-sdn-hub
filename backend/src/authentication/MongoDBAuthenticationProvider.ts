@@ -3,7 +3,7 @@ import {
   AuthenticationResult,
 } from "./AuthenticationProvider";
 import MongoDBPersister from "../database/MongoDBPersister";
-import { compare } from "bcrypt";
+import { compare } from "@node-rs/bcrypt";
 import { EnvironmentDescription } from "../Environment";
 
 /*
@@ -40,6 +40,7 @@ export default class MongoDBAuthenticationProvider
         userid: user._id,
         groupNumber: user.groupNumber,
         type: "mongodb",
+        role: user.role,
       };
     }
     throw new Error("AuthenticationError");
@@ -78,8 +79,30 @@ export default class MongoDBAuthenticationProvider
     assignmentList: Map<string, EnvironmentDescription>,
   ): Promise<Map<string, EnvironmentDescription>> {
     const user = await this.persister.GetUserAccount(username);
-
-    if (user.assignmentListFilter !== undefined) {
+    if (
+      process.env.BACKEND_ASSIGNMENT_TYPE !== undefined &&
+      process.env.BACKEND_ASSIGNMENT_TYPE === "mongodb"
+    ) {
+      try {
+        if (user.courses !== undefined) {
+          const assignments = await this.persister.GetUserAssignments(user);
+          const assignmentNames = assignments.map(
+            (assignment) => assignment.name,
+          );
+          for (const key of assignmentList.keys()) {
+            if (!assignmentNames.includes(key)) {
+              assignmentList.delete(key);
+            }
+          }
+        } else {
+          assignmentList.clear();
+        }
+      } catch (e) {
+        assignmentList.clear();
+        console.log(e);
+      }
+      return assignmentList;
+    } else if (user.assignmentListFilter !== undefined) {
       const tempRegex = user.assignmentListFilter;
       for (const key of assignmentList.keys()) {
         if (key.match(tempRegex) == null) {

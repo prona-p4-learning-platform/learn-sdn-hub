@@ -162,10 +162,10 @@ export default class DockerProvider implements InstanceProvider {
     groupNumber: number,
     environment: string,
     options: {
-        image?: string,
-        dockerCmd?: string,
-        dockerSupplementalPorts?: string[],
-      },
+      image?: string;
+      dockerCmd?: string;
+      dockerSupplementalPorts?: string[];
+    },
   ): Promise<VMEndpoint> {
     const containerImage = options.image ?? this.image;
     const containerCmd = options.dockerCmd ?? this.cmd;
@@ -178,7 +178,10 @@ export default class DockerProvider implements InstanceProvider {
     ];
 
     // append additionally configured ports
-    if (options.dockerSupplementalPorts && options.dockerSupplementalPorts.length > 0)
+    if (
+      options.dockerSupplementalPorts &&
+      options.dockerSupplementalPorts.length > 0
+    )
       containerPorts = containerPorts.concat(options.dockerSupplementalPorts);
 
     const exposedPorts: Record<string, object> = {};

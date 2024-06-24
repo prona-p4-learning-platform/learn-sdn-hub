@@ -26,11 +26,13 @@ import Environment from "./views/Environment";
 import PrivateRoute from "./components/PrivateRoute";
 import AssignmentOverview from "./views/AssignmentOverview";
 import UserSettings from "./views/UserSettings";
+import Administration from "./views/Administration";
 import NavigationButton from "./components/NavigationButton";
 
 export default function App(): JSX.Element {
   const [username, setUsername] = useState("");
   const [groupNumber, setGroupNumber] = useState(0);
+  const [role, setRole] = useState("");
   const [authenticated, setAuthenticated] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
 
@@ -44,12 +46,19 @@ export default function App(): JSX.Element {
       setUsername(username);
     }
 
-    if (localStorage.getItem("group") !== null) {
-      setGroupNumber(parseInt(localStorage.getItem("group") ?? "0"));
+    const group = localStorage.getItem("group");
+    if (group !== null) {
+      const parsedGroup = parseInt(group, 10);
+      setGroupNumber(isNaN(parsedGroup) ? 0 : parsedGroup);
     }
 
     if (localStorage.getItem("darkMode") === "true") {
       setDarkMode(true);
+    }
+
+    const roleName = localStorage.getItem("role");
+    if (roleName !== null) {
+      setRole(roleName);
     }
   }, []);
 
@@ -57,23 +66,29 @@ export default function App(): JSX.Element {
     token: string,
     username: string,
     groupNumber: number,
+    role = "",
   ): void {
     setUsername(username);
     setGroupNumber(groupNumber);
     setAuthenticated(true);
+    setRole(role);
 
     localStorage.setItem("token", token);
     localStorage.setItem("username", username);
-    localStorage.setItem("group", groupNumber.toString());
+    localStorage.setItem("group", groupNumber.toString(10));
+    localStorage.setItem("role", role);
   }
 
   function handleUserLogout(): void {
     setUsername("");
     setGroupNumber(0);
     setAuthenticated(false);
+    setRole("");
+
     localStorage.removeItem("token");
     localStorage.removeItem("username");
     localStorage.removeItem("group");
+    localStorage.removeItem("role");
   }
 
   function changeMode() {
@@ -99,15 +114,24 @@ export default function App(): JSX.Element {
               {authenticated ? ` - ${username} (group: ${groupNumber})` : ""}
             </Typography>
             <Box sx={{ width: "10px" }} />
-            <Link component={NavigationButton} to="/assignments">
-              Assignments
-            </Link>
-            <Link component={NavigationButton} to="/settings">
-              Settings
-            </Link>
-            <Button color="inherit" onClick={handleUserLogout}>
-              Logout
-            </Button>
+            {authenticated && (
+              <>
+                <Link component={NavigationButton} to="/assignments">
+                  Assignments
+                </Link>
+                <Link component={NavigationButton} to="/settings">
+                  Settings
+                </Link>
+                {role === "admin" && (
+                  <Link component={NavigationButton} to="/admin">
+                    Administration
+                  </Link>
+                )}
+                <Button color="inherit" onClick={handleUserLogout}>
+                  Logout
+                </Button>
+              </>
+            )}
             <Box sx={{ mx: "auto " }} />
             <Tooltip
               title={
@@ -145,6 +169,9 @@ export default function App(): JSX.Element {
           path="/environment/:environment"
         >
           <Environment />
+        </PrivateRoute>
+        <PrivateRoute isAuthenticated={authenticated} exact path="/admin">
+          <Administration />
         </PrivateRoute>
       </Router>
     </ThemeProvider>

@@ -439,10 +439,10 @@ export default class FirecrackerProvider implements InstanceProvider {
     groupNumber: number,
     environment: string,
     options?: {
-      kernelImage?: string,
-      kernelBootARGs?: string,
-      rootFSDrive?: string,
-    }
+      kernelImage?: string;
+      kernelBootARGs?: string;
+      rootFSDrive?: string;
+    },
   ): Promise<VMEndpoint> {
     const kernelImage = options?.kernelImage;
     const kernelBootARGs = options?.kernelBootARGs;

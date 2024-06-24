@@ -29,7 +29,7 @@ function isString(data: unknown): data is string {
 /**
  * Create a new fetch method with defaults and integrated validation.
  * Built around json payloads. If you want to send/receive other
- * payloads use ofetch.create() directly.
+ * payloads use $fetch.create() directly.
  *
  * @param defaults The fetch defaults.
  * @returns A fetch method which uses the given defaults.
@@ -173,6 +173,21 @@ export const APIBasePath = import.meta.env.VITE_REACT_APP_API_HOST
  * Fetch method for API requests.
  */
 export const APIRequest = createCustomFetch({
+  baseURL: APIBasePath,
+  timeout: 30000,
+  onRequest: (context) => {
+    // inject auth token if possible
+    const token = localStorage.getItem("token") ?? undefined;
+    context.options.headers ??= {};
+
+    addRequestHeader(context.options.headers, "authorization", token);
+  },
+});
+
+/**
+ * Fetch method for API requests without validation.
+ */
+export const APIRequestNV = $fetch.create({
   baseURL: APIBasePath,
   timeout: 30000,
   onRequest: (context) => {

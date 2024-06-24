@@ -29,7 +29,6 @@ export default (authProviders: AuthenticationProvider[]): Router => {
           tempAssignmentMap,
         );
       }
-
       return tempAssignmentMap;
     };
 
@@ -43,6 +42,43 @@ export default (authProviders: AuthenticationProvider[]): Router => {
 
         res.status(500).json({ status: "error", message });
       });
+  });
+
+  router.get("/point-limits", authenticationMiddleware, (req, res) => {
+    (async () => {
+      const reqWithUser = req as RequestWithUser;
+      const loggedInUser = reqWithUser.user.username;
+
+      let tempAssignmentMap = new Map(environments);
+      let pointsMap = new Map<string, number>();
+
+      for (const authProvider of authProviders) {
+        tempAssignmentMap = await authProvider.filterAssignmentList(
+          loggedInUser,
+          tempAssignmentMap,
+        );
+
+        // Only include entries that have maxBonusPoints set
+        pointsMap = new Map(
+          Array.from(tempAssignmentMap.entries()).reduce(
+            (acc, [key, value]) => {
+              if (value.maxBonusPoints !== undefined) {
+                acc.set(key, value.maxBonusPoints);
+              }
+              return acc;
+            },
+            new Map<string, number>(),
+          ),
+        );
+      }
+
+      return res.status(200).json(Object.fromEntries(pointsMap));
+    })().catch((err) => {
+      let message = "Unknown error";
+      if (err instanceof Error) message = err.message;
+
+      return res.status(500).json({ status: "error", message });
+    });
   });
 
   router.post("/login", json(), loginValidator, (req, res) => {
@@ -62,6 +98,7 @@ export default (authProviders: AuthenticationProvider[]): Router => {
               username: result.username,
               id: result.userid,
               groupNumber: result.groupNumber,
+              ...(result.role && { role: result.role }),
             },
             /* TODO: replace secret */
             "some-secret",
@@ -69,9 +106,12 @@ export default (authProviders: AuthenticationProvider[]): Router => {
 
           console.log(result, token);
 
-          res
-            .status(200)
-            .json({ token, username, groupNumber: result.groupNumber });
+          res.status(200).json({
+            token,
+            username,
+            groupNumber: result.groupNumber,
+            ...(result.role && { role: result.role }),
+          });
           return;
         } catch (err) {
           console.log("error!", err);

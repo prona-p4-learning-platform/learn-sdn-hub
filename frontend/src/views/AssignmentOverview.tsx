@@ -1,12 +1,14 @@
 import { useState, useEffect, useCallback } from "react";
 import { createTheme } from "@mui/material/styles";
 import {
+  Box,
   Button,
   Checkbox,
   Dialog,
   DialogActions,
   DialogContent,
   DialogContentText,
+  LinearProgress,
   List,
   ListItem,
   ListItemText,
@@ -29,12 +31,18 @@ import { useHistory } from "react-router-dom";
 
 type Severity = AlertColor | undefined;
 
+interface PointLimits {
+  [assignment: string]: number | undefined;
+}
+
 interface SubmissionType {
   assignmentName: string;
   lastChanged: Date;
+  points?: number;
 }
 
 const assignmentsValidator = z.array(z.string());
+const pointsValidator = z.record(z.number());
 const deployedUserEnvsValidator = z.array(z.string());
 const deployedGroupEnvsValidator = z.array(z.string());
 const submissionsValidator = z.array(
@@ -43,6 +51,7 @@ const submissionsValidator = z.array(
     lastChanged: z.string().transform((value) => {
       return new Date(value);
     }),
+    points: z.number().optional(),
   }),
 );
 const defaultValidator = z.object({});
@@ -58,6 +67,7 @@ export default function AssignmentOverview(): JSX.Element {
   const [deployedGroupAssignments, setDeployedGroupAssignments] = useState<
     string[]
   >([]);
+  const [pointLimits, setPointLimits] = useState<PointLimits>({});
   const [deploymentNotification, setDeploymentNotification] = useState({
     result: "",
     severity: undefined as Severity,
@@ -121,6 +131,30 @@ export default function AssignmentOverview(): JSX.Element {
     }
   };
 
+  const showPointsTooltip = (assignment: string) => {
+    const submission = submittedAssignments.find(
+      (element) => element.assignmentName === assignment,
+    );
+    if (submission !== undefined && submission.points) {
+      return (
+        "You have earned " +
+        submission.points +
+        " out of " +
+        pointLimits[assignment] +
+        " bonus points."
+      );
+    } else if (submission !== undefined && !submission.points) {
+      return "The submission was not graded yet.";
+    } else if (
+      pointLimits[assignment] !== undefined &&
+      pointLimits[assignment] !== 0
+    ) {
+      return "You can earn bonus points by submitting this assignment!";
+    } else {
+      return "No bonus points available for this assignment.";
+    }
+  };
+
   // regularly fetch assignments and environments as users might work
   // in groups - an environment could be started from a different user
   useEffect(() => {
@@ -132,6 +166,16 @@ export default function AssignmentOverview(): JSX.Element {
       })
       .catch(() => {
         console.log("Fetching assignments failed...");
+      });
+
+    APIRequest("/user/point-limits", pointsValidator)
+      .then((payload) => {
+        if (payload.success) {
+          setPointLimits(payload.data);
+        } else throw payload.error;
+      })
+      .catch(() => {
+        console.log("Fetching point limits failed...");
       });
 
     const update = () => {
@@ -313,7 +357,7 @@ export default function AssignmentOverview(): JSX.Element {
             and open a connection by clicking deploy.
           </Typography>
         )}
-      <List component="nav" aria-label="assignment list" style={{ width: 800 }}>
+      <List component="nav" aria-label="assignment list" style={{ width: 940 }}>
         {assignments.map((assignment) => (
           <ListItem key={assignment}>
             <ListItemText primary={assignment} />
@@ -395,6 +439,71 @@ export default function AssignmentOverview(): JSX.Element {
                   }}
                 />
               </Tooltip>
+              {pointLimits[assignment] ? (
+                <Tooltip title={showPointsTooltip(assignment)}>
+                  <Box
+                    sx={{ display: "inline-flex", alignItems: "center", ml: 2 }}
+                  >
+                    {(() => {
+                      const submission = submittedAssignments.find(
+                        (submission) =>
+                          submission.assignmentName === assignment,
+                      );
+                      const hasSubmission = !!submission;
+                      const pointLimit = pointLimits[assignment];
+                      let percentage = 0;
+
+                      if (
+                        hasSubmission &&
+                        submission.points !== undefined &&
+                        pointLimit !== undefined &&
+                        pointLimit !== 0
+                      ) {
+                        percentage = (submission.points / pointLimit) * 100;
+                      }
+
+                      return (
+                        <>
+                          <Box sx={{ width: "100px" }}>
+                            <LinearProgress
+                              variant={
+                                (hasSubmission && submission.points) ||
+                                !hasSubmission
+                                  ? "determinate"
+                                  : undefined
+                              }
+                              value={
+                                (hasSubmission && submission.points) ||
+                                !hasSubmission
+                                  ? percentage
+                                  : undefined
+                              }
+                              color={hasSubmission ? "primary" : "warning"}
+                            />
+                          </Box>
+                          <Box sx={{ width: "50px", ml: 1 }}>
+                            <Typography variant="body2" color="text.secondary">
+                              {hasSubmission
+                                ? `${submission?.points ? submission?.points : "?"} / ${pointLimit}`
+                                : `0 / ${pointLimit}`}
+                            </Typography>
+                          </Box>
+                        </>
+                      );
+                    })()}
+                  </Box>
+                </Tooltip>
+              ) : (
+                <Box
+                  sx={{ display: "inline-flex", alignItems: "center", ml: 2 }}
+                >
+                  <Box sx={{ width: "158px" }}>
+                    <Typography variant="body2" color="text.secondary">
+                      No bonus points
+                    </Typography>
+                  </Box>
+                </Box>
+              )}
             </ListItemSecondaryAction>
           </ListItem>
         ))}

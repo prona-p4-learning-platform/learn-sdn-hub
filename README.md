@@ -205,6 +205,33 @@ the use of MongoDB Atlas service.
 export MONGODB_URL="mongodb+srv://admin:password-here@cluster0.tdnvj.mongodb.net/learn-sdn-hub?retryWrites=true&w=majority"
 ```
 
+### MongoDB Default Structure
+
+The default configuration for MongoDB is to use the following collections:
+- assignments
+- courses
+- submissions
+- users
+
+### Using MongoDB to filter assignments
+
+If you want to use MongoDB to filter assignments based on the assigned courses in the admin panel, you can use the following environment variable:
+
+```sh
+export BACKEND_ASSIGNMENT_TYPE="mongodb"
+```
+
+Ommitting this environment variable or providing another value will use the default filtering provided by a Regex String or by the assignments configured in the environment variable:
+
+```sh
+BACKEND_USER_ALLOWED_ASSIGNMENTS
+```
+
+### Assigning points to submissions
+
+If you want to be able to assign points to subimssions, you need to set ``maxBonusPoints`` in the assignment configuration file. The points can then be assigned in the admin panel.
+For MongoDB you can also set the ``maxBonusPoints`` in the assignment document of the ``assignments`` collection as an ``Int32``.
+
 ### Enable Collaboration
 
 Users in the same group can use collaboration to work in the editor together.

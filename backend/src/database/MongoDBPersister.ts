@@ -1,13 +1,30 @@
-import { MongoClient } from "mongodb";
-import { hash } from "bcrypt";
-import { Persister, UserEnvironment, UserAccount } from "./Persister";
+import { ClientSession, MongoClient, ObjectId, PullOperator } from "mongodb";
+import { hash } from "@node-rs/bcrypt";
 import {
+  Persister,
+  UserEnvironment,
+  UserAccount,
+  UserData,
+  CourseData,
+  ResponseObject,
+  AssignmentData,
+  FileData,
+} from "./Persister";
+import {
+  EnvironmentDescription,
   Submission,
+  SubmissionAdminOverviewEntry,
   SubmissionFileType,
   TerminalStateType,
 } from "../Environment";
+import environments, { updateEnvironments } from "../Configuration";
 
 const saltRounds = 10;
+
+interface EnvironmentDocument extends EnvironmentDescription {
+  _id: string;
+  name: string;
+}
 
 interface EnvironmentEntry {
   environment: string;
@@ -25,7 +42,7 @@ interface UserEntry {
   environments: EnvironmentEntry[];
 }
 
-interface SubmissionEntry {
+export interface SubmissionEntry {
   _id?: string;
   username: string;
   groupNumber: number;
@@ -33,6 +50,12 @@ interface SubmissionEntry {
   submissionCreated: Date;
   terminalStatus: TerminalStateType[];
   submittedFiles: SubmissionFileType[];
+  points?: number;
+}
+
+interface SubmissionAdminEntry extends SubmissionEntry {
+  fileNames: string[];
+  terminalEndpoints: string[];
 }
 
 export default class MongoDBPersister implements Persister {
@@ -43,7 +66,6 @@ export default class MongoDBPersister implements Persister {
   constructor(url: string) {
     this.connectURL = url;
   }
-
   private async getClient(): Promise<MongoClient> {
     if (!this.connectPromise) {
       this.connectPromise = MongoClient.connect(this.connectURL);
@@ -230,6 +252,7 @@ export default class MongoDBPersister implements Persister {
           submissions.push({
             assignmentName: submission.environment,
             lastChanged: submission.submissionCreated,
+            points: submission.points,
           });
         }
 
@@ -240,6 +263,404 @@ export default class MongoDBPersister implements Persister {
           "Unable to retrieve submissions of user or group.\n" + err,
         );
       });
+  }
+
+  async GetAllUsers(): Promise<UserData[]> {
+    const client = await this.getClient();
+    return client
+      .db()
+      .collection<UserData>("users")
+      .find(
+        {},
+        {
+          projection: {
+            _id: 1,
+            username: 1,
+            groupNumber: 1,
+            role: 1,
+            courses: 1,
+          },
+        },
+      )
+      .toArray();
+  }
+
+  async GetAllCourses(): Promise<CourseData[]> {
+    const client = await this.getClient();
+    return client
+      .db()
+      .collection<CourseData>("courses")
+      .find({}, { projection: { _id: 1, name: 1, assignments: 1 } })
+      .toArray();
+  }
+
+  async AddCourseToUsers(
+    userIDs: ObjectId[],
+    courseID: ObjectId,
+    session: ClientSession,
+    client: MongoClient,
+  ): Promise<void> {
+    return client
+      .db()
+      .collection("users")
+      .updateMany(
+        { _id: { $in: userIDs }, courses: { $ne: courseID } },
+        { $addToSet: { courses: courseID } },
+        { session },
+      )
+      .then(() => undefined);
+  }
+
+  async RemoveCourseFromUsers(
+    userIDs: ObjectId[],
+    courseID: ObjectId,
+    session: ClientSession,
+    client: MongoClient,
+  ): Promise<void> {
+    const pullQuery: PullOperator<Document> = { courses: [courseID] };
+
+    return client
+      .db()
+      .collection("users")
+      .updateMany(
+        { _id: { $in: userIDs }, courses: courseID },
+        { $pull: pullQuery },
+        { session },
+      )
+      .then(() => undefined);
+  }
+
+  async AddCourse(courseName: string): Promise<ResponseObject> {
+    const client = await this.getClient();
+
+    const result = await client
+      .db()
+      .collection("courses")
+      .updateOne(
+        { name: courseName },
+        { $setOnInsert: { name: courseName } },
+        { upsert: true },
+      );
+
+    try {
+      if (result.upsertedCount === 0) {
+        return { error: true, message: "Course already exists.", code: 409 };
+      }
+    } catch (err) {
+      if (err instanceof Error) {
+        return { error: true, message: err.message, code: 500 };
+      }
+    }
+
+    return {
+      error: false,
+      message: `Course ${courseName} added.`,
+      code: 200,
+      id: result?.upsertedId?.toString() ?? undefined,
+    };
+  }
+
+  async UpdateCourseForUsers(
+    courseUserAction: {
+      add: { userID: string }[];
+      remove: { userID: string }[];
+    },
+    courseID: string,
+  ): Promise<ResponseObject> {
+    const client = await this.getClient();
+    const session = client.startSession();
+    const response = { error: false, message: "Success" };
+
+    const userIDsAdd: ObjectId[] = courseUserAction.add.map(
+      (userObject) => new ObjectId(userObject.userID),
+    );
+    const userIDsRemove: ObjectId[] = courseUserAction.remove.map(
+      (userObject) => new ObjectId(userObject.userID),
+    );
+    const courseIDObj = new ObjectId(courseID);
+
+    try {
+      await session.withTransaction(async () => {
+        await this.AddCourseToUsers(userIDsAdd, courseIDObj, session, client);
+        await this.RemoveCourseFromUsers(
+          userIDsRemove,
+          courseIDObj,
+          session,
+          client,
+        );
+      });
+
+      response.error = false;
+    } catch (err) {
+      console.log(
+        "Transaction aborted due to an unexpected error: " + String(err),
+      );
+      response.error = true;
+      response.message =
+        "Transaction aborted due to an unexpected error: " + String(err);
+    } finally {
+      await session.endSession();
+    }
+    return response;
+  }
+
+  async LoadEnvironments(): Promise<void> {
+    const client = await this.getClient();
+    const environmentsCollection = client
+      .db()
+      .collection<EnvironmentDocument>("assignments");
+
+    const environmentDocs = await environmentsCollection.find().toArray();
+
+    const environmentMap = new Map<string, EnvironmentDescription>();
+
+    // Transform the MongoDB documents into a Map<string, EnvironmentDescription>
+    environmentDocs.forEach((doc) => {
+      environmentMap.set(doc.name, doc as EnvironmentDescription);
+    });
+
+    // Update the global environments map
+    updateEnvironments(environmentMap);
+  }
+
+  async CreateAssignments(): Promise<AssignmentData[]> {
+    const client = await this.getClient();
+
+    const assignmentNames = Array.from(new Map(environments).keys());
+
+    const assignmentsCollection = client.db().collection("assignments");
+
+    // Create the assignments collection if it doesn't exist
+    await assignmentsCollection.createIndex({ name: 1 }, { unique: true });
+
+    const assignmentsToInsert = Array.from(environments.entries()).map(
+      ([name, env]) => ({
+        name: name,
+        ...env,
+      }),
+    );
+
+    // Insert assignments into the collection
+    const bulkWriteOperations = assignmentsToInsert.map((assignment) => ({
+      updateOne: {
+        filter: { name: assignment.name },
+        update: { $setOnInsert: assignment },
+        upsert: true,
+      },
+    }));
+
+    // Using bulkWrite as insertMany still throws errors on duplicate
+    const result = await assignmentsCollection.bulkWrite(bulkWriteOperations);
+
+    const insertedAssignments = assignmentNames.map((name, index) => ({
+      _id: result.upsertedIds[index] as string,
+      name,
+    }));
+
+    return insertedAssignments;
+  }
+
+  async GetAllAssignments(): Promise<AssignmentData[]> {
+    const client = await this.getClient();
+    return client
+      .db()
+      .collection<AssignmentData>("assignments")
+      .find({}, { projection: { _id: 1, name: 1, maxBonusPoints: 1 } })
+      .toArray();
+  }
+
+  async UpdateAssignementsForCourse(
+    courseID: string,
+    assignmentIDs: string[],
+  ): Promise<void> {
+    const client = await this.getClient();
+    const courseObjID = new ObjectId(courseID);
+    const assignmentObjIDs = assignmentIDs.map((id) => new ObjectId(id));
+    return client
+      .db()
+      .collection("courses")
+      .updateOne(
+        { _id: courseObjID },
+        { $set: { assignments: assignmentObjIDs } },
+      )
+      .then(() => undefined);
+  }
+
+  async GetUserAssignments(userAcc: UserAccount): Promise<AssignmentData[]> {
+    const client = await this.getClient();
+    const courseObjIDs = userAcc.courses?.map((id) => new ObjectId(id));
+
+    return client
+      .db()
+      .collection<AssignmentData>("courses")
+      .aggregate<AssignmentData>([
+        { $match: { _id: { $in: courseObjIDs } } },
+        {
+          $lookup: {
+            from: "assignments",
+            localField: "assignments",
+            foreignField: "_id",
+            as: "assignments",
+          },
+        },
+        { $unwind: "$assignments" },
+        { $replaceRoot: { newRoot: "$assignments" } },
+      ])
+      .toArray();
+  }
+
+  async GetAllSubmissions(): Promise<SubmissionAdminOverviewEntry[]> {
+    try {
+      const client = await this.getClient();
+
+      const allSubmissions = await client
+        .db()
+        .collection<SubmissionAdminEntry>("submissions")
+        .aggregate<SubmissionAdminEntry>([
+          {
+            $unwind: {
+              path: "$submittedFiles",
+              preserveNullAndEmptyArrays: true,
+            },
+          },
+          {
+            $unwind: {
+              path: "$terminalStatus",
+              preserveNullAndEmptyArrays: true,
+            },
+          },
+          {
+            $group: {
+              _id: "$_id",
+              environment: { $first: "$environment" },
+              submissionCreated: { $first: "$submissionCreated" },
+              username: { $first: "$username" },
+              groupNumber: { $first: "$groupNumber" },
+              fileNames: { $addToSet: "$submittedFiles.fileName" },
+              terminalEndpoints: { $addToSet: "$terminalStatus.endpoint" },
+              points: { $first: { $ifNull: ["$points", null] } },
+            },
+          },
+        ])
+        .sort({
+          environment: 1,
+          groupName: 1,
+          username: 1,
+          terminalEndpoints: 1,
+        })
+        .toArray();
+
+      const submissions: SubmissionAdminOverviewEntry[] = allSubmissions.map(
+        (submission) => ({
+          submissionID: submission._id as string,
+          assignmentName: submission.environment,
+          lastChanged: submission.submissionCreated,
+          username: submission.username,
+          groupNumber: Number(submission.groupNumber),
+          fileNames: submission.fileNames,
+          terminalEndpoints: submission.terminalEndpoints,
+          ...(submission.points !== null && {
+            points: submission.points as number,
+          }),
+        }),
+      );
+
+      return submissions;
+    } catch (error) {
+      throw new Error(
+        "Unable to retrieve submissions of user or group: " + String(error),
+      );
+    }
+  }
+
+  async GetSubmissionFile(
+    submissionID: string,
+    fileName: string,
+  ): Promise<FileData> {
+    try {
+      const client = await this.getClient();
+
+      const submission = await client
+        .db()
+        .collection("submissions")
+        .findOne({ _id: new ObjectId(submissionID) });
+
+      if (!submission) {
+        throw new Error("Submission not found");
+      }
+
+      const file = (
+        submission.submittedFiles as { fileName: string; fileContent: string }[]
+      ).find((file) => file.fileName === fileName) as {
+        fileName: string;
+        fileContent: string;
+      };
+
+      if (!file) {
+        throw new Error("File not found in submission");
+      }
+
+      return {
+        fileName: file.fileName,
+        content: file.fileContent,
+      };
+    } catch (error) {
+      if (error instanceof Error)
+        throw new Error(`Unable to get submission file: ${error.message}`);
+    }
+    return { fileName: "", content: "" };
+  }
+
+  async UpdateSubmissionPoints(
+    submissionID: string,
+    points: number,
+  ): Promise<void> {
+    const client = await this.getClient();
+    const courseObjID = new ObjectId(submissionID);
+    return client
+      .db()
+      .collection("submissions")
+      .updateOne({ _id: courseObjID }, { $set: { points: points } })
+      .then((data) => {
+        if (data.modifiedCount === 0) {
+          throw new Error("Could not update points for submission");
+        }
+      });
+  }
+
+  async GetTerminalData(submissionID: string): Promise<TerminalStateType[]> {
+    try {
+      const client = await this.getClient();
+
+      const submission = await client
+        .db()
+        .collection("submissions")
+        .findOne({ _id: new ObjectId(submissionID) });
+
+      if (!submission) {
+        throw new Error("Submission not found");
+      }
+
+      const terminalStatusArray =
+        submission.terminalStatus as TerminalStateType[];
+
+      if (!terminalStatusArray || terminalStatusArray.length === 0) {
+        throw new Error("Terminal status data not found in submission");
+      }
+
+      const terminalData: TerminalStateType[] = terminalStatusArray.map(
+        (status: TerminalStateType) => ({
+          endpoint: status.endpoint,
+          state: status.state,
+        }),
+      );
+
+      return terminalData;
+    } catch (error) {
+      if (error instanceof Error)
+        throw new Error(`Unable to get terminal  file: ${error.message}`);
+    }
+    return [];
   }
 
   async close(): Promise<void> {

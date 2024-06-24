@@ -98,6 +98,23 @@ export interface TestResult {
 export interface Submission {
   assignmentName: string;
   lastChanged: Date;
+  points?: number;
+}
+
+export interface SubmissionAdminOverviewEntry extends Submission {
+  submissionID: string;
+  username: string;
+  groupNumber: number;
+  fileNames: string[];
+  terminalEndpoints: string[];
+  assignmentRef?: string;
+  userRef?: string;
+}
+
+export interface SubmissionAdminEntryDetails {
+  submissionID: string;
+  terminalStatus: Array<TerminalStateType>;
+  submittedFiles: Array<SubmissionFileType>;
 }
 
 export type SubmissionFileType = {
@@ -127,6 +144,7 @@ export interface EnvironmentDescription {
   workspaceFolders?: string[];
   useCollaboration?: boolean;
   useLanguageClient?: boolean;
+  maxBonusPoints?: number;
 }
 
 const DenyStartOfMissingInstanceErrorMessage =
@@ -487,12 +505,14 @@ export default class Environment {
                   {
                     image: this.configuration.providerImage,
                     dockerCmd: this.configuration.providerDockerCmd,
-                    dockerSupplementalPorts: this.configuration.providerDockerSupplementalPorts,
+                    dockerSupplementalPorts:
+                      this.configuration.providerDockerSupplementalPorts,
                     kernelImage: this.configuration.providerKernelImage,
                     kernelBootARGs: this.configuration.providerKernelBootARGs,
                     rootDrive: this.configuration.providerRootDrive,
-                    proxmoxTemplateTag: this.configuration.providerProxmoxTemplateTag,
-                  }
+                    proxmoxTemplateTag:
+                      this.configuration.providerProxmoxTemplateTag,
+                  },
                 ),
               );
             } else {
@@ -919,7 +939,7 @@ export default class Environment {
             command.params,
             command.cwd,
             false,
-            endpoint.SSHJumpHost,          
+            endpoint.SSHJumpHost,
           );
           console.on("finished", (code: string, signal: string) => {
             global.console.log(
@@ -1074,8 +1094,15 @@ export default class Environment {
         else someTestsFailed = true;
       }
       if (someTestsFailed !== undefined && someTestsFailed === false)
-        return Promise.resolve({code: 201, message: "All tests passed! " + testOutput});
-      else return Promise.resolve({code: 251, message: "Some Tests failed! " + testOutput});
+        return Promise.resolve({
+          code: 201,
+          message: "All tests passed! " + testOutput,
+        });
+      else
+        return Promise.resolve({
+          code: 251,
+          message: "Some Tests failed! " + testOutput,
+        });
     } else {
       return Promise.reject(
         new Error(

@@ -1,10 +1,21 @@
-import { Persister, UserEnvironment, UserAccount } from "./Persister";
+/* eslint-disable @typescript-eslint/no-unused-vars */
+import {
+  Persister,
+  UserEnvironment,
+  UserAccount,
+  UserData,
+  CourseData,
+  ResponseObject,
+  AssignmentData,
+  FileData,
+} from "./Persister";
 import fs from "fs";
 import path from "path";
 import {
   TerminalStateType,
   Submission,
   SubmissionFileType,
+  SubmissionAdminOverviewEntry,
 } from "../Environment";
 
 const userEnvironments = new Map<string, Map<string, UserEnvironment>>();
@@ -195,6 +206,75 @@ export default class MemoryPersister implements Persister {
 
       resolve(submissions);
     });
+  }
+
+  GetAllUsers(): Promise<UserData[]> {
+    // TODO: implement
+    throw new Error("Method not implemented.");
+  }
+
+  GetAllCourses(): Promise<CourseData[]> {
+    // TODO: implement
+    throw new Error("Method not implemented.");
+  }
+
+  AddCourse(_courseName: string): Promise<ResponseObject> {
+    throw new Error("Method not implemented.");
+  }
+
+  UpdateCourseForUsers(
+    _courseUserAction: {
+      add: { userID: string }[];
+      remove: { userID: string }[];
+    },
+    _courseID: string,
+  ): Promise<ResponseObject> {
+    throw new Error("Method not implemented.");
+  }
+
+  CreateAssignments(): Promise<AssignmentData[]> {
+    throw new Error("Method not implemented.");
+  }
+
+  GetAllAssignments(): Promise<AssignmentData[] | string[]> {
+    throw new Error("Method not implemented.");
+  }
+
+  UpdateAssignementsForCourse(
+    _courseID: string,
+    _assignmentIDs: string[],
+  ): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
+
+  GetUserAssignments(_userAcc: UserAccount): Promise<AssignmentData[]> {
+    throw new Error("Method not implemented.");
+  }
+
+  GetAllSubmissions(): Promise<SubmissionAdminOverviewEntry[]> {
+    throw new Error("Method not implemented.");
+  }
+
+  GetSubmissionFile(
+    _submissionID: string,
+    _fileName: string,
+  ): Promise<FileData> {
+    throw new Error("Method not implemented.");
+  }
+
+  UpdateSubmissionPoints(
+    _submissionID: string,
+    _points: number,
+  ): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
+
+  GetTerminalData(_submissionID: string): Promise<TerminalStateType[]> {
+    throw new Error("Method not implemented.");
+  }
+
+  LoadEnvironments(): Promise<void> {
+    throw new Error("Method not implemented.");
   }
 
   close(): Promise<void> {

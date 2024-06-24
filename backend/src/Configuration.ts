@@ -659,7 +659,8 @@ environments.set("KommProt-Ue1-Test", {
         type: "Shell",
         name: "host1",
         cwd: "/home/p4/kommprot-labs/kommprot-lab-application-layer",
-        executable: "while [ true ]; do clear && sudo clab inspect &>/dev/null; if [ $? -eq 1 ]; then sudo clab deploy &>/dev/null; fi; docker exec -it clab-kommprot-lab-transport-host1 bash; done",
+        executable:
+          "while [ true ]; do clear && sudo clab inspect &>/dev/null; if [ $? -eq 1 ]; then sudo clab deploy &>/dev/null; fi; docker exec -it clab-kommprot-lab-transport-host1 bash; done",
         params: [],
         provideTty: true,
       },
@@ -669,7 +670,8 @@ environments.set("KommProt-Ue1-Test", {
         type: "Shell",
         name: "host2",
         cwd: "/home/p4/kommprot-labs/kommprot-lab-application-layer",
-        executable: "while [ true ]; do clear && sudo clab inspect &>/dev/null; if [ $? -eq 1 ]; then sudo clab deploy &>/dev/null; fi; docker exec -it clab-kommprot-lab-transport-host2 bash; done",
+        executable:
+          "while [ true ]; do clear && sudo clab inspect &>/dev/null; if [ $? -eq 1 ]; then sudo clab deploy &>/dev/null; fi; docker exec -it clab-kommprot-lab-transport-host2 bash; done",
         params: [],
         provideTty: true,
       },
@@ -702,8 +704,18 @@ environments.set("KommProt-Ue1-Test", {
   ],
   description: "KommProt-Ue1 description",
   assignmentLabSheetLocation: "instance",
-  assignmentLabSheet: "/home/p4/kommprot-labs/kommprot-lab-application-layer/README.md",
+  assignmentLabSheet:
+    "/home/p4/kommprot-labs/kommprot-lab-application-layer/README.md",
 });
 
-
 export default environments;
+
+export function updateEnvironments(
+  updatedEnvironments: Map<string, EnvironmentDescription>,
+): void {
+  environments.clear();
+
+  updatedEnvironments.forEach((value, key) => {
+    environments.set(key, value);
+  });
+}

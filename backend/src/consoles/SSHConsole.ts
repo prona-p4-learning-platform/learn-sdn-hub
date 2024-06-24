@@ -4,7 +4,7 @@ import fs from "fs";
 
 export interface Console {
   on(
-    event: "ready" | "close" | "closed" | "stdout" | "stderr" | "finished",
+    event: "ready" | "close" | "closed" | "finished",
     listener: () => void,
   ): this;
   on(event: "data", listener: (data: string) => void): this;
@@ -19,14 +19,22 @@ export interface Console {
 }
 
 export interface JumpHost {
-  ipaddress: string,
-  port: number,
-  username: string,
-  password?: string,
-  privateKey?: string,
+  ipaddress: string;
+  port: number;
+  username: string;
+  password?: string;
+  privateKey?: string;
 }
 
 type CustomizedSSHClient = Client & {
+  on(
+    event: "stdout" | "stderr",
+    listener: (data: string) => void,
+  ): CustomizedSSHClient;
+  on(
+    event: "finished",
+    listener: (code: string, signal: string) => void,
+  ): CustomizedSSHClient;
   ready: boolean;
   environmentId: string;
   username: string;
@@ -117,55 +125,91 @@ export default class SSHConsole extends EventEmitter implements Console {
         this.emit("finished", code, signal);
       });
       if (jumpHost !== undefined) {
-        console.log("Establishing SSH connection " + ipaddress + ":" + port + " via jump host " + jumpHost.ipaddress + ":" + jumpHost.port);
-        const sshJumpHostConnection =  new Client();
-        sshJumpHostConnection.on("ready", () => {
-          sshJumpHostConnection.forwardOut("127.0.0.1", 0, ipaddress, port, (err, stream) => {
-            if (err) {
-              console.log("Unable to forward connection on jump host");
-              sshConsole.end();
-              sshJumpHostConnection.end();
-              console.log(err);
-              this.emit("error", err);
-            } else {
-              sshConsole
-              .on("ready", () => {
-                console.log("SSH Client connection via jump host :: ready");
-              })
-              .on("error", (err) => {
-                sshConsole.end();
-                sshJumpHostConnection.end();
-                console.log(err);
-                this.emit("error", err);
-              }).connect({
-                sock: stream,
-                username: process.env.SSH_USERNAME,
-                password: process.env.SSH_PASSWORD,
-                privateKey: process.env.SSH_PRIVATE_KEY_PATH
-                  ? fs.readFileSync(process.env.SSH_PRIVATE_KEY_PATH)
-                  : undefined,
-                readyTimeout: 1000,
-              });
-            }
+        console.log(
+          "Establishing SSH connection " +
+            ipaddress +
+            ":" +
+            port +
+            " via jump host " +
+            jumpHost.ipaddress +
+            ":" +
+            jumpHost.port,
+        );
+        const sshJumpHostConnection = new Client();
+        sshJumpHostConnection
+          .on("ready", () => {
+            sshJumpHostConnection.forwardOut(
+              "127.0.0.1",
+              0,
+              ipaddress,
+              port,
+              (err, stream) => {
+                if (err) {
+                  console.log(
+                    "Unable to forward connection on jump host: " + err.message,
+                  );
+                  sshConsole.end();
+                  sshJumpHostConnection.end();
+                  this.emit("error", err);
+                } else {
+                  sshConsole
+                    .on("ready", () => {
+                      console.log(
+                        "SSH Client connection via jump host :: ready",
+                      );
+                    })
+                    .on("close", () => {
+                      console.log(
+                        "SSH Client connection via jump host :: close",
+                      );
+                      sshConsole.end();
+                      sshJumpHostConnection.end();
+                      this.emit("close");
+                    })
+                    .on("error", (err) => {
+                      console.log(err);
+                      sshConsole.end();
+                      sshJumpHostConnection.end();
+                      this.emit("error", err);
+                    })
+                    .connect({
+                      sock: stream,
+                      username: process.env.SSH_USERNAME,
+                      password: process.env.SSH_PASSWORD,
+                      privateKey: process.env.SSH_PRIVATE_KEY_PATH
+                        ? fs.readFileSync(process.env.SSH_PRIVATE_KEY_PATH)
+                        : undefined,
+                      readyTimeout: 1000,
+                    });
+                }
+              },
+            );
+          })
+          .on("close", () => {
+            console.log("SFTP connection close");
+            sshConsole.end();
+            sshJumpHostConnection.end();
+            this.emit("close");
+          })
+          .on("error", (err) => {
+            console.log(err);
+            sshConsole.end();
+            sshJumpHostConnection.end();
+            this.emit("error", err);
+          })
+          .connect({
+            host: jumpHost.ipaddress,
+            port: jumpHost.port,
+            username: jumpHost.username,
+            password: jumpHost.password,
+            privateKey: jumpHost.privateKey
+              ? fs.readFileSync(jumpHost.privateKey)
+              : undefined,
+            //debug: (debug) => {
+            //  console.log(debug)
+            //},
+            readyTimeout: 1000,
           });
-        }).on("error", (err) => {
-          sshConsole.end();
-          sshJumpHostConnection.end();
-          console.log(err);
-          this.emit("error", err);
-        }).connect({
-          host: jumpHost.ipaddress,
-          port: jumpHost.port,
-          username: jumpHost.username,
-          password: jumpHost.password,
-          privateKey: jumpHost.privateKey
-          ? fs.readFileSync(jumpHost.privateKey)
-          : undefined,
-          //debug: (debug) => {
-          //  console.log(debug)
-          //},
-          readyTimeout: 1000,
-        });
       } else {
         console.log("Establishing SSH connection " + ipaddress + ":" + port);
         sshConsole
