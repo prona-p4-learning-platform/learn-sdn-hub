@@ -347,15 +347,7 @@ export default class DockerProvider implements InstanceProvider {
             `${container.Names[0]} was created at ${createdAt.toISOString()} and should be deleted`,
           );
 
-          //await this.deleteServer(container.Id).catch((reason) => {
-          //  const originalMessage =
-          //     reason instanceof Error ? reason.message : "Unknown error";
-          //   throw new Error(
-          //     `DockerProvider: Failed to delete container (${container.Names[0]}) to be pruned.\n` +
-          //       originalMessage,
-          //   );
-          // });
-          await Environment.deleteInstanceEnvironments(container.Id).catch(
+          const deleted = await Environment.deleteInstanceEnvironments(container.Id).catch(
             (reason) => {
               const originalMessage =
                 reason instanceof Error ? reason.message : "Unknown error";
@@ -365,6 +357,19 @@ export default class DockerProvider implements InstanceProvider {
               );
             },
           );
+          if (!deleted) {
+            console.log(
+              `DockerProvider: Could not delete environment during pruning, environment seams to be gone already, deleting leftover container: (${container.Names[0]}).`,
+            );
+            await this.deleteServer(container.Id).catch((reason) => {
+             const originalMessage =
+                reason instanceof Error ? reason.message : "Unknown error";
+              throw new Error(
+                `DockerProvider: Failed to delete container (${container.Names[0]}) to be pruned.\n` +
+                  originalMessage,
+              );
+            });
+          }
         }
       }
     }
