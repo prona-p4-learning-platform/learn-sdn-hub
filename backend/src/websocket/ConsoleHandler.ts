@@ -7,7 +7,7 @@ export default function (
   username: string,
   type: string,
 ): void {
-  console.log(environment, username);
+  console.log("ConsoleHandler: " + environment, username);
   const envInstance = Environment.getActiveEnvironment(environment, username);
   if (envInstance !== undefined) {
     const envConsole = envInstance.getConsoleByAlias(type);

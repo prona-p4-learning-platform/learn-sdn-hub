@@ -46,7 +46,7 @@ export default function XTerminal(props: TerminalProps): JSX.Element {
     let resizeInterval: NodeJS.Timeout | undefined = undefined;
 
     let unmounted = false;
-    let socketOpen = false;
+    //let socketOpen = false;
     websocket.onopen = () => {
       // close socket safely if component has already unmounted (strict mode)
       if (unmounted) {
@@ -55,7 +55,7 @@ export default function XTerminal(props: TerminalProps): JSX.Element {
       }
 
       websocket.send(`auth ${localStorage.getItem("token")}`);
-      socketOpen = true;
+      //socketOpen = true;
 
       // if the terminal is still available -> attach websocket
       if (terminalRef) {
@@ -77,8 +77,18 @@ export default function XTerminal(props: TerminalProps): JSX.Element {
       });
 
       // restore terminal state
-      terminalRef.write(terminalState ?? "");
+      let state = undefined;
+      if (localStorage.getItem("terminalState-" + wsEndpoint)) {
+        state = localStorage.getItem("terminalState-" + wsEndpoint);
+        localStorage.removeItem("terminalState-" + wsEndpoint);
+      } else {
+        state = terminalState;
+      }
+      terminalRef.write(state ?? "");
+      // reset terminal colors
       terminalRef.write("\x1B[0m");
+      // move cursor to the right
+      terminalRef.write("\x1B[1C");
 
       // resize terminal
       fitAddon.fit();
@@ -94,6 +104,18 @@ export default function XTerminal(props: TerminalProps): JSX.Element {
       );
     }
 
+    window.addEventListener("beforeunload", (event) => {
+      event.preventDefault();
+      console.log("Terminal: Saving state before unmount during reload");
+      const state = serAddon.serialize({ scrollback: 1000 });
+      localStorage.setItem("terminalState-" + wsEndpoint, state);
+      //onTerminalUnmount(wsEndpoint, state);
+      // if websocket is open or connecting, close it
+      if (websocket.readyState === 1) {
+        //websocket.close();
+      }
+    });
+
     // componentWillUnmount
     return () => {
       unmounted = true;
@@ -102,12 +124,15 @@ export default function XTerminal(props: TerminalProps): JSX.Element {
       if (resizeInterval) clearInterval(resizeInterval);
 
       // serialize terminal state and close websocket
-      if (socketOpen) {
-        const state = serAddon.serialize({ scrollback: 1000 });
-        onTerminalUnmount(wsEndpoint, state);
-
-        websocket.close();
+      const state = serAddon.serialize({ scrollback: 1000 });
+      localStorage.setItem("terminalState-" + wsEndpoint, state);
+      onTerminalUnmount(wsEndpoint, state);
+      // if websocket is open or connecting, close it
+      if (websocket.readyState === 1) {
+        //websocket.close();
       }
+
+      window.onbeforeunload = null;
     };
   });
 
