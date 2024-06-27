@@ -1,4 +1,5 @@
 import { $fetch, FetchError, FetchOptions } from "ofetch";
+import { useAuthStore } from "../stores/authStore";
 import { destr } from "destr";
 import { z } from "zod";
 
@@ -177,7 +178,7 @@ export const APIRequest = createCustomFetch({
   timeout: 30000,
   onRequest: (context) => {
     // inject auth token if possible
-    const token = localStorage.getItem("token") ?? undefined;
+    const token = useAuthStore.getState().token || undefined;
     context.options.headers ??= {};
 
     addRequestHeader(context.options.headers, "authorization", token);
@@ -192,7 +193,7 @@ export const APIRequestNV = $fetch.create({
   timeout: 30000,
   onRequest: (context) => {
     // inject auth token if possible
-    const token = localStorage.getItem("token") ?? undefined;
+    const token = useAuthStore.getState().token || undefined;
     context.options.headers ??= {};
 
     addRequestHeader(context.options.headers, "authorization", token);

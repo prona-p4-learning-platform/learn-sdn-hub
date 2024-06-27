@@ -1,23 +1,19 @@
+import type { ReactNode } from "react";
 import { Button } from "@mui/material";
+import { Link } from "react-router-dom";
 
 // custom props as react router does not provide them
 interface NavigationProps {
-  href: string;
-  children: JSX.Element;
-  navigate: (to: string) => void;
+  to: string;
+  children: ReactNode;
 }
 
-// https://stackoverflow.com/a/72537967
+// https://stackoverflow.com/a/70582460
 export default function NavigationButton(props: NavigationProps): JSX.Element {
-  const { navigate, href, children } = props;
+  const { to, children } = props;
 
   return (
-    <Button
-      color="inherit"
-      onClick={() => {
-        navigate(href);
-      }}
-    >
+    <Button component={Link} to={to} color="inherit">
       {children}
     </Button>
   );

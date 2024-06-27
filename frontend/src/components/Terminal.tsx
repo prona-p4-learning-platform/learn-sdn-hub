@@ -6,6 +6,7 @@ import type { Terminal } from "xterm";
 
 import XTerm from "./XTerm";
 import createWebSocket from "../api/WebSocket";
+import { useAuthStore } from "../stores/authStore";
 
 interface TerminalProps {
   wsEndpoint: string;
@@ -26,6 +27,7 @@ function sendResize(websocket: WebSocket, fitAddon: FitAddon): void {
 }
 
 export default function XTerminal(props: TerminalProps): JSX.Element {
+  const { token } = useAuthStore();
   const { terminalState, wsEndpoint, onTerminalUnmount } = props;
   const serAddon = useMemo(() => {
     return new SerializeAddon();
@@ -54,7 +56,7 @@ export default function XTerminal(props: TerminalProps): JSX.Element {
         return;
       }
 
-      websocket.send(`auth ${localStorage.getItem("token")}`);
+      websocket.send(`auth ${token}`);
       socketOpen = true;
 
       // if the terminal is still available -> attach websocket

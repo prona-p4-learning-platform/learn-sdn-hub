@@ -11,19 +11,18 @@ import {
   MenuItem,
   Select,
   SelectChangeEvent,
-  Snackbar,
   Tooltip,
   TooltipProps,
   tooltipClasses,
 } from "@mui/material";
-import type { AlertColor } from "@mui/material";
+import { enqueueSnackbar, closeSnackbar } from "notistack";
 import { FetchError } from "ofetch";
 import { z } from "zod";
 
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import CloudDownloadIcon from "@mui/icons-material/CloudDownload";
 
-import Alert from "./Alert";
+import { useAuthStore } from "../stores/authStore";
 import { APIRequest, getHttpError } from "../api/Request";
 import createWebSocket from "../api/WebSocket";
 
@@ -89,8 +88,6 @@ const contentValidator = z.object({
   location: z.string().optional(),
 });
 
-type Severity = AlertColor | undefined;
-
 interface Disposable {
   dispose: () => void;
 }
@@ -101,9 +98,6 @@ interface State {
   currentFileChanged: boolean;
   currentFileLSPLanguage: string;
   currentFilePath: string;
-  editorResult: string;
-  editorSeverity: Severity;
-  editorNotificationOpen: boolean;
   editorConfirmationDialogOpen: boolean;
 }
 
@@ -174,14 +168,11 @@ export default class FileEditor extends Component<FileEditorProps> {
       currentFileChanged: false,
       currentFileLSPLanguage: "",
       currentFilePath: "",
-      editorResult: "",
-      editorSeverity: "info",
-      editorNotificationOpen: false,
       editorConfirmationDialogOpen: false,
     };
 
-    this.username = localStorage.getItem("username") ?? "default-user";
-    this.group = localStorage.getItem("group") ?? "0";
+    this.username = useAuthStore.getState().username || "default-user";
+    this.group = useAuthStore.getState().groupNumber.toString(10);
 
     this.save = this.save.bind(this);
     this.load = this.load.bind(this);
@@ -576,7 +567,7 @@ export default class FileEditor extends Component<FileEditorProps> {
 
         // sending auth token to backend
         this.languageClientWebSocket.send(
-          `auth ${localStorage.getItem("token")}`,
+          `auth ${useAuthStore.getState().token}`,
         );
 
         // backend needs some time to process auth token and initiate
@@ -710,10 +701,9 @@ export default class FileEditor extends Component<FileEditorProps> {
   }
 
   async save(): Promise<void> {
-    this.setState({
-      editorResult: "Saving file...",
-      editorSeverity: "info",
-      editorNotificationOpen: true,
+    const saveSnack = enqueueSnackbar("Saving file...", {
+      variant: "info",
+      persist: true,
     });
     try {
       await APIRequest(
@@ -726,11 +716,9 @@ export default class FileEditor extends Component<FileEditorProps> {
       );
 
       this.environmentFiles[this.state.currentFile].fileChanged = false;
+      enqueueSnackbar("Deploy successful!", { variant: "success" });
       this.setState({
         currentFileChanged: false,
-        editorResult: "Deploy successful!",
-        editorSeverity: "success",
-        editorNotificationOpen: true,
       });
     } catch (error) {
       let stateMessage = "Deploy failed!";
@@ -742,22 +730,20 @@ export default class FileEditor extends Component<FileEditorProps> {
           : httpError.error.message;
       }
 
-      this.setState({
-        editorResult: stateMessage,
-        editorSeverity: "error",
-        editorNotificationOpen: true,
-      });
+      enqueueSnackbar(stateMessage, { variant: "error" });
     }
 
+    closeSnackbar(saveSnack);
     this.editor.focus();
   }
 
   async load(): Promise<void> {
+    const loadSnack = enqueueSnackbar("Loading file...", {
+      variant: "info",
+      persist: true,
+    });
     this.setState({
       editorConfirmationDialogOpen: true,
-      editorResult: "Loading file...",
-      editorSeverity: "info",
-      editorNotificationOpen: true,
     });
     try {
       const payload = await APIRequest(
@@ -771,11 +757,9 @@ export default class FileEditor extends Component<FileEditorProps> {
         this.environmentFiles[this.state.currentFile].value = data.content;
         this.environmentFiles[this.state.currentFile].fileChanged = false;
         this.editor.setValue(data.content);
+        enqueueSnackbar("Retrieve successful!", { variant: "success" });
         this.setState({
           currentFileChanged: false,
-          editorResult: "Retrieve successful!",
-          editorSeverity: "success",
-          editorNotificationOpen: true,
         });
       } else throw payload.error;
     } catch (error) {
@@ -790,21 +774,14 @@ export default class FileEditor extends Component<FileEditorProps> {
         stateMessage = error.message;
       }
 
-      this.setState({
-        editorResult: stateMessage,
-        editorSeverity: "error",
-        editorNotificationOpen: true,
-      });
+      enqueueSnackbar(stateMessage, { variant: "error" });
     }
 
+    closeSnackbar(loadSnack);
     this.editor.focus();
   }
 
   render(): JSX.Element {
-    const handleEditorNotificationClose = () => {
-      this.setState({ editorNotificationOpen: false });
-    };
-
     const handleEditorConfirmationDialogOpen = () => {
       this.setState({ editorConfirmationDialogOpen: true });
     };
@@ -929,18 +906,6 @@ export default class FileEditor extends Component<FileEditorProps> {
           }}
           onMount={this.editorDidMount.bind(this)}
         />
-        <Snackbar
-          open={this.state.editorNotificationOpen}
-          autoHideDuration={6000}
-          onClose={handleEditorNotificationClose}
-        >
-          <Alert
-            onClose={handleEditorNotificationClose}
-            severity={this.state.editorSeverity}
-          >
-            {this.state.editorResult}
-          </Alert>
-        </Snackbar>
         <Dialog
           open={this.state.editorConfirmationDialogOpen}
           onClose={handleEditorConfirmationDialogClose}

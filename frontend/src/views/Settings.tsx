@@ -1,23 +1,11 @@
-import { useState, useCallback, FormEvent } from "react";
-import {
-  Alert,
-  Box,
-  Button,
-  Container,
-  Snackbar,
-  TextField,
-} from "@mui/material";
-import type { AlertColor } from "@mui/material";
+import { useCallback, FormEvent } from "react";
+import { Box, Button, Container, TextField } from "@mui/material";
+import { useSnackbar } from "notistack";
 
 import { APIRequest, httpStatusValidator } from "../api/Request";
 
-type Severity = AlertColor | undefined;
-
-export default function ChangePassword(): JSX.Element {
-  const [changePasswordResult, setChangePasswordResult] = useState("");
-  const [notificationOpen, setNotificationOpen] = useState(false);
-  const [changePasswordSeverity, setChangePasswordSeverity] =
-    useState<Severity>("error");
+function Settings(): JSX.Element {
+  const { enqueueSnackbar } = useSnackbar();
 
   const changePassword = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {
@@ -40,22 +28,16 @@ export default function ChangePassword(): JSX.Element {
         );
 
         if (payload.success) {
-          setChangePasswordResult("Password change successful");
-          setChangePasswordSeverity("success");
-          setNotificationOpen(true);
+          enqueueSnackbar("Password changed successfully!", {
+            variant: "success",
+          });
         } else throw payload.error;
       } catch (error) {
-        setChangePasswordResult("Password change failed");
-        setChangePasswordSeverity("error");
-        setNotificationOpen(true);
+        enqueueSnackbar("Changing password failed!", { variant: "error" });
       }
     },
-    [],
+    [enqueueSnackbar],
   );
-
-  const handleNotificationClose = () => {
-    setNotificationOpen(false);
-  };
 
   return (
     <Container component="main" maxWidth="xs">
@@ -69,7 +51,9 @@ export default function ChangePassword(): JSX.Element {
       >
         <Box
           component="form"
-          onSubmit={void changePassword}
+          onSubmit={() => {
+            void changePassword;
+          }}
           noValidate
           sx={{ mt: 1 }}
         >
@@ -113,18 +97,9 @@ export default function ChangePassword(): JSX.Element {
           </Button>
         </Box>
       </Box>
-      <Snackbar
-        open={notificationOpen}
-        autoHideDuration={6000}
-        onClose={handleNotificationClose}
-      >
-        <Alert
-          onClose={handleNotificationClose}
-          severity={changePasswordSeverity}
-        >
-          {changePasswordResult}
-        </Alert>
-      </Snackbar>
     </Container>
   );
 }
+
+export const Component = Settings;
+export default Settings;
