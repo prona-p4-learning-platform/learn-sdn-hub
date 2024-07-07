@@ -777,7 +777,7 @@ export default class OpenStackProvider implements InstanceProvider {
           );
           providerInstance.axiosInstance
             .get(providerInstance.endpointPublicComputeURL + "/servers/detail")
-            .then(function (response) {
+            .then(async function (response) {
               const servers = response.data.servers as Array<Server>;
               for (const server of servers) {
                 if (server.metadata.learn_sdn_hub_user !== undefined) {
@@ -790,7 +790,20 @@ export default class OpenStackProvider implements InstanceProvider {
                         timestampCreated.toISOString() +
                         "and should be deleted",
                     );
-                    Environment.deleteInstanceEnvironments(server.id);
+                    const deleted = await Environment.deleteInstanceEnvironments(server.id);
+                    if (!deleted) {
+                      console.log(
+                        `OpenStackProvider: Could not delete environment during pruning, environment seams to be gone already, deleting leftover instance: (${server.id}).`,
+                      );
+                      await providerInstance.deleteServer(server.id).catch((reason) => {
+                       const originalMessage =
+                          reason instanceof Error ? reason.message : "Unknown error";
+                        throw new Error(
+                          `OpenStackProvider: Failed to delete instance (${server.id}) to be pruned.\n` +
+                            originalMessage,
+                        );
+                      });
+                    }
                   }
                 }
               }
