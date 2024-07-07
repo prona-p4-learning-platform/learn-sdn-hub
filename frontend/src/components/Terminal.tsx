@@ -80,7 +80,10 @@ export default function XTerminal(props: TerminalProps): JSX.Element {
 
       // restore terminal state
       terminalRef.write(terminalState ?? "");
-      terminalRef.write("\x1B[0m");
+      // ESC[0m resets all styles and colors
+      //terminalRef.write("\x1B[0m");
+      // ESC[1C moves cursor one position to the right
+      terminalRef.write("\x1B[1C");
 
       // resize terminal
       fitAddon.fit();

@@ -123,8 +123,8 @@ function Environment(): JSX.Element {
     stepLabels: [],
     rootPath: "",
     workspaceFolders: [],
-    useCollaboration: true,
-    useLanguageClient: true,
+    useCollaboration: false,
+    useLanguageClient: false,
   });
   const [terminalState, setTerminalState] = useState<TerminalStateType[]>([]);
   const [activeStep, setActiveStep] = useState<number>(0);
