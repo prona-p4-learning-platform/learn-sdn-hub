@@ -350,14 +350,18 @@ export default class FileEditor extends Component<FileEditorProps> {
     }
 
     const collaborationId = fileName + "-group" + group;
-    console.log(
-      "Starting collaboration for user: " +
-        this.username +
-        " in group: " +
-        group +
-        " on: " +
-        collaborationId,
-    );
+    // Avoid console.log in production code, while opening websockets, as Firefox otherwise
+    // will will wait a long time before opening the connection, e.g., when switching terminals
+    // or files in the editor (y-websocket and/or monaco-languageclient)
+    //
+    // console.log(
+    //   "Starting collaboration for user: " +
+    //     this.username +
+    //     " in group: " +
+    //     group +
+    //     " on: " +
+    //     collaborationId,
+    // );
 
     const doc = new Y.Doc();
 
@@ -413,18 +417,23 @@ export default class FileEditor extends Component<FileEditorProps> {
           red.toString(16).padStart(2, "0") +
           green.toString(16).padStart(2, "0") +
           blue.toString(16).padStart(2, "0");
-        console.log("my color: " + hexColor);
+        // Avoid console.log in production code, while opening websockets, as Firefox otherwise
+        // will will wait a long time before opening the connection, e.g., when switching terminals
+        // or files in the editor (y-websocket and/or monaco-languageclient)
+        //
+        // console.log("my color: " + hexColor);
 
         awareness.on(
           "update",
           ({ added = [] as number[] /*, updated = [], removed = [] */ }) => {
             added.forEach((client) => {
-              //yjs awareness debug:
-              //console.log("added client: " + client);
+              // yjs awareness debug:
               //
-              //awareness.getStates().forEach((state, clientId) => {
-              //  console.log("client state: " + clientId + " state: " + state.user.name + " color: " + state.user.color);
-              //});
+              // console.log("added client: " + client);
+              //
+              // awareness.getStates().forEach((state, clientId) => {
+              //   console.log("client state: " + clientId + " state: " + state.user.name + " color: " + state.user.color);
+              // });
 
               // add css class for new client
               const awarenessState = awareness.getStates().get(client);
@@ -437,7 +446,7 @@ export default class FileEditor extends Component<FileEditorProps> {
                 const colorGreen = parseInt(color.substring(3, 5), 16);
                 const colorBlue = parseInt(color.substring(5, 7), 16);
                 const newClient = document.createElement("style");
-                //newClient.type = "text/css";
+                // newClient.type = "text/css";
                 newClient.innerHTML = `
             .yRemoteSelection-${client} {
               background-color: rgb(${colorRed}, ${colorGreen}, ${colorBlue}, .5)
@@ -488,13 +497,14 @@ export default class FileEditor extends Component<FileEditorProps> {
                 document.head.appendChild(newClient);
               }
             });
-            //no need to handle updated and removed clients for now, styles will be kept and will not change
-            //updated.forEach((client) => {
-            //  console.log("updated client: " + client);
-            //});
-            //removed.forEach((client) => {
-            //  console.log("removed client: " + client);
-            //});
+            // no need to handle updated and removed clients for now, styles will be kept and will not change
+            //
+            // updated.forEach((client) => {
+            //   console.log("updated client: " + client);
+            // });
+            // removed.forEach((client) => {
+            //   console.log("removed client: " + client);
+            // });
           },
         );
         console.log("my client id: " + awareness.clientID);
@@ -532,8 +542,8 @@ export default class FileEditor extends Component<FileEditorProps> {
       return;
     }
     this.binding?.destroy();
-    // WebRTC provider problem is room is taken, cannot be joined/created again
-    //this.collaborationProvider?.room?.destroy();
+    // WebRTC provider problem if room is taken, cannot be joined/created again
+    // this.collaborationProvider?.room?.destroy();
     this.collaborationProvider?.disconnect();
   }
 
@@ -553,7 +563,11 @@ export default class FileEditor extends Component<FileEditorProps> {
     }
 
     if (lspLanguage !== "") {
-      console.log("Starting language client for language: " + lspLanguage);
+      // Avoid console.log in production code, while opening websockets, as Firefox otherwise
+      // will will wait a long time before opening the connection, e.g., when switching terminals
+      // or files in the editor (y-websocket and/or monaco-languageclient)
+      //
+      // console.log("Starting language client for language: " + lspLanguage);
 
       this.languageClientWebSocket = createWebSocket(
         "/environment/" +
@@ -576,18 +590,26 @@ export default class FileEditor extends Component<FileEditorProps> {
         // be sent to early and ignored
 
         // save onmessage fn
-        //const defaultOnMessage = this.languageClientWebSocket.onmessage
+        // const defaultOnMessage = this.languageClientWebSocket.onmessage
         this.languageClientWebSocket.onmessage = (e) => {
           if (e.data === "backend websocket ready") {
             // restore onmessage fn
-            console.log("backend websocket ready, starting language client");
-            //this.languageClientWebSocket.onmessage = (e) => {
-            //console.log("received message from backend: " + e.data);
-            //if (e.data === "pong") {
-            // ignore pong keep-alive message from backend
-            //}
-            //defaultOnMessage?.call(this.languageClientWebSocket, e);
-            //}
+
+            // Avoid console.log in production code, while opening websockets, as Firefox otherwise
+            // will will wait a long time before opening the connection, e.g., when switching terminals
+            // or files in the editor (y-websocket and/or monaco-languageclient)
+            //
+            // console.log("backend websocket ready, starting language client");
+
+            // keep-alive seams to be automatically ignored, hence "pong" handling is commented out
+            //
+            // this.languageClientWebSocket.onmessage = (e) => {
+            //   console.log("received message from backend: " + e.data);
+            //   if (e.data === "pong") {
+            //     ignore pong keep-alive message from backend
+            //   }
+            //   defaultOnMessage?.call(this.languageClientWebSocket, e);
+            // }
 
             // keep connection alive
             this.languageClientWSTimerId = setInterval(() => {
@@ -622,16 +644,18 @@ export default class FileEditor extends Component<FileEditorProps> {
 
           // workspaceFolder already set globally, no need to set it again, would only
           // be necessary if workspaceFolders should be different for each selected file
-          //workspaceFolder: {
-          //  uri: "file:///home/p4/"
-          //},
+          //
+          // workspaceFolder: {
+          //   uri: "file:///home/p4/"
+          // },
 
           // disable the default error handler
-          //errorHandler: {
-          //error: () => ({ action: ErrorAction.Continue }),
-          // maybe use restart of language client? e.g., to recover from conn loss?
-          //closed: () => ({ action: CloseAction.Restart })
-          //}
+          //
+          // errorHandler: {
+          //   error: () => ({ action: ErrorAction.Continue }),
+          //   maybe use restart of language client? e.g., to recover from conn loss?
+          //   closed: () => ({ action: CloseAction.Restart })
+          // }
         },
         // create a language client connection from the JSON RPC connection on demand
         connectionProvider: {
@@ -652,7 +676,7 @@ export default class FileEditor extends Component<FileEditorProps> {
     // if languageClient connection was closed, this.languageClient will be undefined
     void this.languageClient?.dispose();
     clearInterval(this.languageClientWSTimerId);
-    //this.languageClientWebSocket.close()
+    this.languageClientWebSocket.close()
   }
 
   findCommonPathPrefix(strings: string[]): string {
