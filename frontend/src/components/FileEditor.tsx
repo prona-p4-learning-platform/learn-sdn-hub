@@ -676,7 +676,7 @@ export default class FileEditor extends Component<FileEditorProps> {
     // if languageClient connection was closed, this.languageClient will be undefined
     void this.languageClient?.dispose();
     clearInterval(this.languageClientWSTimerId);
-    this.languageClientWebSocket.close()
+    //this.languageClientWebSocket.close()
   }
 
   findCommonPathPrefix(strings: string[]): string {
