@@ -644,6 +644,7 @@ export default class FirecrackerProvider implements InstanceProvider {
       IPAddress: microVMIPAddress,
       SSHPort: providerInstance.sshPort,
       LanguageServerPort: providerInstance.lsPort,
+      maxLifetimeMinutes: providerInstance.maxInstanceLifetimeMinutes,
     };
     this.firecrackers.set(microVMIPAddress, {
       vmEndpoint: vmEndpoint,

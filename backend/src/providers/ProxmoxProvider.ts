@@ -534,6 +534,7 @@ export default class ProxmoxProvider implements InstanceProvider {
         privateKey: this.sshJumpHostPrivateKey,
       },
       LanguageServerPort: providerInstance.lsPort,
+      maxInstanceLifetimeMinutes: providerInstance.maxInstanceLifetimeMinutes,
     };
 
     return vmEndpoint;
@@ -615,6 +616,7 @@ export default class ProxmoxProvider implements InstanceProvider {
         privateKey: providerInstance.sshJumpHostPrivateKey,
       },
       LanguageServerPort: providerInstance.lsPort,
+      maxLifetimeMinutes: providerInstance.maxInstanceLifetimeMinutes,
     };
 
     return vmEndpoint;

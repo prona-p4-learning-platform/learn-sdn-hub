@@ -8,6 +8,7 @@ export interface VMEndpoint {
   SSHJumpHost?: JumpHost;
   LanguageServerPort: number;
   RemoteDesktopPort?: number;
+  maxLifetimeMinutes?: number;
 }
 
 // evaluate possiblity to use multiple providers in the same backend, e.g.,

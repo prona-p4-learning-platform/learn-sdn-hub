@@ -505,6 +505,8 @@ export default class OpenStackProvider implements InstanceProvider {
                                       SSHPort: providerInstance.sshPort,
                                       LanguageServerPort:
                                         providerInstance.lsPort,
+                                      maxLifetimeMinutes:
+                                        providerInstance.maxInstanceLifetimeMinutes,
                                     });
                                   })
                                   .catch((err) => {
@@ -560,6 +562,8 @@ export default class OpenStackProvider implements InstanceProvider {
                           IPAddress: fixedIpAddress,
                           SSHPort: providerInstance.sshPort,
                           LanguageServerPort: providerInstance.lsPort,
+                          maxLifetimeMinutes:
+                            providerInstance.maxInstanceLifetimeMinutes,
                         });
                       })
                       .catch((err) => {
@@ -644,6 +648,8 @@ export default class OpenStackProvider implements InstanceProvider {
                   IPAddress: address,
                   SSHPort: providerInstance.sshPort,
                   LanguageServerPort: providerInstance.lsPort,
+                  maxLifetimeMinutes:
+                    providerInstance.maxInstanceLifetimeMinutes,
                 });
               }
             })

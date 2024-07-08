@@ -259,6 +259,7 @@ export default class DockerProvider implements InstanceProvider {
       SSHPort: containerDetails.sshBindingPort,
       LanguageServerPort: containerDetails.lspBindingPort,
       RemoteDesktopPort: containerDetails.rdpBindingPort,
+      maxLifetimeMinutes: this.maxInstanceLifetimeMinutes,
     };
   }
 
@@ -281,6 +282,7 @@ export default class DockerProvider implements InstanceProvider {
       SSHPort: containerDetails.sshBindingPort,
       LanguageServerPort: containerDetails.lspBindingPort,
       RemoteDesktopPort: containerDetails.rdpBindingPort,
+      maxLifetimeMinutes: this.maxInstanceLifetimeMinutes,
     };
   }
 

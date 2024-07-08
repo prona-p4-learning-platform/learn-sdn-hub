@@ -10,6 +10,7 @@ import {
   SubmissionAdminOverviewEntry,
   TerminalStateType,
 } from "../Environment";
+import ActiveEnvironmentTracker from "../trackers/ActiveEnvironmentTracker";
 
 export default (persister: Persister): Router => {
   const router = Router();
@@ -383,6 +384,17 @@ export default (persister: Persister): Router => {
             .json({ error: true, message: "Unknown error" });
         }
       });
+    },
+  );
+
+  router.get(
+    "/environments",
+    authenticationMiddleware,
+    adminRoleMiddleware,
+    (_, res) => {
+      res
+        .status(200)
+        .json(Object.fromEntries(ActiveEnvironmentTracker.getActivityMap()));
     },
   );
 

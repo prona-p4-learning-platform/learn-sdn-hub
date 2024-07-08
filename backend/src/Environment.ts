@@ -10,6 +10,7 @@ import crypto from "crypto";
 import querystring from "querystring";
 import * as Y from "yjs";
 import { fromUint8Array } from "js-base64";
+import ActiveEnvironmentTracker from "./trackers/ActiveEnvironmentTracker";
 
 export interface AliasedFile {
   absFilePath: string;
@@ -172,6 +173,10 @@ export default class Environment {
     return Environment.activeEnvironments.get(`${username}-${environmentId}`);
   }
 
+  public static getActiveEnvironments(): Map<string, Environment> {
+    return Environment.activeEnvironments;
+  }
+
   public static getDeployedUserEnvironmentList(
     username: string,
   ): Array<string> {
@@ -281,11 +286,32 @@ export default class Environment {
             `${username}-${environmentId}`,
             environment,
           );
+          ActiveEnvironmentTracker.addActivity(environment.instanceId, {
+            groupData: {
+              usernames: [username],
+              groupNumber: groupNumber,
+            },
+            environmentData: {
+              environmentId: environmentId,
+              sshPort: endpoint.SSHPort,
+              lsPort: endpoint.LanguageServerPort,
+              ipAddress: endpoint.IPAddress,
+              startTimestamp: Date.now(),
+              remoteDesktopPort: endpoint.RemoteDesktopPort,
+              lifetimeMinutes: endpoint.maxLifetimeMinutes,
+            },
+          });
 
           return Promise.resolve(environment);
         })
         .catch((err) => {
           Environment.activeEnvironments.delete(`${username}-${environmentId}`);
+
+          if (environment.instanceId)
+            ActiveEnvironmentTracker.removeUserActivity(
+              username,
+              environment.instanceId,
+            );
 
           return Promise.reject(
             new Error("Start of environment failed. " + err),
@@ -356,10 +382,34 @@ export default class Environment {
             `${username}-${environmentId}`,
             environment,
           );
+
+          ActiveEnvironmentTracker.addActivity(environment.instanceId, {
+            groupData: {
+              usernames: [username],
+              groupNumber: groupNumber,
+            },
+            environmentData: {
+              environmentId: environmentId,
+              sshPort: endpoint.SSHPort,
+              lsPort: endpoint.LanguageServerPort,
+              ipAddress: endpoint.IPAddress,
+              startTimestamp: Date.now(),
+              remoteDesktopPort: endpoint.RemoteDesktopPort,
+              lifetimeMinutes: endpoint.maxLifetimeMinutes,
+            },
+          });
+
           return Promise.resolve(environment);
         })
         .catch((err) => {
           Environment.activeEnvironments.delete(`${username}-${environmentId}`);
+
+          if (environment.instanceId)
+            ActiveEnvironmentTracker.removeUserActivity(
+              username,
+              environment.instanceId,
+            );
+
           return Promise.reject(
             new Error("Failed to join environment of your group." + err),
           );
@@ -389,6 +439,10 @@ export default class Environment {
               );
             }
           });
+
+          if (environment.instanceId)
+            ActiveEnvironmentTracker.removeActivity(environment.instanceId);
+
           return Promise.resolve(true);
         })
         .catch((err: Error) => {
@@ -410,6 +464,10 @@ export default class Environment {
                 );
               }
             });
+
+            if (environment.instanceId)
+              ActiveEnvironmentTracker.removeActivity(environment.instanceId);
+
             return Promise.resolve(true);
           } else {
             console.log("Failed to stop environment. " + JSON.stringify(err));
