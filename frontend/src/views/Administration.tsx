@@ -14,6 +14,7 @@ import AddEntryDialog from "../components/AddEntryDialog";
 import SubmissionOverview from "../components/SubmissionOverview";
 
 import { APIRequest } from "../api/Request";
+import ActiveEnvironmentTracker from "../components/ActiveEnvironmentTracker";
 
 const assignmentValidator = z.object({
   _id: z.string(),
@@ -357,6 +358,7 @@ function Administration(): JSX.Element {
               "Assign Users",
               "Course Assignments",
               "Submission Overview",
+              "Active Environments",
             ]}
           >
             <UserAssignment
@@ -375,6 +377,7 @@ function Administration(): JSX.Element {
               key="submissionOverview"
               assignments={assignments}
             ></SubmissionOverview>
+            <ActiveEnvironmentTracker key="activeEnvironments"></ActiveEnvironmentTracker>
           </AdminTabs>
         </Grid>
       ) : null}

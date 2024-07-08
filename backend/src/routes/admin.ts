@@ -10,7 +10,7 @@ import {
   SubmissionAdminOverviewEntry,
   TerminalStateType,
 } from "../Environment";
-import ActiveEnvironmentTracker from "../trackers/ActiveEnvironmentTracker";
+import TrackerSSEHandler from "../sse/TrackerSSEHandler";
 
 export default (persister: Persister): Router => {
   const router = Router();
@@ -391,10 +391,23 @@ export default (persister: Persister): Router => {
     "/environments",
     authenticationMiddleware,
     adminRoleMiddleware,
-    (_, res) => {
-      res
-        .status(200)
-        .json(Object.fromEntries(ActiveEnvironmentTracker.getActivityMap()));
+    (req, res) => {
+      res.writeHead(200, {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
+      });
+
+      const reqWithUser = req as RequestWithUser;
+
+      TrackerSSEHandler.addClient(res, reqWithUser.user.username);
+
+      req.on("close", () => {
+        TrackerSSEHandler.removeClient(reqWithUser.user.username);
+        res.end();
+      });
+
+      TrackerSSEHandler.sendInitialActivityData(res);
     },
   );
 
