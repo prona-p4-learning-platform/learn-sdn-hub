@@ -1,6 +1,6 @@
-import config from "./Config";
 import Guacamole from "guacamole-common-js";
 
+import { variables } from "../utilities/Variables";
 import { GuacamoleProxyTunnel } from "./GuacamoleProxyTunnel";
 
 export default function createTunnel(
@@ -10,6 +10,8 @@ export default function createTunnel(
     pathAndQuery = "/" + pathAndQuery;
   }
 
-  console.log(`${config.wsBackendHost}${pathAndQuery}`);
-  return new GuacamoleProxyTunnel(`${config.wsBackendHost}/ws${pathAndQuery}`);
+  console.log(`${variables.location.websocket.url}${pathAndQuery}`);
+  return new GuacamoleProxyTunnel(
+    `${variables.location.websocket.url}/ws${pathAndQuery}`,
+  );
 }

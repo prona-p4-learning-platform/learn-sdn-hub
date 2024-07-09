@@ -1,9 +1,9 @@
-import config from "./Config";
+import { variables } from "../utilities/Variables";
 
 export default function createWebSocket(pathAndQuery = "/"): WebSocket {
   if (!pathAndQuery.startsWith("/")) {
     pathAndQuery = "/" + pathAndQuery;
   }
 
-  return new WebSocket(`${config.wsBackendHost}/ws${pathAndQuery}`);
+  return new WebSocket(`${variables.location.websocket.url}/ws${pathAndQuery}`);
 }
