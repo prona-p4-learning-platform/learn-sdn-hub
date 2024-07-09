@@ -25,6 +25,7 @@ import CloudDownloadIcon from "@mui/icons-material/CloudDownload";
 import { useAuthStore } from "../stores/authStore";
 import { APIRequest, getHttpError } from "../api/Request";
 import createWebSocket from "../api/WebSocket";
+import { variables } from "../utilities/Variables";
 
 // monaco-editor
 import "monaco-editor/esm/vs/editor/editor.all.js";
@@ -378,12 +379,7 @@ export default class FileEditor extends Component<FileEditorProps> {
 
         // Websocket provider
         this.collaborationProvider = new WebsocketProvider(
-          `${window?.location?.protocol === "http:" || undefined ? "ws:" : "wss:"}//` +
-            (import.meta.env.VITE_REACT_APP_YJS_WEBSOCKET_HOST ??
-              window?.location?.hostname ??
-              `localhost`) +
-            `:` +
-            (import.meta.env.VITE_REACT_APP_YJS_WEBSOCKET_PORT ?? `1234`),
+          variables.yjs.websocket.url,
           collaborationId,
           doc,
         );
@@ -394,12 +390,7 @@ export default class FileEditor extends Component<FileEditorProps> {
         //   doc,
         //   {
         //     signaling: [
-        //       `${window?.location?.protocol === "http:" || undefined ? "ws:" : "wss:"}//` +
-        //         (import.meta.env.VITE_REACT_APP_YJS_WEBRTC_HOST ??
-        //         window?.location?.hostname ??
-        //         `localhost`) +
-        //         `:` +
-        //         (import.meta.env.VITE_REACT_APP_YJS_WEBRTC_PORT ?? `4444`),
+        //       variables.yjs.webrtc.url,
         //     ],
         //   }
         // );

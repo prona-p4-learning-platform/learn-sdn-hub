@@ -3,7 +3,7 @@ import { useAuthStore } from "../stores/authStore";
 import { destr } from "destr";
 import { z } from "zod";
 
-import config from "./Config";
+import { variables } from "../utilities/Variables";
 
 type SafeParseSuccess<T> = {
   success: true;
@@ -166,8 +166,8 @@ export async function getHttpError(
   }
 }
 
-export const APIBasePath = import.meta.env.VITE_REACT_APP_API_HOST
-  ? new URL("/api", config.backendURL).href
+export const APIBasePath = variables.location.backend.isModified
+  ? new URL("/api", variables.location.backend.url).href
   : "/api";
 
 /**

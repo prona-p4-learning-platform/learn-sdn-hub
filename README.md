@@ -6,15 +6,15 @@ Initial development was partially funded by the research programme [digLL](https
 
 ## Features
 
-* Web-based lab environment based on React and TypeScript
-* Multiple assignments can be provided for users and deployed to hosts running the exercises' tasks
-* Web-based access to terminals for each assigment based on [xterm.js](https://xtermjs.org/) (using SSH), Apache Guacamole (remote desktop using VNC, RDP etc.) and web frames (iframe)
-* Editing of, e.g., SDN-related files, as well as other configuration or source code files used by the assignments, using web-based [monaco editor](https://microsoft.github.io/monaco-editor/)
-* Augmentation of monaco editor to support SDN and P4 languages, facilitating development tasks by supporting features like auto completion, syntax highlighting, error feedback etc. using [monaco-languageclient](https://github.com/TypeFox/monaco-languageclient)
-* Collaboration support for terminals (tmux), Guacamole (inherently supported by shared remote desktops) as well as collaborative editing in the monaco editor (based on yjs [y-monaco](https://github.com/yjs/y-monaco))
-* Modular authentication backend (included are a simple single user, simple multi user and a MongoDB based authentication backend)
-* Modular assignment host backend (included is an SSH backend for single user, multi user (using hosts, VMs, containers to run the assignments) and an OpenStack (VM), Docker (container) and Firecracker (microVM) provider starting and configuring instances to run the assignments)
-* Support for tests and submissions in assignments
+- Web-based lab environment based on React and TypeScript
+- Multiple assignments can be provided for users and deployed to hosts running the exercises' tasks
+- Web-based access to terminals for each assigment based on [xterm.js](https://xtermjs.org/) (using SSH), Apache Guacamole (remote desktop using VNC, RDP etc.) and web frames (iframe)
+- Editing of, e.g., SDN-related files, as well as other configuration or source code files used by the assignments, using web-based [monaco editor](https://microsoft.github.io/monaco-editor/)
+- Augmentation of monaco editor to support SDN and P4 languages, facilitating development tasks by supporting features like auto completion, syntax highlighting, error feedback etc. using [monaco-languageclient](https://github.com/TypeFox/monaco-languageclient)
+- Collaboration support for terminals (tmux), Guacamole (inherently supported by shared remote desktops) as well as collaborative editing in the monaco editor (based on yjs [y-monaco](https://github.com/yjs/y-monaco))
+- Modular authentication backend (included are a simple single user, simple multi user and a MongoDB based authentication backend)
+- Modular assignment host backend (included is an SSH backend for single user, multi user (using hosts, VMs, containers to run the assignments) and an OpenStack (VM), Docker (container) and Firecracker (microVM) provider starting and configuring instances to run the assignments)
+- Support for tests and submissions in assignments
 
 The following figures show screenshots of the environment, used to teach the basic functions of a P4-based Layer 2 "learning" (flooding & filtering) switch:
 
@@ -33,7 +33,7 @@ we provide a docker-compose file. Clone or download this repository and simply r
 docker-compose up
 ```
 
-This should get you a fully functional learn-sdn-hub deployment together with a [p4-container](https://github.com/prona-p4-learning-platform/p4-container) (based on [p4lang/p4app](https://github.com/p4lang/p4app) image) that can be used to test the assignments. You can use the typical docker-compose setup, e.g., ```docker-compose up -d``` and ```docker-compose down``` to start and stop the entire environment in the background. Configuration of required environment variables can be done using provided [.env](https://github.com/prona-p4-learning-platform/learn-sdn-hub/blob/master/.env) file. The contained parameters can also be overridden by setting env vars with the same name. You can use ```source examples/sample-config-env.sh``` as a starting point to set the environment variables.
+This should get you a fully functional learn-sdn-hub deployment together with a [p4-container](https://github.com/prona-p4-learning-platform/p4-container) (based on [p4lang/p4app](https://github.com/p4lang/p4app) image) that can be used to test the assignments. You can use the typical docker-compose setup, e.g., `docker-compose up -d` and `docker-compose down` to start and stop the entire environment in the background. Configuration of required environment variables can be done using provided [.env](https://github.com/prona-p4-learning-platform/learn-sdn-hub/blob/master/.env) file. The contained parameters can also be overridden by setting env vars with the same name. You can use `source examples/sample-config-env.sh` as a starting point to set the environment variables.
 Again, this is not intended to be used in production environments. Proper setup for production environments is described below.
 
 If you change the IP address used for VBOX_IP_ADDRESSES in .env file for docker-compose, you can login using a user defined in BACKEND_USERS, e.g., user: user1 and password: password1, login to learn-sdn-hub and deploy assignments to the started p4-container or other hosts capable of compiling and running P4, you specified in the .env file.
@@ -49,7 +49,7 @@ export SSH_PASSWORD="p4"
 docker run -it --rm -p 3001:3001 prona/learn-sdn-hub -t $BACKEND_TYPE -a $VBOX_IP_ADDRESSES -s $VBOX_SSH_PORTS -u $SSH_USERNAME -w $SSH_PASSWORD
 ```
 
-The container image runs the backend using the provider specified by "-t". Possible providers are localvm, localmultiuservm and openstack. You can get further help regarding the options by running ```docker run -it --rm prona/learn-sdn-hub -h```. In the case of localvm or localmultiuservm backend type, VBOX_IP_ADDRESSES is expected to lead to a host or a list of hosts that can be reached using SSH (on the port specified by VBOX_SSH_PORTS, and login using SSH_USERNAME, SSH_PASSWORD). For P4 assignments, the host needs to contain all necessary P4 tools, p4c, bmv2, mininet etc. See next [section](#prepare-a-p4-host) for details, if you do not already have a host containing P4 toolchain (like P4 tutorials VM, p4-learning VM etc.)
+The container image runs the backend using the provider specified by "-t". Possible providers are localvm, localmultiuservm and openstack. You can get further help regarding the options by running `docker run -it --rm prona/learn-sdn-hub -h`. In the case of localvm or localmultiuservm backend type, VBOX_IP_ADDRESSES is expected to lead to a host or a list of hosts that can be reached using SSH (on the port specified by VBOX_SSH_PORTS, and login using SSH_USERNAME, SSH_PASSWORD). For P4 assignments, the host needs to contain all necessary P4 tools, p4c, bmv2, mininet etc. See next [section](#prepare-a-p4-host) for details, if you do not already have a host containing P4 toolchain (like P4 tutorials VM, p4-learning VM etc.)
 
 Configuration of assignments, editable files, lab sheets, SSH consoles etc. needs to be done in backend/src/Configuration.ts. Assignment lab sheets need to be stored in backend/src/assigments. You can mount a local Configuration.ts file and a local assignments directory in the container using:
 
@@ -96,10 +96,11 @@ You can copy the production build of the frontend to the static directory of the
 ## Configuration
 
 ### Run the backend using Docker instances for assignments
+
 (using [DockerProvider.ts](https://github.com/prona-p4-learning-platform/learn-sdn-hub/blob/master/backend/src/providers/DockerProvider.ts))
 
 Assignments for users and their groups can be started using Docker containers offering a light weight
-instance format. 
+instance format.
 
 ```sh
 BACKEND_HTTP_PORT="3001"
@@ -107,7 +108,7 @@ BACKEND_TYPE="docker"
 ```
 
 Docker daemon connection defaults to var/run/docker.sock, see https://github.com/apocas/dockerode.
-Using Windows ``//./pipe/docker_engine`` should be used. dockerode also supports using a remote
+Using Windows `//./pipe/docker_engine` should be used. dockerode also supports using a remote
 connection to Docker daemon.
 
 ```sh
@@ -118,15 +119,15 @@ DOCKER_PORT="3000"
 DOCKER_PROTOCOL="http"
 ```
 
-Docker provider configuration must provide a default image that will be used for the started 
-containers. 
+Docker provider configuration must provide a default image that will be used for the started
+containers.
 
 ```sh
 # image must provide SSH port and connection
 export DOCKER_IMAGE="prona/p4-container"
 ```
 
-Also, an entrypoint/iniial cmd can be specified. 
+Also, an entrypoint/iniial cmd can be specified.
 
 ```sh
 DOCKER_CMD="-s"
@@ -142,6 +143,7 @@ DOCKER_MAX_INSTANCE_LIFETIME_MINUTES="120"
 Further configuration options can be specified on a per-assignment basis in the assignment configuration file.
 
 ### Run the backend using OpenStack instances for assignments
+
 (using [OpenStackProvider.ts](https://github.com/prona-p4-learning-platform/learn-sdn-hub/blob/master/backend/src/providers/OpenStackProvider.ts))
 
 Instead of using a preinstalled local VM or host to run your P4 code and assignments, also an OpenStack provider is available, that creates OpenStack instances for deployed assignments. In OpenStack an image is necessary, that contains p4 tool chain etc., as documented above for the local VM use-case. The provider is based on [pkgcloud](https://github.com/pkgcloud/pkgcloud). OpenStack keystone needs to be available using v3.
@@ -158,12 +160,13 @@ export SSH_PASSWORD=<Password to be used for the ssh connection>
 cd backend
 npm run start
 ```
-Optionally you can also ```export SSH_PRIVATE_KEY_PATH=<SSH keyfile>``` to use an SSH keyfile for the connections to the host running your P4 assignments.
+
+Optionally you can also `export SSH_PRIVATE_KEY_PATH=<SSH keyfile>` to use an SSH keyfile for the connections to the host running your P4 assignments.
 
 [start-learn-sdn-hub.sh](https://github.com/prona-p4-learning-platform/learn-sdn-hub/tree/master/examples/start-learn-sdn-hub.sh) can be used as a reference to create a startup script.
 
-
 ### Run the backend using Firecracker microVMs for assignments
+
 (using [FirecrackerProvider.ts](https://github.com/prona-p4-learning-platform/learn-sdn-hub/blob/master/backend/src/providers/FirecrackerProvider.ts))
 
 t.b.w.
@@ -182,14 +185,14 @@ A web browser will open automatically leading you to the login in the frontend. 
 Vite proxies calls to the backend automatically. If the backend is not running on the same machine you can use environment variables to manually redirect this traffic. Create a ".env.local" file in the frontend directory and use the following variables:
 
 ```sh
-VITE_REACT_APP_API_HOST=http://localhost:3001
-VITE_REACT_APP_WS_HOST=ws://localhost:3001
+VITE_API_HOST=http://localhost:3001
+VITE_WS_HOST=ws://localhost:3001
 ```
 
 If you run the backend on a custom port other than the default TCP port 3001, you can also specify this port in the .env.local file to be used by the frontend to connect to the backend:
 
 ```sh
-VITE_REACT_APP_BACKEND_HTTP_PORT=16000
+VITE_BACKEND_HTTP_PORT=16000
 ```
 
 ### Assignment Configuration
@@ -208,6 +211,7 @@ export MONGODB_URL="mongodb+srv://admin:password-here@cluster0.tdnvj.mongodb.net
 ### MongoDB Default Structure
 
 The default configuration for MongoDB is to use the following collections:
+
 - assignments
 - courses
 - submissions
@@ -229,24 +233,24 @@ BACKEND_USER_ALLOWED_ASSIGNMENTS
 
 ### Assigning points to submissions
 
-If you want to be able to assign points to subimssions, you need to set ``maxBonusPoints`` in the assignment configuration file. The points can then be assigned in the admin panel.
-For MongoDB you can also set the ``maxBonusPoints`` in the assignment document of the ``assignments`` collection as an ``Int32``.
+If you want to be able to assign points to subimssions, you need to set `maxBonusPoints` in the assignment configuration file. The points can then be assigned in the admin panel.
+For MongoDB you can also set the `maxBonusPoints` in the assignment document of the `assignments` collection as an `Int32`.
 
 ### Enable Collaboration
 
 Users in the same group can use collaboration to work in the editor together.
-To enable collaboration, ``useCollaboration: true`` needs to be set in the assignment configuration file.
+To enable collaboration, `useCollaboration: true` needs to be set in the assignment configuration file.
 
 Currently yjs is used for the implementation of editor collaboration. An environment variable needs to be set to configure yjs websocket connection:
 
 Connection currently uses anonymous connection, so if security is an issue for collaboration, yjs server and backend should be placed on the same host using localhost for the connection. By default y-websocket is used.
 
 ```sh
-VITE_REACT_APP_YJS_WEBSOCKET_HOST = "localhost"
-VITE_REACT_APP_YJS_WEBSOCKET_PORT = "1234"
+VITE_YJS_WEBSOCKET_HOST=localhost
+VITE_YJS_WEBSOCKET_PORT=1234
 ```
 
-Convergence server can be started, e.g., using:
+Yjs server can be started, e.g., using:
 
 ```sh
 cd backend
@@ -259,4 +263,4 @@ The examples in the repository also show how to use tmux to allow shared termina
 
 ### Enable languageClient
 
-To enable monaco languageClient, ``useLanguageClient: true`` needs to be set in the assignment configuration file. ``rootPath`` and ``workspaceFolders`` can also be defined there, to allow, e.g., auto completion across files in these folders. The instance must provide an LSP port (LSP proxy as described above), e.g., 3005 TCP supporting the languages used in the editor. See [servers.yml](https://github.com/prona-p4-learning-platform/p4-container/blob/master/servers.yml) for an example to use Python and P4 LSP in the proxy. The [lsp.service](https://github.com/prona-p4-learning-platform/p4-container/blob/master/lsp.service) file and [Dockerfile](https://github.com/prona-p4-learning-platform/p4-container/blob/58647e3cdda328f805678e974ea8e780bc9aa27a/Dockerfile#L100) show how the LSP proxy can be configured and started.
+To enable monaco languageClient, `useLanguageClient: true` needs to be set in the assignment configuration file. `rootPath` and `workspaceFolders` can also be defined there, to allow, e.g., auto completion across files in these folders. The instance must provide an LSP port (LSP proxy as described above), e.g., 3005 TCP supporting the languages used in the editor. See [servers.yml](https://github.com/prona-p4-learning-platform/p4-container/blob/master/servers.yml) for an example to use Python and P4 LSP in the proxy. The [lsp.service](https://github.com/prona-p4-learning-platform/p4-container/blob/master/lsp.service) file and [Dockerfile](https://github.com/prona-p4-learning-platform/p4-container/blob/58647e3cdda328f805678e974ea8e780bc9aa27a/Dockerfile#L100) show how the LSP proxy can be configured and started.
