@@ -376,6 +376,8 @@ export default class FileEditor extends Component<FileEditorProps> {
 
         Y.applyUpdate(doc, toUint8Array(data.content));
 
+        // Check for double document, if environment was not undeployed
+
         // Websocket provider
         this.collaborationProvider = new WebsocketProvider(
           `${window?.location?.protocol === "http:" || undefined ? "ws:" : "wss:"}//` +

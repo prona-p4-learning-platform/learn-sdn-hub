@@ -1,4 +1,4 @@
-import SSHConsole, { Console } from "./consoles/SSHConsole";
+import SSHConsole, { Console, JumpHost } from "./consoles/SSHConsole";
 import FileHandler from "./filehandler/SSHFileHandler";
 import {
   InstanceProvider,
@@ -459,6 +459,11 @@ export default class Environment {
   async getIPAddress(): Promise<string> {
     const endpoint = await this.makeSureInstanceExists();
     return endpoint.IPAddress;
+  }
+
+  async getJumphost(): Promise<JumpHost | undefined> {
+    const endpoint = await this.makeSureInstanceExists();
+    return endpoint.SSHJumpHost;
   }
 
   async makeSureInstanceExists(createIfMissing?: boolean): Promise<VMEndpoint> {
