@@ -10,6 +10,7 @@ import crypto from "crypto";
 import querystring from "querystring";
 import * as Y from "yjs";
 import { fromUint8Array } from "js-base64";
+import console from "console";
 
 export interface AliasedFile {
   absFilePath: string;
@@ -164,42 +165,60 @@ export default class Environment {
   private username: string;
   private filehandler!: FileHandler; // TODO: filehandler is not set in constructor
   private groupNumber: number;
+  private sessionId: string;
 
   public static getActiveEnvironment(
     environmentId: string,
-    username: string,
-  ): Environment | undefined {
-    return Environment.activeEnvironments.get(`${username}-${environmentId}`);
+    groupNumber: number,
+    // sessionId can be omitted, if any environment of the group can be returned, e.g., during deletion
+    sessionId?: string,
+  ): Environment | undefined{
+    const activeEnvironment: Array<Environment> = new Array<Environment>();
+
+    for (const [, value] of Environment.activeEnvironments) {
+      if (sessionId) {
+        if ((value.environmentId === environmentId) && (value.groupNumber === groupNumber) && (value.sessionId === sessionId)) {
+          activeEnvironment.push(value);
+        }
+      } else {
+        if ((value.environmentId === environmentId) && (value.groupNumber === groupNumber)) {
+          activeEnvironment.push(value);
+        }
+      }
+    }
+    return activeEnvironment[0];
   }
 
-  public static getDeployedUserEnvironmentList(
+  public static getDeployedUserSessionEnvironmentList(
     username: string,
+    sessionId: string,
   ): Array<string> {
-    const deployedEnvironmentsForUser: Array<string> = new Array<string>();
-    Environment.activeEnvironments.forEach(
-      (value: Environment, key: string) => {
-        if (value.username === username)
-          deployedEnvironmentsForUser.push(key.split("-").slice(1).join("-"));
-      },
-    );
-    return deployedEnvironmentsForUser;
+    const deployedEnvironmentsForUserSession: Array<string> = new Array<string>();
+
+    for (const [, value] of Environment.activeEnvironments) {
+      if ((value.username === username) && (value.sessionId === sessionId))
+        //deployedEnvironmentsForUserSession.push(key.split("-").slice(1).join("-"));
+        deployedEnvironmentsForUserSession.push(value.environmentId);
+    }
+    return deployedEnvironmentsForUserSession;
   }
 
   public static getDeployedGroupEnvironmentList(groupNumber: number): string[] {
     const deployedEnvironmentsForGroup: string[] = [];
 
-    for (const [key, value] of Environment.activeEnvironments) {
+    for (const [, value] of Environment.activeEnvironments) {
       if (value.groupNumber === groupNumber) {
-        deployedEnvironmentsForGroup.push(key.split("-").slice(1).join("-"));
+        //deployedEnvironmentsForGroup.push(key.split("-").slice(1).join("-"));
+        deployedEnvironmentsForGroup.push(value.environmentId);
       }
     }
-
     return deployedEnvironmentsForGroup;
   }
 
   private constructor(
     username: string,
     groupNumber: number,
+    sessionId: string,
     environmentId: string,
     configuration: EnvironmentDescription,
     environmentProvider: InstanceProvider,
@@ -213,6 +232,7 @@ export default class Environment {
     this.persister = persister;
     this.username = username;
     this.groupNumber = groupNumber;
+    this.sessionId = sessionId;
     this.environmentId = environmentId;
   }
 
@@ -239,6 +259,7 @@ export default class Environment {
   static async createEnvironment(
     username: string,
     groupNumber: number,
+    sessionId: string,
     environmentId: string,
     env: EnvironmentDescription,
     provider: InstanceProvider,
@@ -247,6 +268,7 @@ export default class Environment {
     const environment = new Environment(
       username,
       groupNumber,
+      sessionId,
       environmentId,
       env,
       provider,
@@ -254,7 +276,7 @@ export default class Environment {
     );
 
     console.log(
-      "Creating new environment: " + environmentId + " for user: " + username,
+      "Creating new environment: " + environmentId + " for user: " + username + " in group: " + groupNumber + " session: " + sessionId,
     );
 
     const activeEnvironmentsForGroup = Array<Environment>();
@@ -263,7 +285,7 @@ export default class Environment {
         if (environment.environmentId !== environmentId) {
           return Promise.reject(
             new Error(
-              "Your group already deployed another environment. Please reload assignment list.",
+              "You or your group already deployed another environment. Please reload assignment list.",
             ),
           );
         } else {
@@ -274,18 +296,18 @@ export default class Environment {
 
     if (activeEnvironmentsForGroup.length === 0) {
       await environment
-        .start(env, true)
+        .start(env, sessionId, true)
         .then((endpoint) => {
           environment.instanceId = endpoint.instance;
           Environment.activeEnvironments.set(
-            `${username}-${environmentId}`,
+            `${username}-${groupNumber}-${sessionId}-${environmentId}`,
             environment,
           );
 
           return Promise.resolve(environment);
         })
         .catch((err) => {
-          Environment.activeEnvironments.delete(`${username}-${environmentId}`);
+          Environment.activeEnvironments.delete(`${username}-${groupNumber}-${sessionId}-${environmentId}`);
 
           return Promise.reject(
             new Error("Start of environment failed. " + err),
@@ -344,22 +366,24 @@ export default class Environment {
           activeEnvironmentsForGroup[0].username +
           " in group: " +
           groupNumber +
+          " session: " +
+          sessionId +
           " using instance: " +
           groupEnvironmentInstance,
       );
 
       await environment
-        .start(env, false)
+        .start(env, sessionId, false)
         .then((endpoint) => {
           environment.instanceId = endpoint.instance;
           Environment.activeEnvironments.set(
-            `${username}-${environmentId}`,
+            `${username}-${groupNumber}-${sessionId}-${environmentId}`,
             environment,
           );
           return Promise.resolve(environment);
         })
         .catch((err) => {
-          Environment.activeEnvironments.delete(`${username}-${environmentId}`);
+          Environment.activeEnvironments.delete(`${username}-${groupNumber}-${sessionId}-${environmentId}`);
           return Promise.reject(
             new Error("Failed to join environment of your group." + err),
           );
@@ -369,24 +393,21 @@ export default class Environment {
   }
 
   static async deleteEnvironment(
-    username: string,
+    groupNumber: number,
     environmentId: string,
   ): Promise<boolean> {
-    const environment = this.getActiveEnvironment(environmentId, username);
+    const environment = this.getActiveEnvironment(environmentId, groupNumber);
 
     if (environment) {
       const groupNumber = environment.groupNumber;
-
       await environment
         .stop()
         .then(() => {
-          Environment.activeEnvironments.delete(`${username}-${environmentId}`);
+          //Environment.activeEnvironments.delete(`${username}-${groupNumber}-${sessionId}-${environmentId}`);
           // search for other activeEnvironments in the same group
-          Environment.activeEnvironments.forEach((env: Environment) => {
-            if (env.groupNumber === groupNumber && env.username !== username) {
-              Environment.activeEnvironments.delete(
-                `${env.username}-${env.environmentId}`,
-              );
+          Environment.activeEnvironments.forEach((env: Environment, key: string) => {
+            if (env.groupNumber === groupNumber) {
+              Environment.activeEnvironments.delete(key);
             }
           });
           return Promise.resolve(true);
@@ -396,18 +417,12 @@ export default class Environment {
             console.log(
               "Environment was already stopped. Silently deleting leftovers in user session.",
             );
-            Environment.activeEnvironments.delete(
-              `${username}-${environmentId}`,
-            );
             // search for other activeEnvironments in the same group
-            Environment.activeEnvironments.forEach((env: Environment) => {
+            Environment.activeEnvironments.forEach((env: Environment, key: string) => {
               if (
-                env.groupNumber === groupNumber &&
-                env.username !== username
+                env.groupNumber === groupNumber
               ) {
-                Environment.activeEnvironments.delete(
-                  `${env.username}-${env.environmentId}`,
-                );
+                Environment.activeEnvironments.delete(key);
               }
             });
             return Promise.resolve(true);
@@ -430,7 +445,7 @@ export default class Environment {
         instanceEnvironmentFound = true;
         // the environment uses the specified instance and should be deleted
         await this.deleteEnvironment(
-          activeEnvironment.username,
+          activeEnvironment.groupNumber,
           activeEnvironment.environmentId,
         )
           .then((result) => {
@@ -546,6 +561,7 @@ export default class Environment {
 
   async start(
     desc: EnvironmentDescription = this.configuration,
+    sessionId: string,
     createIfMissing: boolean,
   ): Promise<VMEndpoint> {
     const endpoint = await this.makeSureInstanceExists(createIfMissing);
@@ -592,8 +608,10 @@ export default class Environment {
             try {
               const console = new SSHConsole(
                 this.environmentId,
+                subterminal.name,
                 this.username,
                 this.groupNumber,
+                sessionId,
                 endpoint.IPAddress,
                 endpoint.SSHPort,
                 subterminal.executable,
@@ -781,7 +799,10 @@ export default class Environment {
       });
 
       for (const console of this.activeConsoles) {
-        console[1].close(this.environmentId, this.username, this.groupNumber);
+        // session is not used as command is not run from a console,
+        // so it can be anything and also create a new SSH connection if needed
+        // (no need to reuse an existing connection)
+        console[1].close(this.environmentId, this.username, this.groupNumber, "NoSessionId");
       }
       await this.filehandler.close();
 
@@ -795,10 +816,14 @@ export default class Environment {
         ) {
           activeUsers.push(env.username);
           for (const console of this.activeConsoles) {
+            // session is not used as command is not run from a console,
+            // so it can be anything and also create a new SSH connection if needed
+            // (no need to reuse an existing connection)
             console[1].close(
               this.environmentId,
               env.username,
               this.groupNumber,
+              "NoSessionId",
             );
           }
         }
@@ -814,10 +839,15 @@ export default class Environment {
               JSON.stringify(command),
               JSON.stringify(endpoint),
             );
+            // session is not used as command is not run from a console,
+            // so it can be anything and also create a new SSH connection if needed
+            // (no need to reuse an existing connection)
             const console = new SSHConsole(
               this.environmentId,
+              command.name,
               this.username,
               this.groupNumber,
+              "NoSessionId",
               endpoint.IPAddress,
               endpoint.SSHPort,
               command.executable,
@@ -922,7 +952,7 @@ export default class Environment {
     }
   }
 
-  async restart(): Promise<void> {
+  async restart(sessionId: string): Promise<void> {
     const endpoint = await this.makeSureInstanceExists();
 
     for (const command of this.configuration.stopCommands) {
@@ -936,8 +966,10 @@ export default class Environment {
           );
           const console = new SSHConsole(
             this.environmentId,
+            command.name,
             this.username,
             this.groupNumber,
+            sessionId,
             endpoint.IPAddress,
             endpoint.SSHPort,
             command.executable,
@@ -999,8 +1031,14 @@ export default class Environment {
       // run sshCommand
       const console = new SSHConsole(
         this.environmentId,
+        // name and session are not used as command is not run from a console,
+        // so it can be anything and also create a new SSH connection if needed
+        // (no need to reuse an existing connection)
+        // also, no need to specify args and use / as cwd
+        "NoConsole",
         this.username,
         this.groupNumber,
+        "NoSessionID",
         endpoint.IPAddress,
         endpoint.SSHPort,
         command,
@@ -1249,10 +1287,10 @@ export default class Environment {
   public static async getCollabDoc(
     alias: string,
     environmentId: string,
-    username: string,
+    groupNumber: number,
   ): Promise<string> {
     if (this.activeCollabDocs.get(alias) === undefined) {
-      const env = Environment.getActiveEnvironment(environmentId, username);
+      const env = Environment.getActiveEnvironment(environmentId, groupNumber);
       const resolvedPath = env?.editableFiles.get(alias);
 
       if (!env || resolvedPath === undefined) {

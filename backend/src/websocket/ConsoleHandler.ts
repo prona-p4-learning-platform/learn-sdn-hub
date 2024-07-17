@@ -4,11 +4,11 @@ import Environment from "../Environment";
 export default function (
   ws: WebSocket,
   environment: string,
-  username: string,
+  groupNumber: number,
+  sessionId: string,
   type: string,
 ): void {
-  console.log(environment, username);
-  const envInstance = Environment.getActiveEnvironment(environment, username);
+  const envInstance = Environment.getActiveEnvironment(environment, groupNumber, sessionId);
   if (envInstance !== undefined) {
     const envConsole = envInstance.getConsoleByAlias(type);
     if (envConsole === undefined) {
@@ -34,11 +34,14 @@ export default function (
       // eslint-disable-next-line @typescript-eslint/no-base-to-string
       const stringified = message.toString();
       // eslint-disable-next-line no-control-regex
-      const matchings = stringified.match(/^\x1B\[8;(.*);(.*)t$/);
+      const matchResize = stringified.match(/^\x1B\[8;(.*);(.*)t$/);
+      // recently, xterm sends ESC+0;276;0c for some reason, filter that out
+      // eslint-disable-next-line no-control-regex
+      const matchGarbageControlSeq = stringified.match(/^\x1B\[>0;276;0c$/);
 
-      if (matchings && matchings[1] && matchings[2]) {
-        const lines = parseInt(matchings[1]);
-        const columns = parseInt(matchings[2]);
+      if (matchResize && matchResize[1] && matchResize[2]) {
+        const lines = parseInt(matchResize[1]);
+        const columns = parseInt(matchResize[2]);
         //console.log(
         //  "received SIGWINCH resize event (lines: " +
         //    lines +
@@ -47,6 +50,8 @@ export default function (
         //    ")"
         //);
         envConsole.resize(columns, lines);
+      } else if (matchGarbageControlSeq) {
+        //console.log("received terminal control seq ESC+[>0;276;0c, ignoring");
       } else {
         envConsole.write(stringified);
         //console.log(`Received message ${message}`);

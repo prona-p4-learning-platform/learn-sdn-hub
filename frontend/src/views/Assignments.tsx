@@ -336,7 +336,7 @@ function Assignments(): JSX.Element {
       {deployedUserAssignments.length === 0 &&
         deployedGroupAssignments.length > 0 && (
           <Typography>
-            Your group is working on {deployedGroupAssignments[0]}. You can join
+            You or your group members are working on {deployedGroupAssignments[0]}. You can join
             and open a connection by clicking deploy.
           </Typography>
         )}
