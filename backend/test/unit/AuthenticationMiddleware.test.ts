@@ -33,8 +33,7 @@ test("calls next() if a proper token was passed", () => {
       username: "testuser",
       id: "testid",
     },
-    /* TODO: replace secret */
-    "some-secret",
+    process.env.JWT_TOKENSECRET ?? "some-secret",
   );
   AuthenticationMiddleware(
     mockRequest as Request,

@@ -10,7 +10,7 @@ export interface Console {
   on(event: "data", listener: (data: string) => void): this;
   write(data: string): void;
   writeLine(data: string): void;
-  close(environmentId: string, username: string, groupNumber: number): void;
+  close(environmentId: string, username: string, groupNumber: number, sessionId: string): void;
   resize(columns: number, lines: number): void;
   consumeInitialConsoleBuffer(): string;
   command: string;
@@ -39,6 +39,7 @@ type CustomizedSSHClient = Client & {
   environmentId: string;
   username: string;
   groupNumber: number;
+  sessionId: string;
 };
 
 export default class SSHConsole extends EventEmitter implements Console {
@@ -57,8 +58,10 @@ export default class SSHConsole extends EventEmitter implements Console {
 
   constructor(
     environmentId: string,
+    consoleName: string,
     username: string,
     groupNumber: number,
+    sessionId: string,
     ipaddress: string,
     port: number,
     command: string,
@@ -76,12 +79,13 @@ export default class SSHConsole extends EventEmitter implements Console {
     let sshConsole: CustomizedSSHClient;
     // sharing connections in the same group would be possible and multiple users can then use the same xterm.js together,
     // however refresh/different console sizes (which is inevitable due to different browser window sizes) etc. will lead to console corruption
-    const consoleIdentifier = `${ipaddress}:${port}:${environmentId}:${username}:${groupNumber}`;
+    const consoleIdentifier = `${ipaddress}:${port}:${environmentId}:${consoleName}:${username}:${groupNumber}:${sessionId}`;
     const sshConnection = SSHConsole.sshConnections.get(consoleIdentifier);
 
     if (provideTty && sshConnection) {
       sshConsole = sshConnection;
 
+      console.log("#### Reusing existing SSH connection" + consoleIdentifier);
       if (!sshConsole.ready) {
         sshConsole.on("ready", () => {
           sshConsole.ready = true;
@@ -91,6 +95,7 @@ export default class SSHConsole extends EventEmitter implements Console {
         this.setupShellStream(sshConsole);
       }
     } else {
+      console.log("#### Creating new SSH connection" + consoleIdentifier);
       sshConsole = new Client() as CustomizedSSHClient;
       sshConsole.ready = false;
       sshConsole.environmentId = environmentId;
@@ -298,13 +303,14 @@ export default class SSHConsole extends EventEmitter implements Console {
     this.stream?.write(`${data}\n`);
   }
 
-  close(environmentId: string, username: string, groupNumber: number): void {
+  close(environmentId: string, username: string, groupNumber: number, sessionId: string): void {
     console.log("SSH console close");
     SSHConsole.sshConnections.forEach((value, key, map) => {
       if (
         value.environmentId === environmentId &&
         value.username === username &&
-        value.groupNumber === groupNumber
+        value.groupNumber === groupNumber &&
+        value.sessionId === sessionId
       ) {
         value.emit("close");
         map.delete(key);

@@ -6,6 +6,7 @@ export interface TokenPayload {
   id: string;
   groupNumber: number;
   role?: string;
+  sessionId: string;
 }
 
 export type RequestWithUser = Request & {
@@ -17,8 +18,7 @@ function middleware(req: Request, res: Response, next: NextFunction): void {
 
   try {
     if (token) {
-      /* TODO: replace secret */
-      const result = jwt.verify(token, "some-secret") as TokenPayload;
+      const result = jwt.verify(token, process.env.JWT_TOKENSECRET ?? "some-secret") as TokenPayload;
       const reqWithUser = req as RequestWithUser;
 
       reqWithUser.user = result;

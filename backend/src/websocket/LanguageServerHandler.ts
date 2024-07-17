@@ -7,10 +7,10 @@ import fs from "fs";
 export default function (
   wsFromBrowser: WebSocket,
   environment: string,
-  username: string,
+  groupNumber: number,
   language: string,
 ): void {
-  const envInstance = Environment.getActiveEnvironment(environment, username);
+  const envInstance = Environment.getActiveEnvironment(environment, groupNumber);
   if (envInstance !== undefined) {
     Promise.all([
       envInstance.getLanguageServerPort(),
@@ -122,7 +122,8 @@ export default function (
           console.log("LanguageServer WebSocket closed...");
           wsToLanguageServer.close();
         });  
-      }).catch((err) => {
+      })
+      .catch((err) => {
         console.log(err);
         wsFromBrowser.send(
           "Could not connect to environment language server, closing connection.",
