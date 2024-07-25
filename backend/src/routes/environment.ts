@@ -224,7 +224,14 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
       if (env) {
         env
           .readFile(reqWithUser.params.alias)
-          .then((content: string) => {
+          .then((content: string | undefined) => {
+            if (content === undefined) {
+              res.status(404).json({
+                status: "error",
+                message: "File not found or handler not initialized",
+              });
+              return;
+            }
             res.status(200).json({
               content,
               location: env.getFilePathByAlias(reqWithUser.params.alias),

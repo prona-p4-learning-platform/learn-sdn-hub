@@ -34,4 +34,4 @@ export interface InstanceProvider {
 }
 
 export const InstanceNotFoundErrorMessage =
-  "Provider: Cannot get server. Instance not found.";
+  "Provider: Cannot get server. Instance not found. Try to deploy again.";

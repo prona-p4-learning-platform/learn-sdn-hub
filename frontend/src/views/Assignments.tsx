@@ -258,6 +258,7 @@ function Assignments(): JSX.Element {
           query: {
             environment: assignment,
           },
+          timeout: 300000, // 5 minutes timeout, e.g., proxmox and OpenStack take some time for cloning and startup
         });
 
         enqueueSnackbar("Deployment successful!", { variant: "success" });
@@ -297,6 +298,7 @@ function Assignments(): JSX.Element {
           query: {
             environment: assignment,
           },
+          timeout: 300000, // 5 minutes seconds timeout, e.g., proxmox and OpenStack take some time to delete instances
         });
 
         enqueueSnackbar("Deployment deletion successful!", {
