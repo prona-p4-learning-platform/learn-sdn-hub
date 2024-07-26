@@ -18,7 +18,7 @@ if (
   process.env.NODE_EXTRA_CA_CERTS === undefined &&
   process.env.NODE_TLS_REJECT_UNAUTHORIZED === undefined
 ) {
-  console.log(
+  console.warn(
     "\nWARNING: NODE_EXTRA_CA_CERTS is not set. \n" +
       "Please set NODE_EXTRA_CA_CERTS environment variable to provide the CA " +
       "certificate of your cluster, if you do not use a globally trusted " +
@@ -29,10 +29,13 @@ if (
   );
 }
 
+//TODO: make timeouts configurable
+
 //TODO: possibly also support qemu instead of lxc
 enum proxmoxInstanceType {
   lxc,
   qemu,
+  reservation,
 }
 
 interface proxmoxVMInstance {
@@ -50,7 +53,7 @@ export default class ProxmoxProvider implements InstanceProvider {
 
   // Proxmox Provider config
   private maxInstanceLifetimeMinutes: number;
-  private vmSSHTimeoutSeconds = 30;
+  private vmSSHTimeoutSeconds = 120;
 
   private proxmoxTemplateTag: string;
   private proxmoxTargetHost: string;
@@ -68,9 +71,12 @@ export default class ProxmoxProvider implements InstanceProvider {
   private sshJumpHostPassword: string | undefined;
   private sshJumpHostPrivateKey: string | undefined;
 
-  private proxmoxVMInstances: Map<string, proxmoxVMInstance | undefined>;
+  private static proxmoxVMInstances: Map<string, proxmoxVMInstance | undefined>;
 
   private providerInstance: ProxmoxProvider;
+
+  private static semaphoreNextIPAddress = 0;
+  private static semaphoreNextID = 0;
 
   constructor() {
     this.auth = {
@@ -128,12 +134,15 @@ export default class ProxmoxProvider implements InstanceProvider {
                             if (net0?.match(/,ip=(.*),/)) {
                               const ip = net0?.match(/,ip=(.*),/) ?? "";
                               const ipAddress = ip[1].split("/")[0];
-                              this.proxmoxVMInstances.set(ipAddress, {
-                                type: proxmoxInstanceType.lxc,
-                                vmid: vm.vmid,
-                                name: vm.name ?? "",
-                                deleteTimestamp: 0,
-                              });
+                              ProxmoxProvider.proxmoxVMInstances.set(
+                                ipAddress,
+                                {
+                                  type: proxmoxInstanceType.lxc,
+                                  vmid: vm.vmid,
+                                  name: vm.name ?? "",
+                                  deleteTimestamp: 0,
+                                },
+                              );
                             }
                           });
                       } else {
@@ -145,7 +154,39 @@ export default class ProxmoxProvider implements InstanceProvider {
                         );
                       }
                     }
+                  })
+                  .catch((error) => {
+                    const originalMessage =
+                      error instanceof Error ? error.message : "Unknown error";
+                    // do not throw an error if node is temporarily unavailable, simply ignore shutdown nodes
+                    if (originalMessage.match(/595 No route to host/)) {
+                      // ignore unreachable nodes, might be updating or temporarily shutdown, no need to look for VMs on them
+                    } else {
+                      throw new Error(
+                        "ProxmoxProvider: unable to get current status of existing VM to prepopulate running instances: " +
+                          vm.vmid +
+                          " on " +
+                          node.node +
+                          "\n" +
+                          originalMessage,
+                      );
+                    }
                   });
+              }
+            })
+            .catch((error) => {
+              const originalMessage =
+                error instanceof Error ? error.message : "Unknown error";
+              // do not throw an error if node is temporarily unavailable, simply ignore shutdown nodes
+              if (originalMessage.match(/595 No route to host/)) {
+                // ignore unreachable nodes, might be updating or temporarily shutdown, no need to look for VMs on them
+              } else {
+                throw new Error(
+                  "ProxmoxProvider: unable to get current status of VMs on: " +
+                    node.node +
+                    "\n" +
+                    originalMessage,
+                );
               }
             });
         }
@@ -154,7 +195,7 @@ export default class ProxmoxProvider implements InstanceProvider {
         const originalMessage =
           error instanceof Error ? error.message : "Unknown error";
         throw new Error(
-          "ProxmoxProvider: unable to get all existing VMs.\n" +
+          "ProxmoxProvider: unable to get all existing VMs: \n" +
             originalMessage,
         );
       });
@@ -187,12 +228,12 @@ export default class ProxmoxProvider implements InstanceProvider {
       );
     }
 
-    this.proxmoxVMInstances = new Map<string, proxmoxVMInstance>();
+    ProxmoxProvider.proxmoxVMInstances = new Map<string, proxmoxVMInstance>();
     this.networkCIDR.forEach((ip) => {
       // reserve the first and last IP address for the host
       if (ip !== this.gatewayIP)
-        if (!this.proxmoxVMInstances.has(ip)) {
-          this.proxmoxVMInstances.set(ip, undefined);
+        if (!ProxmoxProvider.proxmoxVMInstances.has(ip)) {
+          ProxmoxProvider.proxmoxVMInstances.set(ip, undefined);
         }
     });
 
@@ -204,13 +245,13 @@ export default class ProxmoxProvider implements InstanceProvider {
       if (!isNaN(parsedLifetime))
         this.maxInstanceLifetimeMinutes = parsedLifetime;
       else {
-        console.log(
+        console.error(
           "ProxmoxProvider: Provided instance lifetime cannot be parsed (PROXMOX_MAX_INSTANCE_LIFETIME_MINUTES).",
         );
         process.exit(1);
       }
     } else {
-      console.log(
+      console.error(
         "ProxmoxProvider: No instance lifetime provided (PROXMOX_MAX_INSTANCE_LIFETIME_MINUTES).",
       );
       process.exit(1);
@@ -230,7 +271,7 @@ export default class ProxmoxProvider implements InstanceProvider {
         return this.pruneVMInstance();
       },
       (err: Error) => {
-        console.log(
+        console.error(
           "ProxmoxProvider: Could not prune stale VM instances..." +
             err.message,
         );
@@ -244,10 +285,17 @@ export default class ProxmoxProvider implements InstanceProvider {
     scheduler.addSimpleIntervalJob(job);
   }
 
-  getNextAvailableIPAddress(): string | null {
-    for (const [key, value] of this.proxmoxVMInstances.entries()) {
+  getNextAvailableIPAddress(): string | undefined {
+    for (const [key, value] of ProxmoxProvider.proxmoxVMInstances.entries()) {
       if (value === undefined) {
         // IP address was not used yet, it is available and can be used
+        const reserved: proxmoxVMInstance = {
+          type: proxmoxInstanceType.lxc,
+          vmid: 0,
+          name: "reserved",
+          deleteTimestamp: 0,
+        };
+        ProxmoxProvider.proxmoxVMInstances.set(key, reserved);
         return key;
       } else {
         // typical ARP and NDP timeout is 60 seconds, wait at least 60 seconds before reusing the IP address
@@ -255,14 +303,20 @@ export default class ProxmoxProvider implements InstanceProvider {
           value.deleteTimestamp > 0 &&
           value.deleteTimestamp + 60 * 1000 < Date.now()
         ) {
-          //console.log("Found IP address " + key + " from expired instance " + value.vmid + " at " + (new Date(value.deleteTimestamp)).toLocaleTimeString() + " now: " + new Date().toLocaleTimeString());
+          //console.debug("Found IP address " + key + " from expired instance " + value.vmid + " at " + (new Date(value.deleteTimestamp)).toLocaleTimeString() + " now: " + new Date().toLocaleTimeString());
           // IP address was used but the instance is expired and can be reused
-          this.proxmoxVMInstances.set(key, undefined);
+          const reserved: proxmoxVMInstance = {
+            type: proxmoxInstanceType.lxc,
+            vmid: 0,
+            name: "reserved",
+            deleteTimestamp: 0,
+          };
+          ProxmoxProvider.proxmoxVMInstances.set(key, reserved);
           return key;
         }
       }
     }
-    return null;
+    return undefined;
   }
 
   async createServer(
@@ -331,11 +385,24 @@ export default class ProxmoxProvider implements InstanceProvider {
     await this.proxmox.nodes
       .$(targetNode.node)
       .lxc.$get()
-      .then((lxcs) => {
+      .then(async (lxcs) => {
         for (const lxc of lxcs) {
+          // check if the lxc has the desired tag
           if (lxc.tags?.split(";").find((tag) => tag === proxmoxTemplateTag)) {
-            templateID = lxc.vmid;
-            break;
+            // check if the lxc is a template
+            await this.proxmox.nodes
+              .$(targetNode.node)
+              .lxc.$(lxc.vmid)
+              .config.$get()
+              .then((config) => {
+                if (config.template) {
+                  templateID = lxc.vmid;
+                }
+              });
+            // template found, no need to search further
+            if (templateID !== undefined) {
+              break;
+            }
           }
         }
       })
@@ -351,28 +418,70 @@ export default class ProxmoxProvider implements InstanceProvider {
     const vmName = `${username}-${groupNumber}-${environment}`;
     const vmHostname = vmName.replace(/[^a-zA-Z0-9-]/g, "");
     // get next available VM ID
+
+    // ensure a unique ID even if multiple instances are created at the same time by using a semaphore
+    while (ProxmoxProvider.semaphoreNextID > 0) {
+      // wait for semaphore to be released
+      await this.sleep(100);
+    }
+    ProxmoxProvider.semaphoreNextID++;
+    // make sure that we get a number that was not already taken
+    await this.sleep(100);
     const vmID = await this.proxmox.cluster.nextid.$get();
-    await this.proxmox.nodes
-      .$(targetNode.node)
-      .lxc.$(parseInt(templateID))
-      .clone.$post({
-        newid: vmID,
-        hostname: vmHostname,
-        pool: "learn-sdn-hub",
-        target: targetNode.node,
-      })
-      .catch((reason) => {
-        const originalMessage =
-          reason instanceof Error ? reason.message : "Unknown error";
-        throw new Error(
-          `ProxmoxProvider: Could not clone template (${templateID}) to new VM (${vmID}).\n` +
-            originalMessage,
-        );
-      });
+    // clones are linked clones by default, however, if storage backend does not support that full clones are used by proxmox
+    // leading to longer delay for lxc creation, maybe introduce a config option for that
+    let cloneFinished = false;
+    let cloneTimeout = 300;
+    while (!cloneFinished && cloneTimeout > 0) {
+      await this.proxmox.nodes
+        .$(targetNode.node)
+        .lxc.$(parseInt(templateID))
+        .clone.$post({
+          newid: vmID,
+          hostname: vmHostname,
+          pool: "learn-sdn-hub",
+          target: targetNode.node,
+          full: false,
+        })
+        .then(async () => {
+          await this.sleep(100);
+          ProxmoxProvider.semaphoreNextID--;
+          cloneFinished = true;
+        })
+        .catch(async (reason) => {
+          await this.sleep(100);
+          ProxmoxProvider.semaphoreNextID--;
+          const originalMessage =
+            reason instanceof Error ? reason.message : "Unknown error";
+          if (
+            originalMessage.match(/500 CT is locked/) ||
+            originalMessage.match(
+              /500 Linked clone feature for (.*) is not available/,
+            )
+          ) {
+            // template is currently locked, wait a bit and try again
+            await this.sleep(1000);
+            cloneTimeout--;
+            if (cloneTimeout === 0) {
+              throw new Error(
+                `ProxmoxProvider: Timeout waiting for template (${templateID}) to be unlocked for cloning.\n` +
+                  originalMessage,
+              );
+            }
+          } else {
+            throw new Error(
+              `ProxmoxProvider: Could not clone template (${templateID}) to new VM (${vmID}).\n` +
+                originalMessage,
+            );
+          }
+        });
+    }
 
     // waiting for create lock to be released
     let vmIsLocked = true;
-    let lockTimeout = 10;
+    // depending on the size of the template, this can take a while and we need to ensure the lock is released
+    // before we can set the IP address
+    let lockTimeout = 300;
     while (lockTimeout > 0 && vmIsLocked) {
       const current = await this.proxmox.nodes
         .$(targetNode.node)
@@ -402,7 +511,15 @@ export default class ProxmoxProvider implements InstanceProvider {
     }
 
     // set IP address for the VM
+    // ensure a unique ID even if multiple instances are created at the same time by using a semaphore
+    while (ProxmoxProvider.semaphoreNextIPAddress > 0) {
+      // wait for semaphore to be released
+      await this.sleep(100);
+    }
+    ProxmoxProvider.semaphoreNextIPAddress++;
     const vmIPAddress = this.getNextAvailableIPAddress();
+    await this.sleep(100);
+    ProxmoxProvider.semaphoreNextIPAddress--;
     if (!vmIPAddress)
       throw new Error("ProxmoxProvider: No IP address available.");
 
@@ -442,7 +559,7 @@ export default class ProxmoxProvider implements InstanceProvider {
     } else {
       new_net0 = new_net0 + ",gw=" + this.gatewayIP;
     }
-    //console.log("Changing net0 config from " + config.net0 + " to " + new_net0);
+    //console.debug("Changing net0 config from " + config.net0 + " to " + new_net0);
 
     await this.proxmox.nodes
       .$(targetNode.node)
@@ -489,7 +606,7 @@ export default class ProxmoxProvider implements InstanceProvider {
     const expirationDate = new Date(
       Date.now() + providerInstance.maxInstanceLifetimeMinutes * 60 * 1000,
     );
-    console.log(
+    console.info(
       "ProxmoxProvider: Waiting for SSH to get ready on VM: " +
         vmID +
         " " +
@@ -512,9 +629,9 @@ export default class ProxmoxProvider implements InstanceProvider {
         );
       });
 
-    console.log("ProxmoxProvider: VM SSH ready");
+    console.info("ProxmoxProvider: VM SSH ready");
 
-    this.proxmoxVMInstances.set(vmIPAddress, {
+    ProxmoxProvider.proxmoxVMInstances.set(vmIPAddress, {
       type: proxmoxInstanceType.lxc,
       vmid: vmID,
       name: vmName ?? "",
@@ -541,7 +658,7 @@ export default class ProxmoxProvider implements InstanceProvider {
 
   async getServer(instance: string): Promise<VMEndpoint> {
     const providerInstance = this.providerInstance;
-    //console.log("ProxmoxProvider: Searching for VM: " + instance);
+    //console.debug("ProxmoxProvider: Searching for VM: " + instance);
 
     // search for instance
     const nodes = await this.proxmox.nodes.$get().catch((reason) => {
@@ -581,7 +698,7 @@ export default class ProxmoxProvider implements InstanceProvider {
           }
         })
         .catch(() => {
-          // ignore the case that the template is not found on this node and continue with the next node
+          // ignore the case that the vm is not found on this node and continue with the next node
         });
       if (vmHostname !== "") break;
     }
@@ -589,7 +706,7 @@ export default class ProxmoxProvider implements InstanceProvider {
       throw new Error(InstanceNotFoundErrorMessage);
     }
 
-    console.log(
+    console.info(
       "ProxmoxProvider: VM found, hostname: " +
         vmHostname +
         " IP: " +
@@ -622,7 +739,7 @@ export default class ProxmoxProvider implements InstanceProvider {
 
   async deleteServer(instance: string): Promise<void> {
     //const providerInstance = this.providerInstance;
-    console.log("ProxmoxProvider: Deleting VM: " + instance);
+    console.info("ProxmoxProvider: Deleting VM: " + instance);
 
     // search for instance
     const nodes = await this.proxmox.nodes.$get().catch((reason) => {
@@ -690,6 +807,17 @@ export default class ProxmoxProvider implements InstanceProvider {
                         `ProxmoxProvider: Could not stop VM (${instance}) during deletion.\n` +
                           originalMessage,
                       );
+                    })
+                    .catch((reason) => {
+                      const originalMessage =
+                        reason instanceof Error
+                          ? reason.message
+                          : "Unknown error" + reason;
+                      // do not throw error here, as node can be unavailable
+                      console.error(
+                        `ProxmoxProvider: Could not access VM (${instance}) on node (${node.node}) during deletion.\n` +
+                          originalMessage,
+                      );
                     });
                 } else if (current.status === "stopped") {
                   // instance found
@@ -706,9 +834,13 @@ export default class ProxmoxProvider implements InstanceProvider {
           }
         })
         .catch((error: Error) => {
-          if (error.message.match(/(.*)does not exist:(.*)/)) {
+          if (
+            error.message.match(/500 Configuration file (.*) does not exist/)
+          ) {
             // ignore the case that the instance is not found on this node and continue with the next node
-            //console.log("Instance " + instance + " not found on node " + node.node);
+            //console.debug("Instance " + instance + " not found on node " + node.node);
+          } else if (error.message.match(/595 No route to host/)) {
+            // ignore unreachable nodes, might be updating or temporarily shutdown, no need to look for VMs on them
           } else {
             throw new Error(
               "ProxMox provider was unable to delete VM " +
@@ -725,7 +857,7 @@ export default class ProxmoxProvider implements InstanceProvider {
       throw new Error(InstanceNotFoundErrorMessage);
     }
 
-    //console.log("Deleting VM: " + instance);
+    //console.debug("Deleting VM: " + instance);
 
     await this.proxmox.nodes
       .$(vmNode)
@@ -741,7 +873,7 @@ export default class ProxmoxProvider implements InstanceProvider {
       });
 
     // wait for delete to finish
-    let deleteTimeout = 10;
+    let deleteTimeout = 300;
     let vmDeleted = false;
     while (deleteTimeout > 0 && !vmDeleted) {
       await this.proxmox.nodes
@@ -752,7 +884,9 @@ export default class ProxmoxProvider implements InstanceProvider {
           const originalMessage =
             reason instanceof Error ? reason.message : "Unknown error";
 
-          if (originalMessage.match(/does not exist/)) {
+          if (
+            originalMessage.match(/500 Configuration file (.*) does not exist/)
+          ) {
             vmDeleted = true;
           }
         });
@@ -765,13 +899,14 @@ export default class ProxmoxProvider implements InstanceProvider {
       throw new Error("ProxmoxProvider: Could not delete VM: " + instance);
     }
 
-    const proxmoxVMInstance = this.proxmoxVMInstances.get(vmIPAddress);
+    const proxmoxVMInstance =
+      ProxmoxProvider.proxmoxVMInstances.get(vmIPAddress);
     if (proxmoxVMInstance) {
       proxmoxVMInstance.deleteTimestamp = Date.now();
     }
-    this.proxmoxVMInstances.set(vmIPAddress, proxmoxVMInstance);
+    ProxmoxProvider.proxmoxVMInstances.set(vmIPAddress, proxmoxVMInstance);
 
-    //console.log("Deleted VM: " + instance);
+    //console.debug("Deleted VM: " + instance);
 
     return Promise.resolve();
   }
@@ -855,10 +990,15 @@ export default class ProxmoxProvider implements InstanceProvider {
             .catch((reason) => {
               const originalMessage =
                 reason instanceof Error ? reason.message : "Unknown error";
-              throw new Error(
-                `ProxmoxProvider: Could not get VMs during pruning.\n` +
-                  originalMessage,
-              );
+              // do not throw error here, as nodes can be temporarily unavailable
+              if (originalMessage.match(/595 No route to host/)) {
+                // ignore unreachable nodes, might be updating or temporarily shutdown, no need to look for VMs on them
+              } else {
+                console.log(
+                  `ProxmoxProvider: Could not get VMs during pruning.\n` +
+                    originalMessage,
+                );
+              }
             });
         }
       })
@@ -895,36 +1035,48 @@ export default class ProxmoxProvider implements InstanceProvider {
 
         sshJumpHostConnection
           .on("ready", () => {
-            console.log(
-              "ProxmoxProvider: SSH jump host connection ready. Trying to forward and connect to instance.",
-            );
+            //console.log(
+            //  "ProxmoxProvider: SSH jump host connection ready. Trying to forward and connect to instance.",
+            //);
 
             sshJumpHostConnection.exec(
               "nc -w 1 " + ip + " " + port,
               (err, stream) => {
                 if (err) {
-                  console.log(
+                  console.error(
                     "ProxmoxProvider: SSH connection forward failed. " +
                       err.message,
                   );
+                  stream.end();
                   sshConnection.end();
                   sshJumpHostConnection.end();
                   reject(err);
                 } else {
                   sshConnection
                     .on("ready", () => {
-                      console.log(
-                        "ProxmoxProvider: SSH instance connection ready.",
-                      );
+                      //console.debug(
+                      //  "ProxmoxProvider: SSH instance connection ready.",
+                      //);
+                      stream.end();
                       sshConnection.end();
                       sshJumpHostConnection.end();
                       resolve(true);
                     })
+                    .on("close", () => {
+                      //console.debug(
+                      //  "ProxmoxProvider: SSH instance connection closed. Had error: " +
+                      //    hadError,
+                      //);
+                      stream.end();
+                      sshConnection.end();
+                      sshJumpHostConnection.end();
+                    })
                     .on("error", (err) => {
-                      console.log(
+                      console.error(
                         "ProxmoxProvider: SSH instance connection error. " +
                           err.message,
                       );
+                      stream.end();
                       sshConnection.end();
                       sshJumpHostConnection.end();
                       reject(err);
@@ -946,7 +1098,7 @@ export default class ProxmoxProvider implements InstanceProvider {
             );
           })
           .on("error", (err) => {
-            console.log(
+            console.error(
               "ProxmoxProvider: SSH jump host connection error. " + err.message,
             );
             sshConnection.end();
@@ -963,7 +1115,7 @@ export default class ProxmoxProvider implements InstanceProvider {
               : undefined,
             readyTimeout: 1000,
             //debug: (debug) => {
-            //  console.log(debug)
+            //  console.debug(debug)
             //},
           });
       });
@@ -973,14 +1125,14 @@ export default class ProxmoxProvider implements InstanceProvider {
     let usedTime = 0;
 
     while (usedTime < timeout) {
-      const connected = await testConnection().catch((reason) => {
-        const originalMessage =
-          reason instanceof Error ? reason.message : "Unknown error";
+      const connected = await testConnection().catch(() => {
+        //const originalMessage =
+        //  reason instanceof Error ? reason.message : "Unknown error";
 
-        console.log(
-          "ProxmoxProvider: SSH connection failed - retrying...\n" +
-            originalMessage,
-        );
+        //console.debug(
+        //  "ProxmoxProvider: SSH connection failed - retrying...\n" +
+        //    originalMessage,
+        //);
 
         return false;
       });

@@ -11,19 +11,18 @@ import {
   MenuItem,
   Select,
   SelectChangeEvent,
-  Snackbar,
   Tooltip,
   TooltipProps,
   tooltipClasses,
 } from "@mui/material";
-import type { AlertColor } from "@mui/material";
+import { enqueueSnackbar, closeSnackbar } from "notistack";
 import { FetchError } from "ofetch";
 import { z } from "zod";
 
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import CloudDownloadIcon from "@mui/icons-material/CloudDownload";
 
-import Alert from "./Alert";
+import { useAuthStore } from "../stores/authStore";
 import { APIRequest, getHttpError } from "../api/Request";
 import createWebSocket from "../api/WebSocket";
 
@@ -89,8 +88,6 @@ const contentValidator = z.object({
   location: z.string().optional(),
 });
 
-type Severity = AlertColor | undefined;
-
 interface Disposable {
   dispose: () => void;
 }
@@ -101,9 +98,6 @@ interface State {
   currentFileChanged: boolean;
   currentFileLSPLanguage: string;
   currentFilePath: string;
-  editorResult: string;
-  editorSeverity: Severity;
-  editorNotificationOpen: boolean;
   editorConfirmationDialogOpen: boolean;
 }
 
@@ -174,14 +168,11 @@ export default class FileEditor extends Component<FileEditorProps> {
       currentFileChanged: false,
       currentFileLSPLanguage: "",
       currentFilePath: "",
-      editorResult: "",
-      editorSeverity: "info",
-      editorNotificationOpen: false,
       editorConfirmationDialogOpen: false,
     };
 
-    this.username = localStorage.getItem("username") ?? "default-user";
-    this.group = localStorage.getItem("group") ?? "0";
+    this.username = useAuthStore.getState().username || "default-user";
+    this.group = useAuthStore.getState().groupNumber.toString(10);
 
     this.save = this.save.bind(this);
     this.load = this.load.bind(this);
@@ -359,14 +350,18 @@ export default class FileEditor extends Component<FileEditorProps> {
     }
 
     const collaborationId = fileName + "-group" + group;
-    console.log(
-      "Starting collaboration for user: " +
-        this.username +
-        " in group: " +
-        group +
-        " on: " +
-        collaborationId,
-    );
+    // Avoid console.log in production code, while opening websockets, as Firefox otherwise
+    // will will wait a long time before opening the connection, e.g., when switching terminals
+    // or files in the editor (y-websocket and/or monaco-languageclient)
+    //
+    // console.log(
+    //   "Starting collaboration for user: " +
+    //     this.username +
+    //     " in group: " +
+    //     group +
+    //     " on: " +
+    //     collaborationId,
+    // );
 
     const doc = new Y.Doc();
 
@@ -380,6 +375,8 @@ export default class FileEditor extends Component<FileEditorProps> {
         const { data } = payload;
 
         Y.applyUpdate(doc, toUint8Array(data.content));
+
+        // Check for double document, if environment was not undeployed
 
         // Websocket provider
         this.collaborationProvider = new WebsocketProvider(
@@ -422,18 +419,23 @@ export default class FileEditor extends Component<FileEditorProps> {
           red.toString(16).padStart(2, "0") +
           green.toString(16).padStart(2, "0") +
           blue.toString(16).padStart(2, "0");
-        console.log("my color: " + hexColor);
+        // Avoid console.log in production code, while opening websockets, as Firefox otherwise
+        // will will wait a long time before opening the connection, e.g., when switching terminals
+        // or files in the editor (y-websocket and/or monaco-languageclient)
+        //
+        // console.log("my color: " + hexColor);
 
         awareness.on(
           "update",
           ({ added = [] as number[] /*, updated = [], removed = [] */ }) => {
             added.forEach((client) => {
-              //yjs awareness debug:
-              //console.log("added client: " + client);
+              // yjs awareness debug:
               //
-              //awareness.getStates().forEach((state, clientId) => {
-              //  console.log("client state: " + clientId + " state: " + state.user.name + " color: " + state.user.color);
-              //});
+              // console.log("added client: " + client);
+              //
+              // awareness.getStates().forEach((state, clientId) => {
+              //   console.log("client state: " + clientId + " state: " + state.user.name + " color: " + state.user.color);
+              // });
 
               // add css class for new client
               const awarenessState = awareness.getStates().get(client);
@@ -446,7 +448,7 @@ export default class FileEditor extends Component<FileEditorProps> {
                 const colorGreen = parseInt(color.substring(3, 5), 16);
                 const colorBlue = parseInt(color.substring(5, 7), 16);
                 const newClient = document.createElement("style");
-                //newClient.type = "text/css";
+                // newClient.type = "text/css";
                 newClient.innerHTML = `
             .yRemoteSelection-${client} {
               background-color: rgb(${colorRed}, ${colorGreen}, ${colorBlue}, .5)
@@ -497,13 +499,14 @@ export default class FileEditor extends Component<FileEditorProps> {
                 document.head.appendChild(newClient);
               }
             });
-            //no need to handle updated and removed clients for now, styles will be kept and will not change
-            //updated.forEach((client) => {
-            //  console.log("updated client: " + client);
-            //});
-            //removed.forEach((client) => {
-            //  console.log("removed client: " + client);
-            //});
+            // no need to handle updated and removed clients for now, styles will be kept and will not change
+            //
+            // updated.forEach((client) => {
+            //   console.log("updated client: " + client);
+            // });
+            // removed.forEach((client) => {
+            //   console.log("removed client: " + client);
+            // });
           },
         );
         console.log("my client id: " + awareness.clientID);
@@ -541,8 +544,8 @@ export default class FileEditor extends Component<FileEditorProps> {
       return;
     }
     this.binding?.destroy();
-    // WebRTC provider problem is room is taken, cannot be joined/created again
-    //this.collaborationProvider?.room?.destroy();
+    // WebRTC provider problem if room is taken, cannot be joined/created again
+    // this.collaborationProvider?.room?.destroy();
     this.collaborationProvider?.disconnect();
   }
 
@@ -562,7 +565,11 @@ export default class FileEditor extends Component<FileEditorProps> {
     }
 
     if (lspLanguage !== "") {
-      console.log("Starting language client for language: " + lspLanguage);
+      // Avoid console.log in production code, while opening websockets, as Firefox otherwise
+      // will will wait a long time before opening the connection, e.g., when switching terminals
+      // or files in the editor (y-websocket and/or monaco-languageclient)
+      //
+      // console.log("Starting language client for language: " + lspLanguage);
 
       this.languageClientWebSocket = createWebSocket(
         "/environment/" +
@@ -576,7 +583,7 @@ export default class FileEditor extends Component<FileEditorProps> {
 
         // sending auth token to backend
         this.languageClientWebSocket.send(
-          `auth ${localStorage.getItem("token")}`,
+          `auth ${useAuthStore.getState().token}`,
         );
 
         // backend needs some time to process auth token and initiate
@@ -585,18 +592,26 @@ export default class FileEditor extends Component<FileEditorProps> {
         // be sent to early and ignored
 
         // save onmessage fn
-        //const defaultOnMessage = this.languageClientWebSocket.onmessage
+        // const defaultOnMessage = this.languageClientWebSocket.onmessage
         this.languageClientWebSocket.onmessage = (e) => {
           if (e.data === "backend websocket ready") {
             // restore onmessage fn
-            console.log("backend websocket ready, starting language client");
-            //this.languageClientWebSocket.onmessage = (e) => {
-            //console.log("received message from backend: " + e.data);
-            //if (e.data === "pong") {
-            // ignore pong keep-alive message from backend
-            //}
-            //defaultOnMessage?.call(this.languageClientWebSocket, e);
-            //}
+
+            // Avoid console.log in production code, while opening websockets, as Firefox otherwise
+            // will will wait a long time before opening the connection, e.g., when switching terminals
+            // or files in the editor (y-websocket and/or monaco-languageclient)
+            //
+            // console.log("backend websocket ready, starting language client");
+
+            // keep-alive seams to be automatically ignored, hence "pong" handling is commented out
+            //
+            // this.languageClientWebSocket.onmessage = (e) => {
+            //   console.log("received message from backend: " + e.data);
+            //   if (e.data === "pong") {
+            //     ignore pong keep-alive message from backend
+            //   }
+            //   defaultOnMessage?.call(this.languageClientWebSocket, e);
+            // }
 
             // keep connection alive
             this.languageClientWSTimerId = setInterval(() => {
@@ -631,16 +646,18 @@ export default class FileEditor extends Component<FileEditorProps> {
 
           // workspaceFolder already set globally, no need to set it again, would only
           // be necessary if workspaceFolders should be different for each selected file
-          //workspaceFolder: {
-          //  uri: "file:///home/p4/"
-          //},
+          //
+          // workspaceFolder: {
+          //   uri: "file:///home/p4/"
+          // },
 
           // disable the default error handler
-          //errorHandler: {
-          //error: () => ({ action: ErrorAction.Continue }),
-          // maybe use restart of language client? e.g., to recover from conn loss?
-          //closed: () => ({ action: CloseAction.Restart })
-          //}
+          //
+          // errorHandler: {
+          //   error: () => ({ action: ErrorAction.Continue }),
+          //   maybe use restart of language client? e.g., to recover from conn loss?
+          //   closed: () => ({ action: CloseAction.Restart })
+          // }
         },
         // create a language client connection from the JSON RPC connection on demand
         connectionProvider: {
@@ -710,10 +727,9 @@ export default class FileEditor extends Component<FileEditorProps> {
   }
 
   async save(): Promise<void> {
-    this.setState({
-      editorResult: "Saving file...",
-      editorSeverity: "info",
-      editorNotificationOpen: true,
+    const saveSnack = enqueueSnackbar("Saving file...", {
+      variant: "info",
+      persist: true,
     });
     try {
       await APIRequest(
@@ -726,11 +742,9 @@ export default class FileEditor extends Component<FileEditorProps> {
       );
 
       this.environmentFiles[this.state.currentFile].fileChanged = false;
+      enqueueSnackbar("Deploy successful!", { variant: "success" });
       this.setState({
         currentFileChanged: false,
-        editorResult: "Deploy successful!",
-        editorSeverity: "success",
-        editorNotificationOpen: true,
       });
     } catch (error) {
       let stateMessage = "Deploy failed!";
@@ -742,22 +756,20 @@ export default class FileEditor extends Component<FileEditorProps> {
           : httpError.error.message;
       }
 
-      this.setState({
-        editorResult: stateMessage,
-        editorSeverity: "error",
-        editorNotificationOpen: true,
-      });
+      enqueueSnackbar(stateMessage, { variant: "error" });
     }
 
+    closeSnackbar(saveSnack);
     this.editor.focus();
   }
 
   async load(): Promise<void> {
+    const loadSnack = enqueueSnackbar("Loading file...", {
+      variant: "info",
+      persist: true,
+    });
     this.setState({
       editorConfirmationDialogOpen: true,
-      editorResult: "Loading file...",
-      editorSeverity: "info",
-      editorNotificationOpen: true,
     });
     try {
       const payload = await APIRequest(
@@ -771,11 +783,9 @@ export default class FileEditor extends Component<FileEditorProps> {
         this.environmentFiles[this.state.currentFile].value = data.content;
         this.environmentFiles[this.state.currentFile].fileChanged = false;
         this.editor.setValue(data.content);
+        enqueueSnackbar("Retrieve successful!", { variant: "success" });
         this.setState({
           currentFileChanged: false,
-          editorResult: "Retrieve successful!",
-          editorSeverity: "success",
-          editorNotificationOpen: true,
         });
       } else throw payload.error;
     } catch (error) {
@@ -790,21 +800,14 @@ export default class FileEditor extends Component<FileEditorProps> {
         stateMessage = error.message;
       }
 
-      this.setState({
-        editorResult: stateMessage,
-        editorSeverity: "error",
-        editorNotificationOpen: true,
-      });
+      enqueueSnackbar(stateMessage, { variant: "error" });
     }
 
+    closeSnackbar(loadSnack);
     this.editor.focus();
   }
 
   render(): JSX.Element {
-    const handleEditorNotificationClose = () => {
-      this.setState({ editorNotificationOpen: false });
-    };
-
     const handleEditorConfirmationDialogOpen = () => {
       this.setState({ editorConfirmationDialogOpen: true });
     };
@@ -929,18 +932,6 @@ export default class FileEditor extends Component<FileEditorProps> {
           }}
           onMount={this.editorDidMount.bind(this)}
         />
-        <Snackbar
-          open={this.state.editorNotificationOpen}
-          autoHideDuration={6000}
-          onClose={handleEditorNotificationClose}
-        >
-          <Alert
-            onClose={handleEditorNotificationClose}
-            severity={this.state.editorSeverity}
-          >
-            {this.state.editorResult}
-          </Alert>
-        </Snackbar>
         <Dialog
           open={this.state.editorConfirmationDialogOpen}
           onClose={handleEditorConfirmationDialogClose}

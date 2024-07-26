@@ -6,6 +6,7 @@ import { celebrate, Joi, Segments } from "celebrate";
 import authenticationMiddleware, {
   RequestWithUser,
 } from "../authentication/AuthenticationMiddleware";
+import { randomUUID } from "crypto";
 
 const loginValidator = celebrate({
   [Segments.BODY]: Joi.object().keys({
@@ -93,24 +94,37 @@ export default (authProviders: AuthenticationProvider[]): Router => {
             username,
             password,
           );
+          const sessionId = randomUUID();
           const token = jwt.sign(
             {
               username: result.username,
               id: result.userid,
               groupNumber: result.groupNumber,
               ...(result.role && { role: result.role }),
+              sessionId: sessionId,
             },
-            /* TODO: replace secret */
-            "some-secret",
+            process.env.JWT_TOKENSECRET ?? "some-secret",
           );
 
-          console.log(result, token);
+          console.log(
+            "Handled login for user: " + 
+              username + 
+              " token: " + 
+              token.substring(0,8) + "..." +
+              " session:" + 
+              sessionId + 
+              " groupNumber: " + 
+              result.groupNumber + 
+              " role: " + 
+              result.role
+          );
 
           res.status(200).json({
             token,
             username,
             groupNumber: result.groupNumber,
             ...(result.role && { role: result.role }),
+            sessionId: sessionId,
           });
           return;
         } catch (err) {

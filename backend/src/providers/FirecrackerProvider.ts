@@ -740,15 +740,7 @@ export default class FirecrackerProvider implements InstanceProvider {
 
     for (const [microVMId, microVM] of this.firecrackers.entries()) {
       if (microVM.expirationDate < deadline) {
-        //await this.deleteServer(microVMId).catch((reason) => {
-        //  const originalMessage =
-        //  reason instanceof Error ? reason.message : "Unknown error";
-        //  throw(new Error(
-        //      `FirecrackerProvider: Could not delete expired microVM (${microVMId}) during pruning.\n` +
-        //        originalMessage,
-        //  ));
-        //})
-        await Environment.deleteInstanceEnvironments(microVMId).catch(
+        const deleted = await Environment.deleteInstanceEnvironments(microVMId).catch(
           (reason) => {
             const originalMessage =
               reason instanceof Error ? reason.message : "Unknown error";
@@ -758,12 +750,26 @@ export default class FirecrackerProvider implements InstanceProvider {
             );
           },
         );
-        console.log(
-          "FirecrackerProvider: deleted expired microVM: " +
-            microVMId +
-            " expiration date: " +
-            microVM.expirationDate.toISOString(),
-        );
+        if (!deleted) {
+          console.log(
+            `FirecrackerProvider: Could not delete environment during pruning, environment seams to be gone already, deleting leftover microVM: (${microVMId}).`,
+          );
+          await this.deleteServer(microVMId).catch((reason) => {
+            const originalMessage =
+            reason instanceof Error ? reason.message : "Unknown error";
+            throw(new Error(
+              `FirecrackerProvider: Could not delete expired microVM (${microVMId}) during pruning.\n` +
+                originalMessage,
+            ));
+          })
+        } else {
+          console.log(
+            "FirecrackerProvider: deleted expired microVM: " +
+              microVMId +
+              " expiration date: " +
+              microVM.expirationDate.toISOString(),
+          ); 
+        }
         return;
       }
     }
@@ -816,7 +822,7 @@ export default class FirecrackerProvider implements InstanceProvider {
           reason instanceof Error ? reason.message : "Unknown error";
 
         console.log(
-          "DockerProvider: SSH connection failed - retrying...\n" +
+          "FirecrackerProvider: SSH connection failed - retrying...\n" +
             originalMessage,
         );
 
@@ -829,7 +835,7 @@ export default class FirecrackerProvider implements InstanceProvider {
       await this.sleep(1000);
     }
 
-    throw new Error("DockerProvider: Timed out waiting for SSH connection.");
+    throw new Error("FirecrackerProvider: Timed out waiting for SSH connection.");
   }
 
   sleep(ms: number): Promise<void> {

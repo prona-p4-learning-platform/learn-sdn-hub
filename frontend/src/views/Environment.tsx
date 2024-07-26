@@ -1,8 +1,5 @@
-import { Component } from "react";
-import { withRouter } from "react-router-dom";
-import { RouteComponentProps } from "react-router";
-import ReactMarkdown from "react-markdown";
-import mermaid from "mermaid";
+import { useCallback, useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
 import {
   Button,
   Dialog,
@@ -10,85 +7,26 @@ import {
   DialogContent,
   DialogContentText,
   Grid,
-  Snackbar,
   Step,
   StepButton,
   Stepper,
   Typography,
 } from "@mui/material";
-import type { AlertColor } from "@mui/material";
+import { useSnackbar } from "notistack";
+import mermaid from "mermaid";
+import ReactMarkdown from "react-markdown";
 import { FetchError } from "ofetch";
 import { z } from "zod";
 
-import { APIRequest, getHttpError, httpStatusValidator } from "../api/Request";
-import Alert from "../components/Alert";
-import FileEditor from "../components/FileEditor";
-import GuacamoleClient from "../components/GuacamoleClient";
-import TabControl from "../components/TabControl";
 import Terminal from "../components/Terminal";
-import TerminalTabs from "../components/TerminalTabs";
+import GuacamoleClient from "../components/GuacamoleClient";
 import WebFrame from "../components/WebFrame";
+import TabControl from "../components/TabControl";
+import TerminalTabs from "../components/TerminalTabs";
+import FileEditor from "../components/FileEditor";
 
-type Severity = AlertColor | undefined;
-
-type PathParamsType = {
-  environment: string;
-};
-
-type PropsType = RouteComponentProps<PathParamsType>;
-
-export type TerminalStateType = {
-  endpoint: string;
-  state: string;
-};
-
-export interface Shell {
-  type: "Shell";
-  executable: string;
-  cwd: string;
-  params: string[];
-  provideTty: boolean;
-  name: string;
-}
-
-export interface WebApp {
-  type: "WebApp";
-  url: string;
-  name: string;
-}
-
-export interface Desktop {
-  type: "Desktop";
-  name: string;
-  //websocketUrl: string;
-}
-
-export type TerminalType = Shell | Desktop | WebApp;
-
-type StateType = {
-  environmentStatus: string;
-  errorMessage: string;
-  terminals: TerminalType[][];
-  files: string[];
-  filePaths: string[];
-  assignment: string;
-  environmentNotificationResult: string;
-  environmentNotificationSeverity: Severity;
-  environmentNotificationOpen: boolean;
-  environmentNotificationAutoHideDuration: number | null;
-  confirmationRestartDialogOpen: boolean;
-  confirmationSubmitDialogOpen: boolean;
-  stepNames: string[];
-  stepLabels: string[];
-  activeStep: number;
-  stepsCompleted: boolean;
-  terminalState: TerminalStateType[];
-  providerInstanceStatus: string;
-  rootPath: string;
-  workspaceFolders: string[];
-  useCollaboration: boolean;
-  useLanguageClient: boolean;
-};
+import { useOptionsStore } from "../stores/optionsStore";
+import { APIRequest, httpStatusValidator, getHttpError } from "../api/Request";
 
 const environmentConfigurationValidator = z.object({
   files: z.array(z.string()),
@@ -123,146 +61,188 @@ const environmentConfigurationValidator = z.object({
   useCollaboration: z.boolean().default(false),
   useLanguageClient: z.boolean().default(false),
 });
+
 const environmentAssignmentValidator = z.object({
   content: z.string(),
 });
 
-class EnvironmentView extends Component<PropsType, StateType> {
-  public state: StateType;
+export type TerminalStateType = {
+  endpoint: string;
+  state: string;
+};
 
-  constructor(props: PropsType) {
-    super(props);
-    this.state = {
-      environmentStatus: "running",
-      errorMessage: "",
-      terminals: [],
-      files: [],
-      filePaths: [],
-      assignment: "",
-      terminalState: [],
-      environmentNotificationResult: "",
-      environmentNotificationSeverity: "info",
-      environmentNotificationOpen: false,
-      environmentNotificationAutoHideDuration: 6000,
-      confirmationRestartDialogOpen: false,
-      confirmationSubmitDialogOpen: false,
-      stepNames: [],
-      stepLabels: [],
-      activeStep: 0,
-      stepsCompleted: false,
-      providerInstanceStatus: "",
-      rootPath: "",
-      workspaceFolders: [],
-      useCollaboration: true,
-      useLanguageClient: true,
-    };
-    this.restartEnvironment = this.restartEnvironment.bind(this);
-    this.storeTerminalState = this.storeTerminalState.bind(this);
-  }
+export interface Shell {
+  type: "Shell";
+  executable: string;
+  cwd: string;
+  params: string[];
+  provideTty: boolean;
+  name: string;
+}
 
-  componentDidMount(): void {
-    this.loadEnvironmentConfig();
-    this.loadAssignment();
-    this.loadProviderInstanceStatus();
-  }
+export interface WebApp {
+  type: "WebApp";
+  url: string;
+  name: string;
+}
 
-  async restartEnvironment(): Promise<void> {
-    this.setState({
-      environmentNotificationResult: "Restarting environment...",
-      environmentNotificationSeverity: "info",
-      environmentNotificationOpen: true,
-      environmentNotificationAutoHideDuration: 6000,
-      environmentStatus: "restarting",
-    });
+export interface Desktop {
+  type: "Desktop";
+  name: string;
+  //websocketUrl: string;
+}
 
-    try {
-      await APIRequest(
-        `/environment/${this.props.match.params.environment}/restart`,
-        httpStatusValidator,
-        {
-          method: "POST",
-        },
-      );
+export type TerminalType = Shell | Desktop | WebApp;
 
-      this.setState({
-        environmentNotificationResult: "Restart successful...",
-        environmentNotificationSeverity: "success",
-        environmentNotificationOpen: true,
-        environmentNotificationAutoHideDuration: 6000,
-        environmentStatus: "running",
+type EnvironmentState = {
+  terminals: TerminalType[][];
+  files: string[];
+  filePaths: string[];
+  stepNames: string[];
+  stepLabels: string[];
+  rootPath: string;
+  workspaceFolders: string[];
+  useCollaboration: boolean;
+  useLanguageClient: boolean;
+};
+
+function Environment(): JSX.Element {
+  const { environmentName } = useParams();
+  const { enqueueSnackbar, closeSnackbar } = useSnackbar();
+  const { darkMode } = useOptionsStore();
+  const [prevDarkMode, setPrevDarkMode] = useState<boolean>(darkMode);
+  const [graphs, setGraphs] = useState<string[]>([]);
+  const [assignment, setAssignment] = useState<string>("");
+  const [instanceStatus, setInstanceStatus] = useState<string>("");
+  const [environmentStatus, setEnvironmentStatus] = useState<string>("running");
+  const [state, setState] = useState<EnvironmentState>({
+    terminals: [],
+    files: [],
+    filePaths: [],
+    stepNames: [],
+    stepLabels: [],
+    rootPath: "",
+    workspaceFolders: [],
+    useCollaboration: false,
+    useLanguageClient: false,
+  });
+  const [terminalState, setTerminalState] = useState<TerminalStateType[]>([]);
+  const [activeStep, setActiveStep] = useState<number>(0);
+  const [stepsCompleted, setStepsCompleted] = useState<boolean>(false);
+  const [showRestartDialog, setShowRestartDialog] = useState(false);
+  const [showSubmitDialog, setShowSubmitDialog] = useState(false);
+
+  const loadEnvironmentConfig = useCallback(() => {
+    APIRequest(
+      `/environment/${environmentName}/configuration`,
+      environmentConfigurationValidator,
+    )
+      .then((payload) => {
+        if (payload.success) {
+          // check for completion
+          if (payload.data.stepLabels.length < 1) {
+            setStepsCompleted(true);
+          }
+          setState(payload.data);
+        } else throw payload.error;
+      })
+      .catch((reason: unknown) => {
+        console.log("DEBUG: loadEnvironmentConfig failed");
+        console.log(reason);
       });
-    } catch (error) {
-      let errorMessage = "Unknown error";
+  }, [environmentName]);
 
-      if (error instanceof FetchError) {
-        const httpError = await getHttpError(error);
-
-        if (httpError.success) errorMessage = httpError.data.message;
-        else errorMessage = httpError.error.message;
-      } else if (error instanceof Error) {
-        errorMessage = error.message;
-      }
-
-      this.setState({
-        environmentNotificationResult: `Restart failed! (${errorMessage})`,
-        environmentNotificationSeverity: "error",
-        environmentNotificationOpen: true,
-        environmentNotificationAutoHideDuration: 6000,
-        environmentStatus: "error",
-        errorMessage: errorMessage,
+  const loadAssignment = useCallback(() => {
+    APIRequest(
+      `/environment/${environmentName}/assignment`,
+      environmentAssignmentValidator,
+    )
+      .then((payload) => {
+        if (payload.success) {
+          setAssignment(payload.data.content);
+        } else throw payload.error;
+      })
+      .catch((reason: unknown) => {
+        console.log("DEBUG: loadAssignment failed");
+        console.log(reason);
       });
-    }
+  }, [environmentName]);
+
+  const loadProviderInstanceStatus = useCallback(() => {
+    APIRequest(
+      `/environment/${environmentName}/provider-instance-status`,
+      httpStatusValidator,
+    )
+      .then((payload) => {
+        if (payload.success) {
+          setInstanceStatus(payload.data.message);
+        }
+      })
+      .catch((reason: unknown) => {
+        console.log("DEBUG: loadProviderInstanceStatus failed");
+        console.log(reason);
+      });
+  }, [environmentName]);
+
+  function handleRestartDialogOpen() {
+    setShowRestartDialog(true);
   }
 
-  async checkStepTest(): Promise<void> {
+  function handleRestartDialogClose() {
+    setShowRestartDialog(false);
+  }
+
+  function handleRestartDialogConfirm() {
+    void restartEnvironment();
+    setShowRestartDialog(false);
+  }
+
+  function handleSubmitDialogOpen() {
+    setShowSubmitDialog(true);
+  }
+
+  function handleSubmitDialogClose() {
+    setShowSubmitDialog(false);
+  }
+
+  function handleSubmitDialogConfirm() {
+    void submitAssignment();
+    setShowSubmitDialog(false);
+  }
+
+  async function checkStepTest() {
     // should send terminalState (maybe even editorState) if needed to backend and wait for result of test
-    this.setState({
-      environmentNotificationResult: "Testing step result...",
-      environmentNotificationSeverity: "info",
-      environmentNotificationAutoHideDuration: 6000,
-      environmentNotificationOpen: true,
+    const testSnack = enqueueSnackbar("Testing step result...", {
+      variant: "info",
+      persist: true,
     });
 
     try {
       const payload = await APIRequest(
-        `/environment/${this.props.match.params.environment}/test`,
+        `/environment/${environmentName}/test`,
         httpStatusValidator,
         {
           method: "POST",
           body: {
-            activeStep: this.state.activeStep,
-            terminalState: this.state.terminalState,
+            activeStep: activeStep,
+            terminalState: terminalState,
           },
         },
       );
 
       if (payload.success) {
         if (payload.data.status === "passed") {
-          this.setState({
-            environmentNotificationResult: payload.data.message,
-            environmentNotificationSeverity: "success",
-            environmentNotificationAutoHideDuration: 60000,
-            environmentNotificationOpen: true,
-          });
+          enqueueSnackbar("Test passed!", { variant: "success" });
 
-          if (this.state.activeStep < this.state.stepLabels.length) {
-            this.setState({
-              activeStep: this.state.activeStep + 1,
-            });
+          if (activeStep < state.stepLabels.length) {
+            setActiveStep(activeStep + 1);
           }
           // if this was the last step, steps are completed and finish / submission of assignment can be enabled
-          if (this.state.activeStep === this.state.stepLabels.length) {
-            this.setState({
-              stepsCompleted: true,
-            });
+          if (activeStep === state.stepLabels.length) {
+            setStepsCompleted(true);
           }
         } else {
-          this.setState({
-            environmentNotificationResult: payload.data.message,
-            environmentNotificationSeverity: "error",
-            environmentNotificationAutoHideDuration: 60000,
-            environmentNotificationOpen: true,
-          });
+          enqueueSnackbar(payload.data.message, { variant: "error" });
         }
       } else throw payload.error;
     } catch (error) {
@@ -277,45 +257,74 @@ class EnvironmentView extends Component<PropsType, StateType> {
         errorMessage = error.message;
       }
 
-      this.setState({
-        environmentNotificationResult: `Test failed! (${errorMessage})`,
-        environmentNotificationSeverity: "error",
-        environmentNotificationOpen: true,
-        environmentNotificationAutoHideDuration: 60000,
-        errorMessage: errorMessage,
-      });
+      enqueueSnackbar(`Test failed! (${errorMessage})`, { variant: "error" });
     }
+
+    closeSnackbar(testSnack);
   }
 
-  async submitAssignment(): Promise<void> {
+  async function restartEnvironment() {
+    const restartSnack = enqueueSnackbar("Restarting environment...", {
+      variant: "info",
+      persist: true,
+    });
+    setEnvironmentStatus("restarting");
+
+    try {
+      await APIRequest(
+        `/environment/${environmentName}/restart`,
+        httpStatusValidator,
+        {
+          method: "POST",
+        },
+      );
+
+      enqueueSnackbar("Restart successful!", { variant: "success" });
+      setEnvironmentStatus("running");
+    } catch (error) {
+      let errorMessage = "Unknown error";
+
+      if (error instanceof FetchError) {
+        const httpError = await getHttpError(error);
+
+        if (httpError.success) errorMessage = httpError.data.message;
+        else errorMessage = httpError.error.message;
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+
+      enqueueSnackbar(`Restart failed! (${errorMessage})`, {
+        variant: "error",
+      });
+      setEnvironmentStatus("error");
+    }
+
+    closeSnackbar(restartSnack);
+  }
+
+  async function submitAssignment() {
     // send state of assignment to backend and store/persist result of assignment (for user) there
-    this.setState({
-      environmentNotificationResult: "Submitting result...",
-      environmentNotificationSeverity: "info",
-      environmentNotificationAutoHideDuration: 6000,
-      environmentNotificationOpen: true,
+    const submitSnack = enqueueSnackbar("Submitting result...", {
+      variant: "info",
+      persist: true,
     });
 
     try {
       const payload = await APIRequest(
-        `/environment/${this.props.match.params.environment}/submit`,
+        `/environment/${environmentName}/submit`,
         httpStatusValidator,
         {
           method: "POST",
           body: {
-            activeStep: this.state.activeStep,
-            terminalState: this.state.terminalState,
+            activeStep: activeStep,
+            terminalState: terminalState,
           },
         },
       );
 
       if (payload.success) {
-        this.setState({
-          environmentNotificationResult:
-            "Submission successful! " + payload.data.message,
-          environmentNotificationSeverity: "success",
-          environmentNotificationAutoHideDuration: 60000,
-          environmentNotificationOpen: true,
+        enqueueSnackbar("Submission successful! " + payload.data.message, {
+          variant: "success",
         });
       } else throw payload.error;
     } catch (error) {
@@ -330,351 +339,288 @@ class EnvironmentView extends Component<PropsType, StateType> {
         errorMessage = error.message;
       }
 
-      this.setState({
-        environmentNotificationResult: `Submission failed! (${errorMessage})`,
-        environmentNotificationSeverity: "error",
-        environmentNotificationOpen: true,
-        environmentNotificationAutoHideDuration: 60000,
-        errorMessage,
+      enqueueSnackbar(`Submission failed! (${errorMessage})`, {
+        variant: "error",
       });
     }
+
+    closeSnackbar(submitSnack);
   }
 
-  loadEnvironmentConfig(): void {
-    APIRequest(
-      `/environment/${this.props.match.params.environment}/configuration`,
-      environmentConfigurationValidator,
-    )
-      .then((payload) => {
-        if (payload.success) {
-          this.setState(payload.data);
-
-          if (this.state.stepLabels.length < 1) {
-            this.setState({ stepsCompleted: true });
-          }
-        } else throw payload.error;
-      })
-      .catch((reason: unknown) => {
-        console.log("DEBUG: loadEnvironmentConfig failed");
-        console.log(reason);
-      });
-  }
-
-  loadAssignment() {
-    APIRequest(
-      `/environment/${this.props.match.params.environment}/assignment`,
-      environmentAssignmentValidator,
-    )
-      .then((payload) => {
-        if (payload.success) {
-          this.setState({ assignment: payload.data.content });
-        } else throw payload.error;
-      })
-      .catch((reason: unknown) => {
-        console.log("DEBUG: loadAssignment failed");
-        console.log(reason);
-      });
-  }
-
-  loadProviderInstanceStatus() {
-    APIRequest(
-      `/environment/${this.props.match.params.environment}/provider-instance-status`,
-      httpStatusValidator,
-    )
-      .then((payload) => {
-        if (payload.success) {
-          this.setState({ providerInstanceStatus: payload.data.message });
-        }
-      })
-      .catch((reason: unknown) => {
-        console.log("DEBUG: loadProviderInstanceStatus failed");
-        console.log(reason);
-      });
-  }
-
-  storeTerminalState(endpoint: string, state: string) {
-    this.setState((prevState) => {
-      const newTerminalState: TerminalStateType = {
-        endpoint: endpoint,
-        state: state,
-      };
-      const endpointIndex = prevState.terminalState.findIndex(
-        (element) => element.endpoint === endpoint,
-      );
-      if (endpointIndex === -1) {
-        const addedTerminalState = [
-          ...prevState.terminalState,
-          newTerminalState,
-        ];
-        return {
-          terminalState: addedTerminalState,
-        };
-      } else {
-        const changedTerminalState = [...prevState.terminalState];
-        changedTerminalState[endpointIndex] = newTerminalState;
-        return {
-          terminalState: changedTerminalState,
-        };
-      }
-    });
-  }
-
-  getTerminalState(endpoint: string): string | undefined {
-    return this.state.terminalState.find(
+  function storeTerminalState(endpoint: string, current: string) {
+    const newTerminalState: TerminalStateType = {
+      endpoint: endpoint,
+      state: current,
+    };
+    const endpointIndex = terminalState.findIndex(
       (element) => element.endpoint === endpoint,
-    )?.state;
-  }
-
-  componentDidUpdate() {
-    mermaid.initialize({});
-    mermaid
-      .run({ nodes: document.querySelectorAll("code.language-mermaid") })
-      .catch((reason: unknown) => {
-        console.log("DEBUG: Initializing mermaid failed\n", reason);
-      });
-  }
-
-  render() {
-    const terminalTabNames = new Array<string>();
-    const terminals = this.state.terminals.map((subterminals: TerminalType[]) =>
-      subterminals.map((subterminal, index) => {
-        terminalTabNames.push(subterminal.name);
-
-        if (subterminal.type === "Shell") {
-          return (
-            <Terminal
-              key={subterminal.name}
-              wsEndpoint={`/environment/${this.props.match.params.environment}/type/${subterminal.name}`}
-              terminalState={this.getTerminalState(
-                `/environment/${this.props.match.params.environment}/type/${subterminal.name}`,
-              )}
-              onTerminalUnmount={this.storeTerminalState.bind(this)}
-            />
-          );
-        }
-
-        if (subterminal.type === "Desktop") {
-          return (
-            <GuacamoleClient
-              key={subterminal.name}
-              alias={subterminal.name}
-              environment={this.props.match.params.environment}
-              wsEndpoint={`/environment/${this.props.match.params.environment}/desktop/${subterminal.name}`}
-            />
-          );
-        }
-
-        // if new types of terminals are added this condition is necessary
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-        if (subterminal.type === "WebApp") {
-          return <WebFrame key={subterminal.name} url={subterminal.url} />;
-        } else {
-          return <Typography key={index}>unknown terminal type</Typography>;
-        }
-      }),
     );
 
-    const handleEnvironmentNotificationClose = () => {
-      this.setState({ environmentNotificationOpen: false });
-    };
+    const states = [...terminalState];
+    if (endpointIndex === -1) {
+      states.push(newTerminalState);
+    } else {
+      states[endpointIndex] = newTerminalState;
+    }
 
-    const handleConfirmationRestartDialogOpen = () => {
-      this.setState({ confirmationRestartDialogOpen: true });
-    };
+    setTerminalState(states);
+  }
 
-    const handleConfirmationRestartDialogClose = () => {
-      this.setState({ confirmationRestartDialogOpen: false });
-    };
+  function getTerminalState(endpoint: string) {
+    return terminalState.find((element) => element.endpoint === endpoint)
+      ?.state;
+  }
 
-    const handleConfirmationRestartDialogConfirm = () => {
-      void this.restartEnvironment();
-      this.setState({ confirmationRestartDialogOpen: false });
-    };
+  useEffect(() => {
+    // TODO: offload into router loader
+    loadEnvironmentConfig();
+    loadAssignment();
+    loadProviderInstanceStatus();
+  }, [loadEnvironmentConfig, loadAssignment, loadProviderInstanceStatus]);
 
-    const handleConfirmationSubmitDialogOpen = () => {
-      this.setState({ confirmationSubmitDialogOpen: true });
-    };
+  useEffect(() => {
+    // initialize mermaid with every color mode change
+    mermaid.initialize({
+      theme: darkMode ? "dark" : "default",
+    });
+  }, [darkMode]);
 
-    const handleConfirmationSubmitDialogClose = () => {
-      this.setState({ confirmationSubmitDialogOpen: false });
-    };
+  useEffect(() => {
+    // save mermaid graphs from markdown as code blocks are removed from the DOM...
+    // -> we do this every time the assignment changes (best case scenario: only once)
+    const elements = document.querySelectorAll("code.language-mermaid");
+    const newGraphs: string[] = [];
 
-    const handleConfirmationSubmitDialogConfirm = () => {
-      void this.submitAssignment();
-      this.setState({ confirmationSubmitDialogOpen: false });
-    };
+    for (const element of elements) {
+      newGraphs.push(element.innerHTML);
+    }
 
-    const handleStepClick = () => {
-      void this.checkStepTest();
-    };
+    setGraphs(newGraphs);
+  }, [assignment]);
 
-    return (
-      <>
-        <Grid container spacing={0}>
-          <Grid item xs={6}>
-            <TabControl
-              tabNames={["Assignment", "Terminals"]}
-              handleRestart={handleConfirmationRestartDialogOpen}
-              environmentStatus={this.state.environmentStatus}
+  useEffect(() => {
+    // replace mermaid graphs in markdown with saved graphs when dark mode changes
+    if (darkMode !== prevDarkMode) {
+      const elements = document.querySelectorAll<HTMLElement>(
+        "code.language-mermaid",
+      );
+
+      // remove processed data attribute and replace content with saved graph code
+      for (let i = 0; i < elements.length; i++) {
+        const currentElement = elements[i];
+        const isTagged = currentElement.hasAttribute("data-processed");
+
+        if (isTagged) {
+          currentElement.removeAttribute("data-processed");
+          currentElement.innerHTML = graphs[i];
+        }
+      }
+
+      setPrevDarkMode(darkMode);
+    }
+  }, [darkMode, prevDarkMode, graphs]);
+
+  useEffect(() => {
+    // render mermaid graphs in every render call
+    // already processed code blocks are tagged so it should be quite fast
+    mermaid
+      .run({
+        nodes: document.querySelectorAll<HTMLElement>("code.language-mermaid"),
+      })
+      .catch((reason: unknown) => {
+        console.log("DEBUG: Failed to render mermaid graphs\n", reason);
+      });
+  });
+
+  return (
+    <>
+      <Grid container spacing={0}>
+        <Grid item xs={6}>
+          <TabControl
+            tabNames={["Assignment", "Terminals"]}
+            handleRestart={handleRestartDialogOpen}
+            environmentStatus={environmentStatus}
+          >
+            <Grid
+              container
+              direction="row"
+              justifyContent="flex-start"
+              alignItems="center"
+              spacing={1}
             >
-              <Grid
-                container
-                direction="row"
-                justifyContent="flex-start"
-                alignItems="center"
-                spacing={1}
-              >
-                <Grid item xs={12}>
-                  <ReactMarkdown className="myMarkdownContainer">
-                    {this.state.assignment}
-                  </ReactMarkdown>
-                </Grid>
-                <Grid item xs={12}>
-                  <Grid
-                    container
-                    direction="row"
-                    justifyContent="flex-start"
-                    alignItems="center"
-                    spacing={1}
-                  >
-                    {this.state.stepLabels.length > 0 && (
-                      <Grid item>
-                        <Stepper activeStep={this.state.activeStep}>
-                          {Array.isArray(this.state.stepLabels) &&
-                            this.state.stepLabels.length > 0 &&
-                            this.state.stepLabels.map((stepLabel, index) => (
-                              <Step key={index}>
-                                <StepButton
-                                  disabled={index !== this.state.activeStep}
-                                  key={index}
-                                  onClick={handleStepClick}
-                                >
-                                  {stepLabel}
-                                </StepButton>
-                              </Step>
-                            ))}
-                        </Stepper>
-                      </Grid>
-                    )}
+              <Grid item xs={12}>
+                <ReactMarkdown className="myMarkdownContainer">
+                  {assignment}
+                </ReactMarkdown>
+              </Grid>
+              <Grid item xs={12}>
+                <Grid
+                  container
+                  direction="row"
+                  justifyContent="flex-start"
+                  alignItems="center"
+                  spacing={1}
+                >
+                  {state.stepLabels.length > 0 && (
                     <Grid item>
-                      <Typography variant="body2">
-                        {this.state.providerInstanceStatus}
-                      </Typography>
-                      <Button
-                        variant="contained"
-                        color="primary"
-                        onClick={handleConfirmationSubmitDialogOpen}
-                        disabled={!this.state.stepsCompleted}
-                      >
-                        Finish & Submit
-                      </Button>
+                      <Stepper activeStep={activeStep}>
+                        {Array.isArray(state.stepLabels) &&
+                          state.stepLabels.length > 0 &&
+                          state.stepLabels.map((stepLabel, index) => (
+                            <Step key={index}>
+                              <StepButton
+                                disabled={index !== activeStep}
+                                key={index}
+                                onClick={() => {
+                                  void checkStepTest();
+                                }}
+                              >
+                                {stepLabel}
+                              </StepButton>
+                            </Step>
+                          ))}
+                      </Stepper>
                     </Grid>
+                  )}
+                  <Grid item>
+                    <Typography variant="body2">{instanceStatus}</Typography>
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      onClick={handleSubmitDialogOpen}
+                      disabled={!stepsCompleted}
+                    >
+                      Finish & Submit
+                    </Button>
                   </Grid>
                 </Grid>
               </Grid>
-              <Grid
-                container
-                direction="row"
-                justifyContent="flex-start"
-                alignItems="center"
-                spacing={1}
-              >
-                <Grid item>
-                  {this.state.environmentStatus === "running" && (
-                    <TerminalTabs tabNames={terminalTabNames}>
-                      {terminals}
-                    </TerminalTabs>
-                  )}
-                </Grid>
+            </Grid>
+            <Grid
+              container
+              direction="row"
+              justifyContent="flex-start"
+              alignItems="center"
+              spacing={1}
+            >
+              <Grid item>
+                {(() => {
+                  if (environmentStatus === "running" && environmentName) {
+                    const terminalTabNames = new Array<string>();
+                    const terminals = state.terminals.map(
+                      (subterminals: TerminalType[]) =>
+                        subterminals.map((subterminal, index) => {
+                          terminalTabNames.push(subterminal.name);
+
+                          if (subterminal.type === "Shell") {
+                            return (
+                              <Terminal
+                                key={subterminal.name}
+                                wsEndpoint={`/environment/${environmentName}/type/${subterminal.name}`}
+                                terminalState={getTerminalState(
+                                  `/environment/${environmentName}/type/${subterminal.name}`,
+                                )}
+                                onTerminalUnmount={storeTerminalState}
+                              />
+                            );
+                          }
+
+                          if (subterminal.type === "Desktop") {
+                            return (
+                              <GuacamoleClient
+                                key={subterminal.name}
+                                alias={subterminal.name}
+                                environment={environmentName}
+                                wsEndpoint={`/environment/${environmentName}/desktop/${subterminal.name}`}
+                              />
+                            );
+                          }
+
+                          if (subterminal.type === "WebApp") {
+                            return (
+                              <WebFrame
+                                key={subterminal.name}
+                                url={subterminal.url}
+                              />
+                            );
+                          } else {
+                            return (
+                              <Typography key={index}>
+                                unknown terminal type
+                              </Typography>
+                            );
+                          }
+                        }),
+                    );
+
+                    return (
+                      <TerminalTabs tabNames={terminalTabNames}>
+                        {terminals}
+                      </TerminalTabs>
+                    );
+                  } else return null;
+                })()}
               </Grid>
-            </TabControl>
-          </Grid>
-          <Grid item xs={6}>
-            {this.state.files.length > 0 ? (
-              <FileEditor
-                files={this.state.files}
-                filePaths={this.state.filePaths}
-                environment={this.props.match.params.environment}
-                rootPath={this.state.rootPath}
-                workspaceFolders={this.state.workspaceFolders}
-                useCollaboration={this.state.useCollaboration}
-                useLanguageClient={this.state.useLanguageClient}
-              />
-            ) : (
-              <Typography>Fetching files to initialize editor...</Typography>
-            )}
-          </Grid>
+            </Grid>
+          </TabControl>
         </Grid>
-        {/* TODO evaluate, e.g., notistack (https://github.com/iamhosseindhv/notistack) to show stacked version of multiple lines with PASSED/FAILED tests */}
-        <Snackbar
-          open={this.state.environmentNotificationOpen}
-          autoHideDuration={this.state.environmentNotificationAutoHideDuration}
-          onClose={handleEnvironmentNotificationClose}
-        >
-          <Alert
-            onClose={handleEnvironmentNotificationClose}
-            severity={this.state.environmentNotificationSeverity}
-          >
-            {this.state.environmentNotificationResult}
-          </Alert>
-        </Snackbar>
-        <Dialog
-          open={this.state.confirmationRestartDialogOpen}
-          onClose={handleConfirmationRestartDialogClose}
-          aria-describedby="alert-dialog-restart-confirmation-description"
-        >
-          <DialogContent>
-            <DialogContentText id="alert-dialog-restart-confirmation-description">
-              Restart environment? All processes in terminals will be killed.
-            </DialogContentText>
-          </DialogContent>
-          <DialogActions>
-            <Button
-              onClick={handleConfirmationRestartDialogClose}
-              color="primary"
-              autoFocus
-            >
-              No
-            </Button>
-            <Button
-              onClick={handleConfirmationRestartDialogConfirm}
-              color="primary"
-            >
-              Yes
-            </Button>
-          </DialogActions>
-        </Dialog>
-        <Dialog
-          open={this.state.confirmationSubmitDialogOpen}
-          onClose={handleConfirmationSubmitDialogClose}
-          aria-describedby="alert-dialog-submit-confirmation-description"
-        >
-          <DialogContent>
-            <DialogContentText id="alert-dialog-submit-confirmation-description">
-              Finish and submit assignment result?
-            </DialogContentText>
-          </DialogContent>
-          <DialogActions>
-            <Button
-              onClick={handleConfirmationSubmitDialogClose}
-              color="primary"
-              autoFocus
-            >
-              No
-            </Button>
-            <Button
-              onClick={handleConfirmationSubmitDialogConfirm}
-              color="primary"
-            >
-              Yes
-            </Button>
-          </DialogActions>
-        </Dialog>
-      </>
-    );
-  }
+        <Grid item xs={6}>
+          {state.files.length > 0 && environmentName ? (
+            <FileEditor
+              files={state.files}
+              filePaths={state.filePaths}
+              environment={environmentName}
+              rootPath={state.rootPath}
+              workspaceFolders={state.workspaceFolders}
+              useCollaboration={state.useCollaboration}
+              useLanguageClient={state.useLanguageClient}
+            />
+          ) : (
+            <Typography>Fetching files to initialize editor...</Typography>
+          )}
+        </Grid>
+      </Grid>
+      <Dialog
+        open={showRestartDialog}
+        onClose={handleRestartDialogClose}
+        aria-describedby="alert-dialog-restart-confirmation-description"
+      >
+        <DialogContent>
+          <DialogContentText id="alert-dialog-restart-confirmation-description">
+            Restart environment? All processes in terminals will be killed.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleRestartDialogClose} color="primary" autoFocus>
+            No
+          </Button>
+          <Button onClick={handleRestartDialogConfirm} color="primary">
+            Yes
+          </Button>
+        </DialogActions>
+      </Dialog>
+      <Dialog
+        open={showSubmitDialog}
+        onClose={handleSubmitDialogClose}
+        aria-describedby="alert-dialog-submit-confirmation-description"
+      >
+        <DialogContent>
+          <DialogContentText id="alert-dialog-submit-confirmation-description">
+            Finish and submit assignment result?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleSubmitDialogClose} color="primary" autoFocus>
+            No
+          </Button>
+          <Button onClick={handleSubmitDialogConfirm} color="primary">
+            Yes
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </>
+  );
 }
 
-const Environment = withRouter(EnvironmentView);
-
+export const Component = Environment;
 export default Environment;

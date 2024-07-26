@@ -91,7 +91,8 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
       if (targetEnv.assignmentLabSheetLocation === "instance") {
         const env = Environment.getActiveEnvironment(
           reqWithUser.params.environment,
-          reqWithUser.user.username,
+          reqWithUser.user.groupNumber,
+          reqWithUser.user.sessionId,
         );
 
         if (env) {
@@ -147,6 +148,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
       Environment.createEnvironment(
         reqWithUser.user.username,
         reqWithUser.user.groupNumber,
+        reqWithUser.user.sessionId,
         String(environment),
         targetEnv,
         provider,
@@ -181,7 +183,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
       }
 
       Environment.deleteEnvironment(
-        reqWithUser.user.username,
+        reqWithUser.user.groupNumber,
         String(environment),
       )
         .then((deleted) => {
@@ -215,13 +217,21 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
       const reqWithUser = req as RequestWithUser;
       const env = Environment.getActiveEnvironment(
         reqWithUser.params.environment,
-        reqWithUser.user.username,
+        reqWithUser.user.groupNumber,
+        reqWithUser.user.sessionId,
       );
 
       if (env) {
         env
           .readFile(reqWithUser.params.alias)
-          .then((content: string) => {
+          .then((content: string | undefined) => {
+            if (content === undefined) {
+              res.status(404).json({
+                status: "error",
+                message: "File not found or handler not initialized",
+              });
+              return;
+            }
             res.status(200).json({
               content,
               location: env.getFilePathByAlias(reqWithUser.params.alias),
@@ -250,7 +260,8 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
       const reqWithUser = req as RequestWithUser;
       const env = Environment.getActiveEnvironment(
         reqWithUser.params.environment,
-        reqWithUser.user.username,
+        reqWithUser.user.groupNumber,
+        reqWithUser.user.sessionId,
       );
 
       if (env) {
@@ -285,7 +296,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
       Environment.getCollabDoc(
         reqWithUser.params.alias,
         reqWithUser.params.environment,
-        reqWithUser.user.username,
+        reqWithUser.user.groupNumber,
       )
         .then((content) => {
           res.status(200).json({ content });
@@ -307,12 +318,13 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
       const reqWithUser = req as RequestWithUser;
       const env = Environment.getActiveEnvironment(
         reqWithUser.params.environment,
-        reqWithUser.user.username,
+        reqWithUser.user.groupNumber,
+        reqWithUser.user.sessionId,
       );
 
       if (env) {
         env
-          .restart()
+          .restart(reqWithUser.user.sessionId)
           .then(() => {
             res
               .status(200)
@@ -341,7 +353,8 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
       const reqWithUser = req as RequestWithUser;
       const env = Environment.getActiveEnvironment(
         reqWithUser.params.environment,
-        reqWithUser.user.username,
+        reqWithUser.user.groupNumber,
+        reqWithUser.user.sessionId,
       );
       const { activeStep, terminalState } = reqWithUser.body as {
         activeStep: string;
@@ -387,7 +400,8 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
       const reqWithUser = req as RequestWithUser;
       const env = Environment.getActiveEnvironment(
         reqWithUser.params.environment,
-        reqWithUser.user.username,
+        reqWithUser.user.groupNumber,
+        reqWithUser.user.sessionId,
       );
       // TODO: add validator
       const { activeStep, terminalState } = reqWithUser.body as {
@@ -424,8 +438,9 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
     authenticationMiddleware,
     (req, res) => {
       const reqWithUser = req as RequestWithUser;
-      const deployedEnvList = Environment.getDeployedUserEnvironmentList(
+      const deployedEnvList = Environment.getDeployedUserSessionEnvironmentList(
         reqWithUser.user.username,
+        reqWithUser.user.sessionId,
       );
 
       res.status(200).json(deployedEnvList);
@@ -470,7 +485,8 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
       const reqWithUser = req as RequestWithUser;
       const env = Environment.getActiveEnvironment(
         reqWithUser.params.environment,
-        reqWithUser.user.username,
+        reqWithUser.user.groupNumber,
+        reqWithUser.user.sessionId,
       );
 
       if (env) {

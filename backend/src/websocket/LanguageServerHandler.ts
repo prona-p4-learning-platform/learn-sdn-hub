@@ -1,20 +1,92 @@
 import WebSocket from "ws";
 import Environment from "../Environment";
+import { Client } from "ssh2";
+import { AddressInfo, createServer, Server } from "net";
+import fs from "fs";
 
 export default function (
   wsFromBrowser: WebSocket,
   environment: string,
-  username: string,
+  groupNumber: number,
   language: string,
 ): void {
-  const envInstance = Environment.getActiveEnvironment(environment, username);
+  const envInstance = Environment.getActiveEnvironment(environment, groupNumber);
   if (envInstance !== undefined) {
     Promise.all([
       envInstance.getLanguageServerPort(),
       envInstance.getIPAddress(),
+      envInstance.getJumphost(),
     ])
       .then((result) => {
-        const [port, ipAddress] = result;
+        let [port, ipAddress] = result;
+        const jumpHost = result[2];
+        if (jumpHost !== undefined) {
+          console.log(
+            "Establishing SSH lsp connection " +
+              ipAddress +
+              ":" +
+              port +
+              " via jump host " +
+              jumpHost.ipaddress +
+              ":" +
+              jumpHost.port,
+          );
+          const sshJumpHostConnection = new Client();
+          let srv: Server;
+          sshJumpHostConnection
+            .on("ready", () => {
+              srv = createServer((socket) => {
+                sshJumpHostConnection.forwardOut(
+                  "127.0.0.1",
+                  0,
+                  ipAddress,
+                  port,
+                  (err, stream) => {
+                    if (err) {
+                      console.log(
+                        "Unable to forward lsp connection on jump host: " + err.message,
+                      );
+                      sshJumpHostConnection.end();
+                      socket.end();
+                      srv.close();
+                    } else {
+                      socket.pipe(stream);
+                    }
+                  },
+                );
+              });
+              srv.listen(0, () => {
+                const srvIpAddress = (srv.address() as AddressInfo).address;
+                const srvPort = (srv.address() as AddressInfo).port;
+                ipAddress = srvIpAddress;
+                port = srvPort;
+                console.log("Forwarding lsp connection from " + srvIpAddress + ":" + srvPort  + " over " + jumpHost.ipaddress + ":" + jumpHost.port + " to " + ipAddress + ":" + port);
+              });
+            })
+            .on("close", () => {
+              console.log("SSH jumphost lsp connection close");
+              sshJumpHostConnection.end();
+              srv && srv.close();
+            })
+            .on("error", (err) => {
+              console.log("SSH jumphost lsp connection error: " + err.message);
+              sshJumpHostConnection.end();
+              srv && srv.close();
+            })
+            .connect({
+              host: jumpHost.ipaddress,
+              port: jumpHost.port,
+              username: jumpHost.username,
+              password: jumpHost.password,
+              privateKey: jumpHost.privateKey
+                ? fs.readFileSync(jumpHost.privateKey)
+                : undefined,
+              //debug: (debug) => {
+              //  console.log(debug)
+              //},
+              readyTimeout: 1000,
+            });  
+        }
         const wsToLanguageServer = new WebSocket(
           "ws://" + ipAddress + ":" + port + "/" + language,
         );
@@ -49,7 +121,7 @@ export default function (
         wsFromBrowser.on("close", () => {
           console.log("LanguageServer WebSocket closed...");
           wsToLanguageServer.close();
-        });
+        });  
       })
       .catch((err) => {
         console.log(err);

@@ -1,4 +1,4 @@
-import SSHConsole, { Console } from "./consoles/SSHConsole";
+import SSHConsole, { Console, JumpHost } from "./consoles/SSHConsole";
 import FileHandler from "./filehandler/SSHFileHandler";
 import {
   InstanceProvider,
@@ -10,6 +10,7 @@ import crypto from "crypto";
 import querystring from "querystring";
 import * as Y from "yjs";
 import { fromUint8Array } from "js-base64";
+import console from "console";
 
 export interface AliasedFile {
   absFilePath: string;
@@ -162,44 +163,68 @@ export default class Environment {
   private environmentProvider: InstanceProvider;
   private persister: Persister;
   private username: string;
-  private filehandler!: FileHandler; // TODO: filehandler is not set in constructor
+  private filehandler!: FileHandler | undefined;
   private groupNumber: number;
+  private sessionId: string;
 
   public static getActiveEnvironment(
     environmentId: string,
-    username: string,
+    groupNumber: number,
+    // sessionId can be omitted, if any environment of the group can be returned, e.g., during deletion
+    sessionId?: string,
   ): Environment | undefined {
-    return Environment.activeEnvironments.get(`${username}-${environmentId}`);
+    const activeEnvironment: Array<Environment> = new Array<Environment>();
+
+    for (const [, value] of Environment.activeEnvironments) {
+      if (sessionId) {
+        if (
+          value.environmentId === environmentId &&
+          value.groupNumber === groupNumber &&
+          value.sessionId === sessionId
+        ) {
+          activeEnvironment.push(value);
+        }
+      } else {
+        if (
+          value.environmentId === environmentId &&
+          value.groupNumber === groupNumber
+        ) {
+          activeEnvironment.push(value);
+        }
+      }
+    }
+    return activeEnvironment[0];
   }
 
-  public static getDeployedUserEnvironmentList(
+  public static getDeployedUserSessionEnvironmentList(
     username: string,
+    sessionId: string,
   ): Array<string> {
-    const deployedEnvironmentsForUser: Array<string> = new Array<string>();
-    Environment.activeEnvironments.forEach(
-      (value: Environment, key: string) => {
-        if (value.username === username)
-          deployedEnvironmentsForUser.push(key.split("-").slice(1).join("-"));
-      },
-    );
-    return deployedEnvironmentsForUser;
+    const deployedEnvironmentsForUserSession: Array<string> =
+      new Array<string>();
+
+    for (const [, value] of Environment.activeEnvironments) {
+      if (value.username === username && value.sessionId === sessionId)
+        deployedEnvironmentsForUserSession.push(value.environmentId);
+    }
+    return deployedEnvironmentsForUserSession;
   }
 
   public static getDeployedGroupEnvironmentList(groupNumber: number): string[] {
     const deployedEnvironmentsForGroup: string[] = [];
 
-    for (const [key, value] of Environment.activeEnvironments) {
+    for (const [, value] of Environment.activeEnvironments) {
       if (value.groupNumber === groupNumber) {
-        deployedEnvironmentsForGroup.push(key.split("-").slice(1).join("-"));
+        deployedEnvironmentsForGroup.push(value.environmentId);
       }
     }
-
     return deployedEnvironmentsForGroup;
   }
 
   private constructor(
     username: string,
     groupNumber: number,
+    sessionId: string,
     environmentId: string,
     configuration: EnvironmentDescription,
     environmentProvider: InstanceProvider,
@@ -207,13 +232,20 @@ export default class Environment {
   ) {
     this.activeConsoles = new Map();
     this.activeDesktops = new Map();
+    this.filehandler = undefined;
     this.editableFiles = new Map();
     this.configuration = configuration;
     this.environmentProvider = environmentProvider;
     this.persister = persister;
     this.username = username;
     this.groupNumber = groupNumber;
+    this.sessionId = sessionId;
     this.environmentId = environmentId;
+
+    //TODO go through all environments stored in db and check if instances are still running, if not remove environment in db
+
+    //TODO maybe move scheduler here, to prune environments that are not used anymore, would reduce redundant code in providers
+    // and lead to an easier to understand codebase (esp. as then instances can be directly deleted instead of )
   }
 
   private addEditableFile(alias: string, path: string): void {
@@ -239,6 +271,7 @@ export default class Environment {
   static async createEnvironment(
     username: string,
     groupNumber: number,
+    sessionId: string,
     environmentId: string,
     env: EnvironmentDescription,
     provider: InstanceProvider,
@@ -247,6 +280,7 @@ export default class Environment {
     const environment = new Environment(
       username,
       groupNumber,
+      sessionId,
       environmentId,
       env,
       provider,
@@ -254,16 +288,23 @@ export default class Environment {
     );
 
     console.log(
-      "Creating new environment: " + environmentId + " for user: " + username,
+      "Creating new environment: " +
+        environmentId +
+        " for user: " +
+        username +
+        " in group: " +
+        groupNumber +
+        " session: " +
+        sessionId,
     );
 
     const activeEnvironmentsForGroup = Array<Environment>();
-    for (const environment of Environment.activeEnvironments.values()) {
+    for (const [, environment] of Environment.activeEnvironments) {
       if (environment.groupNumber === groupNumber) {
         if (environment.environmentId !== environmentId) {
           return Promise.reject(
             new Error(
-              "Your group already deployed another environment. Please reload assignment list.",
+              "You or your group already deployed another environment. Please reload assignment list.",
             ),
           );
         } else {
@@ -274,26 +315,27 @@ export default class Environment {
 
     if (activeEnvironmentsForGroup.length === 0) {
       await environment
-        .start(env, true)
+        .start(env, sessionId, true)
         .then((endpoint) => {
           environment.instanceId = endpoint.instance;
           Environment.activeEnvironments.set(
-            `${username}-${environmentId}`,
+            `${username}-${groupNumber}-${sessionId}-${environmentId}`,
             environment,
           );
 
           return Promise.resolve(environment);
         })
         .catch((err) => {
-          Environment.activeEnvironments.delete(`${username}-${environmentId}`);
+          Environment.activeEnvironments.delete(
+            `${username}-${groupNumber}-${sessionId}-${environmentId}`,
+          );
 
           return Promise.reject(
             new Error("Start of environment failed. " + err),
           );
         });
     } else {
-      // the group already runs an environment add this user to it
-      // and reuse instance
+      // the group already runs an environment, add this user to it and reuse instance
       let groupEnvironmentInstance;
       const userEnvironmentsOfOtherGroupUser = await persister
         .GetUserEnvironments(activeEnvironmentsForGroup[0].username)
@@ -344,22 +386,26 @@ export default class Environment {
           activeEnvironmentsForGroup[0].username +
           " in group: " +
           groupNumber +
+          " session: " +
+          sessionId +
           " using instance: " +
           groupEnvironmentInstance,
       );
 
       await environment
-        .start(env, false)
+        .start(env, sessionId, false)
         .then((endpoint) => {
           environment.instanceId = endpoint.instance;
           Environment.activeEnvironments.set(
-            `${username}-${environmentId}`,
+            `${username}-${groupNumber}-${sessionId}-${environmentId}`,
             environment,
           );
           return Promise.resolve(environment);
         })
         .catch((err) => {
-          Environment.activeEnvironments.delete(`${username}-${environmentId}`);
+          Environment.activeEnvironments.delete(
+            `${username}-${groupNumber}-${sessionId}-${environmentId}`,
+          );
           return Promise.reject(
             new Error("Failed to join environment of your group." + err),
           );
@@ -369,51 +415,45 @@ export default class Environment {
   }
 
   static async deleteEnvironment(
-    username: string,
+    groupNumber: number,
     environmentId: string,
   ): Promise<boolean> {
-    const environment = this.getActiveEnvironment(environmentId, username);
+    const environment = this.getActiveEnvironment(environmentId, groupNumber);
 
     if (environment) {
       const groupNumber = environment.groupNumber;
-
       await environment
         .stop()
-        .then(() => {
-          Environment.activeEnvironments.delete(`${username}-${environmentId}`);
-          // search for other activeEnvironments in the same group
-          Environment.activeEnvironments.forEach((env: Environment) => {
-            if (env.groupNumber === groupNumber && env.username !== username) {
-              Environment.activeEnvironments.delete(
-                `${env.username}-${env.environmentId}`,
-              );
+        .then(async () => {
+          // search for other activeEnvironments for this group and delete them
+          for (const [key, env] of Environment.activeEnvironments) {
+            if (env.groupNumber === groupNumber) {
+              await Environment.cleanUp(env);
+              Environment.activeEnvironments.delete(key);
             }
-          });
+          }
           return Promise.resolve(true);
         })
-        .catch((err: Error) => {
-          if (err.message === DenyStartOfMissingInstanceErrorMessage) {
+        .catch(async (err: Error) => {
+          if (
+            err.message.match(
+              "(.*)" + DenyStartOfMissingInstanceErrorMessage + "(.*)",
+            )
+          ) {
             console.log(
               "Environment was already stopped. Silently deleting leftovers in user session.",
             );
-            Environment.activeEnvironments.delete(
-              `${username}-${environmentId}`,
-            );
             // search for other activeEnvironments in the same group
-            Environment.activeEnvironments.forEach((env: Environment) => {
-              if (
-                env.groupNumber === groupNumber &&
-                env.username !== username
-              ) {
-                Environment.activeEnvironments.delete(
-                  `${env.username}-${env.environmentId}`,
-                );
+            for (const [key, env] of this.activeEnvironments) {
+              if (env.groupNumber === groupNumber) {
+                await Environment.cleanUp(env);
+                Environment.activeEnvironments.delete(key);
               }
-            });
+            }
             return Promise.resolve(true);
           } else {
             console.log("Failed to stop environment. " + JSON.stringify(err));
-            return Promise.reject(false);
+            return Promise.reject(err);
           }
         });
     } else {
@@ -423,6 +463,20 @@ export default class Environment {
     return Promise.resolve(true);
   }
 
+  private static async cleanUp(env: Environment) {
+    env.activeConsoles.forEach((sshConsole: Console, key: string) => {
+      //console.debug("Deleting leftover console: " + key);
+      sshConsole.close(env.environmentId, env.groupNumber);
+      env.activeConsoles.delete(key);
+    });
+    await env.filehandler?.close();
+    env.filehandler = undefined;
+    env.activeDesktops.forEach((_desktop: DesktopInstance, key: string) => {
+      //console.debug("Deleting leftover desktop: " + key);
+      env.activeDesktops.delete(key);
+    });
+  }
+
   static async deleteInstanceEnvironments(instance: string): Promise<boolean> {
     let instanceEnvironmentFound = false;
     for (const activeEnvironment of this.activeEnvironments.values()) {
@@ -430,7 +484,7 @@ export default class Environment {
         instanceEnvironmentFound = true;
         // the environment uses the specified instance and should be deleted
         await this.deleteEnvironment(
-          activeEnvironment.username,
+          activeEnvironment.groupNumber,
           activeEnvironment.environmentId,
         )
           .then((result) => {
@@ -459,6 +513,11 @@ export default class Environment {
   async getIPAddress(): Promise<string> {
     const endpoint = await this.makeSureInstanceExists();
     return endpoint.IPAddress;
+  }
+
+  async getJumphost(): Promise<JumpHost | undefined> {
+    const endpoint = await this.makeSureInstanceExists();
+    return endpoint.SSHJumpHost;
   }
 
   async makeSureInstanceExists(createIfMissing?: boolean): Promise<VMEndpoint> {
@@ -541,6 +600,7 @@ export default class Environment {
 
   async start(
     desc: EnvironmentDescription = this.configuration,
+    sessionId: string,
     createIfMissing: boolean,
   ): Promise<VMEndpoint> {
     const endpoint = await this.makeSureInstanceExists(createIfMissing);
@@ -562,6 +622,10 @@ export default class Environment {
     return new Promise((resolve, reject) => {
       try {
         this.filehandler = new FileHandler(
+          this.environmentId,
+          this.username,
+          this.groupNumber,
+          this.sessionId,
           endpoint.IPAddress,
           endpoint.SSHPort,
           endpoint.SSHJumpHost,
@@ -579,16 +643,18 @@ export default class Environment {
       desc.terminals.forEach((subterminals) => {
         subterminals.forEach((subterminal) => {
           if (subterminal.type === "Shell") {
-            global.console.log(
+            console.log(
               "Opening console: ",
               JSON.stringify(subterminal),
               JSON.stringify(endpoint),
             );
             try {
-              const console = new SSHConsole(
+              const sshConsole = new SSHConsole(
                 this.environmentId,
+                subterminal.name,
                 this.username,
                 this.groupNumber,
+                sessionId,
                 endpoint.IPAddress,
                 endpoint.SSHPort,
                 subterminal.executable,
@@ -609,21 +675,21 @@ export default class Environment {
                   return reject(new Error("Unable to create environment"));
                 } else {
                   this.activeConsoles.delete(subterminal.name);
-                  global.console.log(
-                    "deleted console for task: " + subterminal.name,
-                  );
+                  //console.debug(
+                  //  "deleted console for task: " + subterminal.name,
+                  //);
                 }
               };
 
-              console.on("close", setupCloseHandler);
+              sshConsole.on("close", setupCloseHandler);
 
-              console.on("error", (err) => {
+              sshConsole.on("error", (err) => {
                 return reject(err);
               });
 
-              console.on("ready", () => {
+              sshConsole.on("ready", () => {
                 readyTerminalCounter++;
-                this.activeConsoles.set(subterminal.name, console);
+                this.activeConsoles.set(subterminal.name, sshConsole);
                 if (
                   resolvedOrRejected === false &&
                   readyTerminalCounter === numberOfTerminals
@@ -636,7 +702,7 @@ export default class Environment {
               return reject(err);
             }
           } else if (subterminal.type === "Desktop") {
-            global.console.log(
+            console.log(
               "Opening desktop: ",
               JSON.stringify(subterminal),
               JSON.stringify(endpoint),
@@ -735,6 +801,11 @@ export default class Environment {
                 return reject(err);
               });
           } else if (subterminal.type === "WebApp") {
+            console.log(
+              "Opening webapp: ",
+              JSON.stringify(subterminal),
+              JSON.stringify(endpoint),
+            );
             // currently WebApps are instantly treated as ready
             // maybe track WebApp init later
             // maybe also store in activeWebApps var?
@@ -775,13 +846,20 @@ export default class Environment {
         );
       });
 
+      // environments are run per group, so stop all consoles (ssh) and close the filehandler (scp) and remove desktop contexts
       for (const console of this.activeConsoles) {
-        console[1].close(this.environmentId, this.username, this.groupNumber);
+        console[1].close(this.environmentId, this.groupNumber);
+        this.activeConsoles.delete(console[0]);
       }
-      await this.filehandler.close();
 
-      // close consoles of other users in group
-      // maybe also stop/close Desktops and WebApps later?
+      await this.filehandler?.close();
+      this.filehandler = undefined;
+
+      for (const desktop of this.activeDesktops) {
+        this.activeDesktops.delete(desktop[0]);
+      }
+
+      // get other active users in group
       const activeUsers = new Array<string>();
       Environment.activeEnvironments.forEach((env: Environment) => {
         if (
@@ -789,30 +867,30 @@ export default class Environment {
           env.username !== this.username
         ) {
           activeUsers.push(env.username);
-          for (const console of this.activeConsoles) {
-            console[1].close(
-              this.environmentId,
-              env.username,
-              this.groupNumber,
-            );
-          }
         }
       });
+
+      // run stop commands
       let stopCmdsRunning = this.configuration.stopCommands.length;
       for (const command of this.configuration.stopCommands) {
         stopCmdsRunning;
         if (command.type === "Shell") {
           let stopCmdFinished = false;
           await new Promise<void>((stopCmdSuccess, stopCmdFail) => {
-            global.console.log(
-              "Executing stop command: ",
-              JSON.stringify(command),
-              JSON.stringify(endpoint),
-            );
-            const console = new SSHConsole(
+            //console.debug(
+            //  "Executing stop command: ",
+            //  JSON.stringify(command),
+            //  JSON.stringify(endpoint),
+            //);
+            // session is not used as command is not run from a console,
+            // so it can be anything and also create a new SSH connection if needed
+            // (no need to reuse an existing connection)
+            const sshConsole = new SSHConsole(
               this.environmentId,
+              command.name,
               this.username,
               this.groupNumber,
+              undefined,
               endpoint.IPAddress,
               endpoint.SSHPort,
               command.executable,
@@ -821,25 +899,25 @@ export default class Environment {
               command.provideTty,
               endpoint.SSHJumpHost,
             );
-            console.on("finished", (code: string, signal: string) => {
-              global.console.log(
-                "OUTPUT: " +
-                  console.stdout +
-                  "(exit code: " +
-                  code +
-                  ", signal: " +
-                  signal +
-                  ")",
-              );
+            sshConsole.on("finished", (_code: string, _signal: string) => {
+              //console.log(
+              //  "OUTPUT: " +
+              //    sshConsole.stdout +
+              //    "(exit code: " +
+              //    code +
+              //    ", signal: " +
+              //    signal +
+              //    ")",
+              //);
               stopCmdFinished = true;
               stopCmdsRunning--;
-              console.emit("closed");
+              sshConsole.emit("closed");
             });
-            console.on("closed", () => {
+            sshConsole.on("closed", () => {
               if (stopCmdFinished === true) {
                 stopCmdSuccess();
               } else {
-                global.console.log("Stop command failed.");
+                console.log("Stop command failed.");
                 stopCmdFail();
               }
             });
@@ -850,7 +928,7 @@ export default class Environment {
       // wait for stop commands to finish
       let timeout = 10;
       while (timeout > 0 && stopCmdsRunning > 0) {
-        console.log("Waiting for stop cmds to finish...");
+        //console.log("Waiting for stop cmds to finish...");
         await new Promise((r) => setTimeout(r, 1000));
         timeout--;
       }
@@ -894,12 +972,12 @@ export default class Environment {
         .catch((error: Error) => {
           if (error.message === InstanceNotFoundErrorMessage) {
             // instance already gone (e.g., OpenStack instance already deleted)
-            global.console.log(
+            console.log(
               "Error ignored: Server Instance not found during deletion?",
             );
             return Promise.resolve();
           } else {
-            global.console.log(error.message);
+            console.log(error.message);
             return Promise.reject(
               new Error("Error: Unable to delete server." + error.message),
             );
@@ -917,22 +995,24 @@ export default class Environment {
     }
   }
 
-  async restart(): Promise<void> {
+  async restart(sessionId: string): Promise<void> {
     const endpoint = await this.makeSureInstanceExists();
 
     for (const command of this.configuration.stopCommands) {
       if (command.type === "Shell") {
         let resolved = false;
         await new Promise<void>((resolve, reject) => {
-          global.console.log(
-            "Executing stop command: ",
-            JSON.stringify(command),
-            JSON.stringify(endpoint),
-          );
-          const console = new SSHConsole(
+          //console.log(
+          //  "Executing stop command: ",
+          //  JSON.stringify(command),
+          //  JSON.stringify(endpoint),
+          //);
+          const sshConsole = new SSHConsole(
             this.environmentId,
+            command.name,
             this.username,
             this.groupNumber,
+            sessionId,
             endpoint.IPAddress,
             endpoint.SSHPort,
             command.executable,
@@ -941,20 +1021,20 @@ export default class Environment {
             false,
             endpoint.SSHJumpHost,
           );
-          console.on("finished", (code: string, signal: string) => {
-            global.console.log(
-              "OUTPUT: " +
-                console.stdout +
-                "(exit code: " +
-                code +
-                ", signal: " +
-                signal +
-                ")",
-            );
+          sshConsole.on("finished", (_code: string, _signal: string) => {
+            // console.log(
+            //   "OUTPUT: " +
+            //     sshConsole.stdout +
+            //     "(exit code: " +
+            //     code +
+            //     ", signal: " +
+            //     signal +
+            //     ")",
+            // );
             resolved = true;
-            console.emit("closed");
+            sshConsole.emit("closed");
           });
-          console.on("closed", () => {
+          sshConsole.on("closed", () => {
             if (resolved) resolve();
             else
               reject(
@@ -968,15 +1048,15 @@ export default class Environment {
     console.log("Stop commands finished...");
     Environment.activeEnvironments.forEach((value: Environment) => {
       if (value.groupNumber === this.groupNumber) {
-        console.log("Found group env " + value.environmentId + "...");
+        //console.log("Found group env " + value.environmentId + "...");
         const terminal = value.getConsoles();
         terminal.forEach((value: Console) => {
-          console.log("Found active console in " + value.cwd + "...");
+          //console.log("Found active console in " + value.cwd + "...");
           // write command to console
           value.write("cd " + value.cwd + "\n");
-          console.log(
-            "Executing " + value.command + " " + value.args.join(" ") + "\n",
-          );
+          //console.log(
+          //  "Executing " + value.command + " " + value.args.join(" ") + "\n",
+          //);
           value.write(value.command + " " + value.args.join(" ") + "\n");
         });
       }
@@ -992,10 +1072,16 @@ export default class Environment {
 
     return new Promise((resolve, reject) => {
       // run sshCommand
-      const console = new SSHConsole(
+      const sshConsole = new SSHConsole(
         this.environmentId,
+        // name and session are not used as command is not run from a console,
+        // so it can be anything and also create a new SSH connection if needed
+        // (no need to reuse an existing connection)
+        // also, no need to specify args and use / as cwd
+        "NoConsole",
         this.username,
         this.groupNumber,
+        undefined,
         endpoint.IPAddress,
         endpoint.SSHPort,
         command,
@@ -1004,22 +1090,22 @@ export default class Environment {
         false,
         endpoint.SSHJumpHost,
       );
-      console.on("finished", (code: number, signal: string) => {
-        global.console.log(
-          "STDOUT: " +
-            console.stdout +
-            "STDERR: " +
-            console.stderr +
-            "(exit code: " +
-            code +
-            ", signal: " +
-            signal +
-            ")",
-        );
+      sshConsole.on("finished", (code: number, _signal: string) => {
+        // console.log(
+        //   "STDOUT: " +
+        //     sshConsole.stdout +
+        //     "STDERR: " +
+        //     sshConsole.stderr +
+        //     "(exit code: " +
+        //     code +
+        //     ", signal: " +
+        //     signal +
+        //     ")",
+        //);
         if (code === 0) {
           // if stdoutSuccessMatch was supplied, try to match stdout against it, to detect whether cmd was successfull
           if (stdoutSuccessMatch) {
-            if (console.stdout.match(stdoutSuccessMatch)) {
+            if (sshConsole.stdout.match(stdoutSuccessMatch)) {
               // command was run successfully (exit code 0) and stdout matched regexp defined in test
               resolved = true;
             } else {
@@ -1032,10 +1118,10 @@ export default class Environment {
         } else {
           resolved = false;
         }
-        console.emit("closed");
+        sshConsole.emit("closed");
       });
-      console.on("closed", () => {
-        if (resolved) resolve(console.stdout);
+      sshConsole.on("closed", () => {
+        if (resolved) resolve(sshConsole.stdout);
         else reject(new Error("Unable to run SSH command " + command));
       });
     });
@@ -1119,7 +1205,12 @@ export default class Environment {
     console.log("SUBMITTING assignment (step " + stepIndex + ")");
     const submittedFiles = new Array<SubmissionFileType>();
     for (const [alias] of this.editableFiles.entries()) {
-      await this.readFile(alias).then((fileContent: string) => {
+      await this.readFile(alias).then((fileContent: string | undefined) => {
+        if (fileContent === undefined) {
+          throw new Error(
+            "Could not read file content for " + alias + " during submission.",
+          );
+        }
         submittedFiles.push({ fileName: alias, fileContent: fileContent });
       });
     }
@@ -1152,17 +1243,17 @@ export default class Environment {
         const fileNameWithExpanededVars = supplementalFile
           .replace("$user", this.username)
           .replace("$environment", this.environmentId);
-        const fileContent = await this.filehandler.readFile(
-          fileNameWithExpanededVars,
-          "binary",
-        );
-        const flattenedFilePathName = fileNameWithExpanededVars
-          .replace(/\//g, "_")
-          .replace(/\\/g, "_");
-        submittedFiles.push({
-          fileName: flattenedFilePathName,
-          fileContent: fileContent,
-        });
+        await this.filehandler
+          ?.readFile(fileNameWithExpanededVars, "binary")
+          .then((content) => {
+            const flattenedFilePathName = fileNameWithExpanededVars
+              .replace(/\//g, "_")
+              .replace(/\\/g, "_");
+            submittedFiles.push({
+              fileName: flattenedFilePathName,
+              fileContent: content,
+            });
+          });
       }
     }
 
@@ -1208,18 +1299,18 @@ export default class Environment {
   public async readFile(
     alias: string,
     alreadyResolved?: boolean,
-  ): Promise<string> {
+  ): Promise<string | undefined> {
     let resolvedPath;
     if (alreadyResolved === undefined || !alreadyResolved) {
       resolvedPath = this.editableFiles.get(alias);
       if (resolvedPath === undefined) {
-        throw new Error("Could not resolve alias.");
+        throw new Error("Could not resolve alias " + alias + ".");
       }
     } else {
       resolvedPath = alias;
     }
 
-    const content = await this.filehandler.readFile(resolvedPath);
+    const content = await this.filehandler?.readFile(resolvedPath);
     return content;
   }
 
@@ -1235,26 +1326,33 @@ export default class Environment {
       resolvedPath = alias;
     }
     if (resolvedPath === undefined) {
-      throw new Error("Could not resolve alias.");
+      throw new Error("Could not resolve alias " + alias + ".");
     }
-    await this.filehandler.writeFile(resolvedPath, newContent);
+    await this.filehandler?.writeFile(resolvedPath, newContent);
   }
 
   // Create a yjs Doc, handle intial content and return it
   public static async getCollabDoc(
     alias: string,
     environmentId: string,
-    username: string,
+    groupNumber: number,
   ): Promise<string> {
     if (this.activeCollabDocs.get(alias) === undefined) {
-      const env = Environment.getActiveEnvironment(environmentId, username);
+      const env = Environment.getActiveEnvironment(environmentId, groupNumber);
       const resolvedPath = env?.editableFiles.get(alias);
 
       if (!env || resolvedPath === undefined) {
         throw new Error("Could not resolve alias.");
       }
 
-      const content = await env.filehandler.readFile(resolvedPath);
+      const content = await env.filehandler?.readFile(resolvedPath);
+      if (content === undefined) {
+        throw new Error(
+          "Could not read file content to populate collaboration document " +
+            alias +
+            ".",
+        );
+      }
       const ydoc = new Y.Doc();
       const ytext = ydoc.getText("monaco");
 

@@ -10,7 +10,7 @@ export interface Console {
   on(event: "data", listener: (data: string) => void): this;
   write(data: string): void;
   writeLine(data: string): void;
-  close(environmentId: string, username: string, groupNumber: number): void;
+  close(environmentId: string, groupNumber: number, sessionId?: string): void;
   resize(columns: number, lines: number): void;
   consumeInitialConsoleBuffer(): string;
   command: string;
@@ -39,6 +39,8 @@ type CustomizedSSHClient = Client & {
   environmentId: string;
   username: string;
   groupNumber: number;
+  sessionId: string;
+  parentJumpHostClient?: Client;
 };
 
 export default class SSHConsole extends EventEmitter implements Console {
@@ -55,10 +57,15 @@ export default class SSHConsole extends EventEmitter implements Console {
   public exitCode = "";
   public exitSignal = "";
 
+  // maybe check .emit() calls and close() handlers and remove possibly redundant ones,
+  // several of them were added to ensure proper cleanup of ssh connections, otherwise leaking connections could occur
+
   constructor(
     environmentId: string,
+    consoleName: string,
     username: string,
     groupNumber: number,
+    sessionId: string | undefined,
     ipaddress: string,
     port: number,
     command: string,
@@ -76,21 +83,16 @@ export default class SSHConsole extends EventEmitter implements Console {
     let sshConsole: CustomizedSSHClient;
     // sharing connections in the same group would be possible and multiple users can then use the same xterm.js together,
     // however refresh/different console sizes (which is inevitable due to different browser window sizes) etc. will lead to console corruption
-    const consoleIdentifier = `${ipaddress}:${port}:${environmentId}:${username}:${groupNumber}`;
+    const consoleIdentifier = `${ipaddress}:${port}:${environmentId}:${consoleName}:${username}:${groupNumber}:${sessionId}`;
     const sshConnection = SSHConsole.sshConnections.get(consoleIdentifier);
 
-    if (provideTty && sshConnection) {
+    if (sshConnection && sshConnection.ready) {
       sshConsole = sshConnection;
 
-      if (!sshConsole.ready) {
-        sshConsole.on("ready", () => {
-          sshConsole.ready = true;
-          this.setupShellStream(sshConsole);
-        });
-      } else {
-        this.setupShellStream(sshConsole);
-      }
+      //console.debug("Reusing existing SSH connection " + consoleIdentifier);
+      this.setupShellStream(sshConsole);
     } else {
+      //console.debug("Creating new SSH connection " + consoleIdentifier);
       sshConsole = new Client() as CustomizedSSHClient;
       sshConsole.ready = false;
       sshConsole.environmentId = environmentId;
@@ -104,11 +106,16 @@ export default class SSHConsole extends EventEmitter implements Console {
         this.setupShellStream(sshConsole);
       });
       sshConsole.on("error", (err) => {
-        console.log(err);
+        console.error(err);
         this.emit("error", err);
+        if (this.provideTty) {
+          SSHConsole.sshConnections.delete(consoleIdentifier);
+        }
       });
       sshConsole.on("close", () => {
-        console.log("SSH connection closed.");
+        //console.debug("SSH connection closed.");
+        sshConsole.ready = false;
+        this.stream?.end();
         sshConsole.end();
         this.emit("closed");
         if (this.provideTty) {
@@ -125,19 +132,20 @@ export default class SSHConsole extends EventEmitter implements Console {
         this.emit("finished", code, signal);
       });
       if (jumpHost !== undefined) {
-        console.log(
-          "Establishing SSH connection " +
-            ipaddress +
-            ":" +
-            port +
-            " via jump host " +
-            jumpHost.ipaddress +
-            ":" +
-            jumpHost.port,
-        );
+        // console.debug(
+        //   "Establishing SSH connection " +
+        //     ipaddress +
+        //     ":" +
+        //     port +
+        //     " via jump host " +
+        //     jumpHost.ipaddress +
+        //     ":" +
+        //     jumpHost.port,
+        // );
         const sshJumpHostConnection = new Client();
         sshJumpHostConnection
           .on("ready", () => {
+            //console.debug("SSH jumphost connection ready, forwarding connection");
             sshJumpHostConnection.forwardOut(
               "127.0.0.1",
               0,
@@ -145,29 +153,33 @@ export default class SSHConsole extends EventEmitter implements Console {
               port,
               (err, stream) => {
                 if (err) {
-                  console.log(
+                  console.error(
                     "Unable to forward connection on jump host: " + err.message,
                   );
                   sshConsole.end();
                   sshJumpHostConnection.end();
-                  this.emit("error", err);
+                  //this.emit("error", err);
                 } else {
                   sshConsole
                     .on("ready", () => {
-                      console.log(
-                        "SSH Client connection via jump host :: ready",
-                      );
+                      sshConsole.parentJumpHostClient = sshJumpHostConnection;
+                      // console.debug(
+                      //   "SSH Client connection via jump host :: ready",
+                      // );
                     })
                     .on("close", () => {
-                      console.log(
-                        "SSH Client connection via jump host :: close",
-                      );
+                      // console.debug(
+                      //   "SSH Client connection via jump host :: close",
+                      // );
+                      stream.end();
                       sshConsole.end();
                       sshJumpHostConnection.end();
                       this.emit("close");
                     })
                     .on("error", (err) => {
-                      console.log(err);
+                      //console.debug("SSH Client connection via jump host :: error");
+                      console.error(err);
+                      stream.end();
                       sshConsole.end();
                       sshJumpHostConnection.end();
                       this.emit("error", err);
@@ -180,19 +192,22 @@ export default class SSHConsole extends EventEmitter implements Console {
                         ? fs.readFileSync(process.env.SSH_PRIVATE_KEY_PATH)
                         : undefined,
                       readyTimeout: 1000,
+                      timeout: 1000,
                     });
                 }
               },
             );
           })
           .on("close", () => {
-            console.log("SFTP connection close");
+            //console.debug("SSH jumphost connection close");
+            this.stream?.end();
             sshConsole.end();
             sshJumpHostConnection.end();
-            this.emit("close");
           })
           .on("error", (err) => {
-            console.log(err);
+            //console.debug("SSH jumphost connection error");
+            console.error(err);
+            this.stream?.end();
             sshConsole.end();
             sshJumpHostConnection.end();
             this.emit("error", err);
@@ -206,18 +221,19 @@ export default class SSHConsole extends EventEmitter implements Console {
               ? fs.readFileSync(jumpHost.privateKey)
               : undefined,
             //debug: (debug) => {
-            //  console.log(debug)
+            //  console.debug(debug)
             //},
             readyTimeout: 1000,
+            timeout: 1000,
           });
       } else {
-        console.log("Establishing SSH connection " + ipaddress + ":" + port);
+        //console.debug("Establishing SSH connection " + ipaddress + ":" + port);
         sshConsole
           .on("ready", function () {
-            console.log("SSH Client :: ready");
+            //console.debug("SSH Client :: ready");
           })
           .on("error", (err) => {
-            console.log("SSH console error: ", err);
+            console.error("SSH console error: ", err);
           })
           .connect({
             host: ipaddress,
@@ -228,6 +244,7 @@ export default class SSHConsole extends EventEmitter implements Console {
               ? fs.readFileSync(process.env.SSH_PRIVATE_KEY_PATH)
               : undefined,
             readyTimeout: 1000,
+            timeout: 1000,
           });
       }
     }
@@ -236,18 +253,19 @@ export default class SSHConsole extends EventEmitter implements Console {
   private setupShellStream(sshConsole: CustomizedSSHClient) {
     if (this.provideTty) {
       sshConsole.shell((err, stream) => {
-        console.log("setting up shell");
+        //console.debug("setting up shell");
         if (err) throw err;
         this.emit("ready");
         this.stream = stream;
         stream
           .on("close", () => {
-            console.log("SSH Stream :: close");
+            //console.debug("SSH Stream :: close")
             stream.end();
             this.emit("close");
           })
           .on("error", (err: Error) => {
-            console.log("SSH shell error: ", err);
+            stream.end();
+            console.error("SSH shell error: ", err);
           })
           .on("data", (data: string) => {
             if (!this.initialConsoleBufferConsumed) {
@@ -269,18 +287,20 @@ export default class SSHConsole extends EventEmitter implements Console {
           if (err) throw err;
           stream
             .on("close", function (code: string, signal: string) {
-              console.log(
-                "Stream :: close :: code: " + code + ", signal: " + signal,
-              );
+              //console.debug(
+              //  "Stream :: close :: code: " + code + ", signal: " + signal,
+              //);
               sshConsole.emit("finished", code, signal);
+              sshConsole.ready = false;
+              stream.end();
               sshConsole.end();
             })
             .on("data", function (data: string) {
-              //console.log("STDOUT: " + data);
+              //console.debug("STDOUT: " + data);
               sshConsole.emit("stdout", data);
             })
             .stderr.on("data", function (data: string) {
-              //console.log("STDERR: " + data);
+              //console.debug("STDERR: " + data);
               sshConsole.emit("stderr", data);
             });
         },
@@ -289,28 +309,29 @@ export default class SSHConsole extends EventEmitter implements Console {
   }
 
   write(data: string): void {
-    //console.log(`${this.command}${this.args} writing: `, data);
+    //console.debug(`${this.command}${this.args} writing: `, data);
     this.stream?.write(data);
   }
 
   writeLine(data: string): void {
-    //console.log(`${this.command}${this.args}`, data);
+    //console.debug(`${this.command}${this.args}`, data);
     this.stream?.write(`${data}\n`);
   }
 
-  close(environmentId: string, username: string, groupNumber: number): void {
-    console.log("SSH console close");
+  close(environmentId: string, groupNumber: number): void {
+    //console.debug("SSH console close");
     SSHConsole.sshConnections.forEach((value, key, map) => {
+      // if the connection is in the same group and environment, close it
       if (
         value.environmentId === environmentId &&
-        value.username === username &&
         value.groupNumber === groupNumber
       ) {
         value.emit("close");
+        value.end();
+        value.parentJumpHostClient?.end();
         map.delete(key);
       }
     });
-    this.stream?.end();
   }
 
   resize(columns: number, lines: number): void {
