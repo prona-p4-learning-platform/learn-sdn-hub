@@ -16,6 +16,8 @@ Initial development was partially funded by the research programme [digLL](https
 * Modular assignment host backend (included is an SSH backend for single user, multi user (using hosts, VMs, containers to run the assignments) and an OpenStack (VM), Docker (container) and Firecracker (microVM) provider starting and configuring instances to run the assignments)
 * Support for tests and submissions in assignments
 
+learn-sdn-hub and the surrounding ProNA ecosystem with p4-container and p4-boilerplate etc. was also published and presented in our paper at NOMS 2024-2024 IEEE Network Operations and Management Symposium [https://ieeexplore.ieee.org/document/10575540](https://ieeexplore.ieee.org/document/10575540).
+
 The following figures show screenshots of the environment, used to teach the basic functions of a P4-based Layer 2 "learning" (flooding & filtering) switch:
 
 ![learn-sdn hub used for exploratory learning of the basic functions of a P4-based L2 switch](https://raw.githubusercontent.com/prona-p4-learning-platform/learn-sdn-hub/master/examples/screenshots/learn-sdn-hub-screenshot1-small.png "web-based environment with markdown lab sheet incl. mermaid figures/diagrams and monaco editor incl. code completion")
