@@ -159,7 +159,10 @@ export default class ProxmoxProvider implements InstanceProvider {
                     const originalMessage =
                       error instanceof Error ? error.message : "Unknown error";
                     // do not throw an error if node is temporarily unavailable, simply ignore shutdown nodes
-                    if (originalMessage.match(/595 No route to host/)) {
+                    if (
+                      originalMessage.match(/595 No route to host/) ||
+                      originalMessage.match(/595 Connection timed out/)
+                    ) {
                       // ignore unreachable nodes, might be updating or temporarily shutdown, no need to look for VMs on them
                     } else {
                       throw new Error(
@@ -178,7 +181,10 @@ export default class ProxmoxProvider implements InstanceProvider {
               const originalMessage =
                 error instanceof Error ? error.message : "Unknown error";
               // do not throw an error if node is temporarily unavailable, simply ignore shutdown nodes
-              if (originalMessage.match(/595 No route to host/)) {
+              if (
+                originalMessage.match(/595 No route to host/) ||
+                originalMessage.match(/595 Connection timed out/)
+              ) {
                 // ignore unreachable nodes, might be updating or temporarily shutdown, no need to look for VMs on them
               } else {
                 throw new Error(
@@ -194,10 +200,21 @@ export default class ProxmoxProvider implements InstanceProvider {
       .catch((error) => {
         const originalMessage =
           error instanceof Error ? error.message : "Unknown error";
-        throw new Error(
-          "ProxmoxProvider: unable to get all existing VMs: \n" +
-            originalMessage,
-        );
+        // do not throw an error if node is temporarily unavailable, simply ignore shutdown nodes
+        if (
+          originalMessage.match(/595 No route to host/) ||
+          originalMessage.match(/595 Connection timed out/)
+        ) {
+          // ignore unreachable nodes, might be updating or temporarily shutdown, no need to look for VMs on them
+          console.log(
+            "ProxmoxProvider: Node is temporarily unavailable, ignoring for now while getting all VMs.",
+          );
+        } else {
+          throw new Error(
+            "ProxmoxProvider: unable to get all existing VMs:\n" +
+              originalMessage,
+          );
+        }
       });
 
     // check for network cidr
@@ -839,7 +856,10 @@ export default class ProxmoxProvider implements InstanceProvider {
           ) {
             // ignore the case that the instance is not found on this node and continue with the next node
             //console.debug("Instance " + instance + " not found on node " + node.node);
-          } else if (error.message.match(/595 No route to host/)) {
+          } else if (
+            error.message.match(/595 No route to host/) ||
+            error.message.match(/595 Connection timed out/)
+          ) {
             // ignore unreachable nodes, might be updating or temporarily shutdown, no need to look for VMs on them
           } else {
             throw new Error(
@@ -991,7 +1011,10 @@ export default class ProxmoxProvider implements InstanceProvider {
               const originalMessage =
                 reason instanceof Error ? reason.message : "Unknown error";
               // do not throw error here, as nodes can be temporarily unavailable
-              if (originalMessage.match(/595 No route to host/)) {
+              if (
+                originalMessage.match(/595 No route to host/) ||
+                originalMessage.match(/595 Connection timed out/)
+              ) {
                 // ignore unreachable nodes, might be updating or temporarily shutdown, no need to look for VMs on them
               } else {
                 console.log(
