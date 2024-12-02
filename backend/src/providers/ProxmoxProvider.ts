@@ -428,7 +428,7 @@ export default class ProxmoxProvider implements InstanceProvider {
       });
     if (templateID === undefined) {
       throw new Error(
-        `ProxmoxProvider: Could not find a template with tag (${proxmoxTemplateTag} on node ${targetNode.node}`,
+        `ProxmoxProvider: Could not find a template with tag (${proxmoxTemplateTag} on node ${targetNode.node}. permission problem?`,
       );
     }
 
