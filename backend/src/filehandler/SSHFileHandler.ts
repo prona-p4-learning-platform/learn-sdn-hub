@@ -160,6 +160,7 @@ export default class SSHFileHandler {
 
       this.client.sftp((err, sftp) => {
         if (err) {
+          sftp.end();
           reject(err);
           return;
         }
@@ -169,6 +170,7 @@ export default class SSHFileHandler {
           absolutePath,
           (err: Error | undefined, content: Buffer) => {
             if (err) {
+              sftp.end();
               reject(err);
               return;
             }
