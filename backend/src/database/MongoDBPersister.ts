@@ -118,7 +118,6 @@ export default class MongoDBPersister implements Persister {
       .collection<UserEntry>("users")
       .findOne({ username }, { projection: { environments: 1 } })
       .then((result) => {
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         return result && result.environments ? result.environments : [];
       });
   }
@@ -171,8 +170,8 @@ export default class MongoDBPersister implements Persister {
         username +
         " assignment environment: " +
         environment +
-        " terminalStates: " +
-        terminalStates.join(","),
+        " terminalStates (endpoint,state): " +
+        terminalStates.map((ts) => `(${ts.endpoint},${ts.state})`).join(","),
     );
 
     const now = new Date();

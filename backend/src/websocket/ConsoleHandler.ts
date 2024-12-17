@@ -8,7 +8,11 @@ export default function (
   sessionId: string,
   type: string,
 ): void {
-  const envInstance = Environment.getActiveEnvironment(environment, groupNumber, sessionId);
+  const envInstance = Environment.getActiveEnvironment(
+    environment,
+    groupNumber,
+    sessionId,
+  );
   if (envInstance !== undefined) {
     const envConsole = envInstance.getConsoleByAlias(type);
     if (envConsole === undefined) {

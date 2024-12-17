@@ -1,3 +1,8 @@
+import crypto from "node:crypto";
+import { fromUint8Array } from "js-base64";
+import querystring from "querystring";
+import * as Y from "yjs";
+
 import SSHConsole, { Console, JumpHost } from "./consoles/SSHConsole";
 import FileHandler from "./filehandler/SSHFileHandler";
 import {
@@ -6,11 +11,6 @@ import {
   InstanceNotFoundErrorMessage,
 } from "./providers/Provider";
 import { Persister } from "./database/Persister";
-import crypto from "crypto";
-import querystring from "querystring";
-import * as Y from "yjs";
-import { fromUint8Array } from "js-base64";
-import console from "console";
 
 export interface AliasedFile {
   absFilePath: string;
@@ -422,7 +422,8 @@ export default class Environment {
 
     if (environment) {
       const groupNumber = environment.groupNumber;
-      await environment
+
+      return await environment
         .stop()
         .then(async () => {
           // search for other activeEnvironments for this group and delete them
@@ -432,7 +433,7 @@ export default class Environment {
               Environment.activeEnvironments.delete(key);
             }
           }
-          return Promise.resolve(true);
+          return true;
         })
         .catch(async (err: Error) => {
           if (
@@ -450,17 +451,17 @@ export default class Environment {
                 Environment.activeEnvironments.delete(key);
               }
             }
-            return Promise.resolve(true);
+
+            return true;
           } else {
             console.log("Failed to stop environment. " + JSON.stringify(err));
-            return Promise.reject(err);
+            throw err;
           }
         });
     } else {
       console.log("Environment not found.");
-      return Promise.reject(false);
+      return false;
     }
-    return Promise.resolve(true);
   }
 
   private static async cleanUp(env: Environment) {
@@ -479,30 +480,27 @@ export default class Environment {
 
   static async deleteInstanceEnvironments(instance: string): Promise<boolean> {
     let instanceEnvironmentFound = false;
+
     for (const activeEnvironment of this.activeEnvironments.values()) {
       if (activeEnvironment.instanceId === instance) {
         instanceEnvironmentFound = true;
+
         // the environment uses the specified instance and should be deleted
         await this.deleteEnvironment(
           activeEnvironment.groupNumber,
           activeEnvironment.environmentId,
-        )
-          .then((result) => {
-            if (!result) {
-              // unable to delete environment
-              throw new Error(
-                "Environment used by instance " +
-                  instance +
-                  " could not be deleted.",
-              );
-            }
-          })
-          .catch((err) => {
-            return Promise.reject(err);
-          });
+        ).then((result) => {
+          if (!result) {
+            // unable to delete environment
+            throw new Error(
+              `Environment used by instance ${instance} could not be deleted.`,
+            );
+          }
+        });
       }
     }
-    return Promise.resolve(instanceEnvironmentFound);
+
+    return instanceEnvironmentFound;
   }
 
   async getLanguageServerPort(): Promise<number> {
@@ -521,81 +519,59 @@ export default class Environment {
   }
 
   async makeSureInstanceExists(createIfMissing?: boolean): Promise<VMEndpoint> {
-    return new Promise<VMEndpoint>((resolve, reject) => {
-      this.persister
-        .GetUserEnvironments(this.username)
-        .then((environments) => {
-          console.log(
-            "Current user environments: " + JSON.stringify(environments),
-          );
-          const filtered = environments.filter(
-            (env) => env.environment === this.environmentId,
-          );
-          if (filtered.length === 1) {
-            console.log(
-              "Environment " +
-                this.environmentId +
-                " already deployed for user " +
-                this.username +
-                ", trying to reopen it...",
-            );
-            this.environmentProvider
-              .getServer(filtered[0].instance)
-              .then((endpoint) => {
-                return resolve(endpoint);
-              })
-              .catch(async (error: Error) => {
-                if (error.message === InstanceNotFoundErrorMessage) {
-                  // instance is gone, remove environment
-                  await this.persister.RemoveUserEnvironment(
-                    this.username,
-                    filtered[0].environment,
-                  );
-                }
-                return reject(error.message);
-              });
-          } else if (filtered.length === 0) {
-            if (createIfMissing === true) {
-              return resolve(
-                this.environmentProvider.createServer(
-                  this.username,
-                  this.groupNumber,
-                  this.environmentId,
-                  {
-                    image: this.configuration.providerImage,
-                    dockerCmd: this.configuration.providerDockerCmd,
-                    dockerSupplementalPorts:
-                      this.configuration.providerDockerSupplementalPorts,
-                    kernelImage: this.configuration.providerKernelImage,
-                    kernelBootARGs: this.configuration.providerKernelBootARGs,
-                    rootDrive: this.configuration.providerRootDrive,
-                    proxmoxTemplateTag:
-                      this.configuration.providerProxmoxTemplateTag,
-                  },
-                ),
-              );
-            } else {
-              return reject(DenyStartOfMissingInstanceErrorMessage);
-            }
-          } else {
-            return reject(
-              new Error(
-                "More than 1 environments exist for user " +
-                  this.username +
-                  ". Remove duplicate environments from persister " +
-                  typeof this.persister +
-                  " envs found: " +
-                  filtered.join(", "),
-              ),
+    const environments = await this.persister
+      .GetUserEnvironments(this.username)
+      .catch((error: Error) => {
+        throw new Error("Unable to get UserEnvironments.\n" + error.message);
+      });
+
+    console.log("Current user environments: " + JSON.stringify(environments));
+
+    const filtered = environments.filter(
+      (env) => env.environment === this.environmentId,
+    );
+
+    if (filtered.length === 1) {
+      console.log(
+        `Environment ${this.environmentId} already deployed for user ${this.username}, trying to reopen it...`,
+      );
+
+      return await this.environmentProvider
+        .getServer(filtered[0].instance)
+        .catch(async (error: Error) => {
+          if (error.message === InstanceNotFoundErrorMessage) {
+            // instance is gone, remove environment
+            await this.persister.RemoveUserEnvironment(
+              this.username,
+              filtered[0].environment,
             );
           }
-        })
-        .catch((err) => {
-          return reject(
-            new Error("Error: Unable to get UserEnvironments." + err),
-          );
+
+          throw error;
         });
-    });
+    } else if (filtered.length === 0) {
+      if (createIfMissing === true) {
+        return await this.environmentProvider.createServer(
+          this.username,
+          this.groupNumber,
+          this.environmentId,
+          {
+            image: this.configuration.providerImage,
+            dockerCmd: this.configuration.providerDockerCmd,
+            dockerSupplementalPorts:
+              this.configuration.providerDockerSupplementalPorts,
+            kernelImage: this.configuration.providerKernelImage,
+            kernelBootARGs: this.configuration.providerKernelBootARGs,
+            rootDrive: this.configuration.providerRootDrive,
+            proxmoxTemplateTag: this.configuration.providerProxmoxTemplateTag,
+          },
+        );
+      } else throw new Error(DenyStartOfMissingInstanceErrorMessage);
+    } else {
+      throw new Error(
+        `More than 1 environment exists for user ${this.username}. Remove duplicate environments from persister ${typeof this.persister}! Envs found:\n ${JSON.stringify(filtered, null, 2)}`,
+      );
+    }
   }
 
   async start(
@@ -611,167 +587,151 @@ export default class Environment {
       this.configuration.description,
       endpoint.instance,
     );
+
     console.log(
-      "Added new environment: " +
-        this.environmentId +
-        " for user: " +
-        this.username +
-        " using endpoint: " +
-        JSON.stringify(endpoint),
+      `Added new environment: ${this.environmentId} for user: ${this.username} using endpoint: ${JSON.stringify(endpoint)}`,
     );
-    return new Promise((resolve, reject) => {
-      try {
-        this.filehandler = new FileHandler(
-          this.environmentId,
-          this.username,
-          this.groupNumber,
-          this.sessionId,
-          endpoint.IPAddress,
-          endpoint.SSHPort,
-          endpoint.SSHJumpHost,
-        );
-      } catch (err) {
-        return reject(err);
-      }
-      desc.editableFiles.forEach((val) =>
-        this.addEditableFile(val.alias, val.absFilePath),
-      );
-      let errorTerminalCounter = 0;
-      let resolvedOrRejected = false;
-      let readyTerminalCounter = 0;
-      const numberOfTerminals = desc.terminals.flat().length;
-      desc.terminals.forEach((subterminals) => {
-        subterminals.forEach((subterminal) => {
-          if (subterminal.type === "Shell") {
-            console.log(
-              "Opening console: ",
-              JSON.stringify(subterminal),
-              JSON.stringify(endpoint),
-            );
-            try {
-              const sshConsole = new SSHConsole(
-                this.environmentId,
-                subterminal.name,
-                this.username,
-                this.groupNumber,
-                sessionId,
-                endpoint.IPAddress,
-                endpoint.SSHPort,
-                subterminal.executable,
-                subterminal.params,
-                subterminal.cwd,
-                subterminal.provideTty,
-                endpoint.SSHJumpHost,
+
+    this.filehandler = new FileHandler(
+      this.environmentId,
+      this.username,
+      this.groupNumber,
+      this.sessionId,
+      endpoint.IPAddress,
+      endpoint.SSHPort,
+      endpoint.SSHJumpHost,
+    );
+
+    for (const file of desc.editableFiles)
+      this.addEditableFile(file.alias, file.absFilePath);
+
+    for (const subterminals of desc.terminals) {
+      for (const subterminal of subterminals) {
+        switch (subterminal.type) {
+          case "Shell":
+            {
+              console.log(
+                "Opening console: ",
+                JSON.stringify(subterminal),
+                JSON.stringify(endpoint),
               );
 
-              const setupCloseHandler = (): void => {
-                errorTerminalCounter++;
-                if (
-                  resolvedOrRejected === false &&
-                  errorTerminalCounter + readyTerminalCounter ===
-                    numberOfTerminals
-                ) {
-                  resolvedOrRejected = true;
-                  return reject(new Error("Unable to create environment"));
-                } else {
+              await new Promise<void>((resolve, reject) => {
+                const sshConsole = new SSHConsole(
+                  this.environmentId,
+                  subterminal.name,
+                  this.username,
+                  this.groupNumber,
+                  sessionId,
+                  endpoint.IPAddress,
+                  endpoint.SSHPort,
+                  subterminal.executable,
+                  subterminal.params,
+                  subterminal.cwd,
+                  subterminal.provideTty,
+                  endpoint.SSHJumpHost,
+                );
+
+                sshConsole.on("ready", () => {
+                  this.activeConsoles.set(subterminal.name, sshConsole);
+                  resolve();
+                });
+
+                sshConsole.on("error", (err: Error) => {
+                  reject(err);
+                });
+
+                sshConsole.on("close", () => {
                   this.activeConsoles.delete(subterminal.name);
-                  //console.debug(
-                  //  "deleted console for task: " + subterminal.name,
-                  //);
-                }
-              };
-
-              sshConsole.on("close", setupCloseHandler);
-
-              sshConsole.on("error", (err) => {
-                return reject(err);
+                  reject(new Error("Unable to create environment"));
+                });
               });
-
-              sshConsole.on("ready", () => {
-                readyTerminalCounter++;
-                this.activeConsoles.set(subterminal.name, sshConsole);
-                if (
-                  resolvedOrRejected === false &&
-                  readyTerminalCounter === numberOfTerminals
-                ) {
-                  resolvedOrRejected = true;
-                  return resolve(endpoint);
-                }
-              });
-            } catch (err) {
-              return reject(err);
             }
-          } else if (subterminal.type === "Desktop") {
-            console.log(
-              "Opening desktop: ",
-              JSON.stringify(subterminal),
-              JSON.stringify(endpoint),
-            );
+            break;
+          case "Desktop":
+            {
+              console.log(
+                "Opening desktop: ",
+                JSON.stringify(subterminal),
+                JSON.stringify(endpoint),
+              );
 
-            // currently fixed to guacamole and VNC, additional protocols require
-            // different params, see:
-            //   https://guacamole.apache.org/doc/gug/json-auth.html
-            //   https://guacamole.apache.org/doc/gug/configuring-guacamole.html#connection-configuration
+              // currently fixed to guacamole and VNC, additional protocols require
+              // different params, see:
+              //   https://guacamole.apache.org/doc/gug/json-auth.html
+              //   https://guacamole.apache.org/doc/gug/configuring-guacamole.html#connection-configuration
 
-            // Add -join as connection to join already existing connections
-            const payload = {
-              username: this.username,
-              expires: (Date.now() + 2 * 3600 * 1000).toString(),
-              connections: {
-                [this.groupNumber + "-" + this.environmentId]: {
-                  id: this.groupNumber + "-" + this.environmentId,
-                  protocol: subterminal.remoteDesktopProtocol,
-                  parameters: {
-                    hostname: subterminal.remoteDesktopHostname
-                      ? subterminal.remoteDesktopHostname
-                      : endpoint.IPAddress,
-                    port: subterminal.remoteDesktopPort.toString(),
-                    username: subterminal.remoteDesktopUsername
-                      ? subterminal.remoteDesktopUsername
-                      : undefined,
-                    password: subterminal.remoteDesktopPassword,
+              const groupEnv = `${this.groupNumber.toString(10)}-${this.environmentId}`;
+              // Add -join as connection to join already existing connections
+              const groupEnvJoin = `${groupEnv}-join`;
+              const payload = {
+                username: this.username,
+                expires: (Date.now() + 2 * 3600 * 1000).toString(),
+                connections: {
+                  [groupEnv]: {
+                    id: groupEnv,
+                    protocol: subterminal.remoteDesktopProtocol,
+                    parameters: {
+                      hostname: subterminal.remoteDesktopHostname
+                        ? subterminal.remoteDesktopHostname
+                        : endpoint.IPAddress,
+                      port: subterminal.remoteDesktopPort.toString(),
+                      username: subterminal.remoteDesktopUsername
+                        ? subterminal.remoteDesktopUsername
+                        : undefined,
+                      password: subterminal.remoteDesktopPassword,
+                    },
+                  },
+                  [groupEnvJoin]: {
+                    id: groupEnvJoin,
+                    join: groupEnv,
+                    parameters: {
+                      "read-only": "false",
+                    },
                   },
                 },
-                [this.groupNumber + "-" + this.environmentId + "-join"]: {
-                  id: this.groupNumber + "-" + this.environmentId + "-join",
-                  join: this.groupNumber + "-" + this.environmentId,
-                  parameters: {
-                    "read-only": "false",
-                  },
-                },
-              },
-            };
-            const strPayload = JSON.stringify(payload);
-            // change secret (128 bit, 16 byte secret in hexadecimal)
-            const key = Buffer.from("4c0b569e4c96df157eee1b65dd0e4d41", "hex");
-            const hmac = crypto.createHmac("sha256", key);
-            hmac.update(strPayload);
-            const signedPayload = hmac.digest("binary") + strPayload;
-            //debug to compare output with reference app encrypt-json.sh
-            //const hexsignedPayload = Buffer.from(signedPayload, "binary").toString("hex");
-            const cipher = crypto.createCipheriv(
-              "aes-128-cbc",
-              key,
-              "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00",
-            );
-            const enctoken =
-              cipher.update(signedPayload, "binary", "base64") +
-              cipher.final("base64");
-            const urlenctoken = querystring.escape(enctoken);
+              };
+              const strPayload = JSON.stringify(payload);
+              // change secret (128 bit, 16 byte secret in hexadecimal)
+              const key = Buffer.from(
+                "4c0b569e4c96df157eee1b65dd0e4d41",
+                "hex",
+              );
+              const hmac = crypto.createHmac("sha256", key);
+              hmac.update(strPayload);
+              const signedPayload = hmac.digest("binary") + strPayload;
+              //debug to compare output with reference app encrypt-json.sh
+              //const hexsignedPayload = Buffer.from(signedPayload, "binary").toString("hex");
+              const cipher = crypto.createCipheriv(
+                "aes-128-cbc",
+                key,
+                "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00",
+              );
+              const enctoken =
+                cipher.update(signedPayload, "binary", "base64") +
+                cipher.final("base64");
+              const urlenctoken = querystring.escape(enctoken);
 
-            fetch(subterminal.guacamoleServerURL + "/api/tokens", {
-              method: "POST",
-              body: "data=" + urlenctoken,
-              headers: { "Content-Type": "application/x-www-form-urlencoded" },
-            })
-              .then(async (response) => {
-                if (response.status === 200) {
+              await fetch(subterminal.guacamoleServerURL + "/api/tokens", {
+                method: "POST",
+                body: "data=" + urlenctoken,
+                headers: {
+                  "Content-Type": "application/x-www-form-urlencoded",
+                },
+              })
+                .then((response) => {
+                  if (response.status === 200) return response.json();
+                  else
+                    throw new Error(
+                      `Unable to get token from guacamole server (Code: ${response.status}).`,
+                    );
+                })
+                .then((json: GuacamoleAuthResponse) => {
                   const desktop: DesktopInstance = {
                     remoteDesktopProtocol: subterminal.remoteDesktopProtocol,
                     remoteDesktopPort: subterminal.remoteDesktopPort,
                     remoteDesktopPassword: subterminal.remoteDesktopPassword,
-                    remoteDesktopToken:
-                      (await response.json()) as GuacamoleAuthResponse,
+                    remoteDesktopToken: json,
                     guacamoleServerURL: subterminal.guacamoleServerURL,
                   };
 
@@ -780,108 +740,73 @@ export default class Environment {
                       desktop.remoteDesktopToken.username,
                   );
                   this.activeDesktops.set(subterminal.name, desktop);
-
-                  readyTerminalCounter++;
-                  if (
-                    resolvedOrRejected === false &&
-                    readyTerminalCounter === numberOfTerminals
-                  ) {
-                    resolvedOrRejected = true;
-                    return resolve(endpoint);
-                  }
-                } else {
-                  console.log(
-                    "Received error while getting token from guacamole server.",
-                  );
-                  return reject(response.status);
-                }
-              })
-              .catch((err) => {
-                console.log("Unable to get token from guacamole server.");
-                return reject(err);
-              });
-          } else if (subterminal.type === "WebApp") {
-            console.log(
-              "Opening webapp: ",
-              JSON.stringify(subterminal),
-              JSON.stringify(endpoint),
-            );
-            // currently WebApps are instantly treated as ready
-            // maybe track WebApp init later
-            // maybe also store in activeWebApps var?
-            readyTerminalCounter++;
-            if (
-              resolvedOrRejected === false &&
-              readyTerminalCounter === numberOfTerminals
-            ) {
-              resolvedOrRejected = true;
-              return resolve(endpoint);
+                })
+                .catch((err: Error) => {
+                  console.log("Unable to get token from guacamole server.");
+                  throw err;
+                });
             }
-          } else {
+            break;
+          case "WebApp":
+            {
+              // currently WebApps are instantly treated as ready
+              // maybe track WebApp init later
+              // maybe also store in activeWebApps var?
+              console.log(
+                "Opening webapp: ",
+                JSON.stringify(subterminal),
+                JSON.stringify(endpoint),
+              );
+            }
+            break;
+          default:
             // ignoring other unsupported terminal types, will not be started
-            readyTerminalCounter++;
-            if (
-              resolvedOrRejected === false &&
-              readyTerminalCounter === numberOfTerminals
-            ) {
-              resolvedOrRejected = true;
-              return resolve(endpoint);
-            }
-          }
-        });
-      });
-    });
+            break;
+        }
+      }
+    }
+
+    return endpoint;
   }
 
   async stop(): Promise<void> {
     try {
-      const endpoint = await this.makeSureInstanceExists().catch((err) => {
-        return Promise.reject(
-          new Error(
-            "Error: Unable to make sure instance exists " +
-              this.environmentId +
-              "." +
-              err,
-          ),
-        );
-      });
+      const endpoint = await this.makeSureInstanceExists().catch(
+        (err: Error) => {
+          throw new Error(
+            `Error: Unable to make sure instance exists ${this.environmentId}.\n${err.message}`,
+          );
+        },
+      );
 
       // environments are run per group, so stop all consoles (ssh) and close the filehandler (scp) and remove desktop contexts
-      for (const console of this.activeConsoles) {
-        console[1].close(this.environmentId, this.groupNumber);
-        this.activeConsoles.delete(console[0]);
+      for (const [identifier, handler] of this.activeConsoles) {
+        handler.close(this.environmentId, this.groupNumber);
+        this.activeConsoles.delete(identifier);
       }
 
       await this.filehandler?.close();
       this.filehandler = undefined;
 
-      for (const desktop of this.activeDesktops) {
-        this.activeDesktops.delete(desktop[0]);
+      for (const [identifier, _] of this.activeDesktops) {
+        this.activeDesktops.delete(identifier);
       }
 
       // get other active users in group
-      const activeUsers = new Array<string>();
-      Environment.activeEnvironments.forEach((env: Environment) => {
+      const activeUsers: string[] = [];
+      for (const [_, env] of Environment.activeEnvironments) {
         if (
           env.groupNumber === this.groupNumber &&
           env.username !== this.username
         ) {
           activeUsers.push(env.username);
         }
-      });
+      }
 
       // run stop commands
-      let stopCmdsRunning = this.configuration.stopCommands.length;
       for (const command of this.configuration.stopCommands) {
-        stopCmdsRunning;
         if (command.type === "Shell") {
-          let stopCmdFinished = false;
-          await new Promise<void>((stopCmdSuccess, stopCmdFail) => {
-            //console.debug(
-            //  "Executing stop command: ",
-            //  JSON.stringify(command),
-            //  JSON.stringify(endpoint),
-            //);
+          await new Promise<void>((resolve, reject) => {
             // session is not used as command is not run from a console,
             // so it can be anything and also create a new SSH connection if needed
             // (no need to reuse an existing connection)
@@ -899,99 +824,58 @@ export default class Environment {
               command.provideTty,
               endpoint.SSHJumpHost,
             );
-            sshConsole.on("finished", (_code: string, _signal: string) => {
-              //console.log(
-              //  "OUTPUT: " +
-              //    sshConsole.stdout +
-              //    "(exit code: " +
-              //    code +
-              //    ", signal: " +
-              //    signal +
-              //    ")",
-              //);
+            let stopCmdFinished = false;
+
+            sshConsole.on("finished", () => {
               stopCmdFinished = true;
-              stopCmdsRunning--;
               sshConsole.emit("closed");
             });
+
             sshConsole.on("closed", () => {
-              if (stopCmdFinished === true) {
-                stopCmdSuccess();
-              } else {
+              if (!stopCmdFinished) {
                 console.log("Stop command failed.");
-                stopCmdFail();
-              }
+                reject(new Error("Stop command failed."));
+              } else resolve();
             });
           });
         }
       }
 
-      // wait for stop commands to finish
-      let timeout = 10;
-      while (timeout > 0 && stopCmdsRunning > 0) {
-        //console.log("Waiting for stop cmds to finish...");
-        await new Promise((r) => setTimeout(r, 1000));
-        timeout--;
-      }
-      if (timeout === 0) {
-        throw new Error(
-          "Timeout while waiting for stop commands to finish. Continuing with deletion.",
-        );
-      }
-
       await this.environmentProvider
         .deleteServer(endpoint.instance)
-        .then(() => {
-          this.persister
+        .then(async () => {
+          await this.persister
             .RemoveUserEnvironment(this.username, this.environmentId)
-            .then(() => {
-              return Promise.resolve();
-            })
-            .catch((err) => {
-              return Promise.reject(
-                new Error("Error: Unable to remove UserEnvironment." + err),
+            .catch((err: Error) => {
+              throw new Error(
+                "Error: Unable to remove UserEnvironment.\n" + err.message,
               );
             });
-          activeUsers.forEach((user: string) => {
-            this.persister
+
+          for (const user of activeUsers) {
+            await this.persister
               .RemoveUserEnvironment(user, this.environmentId)
-              .then(() => {
-                return Promise.resolve();
-              })
-              .catch((err) => {
-                return Promise.reject(
-                  new Error(
-                    "Error: Unable to remove UserEnvironment for group member " +
-                      user +
-                      "." +
-                      err,
-                  ),
+              .catch((err: Error) => {
+                throw new Error(
+                  `Error: Unable to remove UserEnvironment for group member ${user}.\n${err.message}`,
                 );
               });
-          });
-        })
-        .catch((error: Error) => {
-          if (error.message === InstanceNotFoundErrorMessage) {
-            // instance already gone (e.g., OpenStack instance already deleted)
-            console.log(
-              "Error ignored: Server Instance not found during deletion?",
-            );
-            return Promise.resolve();
-          } else {
-            console.log(error.message);
-            return Promise.reject(
-              new Error("Error: Unable to delete server." + error.message),
-            );
           }
         });
     } catch (err) {
-      if (
-        err instanceof Error &&
-        err.message === InstanceNotFoundErrorMessage
-      ) {
-        return Promise.resolve();
-      } else {
-        return Promise.reject(err);
+      if (err instanceof Error) {
+        if (err.message === InstanceNotFoundErrorMessage) {
+          // instance already gone (e.g., OpenStack instance already deleted)
+          console.log(
+            "Error ignored: Server Instance not found during deletion?",
+          );
+          return;
+        } else {
+          throw new Error("Error: Unable to delete server.\n" + err.message);
+        }
       }
+
+      throw new Error("Error: Unable to delete server.\nUnknown error.");
     }
   }
 
@@ -1038,7 +922,7 @@ export default class Environment {
             if (resolved) resolve();
             else
               reject(
-                new Error("Unable to run stop command." + command.executable),
+                new Error("Unable to run stop command: " + command.executable),
               );
           });
         });
@@ -1300,7 +1184,8 @@ export default class Environment {
     alias: string,
     alreadyResolved?: boolean,
   ): Promise<string | undefined> {
-    let resolvedPath;
+    let resolvedPath: string | undefined;
+
     if (alreadyResolved === undefined || !alreadyResolved) {
       resolvedPath = this.editableFiles.get(alias);
       if (resolvedPath === undefined) {
@@ -1319,15 +1204,18 @@ export default class Environment {
     newContent: string,
     alreadyResolved?: boolean,
   ): Promise<void> {
-    let resolvedPath;
+    let resolvedPath: string | undefined;
+
     if (alreadyResolved === undefined || !alreadyResolved) {
       resolvedPath = this.editableFiles.get(alias);
     } else {
       resolvedPath = alias;
     }
+
     if (resolvedPath === undefined) {
-      throw new Error("Could not resolve alias " + alias + ".");
+      throw new Error(`Could not resolve alias "${alias}".`);
     }
+
     await this.filehandler?.writeFile(resolvedPath, newContent);
   }
 

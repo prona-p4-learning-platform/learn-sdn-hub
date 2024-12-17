@@ -47,8 +47,11 @@ export default function wrapWSWithExpressApp(server: Server): void {
 
       let user: TokenPayload;
       try {
-        user = jwt.verify(token, process.env.JWT_TOKENSECRET ?? "some-secret") as TokenPayload;
-      } catch (err) {
+        user = jwt.verify(
+          token,
+          process.env.JWT_TOKENSECRET ?? "some-secret",
+        ) as TokenPayload;
+      } catch (_) {
         ws.send("Could not authenticate with given credentials.");
         ws.close();
         return;
@@ -65,18 +68,19 @@ export default function wrapWSWithExpressApp(server: Server): void {
 
           if (envMatchResult !== false) {
             const { environment, type } = envMatchResult.params;
-            ConsoleHandler(ws, environment, user.groupNumber, user.sessionId, type);
+            ConsoleHandler(
+              ws,
+              environment,
+              user.groupNumber,
+              user.sessionId,
+              type,
+            );
           } else if (lspMatchResult !== false) {
             const { environment, language } = lspMatchResult.params;
             LanguageServerHandler(ws, environment, user.groupNumber, language);
           } else if (rdMatchResult !== false) {
             const { environment, alias } = rdMatchResult.params;
-            RemoteDesktopHandler(
-              ws,
-              environment,
-              user.groupNumber,
-              alias,
-            );
+            RemoteDesktopHandler(ws, environment, user.groupNumber, alias);
           } else {
             ws.send("No route handler.");
             ws.close();

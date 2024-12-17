@@ -338,8 +338,9 @@ function Assignments(): JSX.Element {
       {deployedUserAssignments.length === 0 &&
         deployedGroupAssignments.length > 0 && (
           <Typography>
-            You or your group members are working on {deployedGroupAssignments[0]}. You can join
-            and open a connection by clicking deploy.
+            You or your group members are working on{" "}
+            {deployedGroupAssignments[0]}. You can join and open a connection by
+            clicking deploy.
           </Typography>
         )}
       <List component="nav" aria-label="assignment list" style={{ width: 940 }}>
