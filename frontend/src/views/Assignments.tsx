@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { createTheme } from "@mui/material/styles";
 import {
   Box,
@@ -388,7 +388,7 @@ function Assignments(): JSX.Element {
                 startIcon={<PlayCircleFilledWhiteIcon />}
                 disabled={!isActiveDeployment(assignment)}
                 onClick={() => {
-                  navigate(`/environment/${assignment}`);
+                  void navigate(`/environment/${assignment}`);
                 }}
                 sx={{ margin: theme.spacing(1) }}
               >
