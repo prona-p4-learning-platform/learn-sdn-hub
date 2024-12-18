@@ -8,20 +8,20 @@ import RemoteDesktopHandler from "./RemoteDesktopHandler";
 import { TokenPayload } from "../authentication/AuthenticationMiddleware";
 import jwt from "jsonwebtoken";
 
-interface WebsocketPathParams {
+type WebsocketPathParams = {
   environment: string;
   type: string;
-}
+};
 
-interface LSPathParams {
+type LSPathParams = {
   environment: string;
   language: string;
-}
+};
 
-interface RDPathParams {
+type RDPathParams = {
   environment: string;
   alias: string;
-}
+};
 
 const envMatcher = match<WebsocketPathParams>(
   "/ws/environment/:environment/type/:type",
