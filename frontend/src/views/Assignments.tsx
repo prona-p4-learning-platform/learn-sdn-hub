@@ -16,6 +16,8 @@ import {
   ListItemSecondaryAction,
   Tooltip,
   Typography,
+  Menu,
+  MenuItem
 } from "@mui/material";
 import { useSnackbar } from "notistack";
 import { FetchError } from "ofetch";
@@ -70,6 +72,15 @@ function Assignments(): JSX.Element {
   const [confirmationResubmitDialogOpen, setConfirmationResubmitDialogOpen] =
     useState({ assignment: "", dialogOpen: false });
   const [resubmitAssignment, setResubmitAssignment] = useState("");
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+
+  const handleK8sClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleK8sClose = () => {
+    setAnchorEl(null);
+  };
 
   const handleConfirmationUndeployDialogOpen = (selectedAssignment: string) => {
     setConfirmationUndeployDialogOpen({
@@ -285,6 +296,130 @@ function Assignments(): JSX.Element {
     [updateDeployedEnvironments, enqueueSnackbar, closeSnackbar],
   );
 
+  const setupK8S = useCallback(
+    async () => {
+      const creatingSnack = enqueueSnackbar("Setting up Kubernetes configuration...", {
+        variant: "info",
+        persist: true,
+      });
+
+      try {
+        await APIRequest("/k8s/setup", defaultValidator, {
+          method: "POST",
+          timeout: 30000, // 30 seconds timeout
+        });
+
+        enqueueSnackbar("Kubernetes configuration setup successful!", { variant: "success" });
+      } catch (error) {
+        if (error instanceof FetchError) {
+          const httpError = await getHttpError(error);
+          const message = httpError.success
+            ? httpError.data.message
+            : httpError.error.message;
+
+          enqueueSnackbar("Kubernetes configuration setup failed! (" + message + ")", {
+            variant: "error",
+          });
+        } else {
+          enqueueSnackbar("Kubernetes cluster setup error while connecting to backend!", {
+            variant: "error",
+          });
+        }
+      }
+
+      closeSnackbar(creatingSnack);
+    },
+    [enqueueSnackbar, closeSnackbar]
+  )
+
+  const undeployK8S = useCallback(
+    async () => {
+      const creatingSnack = enqueueSnackbar("Undeploying Kubernetes configuration...", {
+        variant: "info",
+        persist: true,
+      });
+
+      try {
+        await APIRequest("/k8s/undeploy", defaultValidator, {
+          method: "DELETE",
+          timeout: 30000, // 30 seconds timeout
+        });
+
+        enqueueSnackbar("Kubernetes configuration undeploy successful!", { variant: "success" });
+      } catch (error) {
+        if (error instanceof FetchError) {
+          const httpError = await getHttpError(error);
+          const message = httpError.success
+            ? httpError.data.message
+            : httpError.error.message;
+
+          enqueueSnackbar("Kubernetes configuration undeploy failed! (" + message + ")", {
+            variant: "error",
+          });
+        } else {
+          enqueueSnackbar("Kubernetes cluster undeploy error while connecting to backend!", {
+            variant: "error",
+          });
+        }
+      }
+
+      closeSnackbar(creatingSnack);
+    },
+    [enqueueSnackbar, closeSnackbar]
+  )
+
+  const downloadKubeconfig = useCallback(
+    async () => {
+      const creatingSnack = enqueueSnackbar("Downloading Kubernetes configuration...", {
+        variant: "info",
+        persist: true,
+      });
+
+      try {
+        const response = await APIRequest("/k8s/download-kubeconfig", defaultValidator, {
+          method: "GET",
+          timeout: 30000, // 30 seconds timeout
+        });
+
+        // Download kubeconfig file
+        const yamlContent = response.rawBody;
+        const blob = new Blob([yamlContent], { type: "text/yaml" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "kubeconfig.yaml";
+        document.body.appendChild(link);
+        link.click();
+        
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+
+        // Store kubeconfig in local storage
+        localStorage.setItem("kubeconfig", yamlContent);
+
+        enqueueSnackbar("Kubernetes configuration download successful!", { variant: "success" });
+      } catch (error) {
+        if (error instanceof FetchError) {
+          const httpError = await getHttpError(error);
+          const message = httpError.success
+            ? httpError.data.message
+            : httpError.error.message;
+
+          enqueueSnackbar("Kubernetes configuration download failed! (" + message + ")", {
+            variant: "error",
+          });
+        } else {
+          enqueueSnackbar("Kubernetes configuration download error while connecting to backend!", {
+            variant: "error",
+          });
+        }
+      }
+
+      closeSnackbar(creatingSnack);
+    },
+    [enqueueSnackbar, closeSnackbar]
+  )
+
   const deleteEnvironment = useCallback(
     async (assignment: string) => {
       const deletingSnack = enqueueSnackbar("Deleting virtual environment...", {
@@ -342,6 +477,22 @@ function Assignments(): JSX.Element {
             and open a connection by clicking deploy.
           </Typography>
         )}
+
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', m: 2, mb: 0 }}>
+        <Button variant="contained" color="inherit" onClick={handleK8sClick}>Kubernetes</Button>
+        <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleK8sClose}>
+        <MenuItem onClick={() => {void setupK8S(); }}>
+          Setup
+        </MenuItem>
+        <MenuItem onClick={() => {void undeployK8S(); }}>
+          Undeploy
+        </MenuItem>
+        <MenuItem onClick={() => {void downloadKubeconfig(); }}>
+          Download <code>.kubeconfig</code>
+        </MenuItem>
+        </Menu>
+      </Box>
+
       <List component="nav" aria-label="assignment list" style={{ width: 940 }}>
         {assignments.map((assignment) => (
           <ListItem key={assignment}>
