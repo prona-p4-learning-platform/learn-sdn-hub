@@ -18,7 +18,8 @@ export default (): Router => {
       .createUserCert(namespaceName)
       .then((cert: KubernetesCert) => {
         const kubeconfig: string = k8s.getKubeconfig(cert, namespaceName);
-        console.log(kubeconfig);
+
+        k8s.storeLocalKubeconfig(kubeconfig, reqWithUser.user.groupNumber);
 
         k8s
           .setupNamespace(namespaceName)
@@ -46,6 +47,8 @@ export default (): Router => {
     k8s
       .undeployNamespace(namespaceName)
       .then(() => {
+        k8s.deleteLocalKubeconfig(reqWithUser.user.groupNumber);
+
         res
           .status(200)
           .json({ status: "success", message: "K8S undeploy successful" });

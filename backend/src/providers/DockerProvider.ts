@@ -11,6 +11,7 @@ import Dockerode, {
 import { ToadScheduler, SimpleIntervalJob, AsyncTask } from "toad-scheduler";
 import { Client } from "ssh2";
 import Environment from "../Environment";
+import KubernetesManager from "../KubernetesManager";
 
 const schedulerIntervalSeconds = 5 * 60;
 
@@ -165,6 +166,7 @@ export default class DockerProvider implements InstanceProvider {
       image?: string;
       dockerCmd?: string;
       dockerSupplementalPorts?: string[];
+      mountKubeconfig?: boolean;
     },
   ): Promise<VMEndpoint> {
     const containerImage = options.image ?? this.image;
@@ -192,6 +194,28 @@ export default class DockerProvider implements InstanceProvider {
       portBindings[port] = [{}];
     }
 
+    const envs: string[] = [];
+    const hostConfigBinds: string[] = [];
+
+    // Add kubeconfig to container if requested
+    if (options.mountKubeconfig) {
+      const containerKubeconfigPath: string = "/home/p4/.kube/config";
+      let kubeconfigPath: string;
+
+      const k8s: KubernetesManager = new KubernetesManager();
+      try {
+        kubeconfigPath = k8s.getLocalKubeconfigPath(groupNumber);
+      } catch (err) {
+        throw new Error(
+          "DockerProvider: Could not get kubeconfig path.\n" +
+            (err as Error).message,
+        );
+      }
+
+      envs.push(`KUBECONFIG=${containerKubeconfigPath}`);
+      hostConfigBinds.push(`${kubeconfigPath}:${containerKubeconfigPath}`);
+    }
+
     const containerOptions: ContainerCreateOptions = {
       Image: containerImage,
       name: `${username}-${groupNumber}-${environment}`,
@@ -207,7 +231,9 @@ export default class DockerProvider implements InstanceProvider {
         PortBindings: portBindings,
         Privileged: true,
         AutoRemove: true,
+        Binds: hostConfigBinds,
       },
+      Env: envs,
     };
 
     // TODO: handle container already exists?
@@ -347,22 +373,22 @@ export default class DockerProvider implements InstanceProvider {
             `${container.Names[0]} was created at ${createdAt.toISOString()} and should be deleted`,
           );
 
-          const deleted = await Environment.deleteInstanceEnvironments(container.Id).catch(
-            (reason) => {
-              const originalMessage =
-                reason instanceof Error ? reason.message : "Unknown error";
-              console.log(
-                `DockerProvider: Error while deleting environment after pruning container (${container.Names[0]}).\n` +
-                  originalMessage,
-              );
-            },
-          );
+          const deleted = await Environment.deleteInstanceEnvironments(
+            container.Id,
+          ).catch((reason) => {
+            const originalMessage =
+              reason instanceof Error ? reason.message : "Unknown error";
+            console.log(
+              `DockerProvider: Error while deleting environment after pruning container (${container.Names[0]}).\n` +
+                originalMessage,
+            );
+          });
           if (!deleted) {
             console.log(
               `DockerProvider: Could not delete environment during pruning, environment seams to be gone already, deleting leftover container: (${container.Names[0]}).`,
             );
             await this.deleteServer(container.Id).catch((reason) => {
-             const originalMessage =
+              const originalMessage =
                 reason instanceof Error ? reason.message : "Unknown error";
               throw new Error(
                 `DockerProvider: Failed to delete container (${container.Names[0]}) to be pruned.\n` +

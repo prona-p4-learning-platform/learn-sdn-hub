@@ -146,6 +146,7 @@ export interface EnvironmentDescription {
   useCollaboration?: boolean;
   useLanguageClient?: boolean;
   maxBonusPoints?: number;
+  mountKubeconfig?: boolean;
 }
 
 const DenyStartOfMissingInstanceErrorMessage =
@@ -571,6 +572,7 @@ export default class Environment {
                     rootDrive: this.configuration.providerRootDrive,
                     proxmoxTemplateTag:
                       this.configuration.providerProxmoxTemplateTag,
+                    mountKubeconfig: this.configuration.mountKubeconfig,
                   },
                 ),
               );

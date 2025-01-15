@@ -27,6 +27,7 @@ export interface InstanceProvider {
       kernelBootARGs?: string;
       rootDrive?: string;
       proxmoxTemplateTag?: string;
+      mountKubeconfig?: boolean;
     },
   ): Promise<VMEndpoint>;
   getServer(instance: string): Promise<VMEndpoint>;

@@ -708,6 +708,54 @@ environments.set("KommProt-Ue1-Test", {
     "/home/p4/kommprot-labs/kommprot-lab-application-layer/README.md",
 });
 
+environments.set("CC-Test", {
+  providerImage: "cc-container",
+  // providerImage: "ssh:ubuntu",
+  providerDockerCmd: "",
+  mountKubeconfig: true,
+  terminals: [
+    [
+      {
+        type: "Shell",
+        name: "host1",
+        cwd: "/home/p4/kommprot-labs/kommprot-lab-application-layer",
+        executable: "",
+        params: [],
+        provideTty: true,
+      },
+    ],
+  ],
+  editableFiles: [
+    {
+      absFilePath:
+        "/home/p4/kommprot-labs/kommprot-lab-application-layer/README.md",
+      alias: "README",
+    },
+  ],
+  stopCommands: [
+    {
+      type: "Shell",
+      name: "host1",
+      cwd: "/home/p4/kommprot-labs/kommprot-lab-application-layer",
+      executable: "sudo clab destroy",
+      params: [],
+      provideTty: false,
+    },
+    {
+      type: "Shell",
+      name: "host2",
+      cwd: "/home/p4/kommprot-labs/kommprot-lab-application-layer",
+      executable: "",
+      params: [],
+      provideTty: false,
+    },
+  ],
+  description: "CC-Test description",
+  assignmentLabSheetLocation: "instance",
+  assignmentLabSheet:
+    "/home/p4/kommprot-labs/kommprot-lab-application-layer/README.md",
+});
+
 export default environments;
 
 export function updateEnvironments(

@@ -1,4 +1,5 @@
 import { Client } from "ssh2";
+import fs from "fs";
 
 export interface KubernetesCert {
   key: string;
@@ -317,5 +318,46 @@ users:
       client-certificate-data: ${cert.crt}
       client-key-data: ${cert.key}
  `;
+  }
+
+  /**
+   * This function stores a kubeconfig file on the local filesystem. It overwrites any existing file.
+   * @param kubeconfig - The kubeconfig file to be stored.
+   * @param groupNumber - The group number of the user.
+   */
+  storeLocalKubeconfig(kubeconfig: string, groupNumber: number): void {
+    const localPath = process.env.KUBECTL_STORE_PATH || "/tmp";
+
+    fs.writeFileSync(
+      `${localPath}/kubeconfig-group-${groupNumber}`,
+      kubeconfig,
+    );
+  }
+
+  /**
+   * This function deletes a kubeconfig file from the local filesystem.
+   * @param groupNumber - The group number of the user.
+   */
+  deleteLocalKubeconfig(groupNumber: number): void {
+    const localPath = process.env.KUBECTL_STORE_PATH || "/tmp";
+
+    if (fs.existsSync(`${localPath}/kubeconfig-group-${groupNumber}`)) {
+      fs.unlinkSync(`${localPath}/kubeconfig-group-${groupNumber}`);
+    }
+  }
+
+  /**
+   * Get the path to the kubeconfig file on the local filesystem.
+   * @param groupNumber - The group number of the user.
+   * @returns The path to the kubeconfig file as a string.
+   */
+  getLocalKubeconfigPath(groupNumber: number): string {
+    const localPath = process.env.KUBECTL_STORE_PATH || "/tmp";
+
+    if (!fs.existsSync(`${localPath}/kubeconfig-group-${groupNumber}`)) {
+      throw new Error("KubernetesManager: Kubeconfig file not found.");
+    }
+
+    return `${localPath}/kubeconfig-group-${groupNumber}`;
   }
 }
