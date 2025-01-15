@@ -708,9 +708,8 @@ environments.set("KommProt-Ue1-Test", {
     "/home/p4/kommprot-labs/kommprot-lab-application-layer/README.md",
 });
 
-environments.set("CC-Test", {
+environments.set("CC-Lab-1", {
   providerImage: "cc-container",
-  // providerImage: "ssh:ubuntu",
   providerDockerCmd: "",
   mountKubeconfig: true,
   terminals: [
@@ -718,7 +717,7 @@ environments.set("CC-Test", {
       {
         type: "Shell",
         name: "host1",
-        cwd: "/home/p4/kommprot-labs/kommprot-lab-application-layer",
+        cwd: "/home/p4/labs/lab1",
         executable: "",
         params: [],
         provideTty: true,
@@ -727,33 +726,14 @@ environments.set("CC-Test", {
   ],
   editableFiles: [
     {
-      absFilePath:
-        "/home/p4/kommprot-labs/kommprot-lab-application-layer/README.md",
-      alias: "README",
+      absFilePath: "/home/p4/labs/lab1/nginx.yaml",
+      alias: "nginx.yaml",
     },
   ],
-  stopCommands: [
-    {
-      type: "Shell",
-      name: "host1",
-      cwd: "/home/p4/kommprot-labs/kommprot-lab-application-layer",
-      executable: "sudo clab destroy",
-      params: [],
-      provideTty: false,
-    },
-    {
-      type: "Shell",
-      name: "host2",
-      cwd: "/home/p4/kommprot-labs/kommprot-lab-application-layer",
-      executable: "",
-      params: [],
-      provideTty: false,
-    },
-  ],
+  stopCommands: [],
   description: "CC-Test description",
   assignmentLabSheetLocation: "instance",
-  assignmentLabSheet:
-    "/home/p4/kommprot-labs/kommprot-lab-application-layer/README.md",
+  assignmentLabSheet: "/home/p4/labs/lab1/README.md",
 });
 
 export default environments;
