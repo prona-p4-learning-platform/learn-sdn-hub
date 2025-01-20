@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Outlet, useNavigate, useLocation } from "react-router-dom";
+import { Outlet, useNavigate, useLocation } from "react-router";
 import {
   AppBar,
   Box,
@@ -31,12 +31,12 @@ export default function Layout(): JSX.Element {
   useEffect(() => {
     // redirect to login if not authenticated
     if (!isAuthenticated && location.pathname !== "/") {
-      navigate("/", { replace: true });
+      void navigate("/", { replace: true });
     }
 
     // redirect to assignments if authenticated
     if (isAuthenticated && location.pathname === "/") {
-      navigate("/assignments", { replace: true });
+      void navigate("/assignments", { replace: true });
     }
   }, [isAuthenticated, location.pathname, navigate]);
 

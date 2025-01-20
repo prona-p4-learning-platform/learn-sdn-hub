@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import {
   Persister,
   UserEnvironment,
@@ -131,11 +130,11 @@ export default class MemoryPersister implements Persister {
           .join(", ")}`,
       );
       const resultPathRoot = path.resolve("src", "assignments", "results");
-      !fs.existsSync(resultPathRoot) && fs.mkdirSync(resultPathRoot);
+      if (!fs.existsSync(resultPathRoot)) fs.mkdirSync(resultPathRoot);
 
       const resultDirName = username + "-" + groupNumber + "-" + environment;
       const resultPath = path.resolve(resultPathRoot, resultDirName);
-      !fs.existsSync(resultPath) && fs.mkdirSync(resultPath);
+      if (!fs.existsSync(resultPath)) fs.mkdirSync(resultPath);
 
       for (const terminalState of terminalStates) {
         fs.writeFileSync(

@@ -12,9 +12,9 @@ function Settings(): JSX.Element {
       event.preventDefault();
       const data = new FormData(event.currentTarget);
       const credentials = {
-        oldPassword: data.get("oldPassword")?.toString() ?? "",
-        newPassword: data.get("newPassword")?.toString() ?? "",
-        confirmNewPassword: data.get("confirmNewPassword")?.toString() ?? "",
+        oldPassword: data.get("oldPassword") ?? "",
+        newPassword: data.get("newPassword") ?? "",
+        confirmNewPassword: data.get("confirmNewPassword") ?? "",
       };
 
       try {
@@ -32,7 +32,7 @@ function Settings(): JSX.Element {
             variant: "success",
           });
         } else throw payload.error;
-      } catch (error) {
+      } catch (_) {
         enqueueSnackbar("Changing password failed!", { variant: "error" });
       }
     },

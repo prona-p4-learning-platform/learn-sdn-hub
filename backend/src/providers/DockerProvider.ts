@@ -338,7 +338,6 @@ export default class DockerProvider implements InstanceProvider {
 
     for (const container of containers) {
       // server instance has learn_sdn_hub metadata and is assumed to be created by learn-sdn-hub
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       if (container.Labels["learn_sdn_hub_user"] !== undefined) {
         const createdAt = new Date(container.Created * 1000);
 
@@ -347,22 +346,22 @@ export default class DockerProvider implements InstanceProvider {
             `${container.Names[0]} was created at ${createdAt.toISOString()} and should be deleted`,
           );
 
-          const deleted = await Environment.deleteInstanceEnvironments(container.Id).catch(
-            (reason) => {
-              const originalMessage =
-                reason instanceof Error ? reason.message : "Unknown error";
-              console.log(
-                `DockerProvider: Error while deleting environment after pruning container (${container.Names[0]}).\n` +
-                  originalMessage,
-              );
-            },
-          );
+          const deleted = await Environment.deleteInstanceEnvironments(
+            container.Id,
+          ).catch((reason) => {
+            const originalMessage =
+              reason instanceof Error ? reason.message : "Unknown error";
+            console.log(
+              `DockerProvider: Error while deleting environment after pruning container (${container.Names[0]}).\n` +
+                originalMessage,
+            );
+          });
           if (!deleted) {
             console.log(
               `DockerProvider: Could not delete environment during pruning, environment seams to be gone already, deleting leftover container: (${container.Names[0]}).`,
             );
             await this.deleteServer(container.Id).catch((reason) => {
-             const originalMessage =
+              const originalMessage =
                 reason instanceof Error ? reason.message : "Unknown error";
               throw new Error(
                 `DockerProvider: Failed to delete container (${container.Names[0]}) to be pruned.\n` +

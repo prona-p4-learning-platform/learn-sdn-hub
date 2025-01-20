@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { createTheme } from "@mui/material/styles";
 import {
   Box,
@@ -338,8 +338,9 @@ function Assignments(): JSX.Element {
       {deployedUserAssignments.length === 0 &&
         deployedGroupAssignments.length > 0 && (
           <Typography>
-            You or your group members are working on {deployedGroupAssignments[0]}. You can join
-            and open a connection by clicking deploy.
+            You or your group members are working on{" "}
+            {deployedGroupAssignments[0]}. You can join and open a connection by
+            clicking deploy.
           </Typography>
         )}
       <List component="nav" aria-label="assignment list" style={{ width: 940 }}>
@@ -387,7 +388,7 @@ function Assignments(): JSX.Element {
                 startIcon={<PlayCircleFilledWhiteIcon />}
                 disabled={!isActiveDeployment(assignment)}
                 onClick={() => {
-                  navigate(`/environment/${assignment}`);
+                  void navigate(`/environment/${assignment}`);
                 }}
                 sx={{ margin: theme.spacing(1) }}
               >

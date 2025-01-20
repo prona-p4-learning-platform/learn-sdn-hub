@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Button } from "@mui/material";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 
 // custom props as react router does not provide them
 interface NavigationProps {

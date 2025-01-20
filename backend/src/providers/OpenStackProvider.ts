@@ -1,6 +1,6 @@
+/* eslint-disable @typescript-eslint/prefer-promise-reject-errors */
 /* eslint-disable no-async-promise-executor */
 /* eslint-disable @typescript-eslint/no-misused-promises */
-/* eslint-disable @typescript-eslint/no-floating-promises */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
@@ -790,19 +790,24 @@ export default class OpenStackProvider implements InstanceProvider {
                         timestampCreated.toISOString() +
                         "and should be deleted",
                     );
-                    const deleted = await Environment.deleteInstanceEnvironments(server.id);
+                    const deleted =
+                      await Environment.deleteInstanceEnvironments(server.id);
                     if (!deleted) {
                       console.log(
                         `OpenStackProvider: Could not delete environment during pruning, environment seams to be gone already, deleting leftover instance: (${server.id}).`,
                       );
-                      await providerInstance.deleteServer(server.id).catch((reason) => {
-                       const originalMessage =
-                          reason instanceof Error ? reason.message : "Unknown error";
-                        throw new Error(
-                          `OpenStackProvider: Failed to delete instance (${server.id}) to be pruned.\n` +
-                            originalMessage,
-                        );
-                      });
+                      await providerInstance
+                        .deleteServer(server.id)
+                        .catch((reason) => {
+                          const originalMessage =
+                            reason instanceof Error
+                              ? reason.message
+                              : "Unknown error";
+                          throw new Error(
+                            `OpenStackProvider: Failed to delete instance (${server.id}) to be pruned.\n` +
+                              originalMessage,
+                          );
+                        });
                     }
                   }
                 }
