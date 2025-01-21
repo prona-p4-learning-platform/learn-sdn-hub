@@ -420,6 +420,11 @@ function Assignments(): JSX.Element {
     [enqueueSnackbar, closeSnackbar]
   )
 
+  const hasKubernetesAssignments = () => {
+    // Check if there are any assignments in the second group
+    return assignments.length > 0 && assignments[1].length > 0;
+  }
+
   const deleteEnvironment = useCallback(
     async (assignment: string) => {
       const deletingSnack = enqueueSnackbar("Deleting virtual environment...", {
@@ -483,10 +488,10 @@ function Assignments(): JSX.Element {
       <List component="nav" aria-label="assignment list" style={{ width: 940 }}>
         {assignments.map((assignmentGroup, assignmentGroupIndex) => (
           <div key={`group-${assignmentGroupIndex}`}>
-            {assignmentGroupIndex === 0 ? null : (
+            {assignmentGroupIndex === 0 || !hasKubernetesAssignments() ? null : (
               <div style={{padding: '8px'}}>
                 <Typography variant="h6" style={{marginTop: '3rem', marginBottom: '0', paddingBottom: '0'}} gutterBottom>
-                {assignmentGroupIndex === 1 ? "Kubernetes Exercises" : `Assignment Group ${assignmentGroupIndex + 1}`}
+                {assignmentGroupIndex === 1 ? "Kubernetes Assignments" : `Assignment Group ${assignmentGroupIndex + 1}`}
                 </Typography>
 
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
