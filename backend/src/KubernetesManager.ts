@@ -364,4 +364,18 @@ users:
 
     return `${localPath}/kubeconfig-group-${groupNumber}`;
   }
+
+  getLocalKubeconfigAsBase64(groupNumber: number): string {
+    const localPath = process.env.KUBECTL_STORE_PATH || "/tmp";
+
+    if (!fs.existsSync(`${localPath}/kubeconfig-group-${groupNumber}`)) {
+      throw new Error("KubernetesManager: Kubeconfig file not found.");
+    }
+
+    const kubeconfig = fs.readFileSync(
+      `${localPath}/kubeconfig-group-${groupNumber}`,
+    );
+
+    return Buffer.from(kubeconfig).toString("base64");
+  }
 }
