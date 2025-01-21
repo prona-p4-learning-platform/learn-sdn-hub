@@ -27,7 +27,7 @@ export default class KubernetesManager {
                   "KubernetesManager: Could not create user certificate.\n" +
                     err.message,
                 );
-                reject(err);
+                reject(new Error("Could not create user certificate."));
               }
 
               stream.on("data", (data: string) => {
@@ -36,7 +36,7 @@ export default class KubernetesManager {
               });
               stream.stderr.on("data", (data: undefined) => {
                 console.log(`KubernetesManager: ${data}`);
-                reject(data);
+                reject(new Error(data));
               });
               stream.on("close", () => {
                 console.log(
@@ -46,7 +46,9 @@ export default class KubernetesManager {
                 // check if cert was created
                 if (certData.length < 3) {
                   reject(
-                    "KubernetesManager: Certificate was already created. Try to download it instead.",
+                    new Error(
+                      "KubernetesManager: Certificate was already created. Try to download it instead.",
+                    ),
                   );
                 }
 
@@ -58,7 +60,7 @@ export default class KubernetesManager {
                     "KubernetesManager: Could not parse certificate data.\n" +
                       (err as Error).message,
                   );
-                  reject(err);
+                  reject(new Error("Could not parse certificate data."));
                 }
               });
             },
@@ -185,7 +187,7 @@ export default class KubernetesManager {
               });
               stream.stderr.on("data", (data: undefined) => {
                 console.log(`KubernetesManager undeploy: ${data}`);
-                reject(data);
+                reject(new Error(data));
               });
               stream.on("close", () => {
                 console.log(
@@ -245,7 +247,7 @@ export default class KubernetesManager {
               });
               stream.stderr.on("data", (data: undefined) => {
                 console.log(`KubernetesManager: ${data}`);
-                reject(data);
+                reject(new Error(data));
               });
               stream.on("close", () => {
                 console.log(
@@ -255,7 +257,9 @@ export default class KubernetesManager {
                 // check if cert was created
                 if (certData.length < 3) {
                   reject(
-                    "KubernetesManager: Certificate was not found. Try to create it instead.",
+                    new Error(
+                      "KubernetesManager: Certificate was not found. Try to create it instead.",
+                    ),
                   );
                 }
 
@@ -267,7 +271,7 @@ export default class KubernetesManager {
                     "KubernetesManager: Could not parse certificate data.\n" +
                       (err as Error).message,
                   );
-                  reject(err);
+                  reject(new Error("Could not parse certificate data."));
                 }
               });
             },
