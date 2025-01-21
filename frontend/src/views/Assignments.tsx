@@ -39,7 +39,7 @@ interface SubmissionType {
   points?: number;
 }
 
-const assignmentsValidator = z.array(z.string());
+const assignmentsValidator = z.array(z.array(z.string()));
 const pointsValidator = z.record(z.number());
 const deployedUserEnvsValidator = z.array(z.string());
 const deployedGroupEnvsValidator = z.array(z.string());
@@ -56,7 +56,7 @@ const defaultValidator = z.object({});
 
 function Assignments(): JSX.Element {
   const { enqueueSnackbar, closeSnackbar } = useSnackbar();
-  const [assignments, setAssignments] = useState<string[]>([]);
+  const [assignments, setAssignments] = useState<string[][]>([]);
   const [submittedAssignments, setSubmittedAssignments] = useState<
     SubmissionType[]
   >([]);
@@ -479,170 +479,190 @@ function Assignments(): JSX.Element {
           </Typography>
         )}
 
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', m: 2, mb: 0 }}>
-        <Button variant="contained" color="inherit" onClick={handleK8sClick}>Kubernetes</Button>
-        <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleK8sClose}>
-        <MenuItem onClick={() => {void setupK8S(); }}>
-          Setup
-        </MenuItem>
-        <MenuItem onClick={() => {void undeployK8S(); }}>
-          Undeploy
-        </MenuItem>
-        <MenuItem onClick={() => {void downloadKubeconfig(); }}>
-          Download <code>.kubeconfig</code>
-        </MenuItem>
-        </Menu>
-      </Box>
 
       <List component="nav" aria-label="assignment list" style={{ width: 940 }}>
-        {assignments.map((assignment) => (
-          <ListItem key={assignment}>
-            <ListItemText primary={assignment} />
-            {/*
-            <ListItemText primary={assignment} secondary={showDescirption(assignment)}/>
+        {assignments.map((assignmentGroup, assignmentGroupIndex) => (
+          <div key={`group-${assignmentGroupIndex}`}>
+            {assignmentGroupIndex === 0 ? null : (
+              <div style={{padding: '8px'}}>
+                <Typography variant="h6" style={{marginTop: '3rem', marginBottom: '0', paddingBottom: '0'}} gutterBottom>
+                {assignmentGroupIndex === 1 ? "Kubernetes Exercises" : `Assignment Group ${assignmentGroupIndex + 1}`}
+                </Typography>
 
-            maybe wrap all together in an assignment interface containing all information from: 
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
+                  <p>
+                    The following exercises require a Kubernetes environment. To deploy the environment, the 'Setup' button must be used once. Don't forget to press the 'Undeploy' button after completing the exercises.
+                  </p>
 
-              const [assignments, setAssignments] = useState([])
-              const [submittedAssignments, setSubmittedAssignments] = useState([] as SubmissionType[])
-              const [deployedUserAssignments, setDeployedUserAssignments] = useState([])
-              const [deployedGroupAssignments, setDeployedGroupAssignments] = useState([])
+                  <Box sx={{ display: 'flex', mt: '1.3rem', mb: 0 }}>
+                    <Button variant="contained" color="inherit" onClick={handleK8sClick}>
+                      Kubernetes
+                    </Button>
+                    <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleK8sClose}>
+                      <MenuItem onClick={() => { void setupK8S(); }}>
+                        Setup
+                      </MenuItem>
+                      <MenuItem onClick={() => { void undeployK8S(); }}>
+                        Undeploy
+                      </MenuItem>
+                      <MenuItem onClick={() => { void downloadKubeconfig(); }}>
+                        Download <code>.kubeconfig</code>
+                      </MenuItem>
+                    </Menu>
+                  </Box>
+                </div>
+              </div>
+            )}
+            {assignmentGroup.map((assignment) => (
+              <ListItem key={assignment}>
+                <ListItemText primary={assignment} />
+                {/*
+                <ListItemText primary={assignment} secondary={showDescirption(assignment)}/>
 
-            and therefore also reducing number of backend fetches in useEffect
+                maybe wrap all together in an assignment interface containing all information from: 
 
-            maybe also allow resubmission? (e.g., by unticking submission state checkbox?)
-            */}
-            <ListItemSecondaryAction>
-              <Button
-                variant="contained"
-                color="primary"
-                startIcon={<CloudUploadIcon />}
-                disabled={
-                  deployedUserAssignments.length > 0 ||
-                  (deployedGroupAssignments.length > 0 &&
-                    !deployedGroupAssignments.includes(assignment)) ||
-                  (submittedAssignments.findIndex(
-                    (element) => element.assignmentName === assignment,
-                  ) !== -1 &&
-                    resubmitAssignment !== assignment)
-                }
-                onClick={() => {
-                  void createEnvironment(assignment);
-                }}
-                sx={{ margin: theme.spacing(1) }}
-              >
-                Deploy
-              </Button>
-              <Button
-                variant="contained"
-                color="secondary"
-                startIcon={<PlayCircleFilledWhiteIcon />}
-                disabled={!isActiveDeployment(assignment)}
-                onClick={() => {
-                  void navigate(`/environment/${assignment}`);
-                }}
-                sx={{ margin: theme.spacing(1) }}
-              >
-                Start Assignment
-              </Button>
-              <Button
-                variant="contained"
-                color="primary"
-                startIcon={<CloudOffIcon />}
-                disabled={!isActiveDeployment(assignment)}
-                onClick={() => {
-                  handleConfirmationUndeployDialogOpen(assignment);
-                }}
-                sx={{ margin: theme.spacing(1) }}
-              >
-                Undeploy
-              </Button>
-              <Tooltip title={showSubmissionStatus(assignment)}>
-                <Checkbox
-                  edge="end"
-                  checked={
-                    submittedAssignments.findIndex(
-                      (element) => element.assignmentName === assignment,
-                    ) !== -1
-                  }
-                  disabled={
-                    submittedAssignments.findIndex(
-                      (element) => element.assignmentName === assignment,
-                    ) === -1
-                  }
-                  color="primary"
-                  onClick={() => {
-                    handleConfirmationResubmitDialogOpen(assignment);
-                  }}
-                />
-              </Tooltip>
-              {pointLimits[assignment] ? (
-                <Tooltip title={showPointsTooltip(assignment)}>
-                  <Box
-                    sx={{ display: "inline-flex", alignItems: "center", ml: 2 }}
+                  const [assignments, setAssignments] = useState([])
+                  const [submittedAssignments, setSubmittedAssignments] = useState([] as SubmissionType[])
+                  const [deployedUserAssignments, setDeployedUserAssignments] = useState([])
+                  const [deployedGroupAssignments, setDeployedGroupAssignments] = useState([])
+
+                and therefore also reducing number of backend fetches in useEffect
+
+                maybe also allow resubmission? (e.g., by unticking submission state checkbox?)
+                */}
+                <ListItemSecondaryAction>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    startIcon={<CloudUploadIcon />}
+                    disabled={
+                      deployedUserAssignments.length > 0 ||
+                      (deployedGroupAssignments.length > 0 &&
+                        !deployedGroupAssignments.includes(assignment)) ||
+                      (submittedAssignments.findIndex(
+                        (element) => element.assignmentName === assignment,
+                      ) !== -1 &&
+                        resubmitAssignment !== assignment)
+                    }
+                    onClick={() => {
+                      void createEnvironment(assignment);
+                    }}
+                    sx={{ margin: theme.spacing(1) }}
                   >
-                    {(() => {
-                      const submission = submittedAssignments.find(
-                        (submission) =>
-                          submission.assignmentName === assignment,
-                      );
-                      const hasSubmission = !!submission;
-                      const pointLimit = pointLimits[assignment];
-                      let percentage = 0;
-
-                      if (
-                        hasSubmission &&
-                        submission.points !== undefined &&
-                        pointLimit !== undefined &&
-                        pointLimit !== 0
-                      ) {
-                        percentage = (submission.points / pointLimit) * 100;
+                    Deploy
+                  </Button>
+                  <Button
+                    variant="contained"
+                    color="secondary"
+                    startIcon={<PlayCircleFilledWhiteIcon />}
+                    disabled={!isActiveDeployment(assignment)}
+                    onClick={() => {
+                      void navigate(`/environment/${assignment}`);
+                    }}
+                    sx={{ margin: theme.spacing(1) }}
+                  >
+                    Start Assignment
+                  </Button>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    startIcon={<CloudOffIcon />}
+                    disabled={!isActiveDeployment(assignment)}
+                    onClick={() => {
+                      handleConfirmationUndeployDialogOpen(assignment);
+                    }}
+                    sx={{ margin: theme.spacing(1) }}
+                  >
+                    Undeploy
+                  </Button>
+                  <Tooltip title={showSubmissionStatus(assignment)}>
+                    <Checkbox
+                      edge="end"
+                      checked={
+                        submittedAssignments.findIndex(
+                          (element) => element.assignmentName === assignment,
+                        ) !== -1
                       }
+                      disabled={
+                        submittedAssignments.findIndex(
+                          (element) => element.assignmentName === assignment,
+                        ) === -1
+                      }
+                      color="primary"
+                      onClick={() => {
+                        handleConfirmationResubmitDialogOpen(assignment);
+                      }}
+                    />
+                  </Tooltip>
+                  {pointLimits[assignment] ? (
+                    <Tooltip title={showPointsTooltip(assignment)}>
+                      <Box
+                        sx={{ display: "inline-flex", alignItems: "center", ml: 2 }}
+                      >
+                        {(() => {
+                          const submission = submittedAssignments.find(
+                            (submission) =>
+                              submission.assignmentName === assignment,
+                          );
+                          const hasSubmission = !!submission;
+                          const pointLimit = pointLimits[assignment];
+                          let percentage = 0;
 
-                      return (
-                        <>
-                          <Box sx={{ width: "100px" }}>
-                            <LinearProgress
-                              variant={
-                                (hasSubmission && submission.points) ||
-                                !hasSubmission
-                                  ? "determinate"
-                                  : undefined
-                              }
-                              value={
-                                (hasSubmission && submission.points) ||
-                                !hasSubmission
-                                  ? percentage
-                                  : undefined
-                              }
-                              color={hasSubmission ? "primary" : "warning"}
-                            />
-                          </Box>
-                          <Box sx={{ width: "50px", ml: 1 }}>
-                            <Typography variant="body2" color="text.secondary">
-                              {hasSubmission
-                                ? `${submission?.points ? submission?.points : "?"} / ${pointLimit}`
-                                : `0 / ${pointLimit}`}
-                            </Typography>
-                          </Box>
-                        </>
-                      );
-                    })()}
-                  </Box>
-                </Tooltip>
-              ) : (
-                <Box
-                  sx={{ display: "inline-flex", alignItems: "center", ml: 2 }}
-                >
-                  <Box sx={{ width: "158px" }}>
-                    <Typography variant="body2" color="text.secondary">
-                      No bonus points
-                    </Typography>
-                  </Box>
-                </Box>
-              )}
-            </ListItemSecondaryAction>
-          </ListItem>
+                          if (
+                            hasSubmission &&
+                            submission.points !== undefined &&
+                            pointLimit !== undefined &&
+                            pointLimit !== 0
+                          ) {
+                            percentage = (submission.points / pointLimit) * 100;
+                          }
+
+                          return (
+                            <>
+                              <Box sx={{ width: "100px" }}>
+                                <LinearProgress
+                                  variant={
+                                    (hasSubmission && submission.points) ||
+                                    !hasSubmission
+                                      ? "determinate"
+                                      : undefined
+                                  }
+                                  value={
+                                    (hasSubmission && submission.points) ||
+                                    !hasSubmission
+                                      ? percentage
+                                      : undefined
+                                  }
+                                  color={hasSubmission ? "primary" : "warning"}
+                                />
+                              </Box>
+                              <Box sx={{ width: "50px", ml: 1 }}>
+                                <Typography variant="body2" color="text.secondary">
+                                  {hasSubmission
+                                    ? `${submission?.points ? submission?.points : "?"} / ${pointLimit}`
+                                    : `0 / ${pointLimit}`}
+                                </Typography>
+                              </Box>
+                            </>
+                          );
+                        })()}
+                      </Box>
+                    </Tooltip>
+                  ) : (
+                    <Box
+                      sx={{ display: "inline-flex", alignItems: "center", ml: 2 }}
+                    >
+                      <Box sx={{ width: "158px" }}>
+                        <Typography variant="body2" color="text.secondary">
+                          No bonus points
+                        </Typography>
+                      </Box>
+                    </Box>
+                  )}
+                </ListItemSecondaryAction>
+              </ListItem>
+            ))}
+          </div>
         ))}
         <Dialog
           open={confirmationUndeployDialogOpen.dialogOpen}

@@ -35,7 +35,18 @@ export default (authProviders: AuthenticationProvider[]): Router => {
 
     getAssignments()
       .then((map) => {
-        res.status(200).json(Array.from(map.keys()));
+        // return list splitted by kubernetes assignments and other assignments
+        const assignmentsSplitted: string[][] = [[], []];
+
+        map.forEach((value, key) => {
+          if (!value.mountKubeconfig) {
+            assignmentsSplitted[0].push(key);
+          } else {
+            assignmentsSplitted[1].push(key);
+          }
+        });
+
+        res.status(200).json(assignmentsSplitted);
       })
       .catch((err) => {
         let message = "Unknown error";
