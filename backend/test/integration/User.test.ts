@@ -19,7 +19,7 @@ beforeAll(async () => {
   connection = await MongoClient.connect(ENV_MONGO_URL);
   try {
     await connection.db().dropCollection("users");
-  } catch (err) {
+  } catch (_) {
     /* */
   }
 

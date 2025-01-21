@@ -18,13 +18,16 @@ function middleware(req: Request, res: Response, next: NextFunction): void {
 
   try {
     if (token) {
-      const result = jwt.verify(token, process.env.JWT_TOKENSECRET ?? "some-secret") as TokenPayload;
+      const result = jwt.verify(
+        token,
+        process.env.JWT_TOKENSECRET ?? "some-secret",
+      ) as TokenPayload;
       const reqWithUser = req as RequestWithUser;
 
       reqWithUser.user = result;
       next();
     } else throw new Error("No authorization header found.");
-  } catch (err) {
+  } catch (_) {
     res.status(401).json({ error: true, message: "Invalid token." });
   }
 }

@@ -22,8 +22,8 @@ export default function Login(): JSX.Element {
       event.preventDefault();
       const data = new FormData(event.currentTarget);
       const credentials = {
-        username: data.get("username")?.toString() ?? "",
-        password: data.get("password")?.toString() ?? "",
+        username: data.get("username") ?? "",
+        password: data.get("password") ?? "",
       };
 
       try {

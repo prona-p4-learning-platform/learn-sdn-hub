@@ -179,7 +179,7 @@ export const APIRequest = createCustomFetch({
   onRequest: (context) => {
     // inject auth token if possible
     const token = useAuthStore.getState().token || undefined;
-    context.options.headers ??= {};
+    context.options.headers ??= new Headers();
 
     addRequestHeader(context.options.headers, "authorization", token);
   },
@@ -194,7 +194,7 @@ export const APIRequestNV = $fetch.create({
   onRequest: (context) => {
     // inject auth token if possible
     const token = useAuthStore.getState().token || undefined;
-    context.options.headers ??= {};
+    context.options.headers ??= new Headers();
 
     addRequestHeader(context.options.headers, "authorization", token);
   },

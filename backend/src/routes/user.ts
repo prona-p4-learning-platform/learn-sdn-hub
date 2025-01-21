@@ -107,16 +107,17 @@ export default (authProviders: AuthenticationProvider[]): Router => {
           );
 
           console.log(
-            "Handled login for user: " + 
-              username + 
-              " token: " + 
-              token.substring(0,8) + "..." +
-              " session:" + 
-              sessionId + 
-              " groupNumber: " + 
-              result.groupNumber + 
-              " role: " + 
-              result.role
+            "Handled login for user: " +
+              username +
+              " token: " +
+              token.substring(0, 8) +
+              "..." +
+              " session:" +
+              sessionId +
+              " groupNumber: " +
+              result.groupNumber +
+              " role: " +
+              result.role,
           );
 
           res.status(200).json({
