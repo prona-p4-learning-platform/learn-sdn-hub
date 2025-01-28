@@ -718,7 +718,7 @@ export default class ProxmoxProvider implements InstanceProvider {
                             stream.end();
                             sshMkdirKubeconfig.end();
                             sshJumpHostMkdirConnection.end();
-                            reject(err);
+                            reject(new Error(err.message));
                           });
                           stream.on("exit", (code) => {
                             console.debug(
