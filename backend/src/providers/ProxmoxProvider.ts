@@ -656,7 +656,7 @@ export default class ProxmoxProvider implements InstanceProvider {
 
     // Add kubeconfig to container if requested
     if (options.mountKubeconfig) {
-      const containerKubeconfigPath: string = "/home/" + process.env.SSH_USERNAME + "/.kube";
+      const containerKubeconfigPath: string = "/home/" + process.env.SSH_USERNAME + "/.kube/config";
       let kubeconfigPath: string;
 
       const k8s: KubernetesManager = new KubernetesManager();
@@ -676,10 +676,9 @@ export default class ProxmoxProvider implements InstanceProvider {
       await new Promise<void>((resolve, reject) => {
         sshJumpHostMkdirConnection
           .on("ready", () => {
-            // debug, disable later
-            console.log(
-              "ProxmoxProvider: SSH jump host connection for mkdir kubeconfig ready. Trying to forward and connect to instance.",
-            );
+            //console.log(
+            //  "ProxmoxProvider: SSH jump host connection for mkdir kubeconfig ready. Trying to forward and connect to instance.",
+            //);
             sshJumpHostMkdirConnection.forwardOut(
               "127.0.0.1",
               0,
@@ -711,39 +710,6 @@ export default class ProxmoxProvider implements InstanceProvider {
                             ),
                           );
                         } else {
-                          // when command was executed successfully, resolve the promise
-                          // stream.on("close", (code: string | number) => {
-                          //   if (code === 0) {
-                          //     stream.end();
-                          //     sshMkdirKubeconfig.end();
-                          //     sshJumpHostConnection.end();
-                          //     resolve();
-                          //   } else {
-                          //     stream.end();
-                          //     sshMkdirKubeconfig.end();
-                          //     sshJumpHostConnection.end();
-                          //     reject(
-                          //       new Error(
-                          //         "ProxmoxProvider: Could not create kubeconfig directory on new VM (" +
-                          //           vmID +
-                          //           ").\n" +
-                          //           "Exit code: " +
-                          //           code,
-                          //       ),
-                          //     );
-                          //   }
-                          // });
-
-                          // stream.on("data", (data: string) => {
-                          //   console.debug(
-                          //     "ProxmoxProvider: mkdir kubeconfig: " + data,
-                          //   );
-                          // });
-                          // stream.stderr.on("data", (data) => {
-                          //   console.error(
-                          //     "ProxmoxProvider: mkdir kubeconfig error: " + data,
-                          //   );
-                          // });
                           stream.on("error", (err: { message: string; }) => {
                             console.error(
                               "ProxmoxProvider: mkdir kubeconfig error: " +
@@ -784,10 +750,9 @@ export default class ProxmoxProvider implements InstanceProvider {
                   })
                   // close is handled inside exec command above
                   .on("close", () => {
-                    // debug, disable later
-                    console.debug(
-                     "ProxmoxProvider: SSH instance connection for mkdir kubeconfig closed."
-                    );
+                    // console.debug(
+                    //  "ProxmoxProvider: SSH instance connection for mkdir kubeconfig closed."
+                    // );
                     stream.end();
                     sshMkdirKubeconfig.end();
                     sshJumpHostMkdirConnection.end();
@@ -855,10 +820,9 @@ export default class ProxmoxProvider implements InstanceProvider {
       await new Promise<void>((resolve, reject) => {
         sshJumpHostCopyConnection
           .on("ready", () => {
-            // debug, disable later
-            console.log(
-             "ProxmoxProvider: SSH jump host connection for copy kubeconfig ready. Trying to forward and connect to instance.",
-            );
+            // console.log(
+            //  "ProxmoxProvider: SSH jump host connection for copy kubeconfig ready. Trying to forward and connect to instance.",
+            // );
 
             sshJumpHostCopyConnection.forwardOut(
               "127.0.0.1",
@@ -914,10 +878,9 @@ export default class ProxmoxProvider implements InstanceProvider {
                     });
                   })
                   .on("close", () => {
-                    // debug, disable later
-                    console.debug(
-                      "ProxmoxProvider: SSH instance connection for copy kubeconfig closed."
-                    );
+                    //console.debug(
+                    //  "ProxmoxProvider: SSH instance connection for copy kubeconfig closed."
+                    //);
                     stream.end();
                     sshCopyKubeconfig.end();
                     sshJumpHostCopyConnection.end();
@@ -940,10 +903,9 @@ export default class ProxmoxProvider implements InstanceProvider {
                       ? fs.readFileSync(process.env.SSH_PRIVATE_KEY_PATH)
                       : undefined,
                     readyTimeout: 1000,
-                    // debug, disable later
-                    debug: (debug) => {
-                      console.log(debug)
-                    },
+                    //debug: (debug) => {
+                    //  console.log(debug)
+                    //},
                   });
                 }
               },
