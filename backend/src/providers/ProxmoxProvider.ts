@@ -350,7 +350,7 @@ export default class ProxmoxProvider implements InstanceProvider {
       proxmoxTemplateTag?: string;
       mountKubeconfig?: boolean;
       //SAL
-      sshTunnelingPorts?: number[];
+      sshTunnelingPorts?: string[];
     },
   ): Promise<VMEndpoint> {
     let proxmoxTemplateTag = options.proxmoxTemplateTag;
@@ -665,7 +665,13 @@ export default class ProxmoxProvider implements InstanceProvider {
     if (options.sshTunnelingPorts != undefined) {
       let activePorts: Set<number> = new Set(); // Speichert die aktiven Ports
       // let timeout = 60000;
-      options.sshTunnelingPorts.forEach(async port => {
+      options.sshTunnelingPorts.forEach(async portStr => {
+        var portStr = portStr.replace(/(\d+)\$\((GROUP_ID)\)/g, (_, port, __) => {
+          // console.log(port);
+          return (Number(port) + groupNumber).toString();
+        });
+
+        let port = Number(portStr);
         if (port > 1024 && !activePorts.has(port)) {
           const createSSHTunnel = () => {
             return new Promise<boolean>((resolve, reject) => {
