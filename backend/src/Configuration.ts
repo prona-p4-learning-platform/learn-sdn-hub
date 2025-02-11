@@ -1032,6 +1032,119 @@ environments.set("Test-Uebung3-SDN", {
   useLanguageClient: true,
 });
 
+// SAL
+environments.set("Containerlab-Test-SAL", {
+  providerProxmoxTemplateTag: "learn-sdn-hub-template-apel",
+  sshTunnelingPorts: [50080], //ToDo: Strings, damit man da mit Patterns zum ersetzen arbeiten kann
+  // providerProxmoxTemplateTag: "learn-sdn-hub-develop-template",
+  terminals: [
+    [
+      {
+        //ToDo: Das generate Skript noch aufteilen in 
+        // Generierung + Graph Erzeugung(?) + Aufwählen auf docker container
+        // Nur aufwählen auf Docker container (für z.B. Host 2)
+        type: "Shell",
+        name: "host1",
+        cwd: "/home/p4/containerlab-testlabs/",
+        // cwd: "/home/p4/",
+        executable: "./generate_topology.sh 5 1",
+        // executable: "echo Hello World 1",
+        params: [],
+        provideTty: true,
+      },
+    ],
+    [
+      {
+        type: "Shell",
+        name: "host2",
+        cwd: "/home/p4/containerlab-testlabs/",
+        // cwd: "/home/p4/",
+        executable: "./generate_topology.sh 5 2",
+        // executable: "echo Hello World 2",
+        params: [],
+        provideTty: true,
+      },
+    ],
+    [
+      {
+        type: "Shell",
+        name: "topologie_graph",
+        cwd: "/home/p4/containerlab-testlabs/",
+        // cwd: "/home/p4/",
+        //SAL ToDo: Shell Skript draus machen mit Parametern für Port abhängig von GROUP_ID, vllt einfach 500<GROUP_ID zweistellig>
+        executable: "while [ true ]; do clear && sudo clab inspect &>/dev/null; if [ $? -eq 1 ]; then sleep 5 &>/dev/null; fi; sudo clab graph --topo clab_test_sal_topology_5.yml; done", //--srv ":3002"
+        // executable: "while [ true ]; do clear && sudo clab inspect &>/dev/null; if [ $? -eq 1 ]; then sleep 5 &>/dev/null; fi; sudo clab graph --topo clab_test_sal_topology_5.yml --dot &>/dev/null && echo -e '<!DOCTYPE html>\n<html lang=\"de\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>Topologie</title>\n</head>\n<body>\n    <img src=\"/home/p4/containerlab-testlabs/clab-test_sal_5/graph/clab_test_sal_topology_5.png\" alt=\"ContainerLab Topologie\">\n</body>\n</html>' > index.html; done",
+        // executable: "while [ true ]; do clear && sudo clab inspect &>/dev/null; if [ $? -eq 1 ]; then sleep 5 &>/dev/null; fi; sudo clab graph --topo clab_test_sal_topology_5.yml --mermaid &>/dev/null && echo '```mermaid' > topologie_mermaid.md && cat clab-test_sal_5/graph/clab_test_sal_topology_5.mermaid >> topologie_mermaid.md && echo '```' >> topologie_mermaid.md; done",
+        // executable: "echo Hello World 2",
+        params: [],
+        provideTty: true,
+      },
+    ],
+    [
+      {
+        type: "Shell",
+        name: "TEST",
+        cwd: "/home/p4/containerlab-testlabs/",
+        // cwd: "/home/p4/",
+        executable: "echo TEST",
+        params: [],
+        provideTty: true,
+      },
+    ],
+    [
+      {
+        type: "WebApp",
+        name: "Topologie_Graph_WebApp",
+        // url: "http://localhost:3002",
+        // url: "file://home/p4/containerlab-testlabs/clab-test_sal_5/graph/clab_test_sal_topology_5.png"
+        // url: "/home/p4/containerlab-testlabs/index.html"
+        // url: "http://172.31.0.4:50080",
+        url: "http://localhost:50080",
+      },
+    ],
+  ],
+  editableFiles: [
+    {
+      absFilePath:
+        "/home/p4/containerlab-testlabs/lab-notes.md",
+        // "/home/p4/kommprot-labs/kommprot-lab-transport-layer/lab-notes.md",
+      alias: "lab-notes",
+    },
+    // {
+    //   absFilePath:
+    //     "/home/p4/containerlab-testlabs/README.md",
+    //     // "/home/p4/kommprot-labs/kommprot-lab-transport-layer/README.md",
+    //   alias: "README",
+    // },
+  ],
+  stopCommands: [
+    {
+      type: "Shell",
+      name: "bash",
+      cwd: "/home/p4/containerlab-testlabs/",
+      // cwd: "/home/p4/",
+      // executable: "sudo clab destroy",
+      executable: "echo Bye",
+      params: [],
+      provideTty: false,
+    },
+    {
+      type: "Shell",
+      name: "bash2",
+      cwd: "/home/p4/containerlab-testlabs/",
+      // cwd: "/home/p4/",
+      executable: "",
+      params: [],
+      provideTty: false,
+    },
+  ],
+  description: "ContainerLab Test SAL",
+  assignmentLabSheetLocation: "instance",
+  assignmentLabSheet: "/home/p4/containerlab-testlabs/README.md",
+  // assignmentLabSheet: "/home/p4/kommprot-labs/kommprot-lab-transport-layer/lab-notes.md",
+});
+// =========================
+
 environments.set("CC-Lab-1", {
   //providerImage: "cc-container",
   //providerDockerCmd: "",

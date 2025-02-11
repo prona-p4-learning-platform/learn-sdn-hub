@@ -10,6 +10,7 @@ import proxmoxApi, { Proxmox, ProxmoxEngineOptions } from "proxmox-api";
 import fs from "fs";
 import { Netmask } from "netmask";
 import KubernetesManager from "../KubernetesManager";
+import { SSHConnection } from 'node-ssh-forward'
 
 const schedulerIntervalSeconds = 5 * 60;
 
@@ -348,6 +349,8 @@ export default class ProxmoxProvider implements InstanceProvider {
     options: {
       proxmoxTemplateTag?: string;
       mountKubeconfig?: boolean;
+      //SAL
+      sshTunnelingPorts?: number[];
     },
   ): Promise<VMEndpoint> {
     let proxmoxTemplateTag = options.proxmoxTemplateTag;
@@ -418,9 +421,12 @@ export default class ProxmoxProvider implements InstanceProvider {
               .lxc.$(lxc.vmid)
               .config.$get()
               .then((config) => {
+                //SAL
                 if (config.template) {
                   templateID = lxc.vmid;
                 }
+                // console.log(config.template);
+                // templateID = lxc.vmid;
               });
             // template found, no need to search further
             if (templateID !== undefined) {
@@ -653,6 +659,173 @@ export default class ProxmoxProvider implements InstanceProvider {
       });
 
     console.info("ProxmoxProvider: VM SSH ready");
+
+    //SAL
+    //Create SSH tunnel on any port (to be provided by option)
+    if (options.sshTunnelingPorts != undefined) {
+      let activePorts: Set<number> = new Set(); // Speichert die aktiven Ports
+      // let timeout = 60000;
+      options.sshTunnelingPorts.forEach(async port => {
+        if (port > 1024 && !activePorts.has(port)) {
+          const createSSHTunnel = () => {
+            return new Promise<boolean>((resolve, reject) => {
+              console.log(`SSH Tunnel zu ${vmIPAddress}:${port} wird versucht...`);
+
+              try {
+                const sshConnection = new SSHConnection({
+                  endHost: vmIPAddress,
+                  bastionHost: this.sshJumpHostIPAddress,
+                  // port: this.sshJumpHostPort,
+                  username: this.sshJumpHostUser,
+                  password: this.sshJumpHostPassword,
+                  // privateKey: this.sshJumpHostPrivateKey
+                  //   ? fs.readFileSync(this.sshJumpHostPrivateKey)
+                  //   : undefined,
+                  skipAutoPrivateKey: true               
+                });
+                sshConnection.forward({
+                  fromPort: port,
+                  toHost: vmIPAddress,
+                  toPort: port
+                });
+
+                activePorts.add(port); // Port als aktiv markieren
+                return resolve(true);
+              } catch (error) {
+                reject(error);
+              }
+              
+
+              
+
+              // const client = new Client();
+              // const sshJumpHostConnection = new Client();
+
+              // sshJumpHostConnection.on("ready", () => {
+              //   sshJumpHostConnection.forwardOut("127.0.0.1", port, vmIPAddress, port, (err, stream) => {
+              //   // sshJumpHostConnection.forwardIn(vmIPAddress, port, (err) => {
+              //     if (err) {
+              //       console.error("Unable to forward connection on jump host");
+              //       console.error(`Fehler beim SSH Tunnel für Port ${port}:`, err);
+              //       client.end();
+              //       sshJumpHostConnection.end();
+              //       return reject(err);
+              //     }
+              //     else {
+              //       // activePorts.add(port); // Port als aktiv markieren
+              //       // return resolve(true);
+
+              //       client
+              //         .on("ready", () => {
+              //           console.debug("SSH Tunnel connection via jump host :: ready");
+              //           // stream.end();
+              //           activePorts.add(port); // Port als aktiv markieren
+              //           return resolve(true);
+              //         })
+              //         .on("close", () => {
+              //           console.debug("SSH Tunnel connection via jump host :: close");
+              //           stream.end();
+              //           client.end();
+              //           sshJumpHostConnection.end();
+              //         })
+              //         .on("error", (err) => {
+              //           console.error("SSH Tunnel connection via jump host :: error => ", err);
+              //           client.end();
+              //           sshJumpHostConnection.end();
+
+              //           return reject(err);
+              //         })
+              //         .connect({
+              //           sock: stream,
+              //           username: process.env.SSH_USERNAME,
+              //           password: process.env.SSH_PASSWORD,
+              //           privateKey: process.env.SSH_PRIVATE_KEY_PATH
+              //             ? fs.readFileSync(process.env.SSH_PRIVATE_KEY_PATH)
+              //             : undefined,
+              //           readyTimeout: 1000,
+              //         });
+              //     }
+              //   });
+              // });
+
+              // sshJumpHostConnection.on("error", (err) => {
+              //   console.error(`Fehler beim SSH Tunnel für Port ${port}:`, err);
+              //   sshJumpHostConnection.end();
+              //   return reject(err);
+              // })
+
+              // sshJumpHostConnection.on("close", () => {
+              //   console.log(`SSH Tunnel für Port ${port} geschlossen.`);
+              //   activePorts.delete(port); // Port aus der Liste entfernen
+              // });
+
+              // sshJumpHostConnection.connect({
+              //   host: this.sshJumpHostIPAddress,
+              //   port: this.sshJumpHostPort,
+              //   username: this.sshJumpHostUser,
+              //   password: this.sshJumpHostPassword,
+              //   privateKey: this.sshJumpHostPrivateKey
+              //     ? fs.readFileSync(this.sshJumpHostPrivateKey)
+              //     : undefined,
+              //   readyTimeout: 1000,
+              //   //debug: (debug) => {
+              //   //  console.debug(debug)
+              //   //},
+              // });
+            });
+          };
+
+          // const startTime = Date.now();
+          // let usedTime = 0;
+
+          // while (usedTime < timeout) {
+          //   const connected = await createSSHTunnel().catch(() => {
+          //     return false;
+          //   });
+
+          //   if (connected) return;
+
+          //   usedTime = Math.floor((Date.now() - startTime) / 1000);
+          //   this.sleep(1000);
+          // }
+
+          // console.error("SSH Tunnel: Timed out waiting for SSH connection.");
+
+          const createSSHTunnelWithRetry = (maxRetries: number, timeout: number) => {
+            let retries = 0;
+          
+            const attemptTunnelCreation = () => {
+              if (retries >= maxRetries) {
+                console.error("SSH Tunnel: Timed out waiting for SSH connection.");
+                return;
+              }
+          
+              console.log(`Versuch ${retries + 1} von ${maxRetries}`);
+          
+              createSSHTunnel()
+                .then((connected) => {
+                  if (connected) {
+                    console.log("SSH Tunnel erfolgreich erstellt!");
+                  } else {
+                    retries++;
+                    setTimeout(attemptTunnelCreation, timeout);  // Wiederhole nach timeout
+                  }
+                })
+                .catch((err) => {
+                  console.error("Fehler beim Tunnelaufbau:", err);
+                  retries++;
+                  setTimeout(attemptTunnelCreation, timeout);  // Wiederhole nach timeout
+                });
+            };
+          
+            attemptTunnelCreation();
+          };
+          
+          // Beispiel-Aufruf:
+          createSSHTunnelWithRetry(10, 3000); // Maximal 5 Versuche, mit 1 Sekunde Pause zwischen den Versuchen          
+        }
+      });
+    }
 
     // Add kubeconfig to container if requested
     if (options.mountKubeconfig) {

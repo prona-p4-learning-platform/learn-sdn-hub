@@ -147,6 +147,9 @@ export interface EnvironmentDescription {
   useLanguageClient?: boolean;
   maxBonusPoints?: number;
   mountKubeconfig?: boolean;
+
+  //SAL
+  sshTunnelingPorts? : number[];
 }
 
 const DenyStartOfMissingInstanceErrorMessage =
@@ -566,6 +569,8 @@ export default class Environment {
             rootDrive: this.configuration.providerRootDrive,
             proxmoxTemplateTag: this.configuration.providerProxmoxTemplateTag,
             mountKubeconfig: this.configuration.mountKubeconfig,
+            //SAL
+            sshTunnelingPorts: this.configuration.sshTunnelingPorts,
           },
         );
       } else throw new Error(DenyStartOfMissingInstanceErrorMessage);
@@ -594,7 +599,17 @@ export default class Environment {
       `Added new environment: ${this.environmentId} for user: ${this.username} using endpoint: ${JSON.stringify(endpoint)}`,
     );
 
-    this.filehandler = new FileHandler(
+    //SAL
+    // this.filehandler = new FileHandler(
+    //   this.environmentId,
+    //   this.username,
+    //   this.groupNumber,
+    //   this.sessionId,
+    //   endpoint.IPAddress,
+    //   endpoint.SSHPort,
+    //   endpoint.SSHJumpHost,
+    // );
+    this.filehandler = await FileHandler.create(
       this.environmentId,
       this.username,
       this.groupNumber,
