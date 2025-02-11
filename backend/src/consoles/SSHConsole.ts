@@ -76,7 +76,9 @@ export default class SSHConsole extends EventEmitter implements Console {
   ) {
     super();
     this.command = command;
-    this.args = args;
+    //SAL
+    this.args = args.map(str => str.replace(/\$\((GROUP_ID)\)/g, groupNumber.toString()));
+    // this.args = args;
     this.cwd = cwd;
     this.provideTty = provideTty;
     this.initialConsoleBuffer = new Array<string>();

@@ -29,7 +29,7 @@ export interface InstanceProvider {
       proxmoxTemplateTag?: string;
       mountKubeconfig?: boolean;
       //SAL
-      sshTunnelingPorts?: number[];
+      sshTunnelingPorts?: string[];
     },
   ): Promise<VMEndpoint>;
   getServer(instance: string): Promise<VMEndpoint>;

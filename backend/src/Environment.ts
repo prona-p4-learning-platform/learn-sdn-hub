@@ -149,7 +149,7 @@ export interface EnvironmentDescription {
   mountKubeconfig?: boolean;
 
   //SAL
-  sshTunnelingPorts? : number[];
+  sshTunnelingPorts? : string[];
 }
 
 const DenyStartOfMissingInstanceErrorMessage =
