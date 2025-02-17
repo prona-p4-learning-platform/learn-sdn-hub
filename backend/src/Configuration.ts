@@ -1035,14 +1035,11 @@ environments.set("Test-Uebung3-SDN", {
 // SAL
 environments.set("Containerlab-Test-SAL", {
   providerProxmoxTemplateTag: "learn-sdn-hub-template-apel",
-  sshTunnelingPorts: ["50080$(GROUP_ID)"], //ToDo: Strings, damit man da mit Patterns zum ersetzen arbeiten kann
+  sshTunnelingPorts: ["50080$(GROUP_ID)"],
   // providerProxmoxTemplateTag: "learn-sdn-hub-develop-template",
   terminals: [
     [
       {
-        //ToDo: Das generate Skript noch aufteilen in 
-        // 1: Generierung + Aufwählen auf docker container
-        // 2: Nur aufwählen auf Docker container (für z.B. Host 2)
         type: "Shell",
         name: "host1",
         cwd: "/home/p4/containerlab-testlabs/",
@@ -1092,7 +1089,7 @@ environments.set("Containerlab-Test-SAL", {
       {
         type: "WebApp",
         name: "Topologie_Graph_WebApp",
-        url: "http://localhost:50080",
+        url: "http://localhost:50080$(GROUP_ID)",
       },
     ],
   ],
