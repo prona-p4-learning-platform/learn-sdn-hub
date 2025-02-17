@@ -633,6 +633,9 @@ export default class Environment {
                 JSON.stringify(endpoint),
               );
 
+              // SAL - replace placeholder in params (ToDo: In Function auslagern, was es für alle subTerminal.Types macht?)
+              subterminal.params = subterminal.params.map(str => str.replace(/\$\((GROUP_ID)\)/g, this.groupNumber.toString()));
+
               await new Promise<void>((resolve, reject) => {
                 const sshConsole = new SSHConsole(
                   this.environmentId,
@@ -766,6 +769,13 @@ export default class Environment {
             break;
           case "WebApp":
             {
+              // SAL - replace placeholder in url (ToDo: In Function auslagern, was es für alle subTerminal.Types macht?)
+              var url = subterminal.url.replace(/(\d+)\$\((GROUP_ID)\)/g, (_, port, __) => {
+                // console.log(port);
+                return (Number(port) + this.groupNumber).toString();
+              });
+              subterminal.url = url;
+
               // currently WebApps are instantly treated as ready
               // maybe track WebApp init later
               // maybe also store in activeWebApps var?

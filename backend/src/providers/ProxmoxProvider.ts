@@ -82,6 +82,9 @@ export default class ProxmoxProvider implements InstanceProvider {
   private static semaphoreNextIPAddress = 0;
   private static semaphoreNextID = 0;
 
+  //SAL
+  private static sshTunnelConnections: Map<string, SSHConnection[] | undefined>;
+
   constructor() {
     this.auth = {
       host: process.env.PROXMOX_HOST ?? "localhost",
@@ -251,6 +254,9 @@ export default class ProxmoxProvider implements InstanceProvider {
       );
     }
 
+    //SAL
+    ProxmoxProvider.sshTunnelConnections = new Map<string, SSHConnection[]>;
+    
     ProxmoxProvider.proxmoxVMInstances = new Map<string, proxmoxVMInstance>();
     this.networkCIDR.forEach((ip) => {
       // reserve the first and last IP address for the host
@@ -664,9 +670,8 @@ export default class ProxmoxProvider implements InstanceProvider {
     //Create SSH tunnel on any port (to be provided by option)
     if (options.sshTunnelingPorts != undefined) {
       let activePorts: Set<number> = new Set(); // Speichert die aktiven Ports
-      // let timeout = 60000;
       options.sshTunnelingPorts.forEach(async portStr => {
-        var portStr = portStr.replace(/(\d+)\$\((GROUP_ID)\)/g, (_, port, __) => {
+        portStr = portStr.replace(/(\d+)\$\((GROUP_ID)\)/g, (_, port, __) => {
           // console.log(port);
           return (Number(port) + groupNumber).toString();
         });
@@ -695,107 +700,21 @@ export default class ProxmoxProvider implements InstanceProvider {
                   toPort: port
                 });
 
+                if (!ProxmoxProvider.sshTunnelConnections.has(vmIPAddress)) {
+                  ProxmoxProvider.sshTunnelConnections.set(vmIPAddress, []); // Falls IP noch nicht existiert, leere Liste erstellen
+                }
+                ProxmoxProvider.sshTunnelConnections.get(vmIPAddress)!.push(sshConnection); // Verbindung zur Liste hinzufügen
+              
+                //ToDo SAL: sshTunnelConnections irgendwo verwalten und wenn proxmox instance gelöscht wird, dann auch die sshConnection entfernen
+                //sshConnection.shutdown();
+
                 activePorts.add(port); // Port als aktiv markieren
                 return resolve(true);
               } catch (error) {
                 reject(error);
-              }
-              
-
-              
-
-              // const client = new Client();
-              // const sshJumpHostConnection = new Client();
-
-              // sshJumpHostConnection.on("ready", () => {
-              //   sshJumpHostConnection.forwardOut("127.0.0.1", port, vmIPAddress, port, (err, stream) => {
-              //   // sshJumpHostConnection.forwardIn(vmIPAddress, port, (err) => {
-              //     if (err) {
-              //       console.error("Unable to forward connection on jump host");
-              //       console.error(`Fehler beim SSH Tunnel für Port ${port}:`, err);
-              //       client.end();
-              //       sshJumpHostConnection.end();
-              //       return reject(err);
-              //     }
-              //     else {
-              //       // activePorts.add(port); // Port als aktiv markieren
-              //       // return resolve(true);
-
-              //       client
-              //         .on("ready", () => {
-              //           console.debug("SSH Tunnel connection via jump host :: ready");
-              //           // stream.end();
-              //           activePorts.add(port); // Port als aktiv markieren
-              //           return resolve(true);
-              //         })
-              //         .on("close", () => {
-              //           console.debug("SSH Tunnel connection via jump host :: close");
-              //           stream.end();
-              //           client.end();
-              //           sshJumpHostConnection.end();
-              //         })
-              //         .on("error", (err) => {
-              //           console.error("SSH Tunnel connection via jump host :: error => ", err);
-              //           client.end();
-              //           sshJumpHostConnection.end();
-
-              //           return reject(err);
-              //         })
-              //         .connect({
-              //           sock: stream,
-              //           username: process.env.SSH_USERNAME,
-              //           password: process.env.SSH_PASSWORD,
-              //           privateKey: process.env.SSH_PRIVATE_KEY_PATH
-              //             ? fs.readFileSync(process.env.SSH_PRIVATE_KEY_PATH)
-              //             : undefined,
-              //           readyTimeout: 1000,
-              //         });
-              //     }
-              //   });
-              // });
-
-              // sshJumpHostConnection.on("error", (err) => {
-              //   console.error(`Fehler beim SSH Tunnel für Port ${port}:`, err);
-              //   sshJumpHostConnection.end();
-              //   return reject(err);
-              // })
-
-              // sshJumpHostConnection.on("close", () => {
-              //   console.log(`SSH Tunnel für Port ${port} geschlossen.`);
-              //   activePorts.delete(port); // Port aus der Liste entfernen
-              // });
-
-              // sshJumpHostConnection.connect({
-              //   host: this.sshJumpHostIPAddress,
-              //   port: this.sshJumpHostPort,
-              //   username: this.sshJumpHostUser,
-              //   password: this.sshJumpHostPassword,
-              //   privateKey: this.sshJumpHostPrivateKey
-              //     ? fs.readFileSync(this.sshJumpHostPrivateKey)
-              //     : undefined,
-              //   readyTimeout: 1000,
-              //   //debug: (debug) => {
-              //   //  console.debug(debug)
-              //   //},
-              // });
+              } 
             });
           };
-
-          // const startTime = Date.now();
-          // let usedTime = 0;
-
-          // while (usedTime < timeout) {
-          //   const connected = await createSSHTunnel().catch(() => {
-          //     return false;
-          //   });
-
-          //   if (connected) return;
-
-          //   usedTime = Math.floor((Date.now() - startTime) / 1000);
-          //   this.sleep(1000);
-          // }
-
-          // console.error("SSH Tunnel: Timed out waiting for SSH connection.");
 
           const createSSHTunnelWithRetry = (maxRetries: number, timeout: number) => {
             let retries = 0;
@@ -827,7 +746,6 @@ export default class ProxmoxProvider implements InstanceProvider {
             attemptTunnelCreation();
           };
           
-          // Beispiel-Aufruf:
           createSSHTunnelWithRetry(10, 3000); // Maximal 5 Versuche, mit 1 Sekunde Pause zwischen den Versuchen          
         }
       });
@@ -1398,6 +1316,14 @@ export default class ProxmoxProvider implements InstanceProvider {
       proxmoxVMInstance.deleteTimestamp = Date.now();
     }
     ProxmoxProvider.proxmoxVMInstances.set(vmIPAddress, proxmoxVMInstance);
+
+    //SAL
+    const sshTunnelConnections = ProxmoxProvider.sshTunnelConnections.get(vmIPAddress);
+    if (sshTunnelConnections) {
+      sshTunnelConnections.forEach(sshTunnelConnection => {
+        sshTunnelConnection.shutdown();
+      });
+    }
 
     //console.debug("Deleted VM: " + instance);
 
