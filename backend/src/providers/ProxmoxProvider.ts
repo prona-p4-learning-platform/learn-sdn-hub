@@ -708,8 +708,6 @@ export default class ProxmoxProvider implements InstanceProvider {
                 }).catch((error: unknown) => {
                   if (error instanceof Error) {
                     console.error(`SSH Tunnel beenden fehlgeschlagen: ${error.message}`);
-                  } else {
-                    console.error(`Unbekannter Fehler beim Beenden des SSH Tunnels`, error);
                   }
                   // console.error(error);
                 });
@@ -718,10 +716,7 @@ export default class ProxmoxProvider implements InstanceProvider {
                   ProxmoxProvider.sshTunnelConnections.set(vmIPAddress, []); // Falls IP noch nicht existiert, leere Liste erstellen
                 }
                 ProxmoxProvider.sshTunnelConnections.get(vmIPAddress)!.push(sshConnection); // Verbindung zur Liste hinzufügen
-              
-                //ToDo SAL: sshTunnelConnections irgendwo verwalten und wenn proxmox instance gelöscht wird, dann auch die sshConnection entfernen
-                //sshConnection.shutdown();
-
+            
                 activePorts.add(port); // Port als aktiv markieren
                 return resolve(true);
               } catch (error) {
@@ -1347,8 +1342,6 @@ export default class ProxmoxProvider implements InstanceProvider {
         }).catch((error: unknown) => {
           if (error instanceof Error) {
             console.error(`SSH Tunnel beenden fehlgeschlagen: ${error.message}`);
-          } else {
-            console.error(`Unbekannter Fehler beim Beenden des SSH Tunnels`, error);
           }
           // console.error(error);
         });
