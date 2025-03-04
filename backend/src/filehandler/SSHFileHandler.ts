@@ -188,7 +188,8 @@ export default class SSHFileHandler {
         console.log("Verbindung erfolgreich!");
         return;
       } catch (error) {
-        console.error(`Verbindung fehlgeschlagen: ${error}`);
+        console.error(`Verbindung fehlgeschlagen`);
+        console.log(error);
         console.log(`Neuer Versuch in ${retryDelayMs / 1000} Sekunden...`);
         await this.sleep(retryDelayMs);
       }

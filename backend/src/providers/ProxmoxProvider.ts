@@ -668,15 +668,15 @@ export default class ProxmoxProvider implements InstanceProvider {
 
     //SAL
     //Create SSH tunnel on any port (to be provided by option)
-    if (options.sshTunnelingPorts != undefined) {
-      let activePorts: Set<number> = new Set(); // Speichert die aktiven Ports
-      options.sshTunnelingPorts.forEach(async portStr => {
+    if (options.sshTunnelingPorts !== undefined) {
+      const activePorts: Set<number> = new Set(); // Speichert die aktiven Ports
+      options.sshTunnelingPorts.forEach(portStr => {
         portStr = portStr.replace(/(\d+)\$\((GROUP_ID)\)/g, (_, port, __) => {
           // console.log(port);
           return (Number(port) + groupNumber).toString();
         });
-
-        let port = Number(portStr);
+        
+        const port = Number(portStr);
         if (port > 1024 && !activePorts.has(port)) {
           const createSSHTunnel = () => {
             return new Promise<boolean>((resolve, reject) => {
@@ -698,6 +698,12 @@ export default class ProxmoxProvider implements InstanceProvider {
                   fromPort: port,
                   toHost: vmIPAddress,
                   toPort: port
+                }).then(result => {
+                  console.log(`SSH Tunnel zu ${vmIPAddress}:${port} erfolgreich hergestellt`);
+                  console.log(result);
+                }).catch(error => {
+                  console.error(`SSH Tunnel zu ${vmIPAddress}:${port} fehlgeschlagen`);
+                  console.log(error);
                 });
 
                 if (!ProxmoxProvider.sshTunnelConnections.has(vmIPAddress)) {
@@ -711,7 +717,9 @@ export default class ProxmoxProvider implements InstanceProvider {
                 activePorts.add(port); // Port als aktiv markieren
                 return resolve(true);
               } catch (error) {
-                reject(error);
+                reject(new Error(`SSH Tunnel zu ${vmIPAddress}:${port} fehlgeschlagen`));
+                console.error(`SSH Tunnel zu ${vmIPAddress}:${port} fehlgeschlagen`);
+                console.log(error);
               } 
             });
           };
@@ -1321,7 +1329,13 @@ export default class ProxmoxProvider implements InstanceProvider {
     const sshTunnelConnections = ProxmoxProvider.sshTunnelConnections.get(vmIPAddress);
     if (sshTunnelConnections) {
       sshTunnelConnections.forEach(sshTunnelConnection => {
-        sshTunnelConnection.shutdown();
+        sshTunnelConnection.shutdown().then(result => {
+          console.log(`SSH Tunnel erfolgreich beendet`);
+          console.log(result);
+        }).catch(error => {
+          console.error(`SSH Tunnel beenden fehlgeschlagen`);
+          console.log(error);
+        });;
       });
     }
 
