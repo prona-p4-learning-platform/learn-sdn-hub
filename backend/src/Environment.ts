@@ -770,7 +770,7 @@ export default class Environment {
           case "WebApp":
             {
               // SAL - replace placeholder in url (ToDo: In Function auslagern, was es für alle subTerminal.Types macht?)
-              var url = subterminal.url.replace(/(\d+)\$\((GROUP_ID)\)/g, (_, port, __) => {
+              const url = subterminal.url.replace(/(\d+)\$\((GROUP_ID)\)/g, (_, port, __) => {
                 // console.log(port);
                 return (Number(port) + this.groupNumber).toString();
               });
