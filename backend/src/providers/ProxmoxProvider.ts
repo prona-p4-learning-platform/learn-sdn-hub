@@ -694,16 +694,24 @@ export default class ProxmoxProvider implements InstanceProvider {
                   //   : undefined,
                   skipAutoPrivateKey: true               
                 });
+
+                if (!sshConnection)
+                  return reject(new Error(`SSH Tunnel zu ${vmIPAddress}:${port} fehlgeschlagen`));
+
                 sshConnection.forward({
                   fromPort: port,
                   toHost: vmIPAddress,
                   toPort: port
-                }).then(result => {
+                }).then(() => {
                   console.log(`SSH Tunnel zu ${vmIPAddress}:${port} erfolgreich hergestellt`);
-                  console.log(result);
-                }).catch(error => {
-                  console.error(`SSH Tunnel zu ${vmIPAddress}:${port} fehlgeschlagen`);
-                  console.log(error);
+                  // console.log(result);
+                }).catch((error: unknown) => {
+                  if (error instanceof Error) {
+                    console.error(`SSH Tunnel beenden fehlgeschlagen: ${error.message}`);
+                  } else {
+                    console.error(`Unbekannter Fehler beim Beenden des SSH Tunnels`, error);
+                  }
+                  // console.error(error);
                 });
 
                 if (!ProxmoxProvider.sshTunnelConnections.has(vmIPAddress)) {
@@ -719,7 +727,7 @@ export default class ProxmoxProvider implements InstanceProvider {
               } catch (error) {
                 reject(new Error(`SSH Tunnel zu ${vmIPAddress}:${port} fehlgeschlagen`));
                 console.error(`SSH Tunnel zu ${vmIPAddress}:${port} fehlgeschlagen`);
-                console.log(error);
+                console.error(error);
               } 
             });
           };
@@ -1327,15 +1335,23 @@ export default class ProxmoxProvider implements InstanceProvider {
 
     //SAL
     const sshTunnelConnections = ProxmoxProvider.sshTunnelConnections.get(vmIPAddress);
-    if (sshTunnelConnections) {
+    if (sshTunnelConnections && Array.isArray(sshTunnelConnections)) {
       sshTunnelConnections.forEach(sshTunnelConnection => {
-        sshTunnelConnection.shutdown().then(result => {
+        if (!sshTunnelConnection) {
+          return;
+        }
+
+        sshTunnelConnection.shutdown().then(() => {
           console.log(`SSH Tunnel erfolgreich beendet`);
-          console.log(result);
-        }).catch(error => {
-          console.error(`SSH Tunnel beenden fehlgeschlagen`);
-          console.log(error);
-        });;
+          // console.log(result);
+        }).catch((error: unknown) => {
+          if (error instanceof Error) {
+            console.error(`SSH Tunnel beenden fehlgeschlagen: ${error.message}`);
+          } else {
+            console.error(`Unbekannter Fehler beim Beenden des SSH Tunnels`, error);
+          }
+          // console.error(error);
+        });
       });
     }
 
