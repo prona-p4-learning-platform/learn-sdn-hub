@@ -1,14 +1,16 @@
 import { ClientSession, MongoClient, ObjectId, PullOperator } from "mongodb";
 import { hash } from "@node-rs/bcrypt";
 import {
+  AssignmentData,
+  CourseData,
+  FileData,
   Persister,
-  UserEnvironment,
+  ResponseObject,
   UserAccount,
   UserData,
-  CourseData,
-  ResponseObject,
-  AssignmentData,
-  FileData,
+  UserEntry,
+  UserEnvironment,
+  UserExternalId,
 } from "./Persister";
 import {
   EnvironmentDescription,
@@ -24,22 +26,6 @@ const saltRounds = 10;
 interface EnvironmentDocument extends EnvironmentDescription {
   _id: string;
   name: string;
-}
-
-interface EnvironmentEntry {
-  environment: string;
-  description: string;
-  instance: string;
-}
-
-interface UserEntry {
-  _id?: string;
-  username: string;
-  password?: string;
-  passwordHash?: string;
-  groupNumber: number;
-  assignmentListFilter?: string;
-  environments: EnvironmentEntry[];
 }
 
 export interface SubmissionEntry {
@@ -66,6 +52,7 @@ export default class MongoDBPersister implements Persister {
   constructor(url: string) {
     this.connectURL = url;
   }
+
   private async getClient(): Promise<MongoClient> {
     if (!this.connectPromise) {
       this.connectPromise = MongoClient.connect(this.connectURL);
@@ -88,6 +75,98 @@ export default class MongoDBPersister implements Persister {
 
     if (result) return result;
     else throw new Error("MongoDBPersister: UserAccount not found.");
+  }
+
+  async GetUserAccountByExternalId(
+    externalId: UserExternalId,
+  ): Promise<UserAccount> {
+    const client = await this.getClient();
+    const result = await client.db().collection<UserEntry>("users").findOne({
+      "externalIds.authProvider": externalId.authProvider,
+      "externalIds.externalId": externalId.externalId,
+    });
+
+    if (result) return result;
+    else throw new Error("MongoDBPersister: UserAccount not found.");
+  }
+
+  async CreateUserAccount(userEntry: UserEntry): Promise<ResponseObject> {
+    const promises =
+      userEntry.externalIds?.map(async (externalId) => {
+        try {
+          return await this.GetUserAccountByExternalId(externalId);
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        } catch (error) {
+          return null;
+        }
+      }) ?? [];
+
+    try {
+      promises.push(this.GetUserAccount(userEntry.username));
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    } catch (error) {
+      // Pass
+    }
+
+    const results = await Promise.all(promises); // Wait for all promises to resolve
+
+    // Filter out null values (if any)
+    const accountList = results.filter((result) => result !== null);
+    if (accountList.length > 0) {
+      throw new Error(
+        `MongoDBPersister: UserAccount with username ${userEntry.username} or one of the external ids ${JSON.stringify(userEntry?.externalIds)} already exists.`,
+      );
+    }
+
+    const client = await this.getClient();
+    const result = await client
+      .db()
+      .collection<UserEntry>("users")
+      .insertOne(userEntry);
+
+    if (result)
+      return {
+        error: false,
+        message: `User ${userEntry.username} created.`,
+        code: 200,
+        id: result.insertedId,
+      };
+    else throw new Error("MongoDBPersister: UserAccount couldn't be created.");
+  }
+
+  async AddUserExternalId(
+    username: string,
+    externalId: UserExternalId,
+  ): Promise<void> {
+    const client = await this.getClient();
+    const user = await client
+      .db()
+      .collection<UserEntry>("users")
+      .findOne({ username });
+
+    if (!user) {
+      throw new Error("MongoDBPersister: UserAccount was not found.");
+    }
+
+    if (
+      user.externalIds?.find(
+        (id) => id.authProvider === externalId.authProvider,
+      )
+    ) {
+      throw new Error(
+        "MongoDBPersister: UserAccount already has external id with the auth provider.",
+      );
+    }
+    const result = await client
+      .db()
+      .collection<UserEntry>("users")
+      .updateOne(
+        { _id: user._id },
+        { $set: { externalIds: [...(user.externalIds ?? []), externalId] } },
+      );
+    if (result.acknowledged) {
+      console.log("MongoDBPersister: Updated externals ids on user account");
+    }
   }
 
   async ChangeUserPassword(
