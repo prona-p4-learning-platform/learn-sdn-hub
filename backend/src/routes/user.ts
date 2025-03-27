@@ -29,6 +29,9 @@ const authValidator = celebrate({
   }),
 });
 
+/**
+ * TODO Currently only the /login endpoint are extracted into the {@link user.service}. Everything else could also be exported to enforce encapsulation.
+ */
 export default (
   authProviders: AuthenticationProvider[],
   persister: Persister,

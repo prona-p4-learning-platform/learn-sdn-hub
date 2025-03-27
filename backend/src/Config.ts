@@ -37,6 +37,7 @@ export interface Config {
 }
 
 /**
+ * TODO Add other parameters that are used for the backend configuration
  * Parse whole config
  */
 function parseConfig(): Config {

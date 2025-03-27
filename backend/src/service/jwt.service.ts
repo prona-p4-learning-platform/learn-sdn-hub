@@ -147,6 +147,7 @@ export class JwtService {
   }
 
   /**
+   * TODO Migrate authorization to use complete jwt tokens with expiration, etc or even oidc/oauth2.0 tokens. https://www.rfc-editor.org/info/rfc7519
    * Decodes and validates token.
    * @param token The base64 encoded token that should be decoded.
    * @param secretOrPublicKey Key that will be used to verify the signature
