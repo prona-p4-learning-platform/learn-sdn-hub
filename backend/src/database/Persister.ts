@@ -5,6 +5,17 @@ import {
   TerminalStateType,
 } from "../Environment";
 
+export interface UserEntry {
+  _id?: string;
+  username: string;
+  password?: string;
+  passwordHash?: string;
+  groupNumber: number;
+  assignmentListFilter?: string;
+  environments: UserEnvironment[];
+  externalIds: UserExternalId[];
+}
+
 export interface UserAccount {
   _id: string;
   username: string;
@@ -14,6 +25,11 @@ export interface UserAccount {
   assignmentListFilter?: string;
   role?: string;
   courses?: string[];
+}
+
+export interface UserExternalId {
+  externalId: string;
+  authProvider: string;
 }
 
 export interface UserEnvironment {
@@ -62,6 +78,9 @@ export type CourseUserAction = {
 
 export interface Persister {
   GetUserAccount: (username: string) => Promise<UserAccount>;
+  GetUserAccountByExternalId: (externalId: UserExternalId) => Promise<UserAccount>;
+  CreateUserAccount: (userEntry: UserEntry) => Promise<ResponseObject>;
+  AddUserExternalId: (username: string, externalId: UserExternalId) => Promise<void>;
   GetUserEnvironments: (username: string) => Promise<UserEnvironment[]>;
   AddUserEnvironment: (
     username: string,
