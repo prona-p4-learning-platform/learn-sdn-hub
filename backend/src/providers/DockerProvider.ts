@@ -364,7 +364,6 @@ export default class DockerProvider implements InstanceProvider {
 
     for (const container of containers) {
       // server instance has learn_sdn_hub metadata and is assumed to be created by learn-sdn-hub
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       if (container.Labels["learn_sdn_hub_user"] !== undefined) {
         const createdAt = new Date(container.Created * 1000);
 
