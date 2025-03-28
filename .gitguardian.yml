@@ -1,0 +1,4 @@
+secret:
+  # Exclude files and paths by globbing
+  ignored_paths:
+    - './examples/oidc-extension/*'
