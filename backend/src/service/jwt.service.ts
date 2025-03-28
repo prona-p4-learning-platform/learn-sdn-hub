@@ -31,10 +31,10 @@ export class JwtService {
 
     // Fetch openid config from issuer if cache has no valid entry.
     // Fetch the well-know oidc configuration for the endpoint specification
-    const response = await axios.get(
+    const response = await axios.get<OidcMetadata>(
       `${issuer}/.well-known/openid-configuration`,
     );
-    const oidcMetadata: OidcMetadata = (await response.data) as OidcMetadata;
+    const oidcMetadata: OidcMetadata = response.data;
 
     // Error handling if oidc config couldn't be fetched
     if (!oidcMetadata) {
