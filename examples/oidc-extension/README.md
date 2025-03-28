@@ -37,15 +37,29 @@ Once the containers are up and running, follow these steps to configure Keycloak
 
 1. **Create a Realm**:
     - Access the Keycloak admin console at `http://localhost:8080`.
-    - On the first login, you'll be prompted to set the admin credentials. Set the credentials as desired.
-    - Log in using the newly set admin credentials.
-    - Create a new realm named `learn-sdn-hub` in the top left corner.
+    - First login with the temporary admin credentials from the `.env` file
+    - On the first login, you'll be prompted to set the admin credentials. Set the credentials as and if desired.
+    - Create a new realm named `learn-sdn-hub` in the top left corner (dropdown menu [Keycloak master]).
 
 2. **Import the Client Configuration**:
     - Import the client configuration file located in the root directory: `learn-sdn-hub-frontend-service.json` [here](./learn-sdn-hub-frontend-service.json).
     - This will create a new client within the `learn-sdn-hub` realm.
 
-### 4. Configuring the Application
+3. **Optionally activate registration**
+   - In the newly created realm, navigate to the `Realm settings` side tab
+   - After that navigate to the `Login` tab at the top
+   - Here just activate `User registration`
+
+### 4. Configure MongoDB
+If the local MongoDB is being used it needs to be setup for the application. For that the GUI can be accessed via `localhost:8081` and used for the necessary configurations:
+
+- Create database `learn-sdn-hub`
+  - Create collection `assignments`
+  - Create collection `courses`
+  - Create collection `submissions`
+  - Create collection `users`
+
+### 5. Configuring the Application
 
 Both the backend and frontend require environment variable configuration. The necessary parameters need to be defined in their respective `.env` files:
 

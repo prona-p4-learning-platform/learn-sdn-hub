@@ -101,12 +101,16 @@ export default class MongoDBPersister implements Persister {
         }
       }) ?? [];
 
-    try {
-      promises.push(this.GetUserAccount(userEntry.username));
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (error) {
-      // Pass
-    }
+    promises.push(
+      (async () => {
+        try {
+          return await this.GetUserAccount(userEntry.username);
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        } catch (error) {
+          return null;
+        }
+      })(),
+    );
 
     const results = await Promise.all(promises); // Wait for all promises to resolve
 
