@@ -1035,18 +1035,16 @@ environments.set("Test-Uebung3-SDN", {
 // SAL
 environments.set("Containerlab-Test-SAL", {
   providerProxmoxTemplateTag: "learn-sdn-hub-template-apel",
-  sshTunnelingPorts: ["50080$(GROUP_ID)"],
   // providerProxmoxTemplateTag: "learn-sdn-hub-develop-template",
+  sshTunnelingPorts: ["50080$(GROUP_ID)"],
   terminals: [
     [
       {
         type: "Shell",
         name: "host1",
         cwd: "/home/p4/containerlab-testlabs/",
-        // cwd: "/home/p4/",
         executable: "./generate_topology.sh",
-        // executable: "echo Hello World 1",
-        params: ["\"test_sal\"", "$(GROUP_ID)", "1"],
+        params: ["\"simple_test_lab\"", "$(GROUP_ID)", "1"],
         provideTty: true,
       },
     ],
@@ -1055,11 +1053,16 @@ environments.set("Containerlab-Test-SAL", {
         type: "Shell",
         name: "host2",
         cwd: "/home/p4/containerlab-testlabs/",
-        // cwd: "/home/p4/",
         executable: "./start_container.sh",
-        // executable: "echo Hello World 2",
-        params: ["\"test_sal\"", "$(GROUP_ID)", "2"],
+        params: ["\"simple_test_lab\"", "$(GROUP_ID)", "2"],
         provideTty: true,
+      },
+    ],
+    [
+      {
+        type: "WebApp",
+        name: "Topologie Graph",
+        url: "http://localhost:50080$(GROUP_ID)",
       },
     ],
     [
@@ -1067,31 +1070,21 @@ environments.set("Containerlab-Test-SAL", {
         type: "Shell",
         name: "topologie_graph",
         cwd: "/home/p4/containerlab-testlabs/",
-        // cwd: "/home/p4/",
-        //SAL ToDo: Shell Skript draus machen mit Parametern für Port abhängig von GROUP_ID, vllt einfach 500<GROUP_ID zweistellig>
-        // executable: "while [ true ]; do clear && sudo clab inspect &>/dev/null; if [ $? -eq 1 ]; then sleep 5 &>/dev/null; fi; sudo clab graph --topo clab_test_sal_topology_5.yml; done", //--srv ":3002"
         executable: "./generate_graph.sh",
-        params: ["\"test_sal\"", "$(GROUP_ID)"],
-        provideTty: true, //false
+        params: ["\"simple_test_lab\"", "$(GROUP_ID)"],
+        provideTty: true, //ToDo SAL: "false" funtkioniert nicht korrekt, evtl. irgendwo noch ein Fehler in SSHConsole?
       },
     ],
-    [
-      {
-        type: "Shell",
-        name: "TEST",
-        cwd: "/home/p4/containerlab-testlabs/",
-        executable: "echo TEST",
-        params: [],
-        provideTty: true,
-      },
-    ],
-    [
-      {
-        type: "WebApp",
-        name: "Topologie_Graph_WebApp",
-        url: "http://localhost:50080$(GROUP_ID)",
-      },
-    ],
+    // [
+    //   {
+    //     type: "Shell",
+    //     name: "TEST",
+    //     cwd: "/home/p4/containerlab-testlabs/",
+    //     executable: "echo TEST",
+    //     params: [],
+    //     provideTty: false,
+    //   },
+    // ],
   ],
   editableFiles: [
     {
@@ -1106,24 +1099,14 @@ environments.set("Containerlab-Test-SAL", {
       name: "bash",
       cwd: "/home/p4/containerlab-testlabs/",
       executable: "sudo clab destroy",
-      //ToDo SAL: ggf. auch in Skript mit Parametern, weil man Topology File braucht
-      // executable: "echo Bye",
+      //ToDo SAL: Auch in Skript mit Parametern, weil man Topology File braucht
       params: [],
       provideTty: false,
     },
-    // {
-    //   type: "Shell",
-    //   name: "bash2",
-    //   cwd: "/home/p4/containerlab-testlabs/",
-    //   executable: "",
-    //   params: [],
-    //   provideTty: false,
-    // },
   ],
   description: "ContainerLab Test SAL",
   assignmentLabSheetLocation: "instance",
   assignmentLabSheet: "/home/p4/containerlab-testlabs/README.md",
-  // assignmentLabSheet: "/home/p4/kommprot-labs/kommprot-lab-transport-layer/lab-notes.md",
 });
 // =========================
 
