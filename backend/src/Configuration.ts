@@ -1032,6 +1032,84 @@ environments.set("Test-Uebung3-SDN", {
   useLanguageClient: true,
 });
 
+// SAL
+environments.set("Containerlab-Test-SAL", {
+  providerProxmoxTemplateTag: "learn-sdn-hub-template-apel",
+  // providerProxmoxTemplateTag: "learn-sdn-hub-develop-template",
+  sshTunnelingPorts: ["50080$(GROUP_ID)"],
+  terminals: [
+    [
+      {
+        type: "Shell",
+        name: "host1",
+        cwd: "/home/p4/containerlab-testlabs/",
+        executable: "./generate_topology.sh",
+        params: ["\"simple_test_lab\"", "$(GROUP_ID)", "1"],
+        provideTty: true,
+      },
+    ],
+    [
+      {
+        type: "Shell",
+        name: "host2",
+        cwd: "/home/p4/containerlab-testlabs/",
+        executable: "./start_container.sh",
+        params: ["\"simple_test_lab\"", "$(GROUP_ID)", "2"],
+        provideTty: true,
+      },
+    ],
+    [
+      {
+        type: "WebApp",
+        name: "Topologie Graph",
+        url: "http://localhost:50080$(GROUP_ID)",
+      },
+    ],
+    [
+      {
+        type: "Shell",
+        name: "topologie_graph",
+        cwd: "/home/p4/containerlab-testlabs/",
+        executable: "./generate_graph.sh",
+        params: ["\"simple_test_lab\"", "$(GROUP_ID)"],
+        provideTty: true, //ToDo SAL: "false" funtkioniert nicht korrekt, evtl. irgendwo noch ein Fehler in SSHConsole?
+      },
+    ],
+    // [
+    //   {
+    //     type: "Shell",
+    //     name: "TEST",
+    //     cwd: "/home/p4/containerlab-testlabs/",
+    //     executable: "echo TEST",
+    //     params: [],
+    //     provideTty: false,
+    //   },
+    // ],
+  ],
+  editableFiles: [
+    {
+      absFilePath:
+        "/home/p4/containerlab-testlabs/lab-notes.md",
+      alias: "lab-notes",
+    }
+  ],
+  stopCommands: [
+    {
+      type: "Shell",
+      name: "bash",
+      cwd: "/home/p4/containerlab-testlabs/",
+      executable: "sudo clab destroy",
+      //ToDo SAL: Auch in Skript mit Parametern, weil man Topology File braucht
+      params: [],
+      provideTty: false,
+    },
+  ],
+  description: "ContainerLab Test SAL",
+  assignmentLabSheetLocation: "instance",
+  assignmentLabSheet: "/home/p4/containerlab-testlabs/README.md",
+});
+// =========================
+
 environments.set("CC-Lab-1", {
   //providerImage: "cc-container",
   //providerDockerCmd: "",

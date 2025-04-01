@@ -10,6 +10,7 @@ import proxmoxApi, { Proxmox, ProxmoxEngineOptions } from "proxmox-api";
 import fs from "fs";
 import { Netmask } from "netmask";
 import KubernetesManager from "../KubernetesManager";
+import { SSHConnection } from 'node-ssh-forward'
 
 const schedulerIntervalSeconds = 5 * 60;
 
@@ -80,6 +81,9 @@ export default class ProxmoxProvider implements InstanceProvider {
 
   private static semaphoreNextIPAddress = 0;
   private static semaphoreNextID = 0;
+
+  //SAL
+  private static sshTunnelConnections: Map<string, SSHConnection[] | undefined>;
 
   constructor() {
     this.auth = {
@@ -250,6 +254,9 @@ export default class ProxmoxProvider implements InstanceProvider {
       );
     }
 
+    //SAL
+    ProxmoxProvider.sshTunnelConnections = new Map<string, SSHConnection[]>;
+    
     ProxmoxProvider.proxmoxVMInstances = new Map<string, proxmoxVMInstance>();
     this.networkCIDR.forEach((ip) => {
       // reserve the first and last IP address for the host
@@ -348,6 +355,8 @@ export default class ProxmoxProvider implements InstanceProvider {
     options: {
       proxmoxTemplateTag?: string;
       mountKubeconfig?: boolean;
+      //SAL
+      sshTunnelingPorts?: string[];
     },
   ): Promise<VMEndpoint> {
     let proxmoxTemplateTag = options.proxmoxTemplateTag;
@@ -418,9 +427,12 @@ export default class ProxmoxProvider implements InstanceProvider {
               .lxc.$(lxc.vmid)
               .config.$get()
               .then((config) => {
+                //SAL
                 if (config.template) {
                   templateID = lxc.vmid;
                 }
+                // console.log(config.template);
+                // templateID = lxc.vmid;
               });
             // template found, no need to search further
             if (templateID !== undefined) {
@@ -653,6 +665,102 @@ export default class ProxmoxProvider implements InstanceProvider {
       });
 
     console.info("ProxmoxProvider: VM SSH ready");
+
+    //SAL
+    //Create SSH tunnel on any port (to be provided by option)
+    if (options.sshTunnelingPorts !== undefined) {
+      const activePorts: Set<number> = new Set(); // Speichert die aktiven Ports
+      options.sshTunnelingPorts.forEach(portStr => {
+        portStr = portStr.replace(/(\d+)\$\((GROUP_ID)\)/g, (_, port, __) => {
+          // console.log(port);
+          return (Number(port) + groupNumber).toString();
+        });
+        
+        const port = Number(portStr);
+        if (port > 1024 && !activePorts.has(port)) {
+          const createSSHTunnel = () => {
+            return new Promise<boolean>((resolve, reject) => {
+              console.log(`SSH Tunnel zu ${vmIPAddress}:${port} wird versucht...`);
+
+              try {
+                const sshConnection = new SSHConnection({
+                  endHost: vmIPAddress,
+                  bastionHost: this.sshJumpHostIPAddress,
+                  // port: this.sshJumpHostPort,
+                  username: this.sshJumpHostUser,
+                  password: this.sshJumpHostPassword,
+                  // privateKey: this.sshJumpHostPrivateKey
+                  //   ? fs.readFileSync(this.sshJumpHostPrivateKey)
+                  //   : undefined,
+                  skipAutoPrivateKey: true               
+                });
+
+                if (!sshConnection)
+                  return reject(new Error(`SSH Tunnel zu ${vmIPAddress}:${port} fehlgeschlagen`));
+
+                sshConnection.forward({
+                  fromPort: port,
+                  toHost: vmIPAddress,
+                  toPort: port
+                }).then(() => {
+                  console.log(`SSH Tunnel zu ${vmIPAddress}:${port} erfolgreich hergestellt`);
+                  // console.log(result);
+                }).catch((error: unknown) => {
+                  if (error instanceof Error) {
+                    console.error(`SSH Tunnel beenden fehlgeschlagen: ${error.message}`);
+                  }
+                  // console.error(error);
+                });
+
+                if (!ProxmoxProvider.sshTunnelConnections.has(vmIPAddress)) {
+                  ProxmoxProvider.sshTunnelConnections.set(vmIPAddress, []); // Falls IP noch nicht existiert, leere Liste erstellen
+                }
+                ProxmoxProvider.sshTunnelConnections.get(vmIPAddress)!.push(sshConnection); // Verbindung zur Liste hinzufügen
+            
+                activePorts.add(port); // Port als aktiv markieren
+                return resolve(true);
+              } catch (error) {
+                reject(new Error(`SSH Tunnel zu ${vmIPAddress}:${port} fehlgeschlagen`));
+                console.error(`SSH Tunnel zu ${vmIPAddress}:${port} fehlgeschlagen`);
+                console.error(error);
+              } 
+            });
+          };
+
+          const createSSHTunnelWithRetry = (maxRetries: number, timeout: number) => {
+            let retries = 0;
+          
+            const attemptTunnelCreation = () => {
+              if (retries >= maxRetries) {
+                console.error("SSH Tunnel: Timed out waiting for SSH connection.");
+                return;
+              }
+          
+              console.log(`Versuch ${retries + 1} von ${maxRetries}`);
+          
+              createSSHTunnel()
+                .then((connected) => {
+                  if (connected) {
+                    console.log("SSH Tunnel erfolgreich erstellt!");
+                  } else {
+                    retries++;
+                    setTimeout(attemptTunnelCreation, timeout);  // Wiederhole nach timeout
+                  }
+                })
+                .catch((err) => {
+                  console.error("Fehler beim Tunnelaufbau:", err);
+                  retries++;
+                  setTimeout(attemptTunnelCreation, timeout);  // Wiederhole nach timeout
+                });
+            };
+          
+            attemptTunnelCreation();
+          };
+          
+          createSSHTunnelWithRetry(10, 3000); // Maximal 5 Versuche, mit 1 Sekunde Pause zwischen den Versuchen          
+        }
+      });
+    }
 
     // Add kubeconfig to container if requested
     if (options.mountKubeconfig) {
@@ -1219,6 +1327,26 @@ export default class ProxmoxProvider implements InstanceProvider {
       proxmoxVMInstance.deleteTimestamp = Date.now();
     }
     ProxmoxProvider.proxmoxVMInstances.set(vmIPAddress, proxmoxVMInstance);
+
+    //SAL
+    const sshTunnelConnections = ProxmoxProvider.sshTunnelConnections.get(vmIPAddress);
+    if (sshTunnelConnections && Array.isArray(sshTunnelConnections)) {
+      sshTunnelConnections.forEach(sshTunnelConnection => {
+        if (!sshTunnelConnection) {
+          return;
+        }
+
+        sshTunnelConnection.shutdown().then(() => {
+          console.log(`SSH Tunnel erfolgreich beendet`);
+          // console.log(result);
+        }).catch((error: unknown) => {
+          if (error instanceof Error) {
+            console.error(`SSH Tunnel beenden fehlgeschlagen: ${error.message}`);
+          }
+          // console.error(error);
+        });
+      });
+    }
 
     //console.debug("Deleted VM: " + instance);
 
