@@ -1,21 +1,41 @@
-import { Router, json } from "express";
+import { json, Router } from "express";
 import { AuthenticationProvider } from "../authentication/AuthenticationProvider";
 import environments from "../Configuration";
-import jwt from "jsonwebtoken";
 import { celebrate, Joi, Segments } from "celebrate";
 import authenticationMiddleware, {
   RequestWithUser,
 } from "../authentication/AuthenticationMiddleware";
-import { randomUUID } from "crypto";
+import { Persister } from "../database/Persister";
+import { LoginError, userService } from "../service/user.service";
 
-const loginValidator = celebrate({
-  [Segments.BODY]: Joi.object().keys({
-    username: Joi.string().required(),
-    password: Joi.string().required(),
+const authValidator = celebrate({
+  [Segments.BODY]: Joi.object({
+    type: Joi.string().valid("jwt", "basic").required(),
+    token: Joi.when("type", {
+      is: "jwt",
+      then: Joi.string().required(),
+      otherwise: Joi.forbidden(),
+    }),
+    username: Joi.when("type", {
+      is: "basic",
+      then: Joi.string().required(),
+      otherwise: Joi.forbidden(),
+    }),
+    password: Joi.when("type", {
+      is: "basic",
+      then: Joi.string().required(),
+      otherwise: Joi.forbidden(),
+    }),
   }),
 });
 
-export default (authProviders: AuthenticationProvider[]): Router => {
+/**
+ * TODO Currently only the /login endpoint are extracted into the {@link user.service}. Everything else could also be exported to enforce encapsulation.
+ */
+export default (
+  authProviders: AuthenticationProvider[],
+  persister: Persister,
+): Router => {
   const router = Router();
 
   router.get("/assignments", authenticationMiddleware, (req, res) => {
@@ -35,7 +55,18 @@ export default (authProviders: AuthenticationProvider[]): Router => {
 
     getAssignments()
       .then((map) => {
-        res.status(200).json(Array.from(map.keys()));
+        // return list splitted by kubernetes assignments and other assignments
+        const assignmentsSplitted: string[][] = [[], []];
+
+        map.forEach((value, key) => {
+          if (!value.mountKubeconfig) {
+            assignmentsSplitted[0].push(key);
+          } else {
+            assignmentsSplitted[1].push(key);
+          }
+        });
+
+        res.status(200).json(assignmentsSplitted);
       })
       .catch((err) => {
         let message = "Unknown error";
@@ -82,58 +113,44 @@ export default (authProviders: AuthenticationProvider[]): Router => {
     });
   });
 
-  router.post("/login", json(), loginValidator, (req, res) => {
+  router.post("/login", json(), authValidator, (req, res) => {
     const login = async () => {
       const body = req.body as Record<string, string>;
-      const username = body.username;
-      const password = body.password;
-
-      for (const authProvider of authProviders) {
-        try {
-          const result = await authProvider.authenticateUser(
-            username,
-            password,
-          );
-          const sessionId = randomUUID();
-          const token = jwt.sign(
-            {
-              username: result.username,
-              id: result.userid,
-              groupNumber: result.groupNumber,
-              ...(result.role && { role: result.role }),
-              sessionId: sessionId,
-            },
-            process.env.JWT_TOKENSECRET ?? "some-secret",
-          );
-
-          console.log(
-            "Handled login for user: " +
-              username +
-              " token: " +
-              token.substring(0, 8) +
-              "..." +
-              " session:" +
-              sessionId +
-              " groupNumber: " +
-              result.groupNumber +
-              " role: " +
-              result.role,
-          );
-
-          res.status(200).json({
-            token,
-            username,
-            groupNumber: result.groupNumber,
-            ...(result.role && { role: result.role }),
-            sessionId: sessionId,
-          });
-          return;
-        } catch (err) {
-          console.log("error!", err);
+      try {
+        switch (body.type) {
+          case "jwt": {
+            const loginResponse = await userService.loginOidc(
+              body.token,
+              persister,
+            );
+            res.status(200).json(loginResponse);
+            return;
+          }
+          case "basic": {
+            const loginResponse = await userService.loginBasic(
+              body.username,
+              body.password,
+              authProviders,
+            );
+            res.status(200).json(loginResponse);
+            return;
+          }
         }
+      } catch (error) {
+        // Error handling
+        if (error instanceof LoginError) {
+          res.status(401).json({ status: "error", error: error.message });
+          return;
+        }
+        if (error instanceof Error) {
+          res.status(500).json({ status: "error", error: error.message });
+          return;
+        }
+        // Handle unexpected error types
+        res
+          .status(500)
+          .json({ status: "error", error: "An unknown error occurred" });
       }
-
-      res.status(401).json({ status: "error", error: "Not authenticated." });
     };
 
     login().catch(() => {}); // should not throw

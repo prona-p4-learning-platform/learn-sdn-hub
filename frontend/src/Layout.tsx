@@ -10,15 +10,16 @@ import {
   Typography,
 } from "@mui/material";
 import {
-  Hub as HubIcon,
   Brightness4 as Brightness4Icon,
   Brightness7 as Brightness7Icon,
+  Hub as HubIcon,
 } from "@mui/icons-material";
 
 import NavigationButton from "./components/NavigationButton";
 
 import { useAuthStore } from "./stores/authStore";
 import { useOptionsStore } from "./stores/optionsStore";
+import oidcClient from "./api/OidcClient.ts";
 
 export default function Layout(): JSX.Element {
   const { username, groupNumber, clearStorage } = useAuthStore();
@@ -43,6 +44,11 @@ export default function Layout(): JSX.Element {
   function handleUserLogout(): void {
     useAuthStore.persist.clearStorage(); // clear local storage
     clearStorage(); // reset store itself
+    void oidcClient.getUser().then((user) => {
+      if (user?.id_token) {
+        return oidcClient.signoutRedirect({ id_token_hint: user.id_token });
+      }
+    })
   }
 
   return (

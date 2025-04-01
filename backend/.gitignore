@@ -1,3 +1,5 @@
 .eslintcache
 static
 dist
+
+.env

@@ -297,6 +297,8 @@ environments.set("Example0-SDN-Intro", {
   ],
   description: "Example0-SDN-Intro description",
   assignmentLabSheet: "../assignments/prona-sdn-intro.md",
+  useCollaboration: true,
+  useLanguageClient: true, 
 });
 
 environments.set("Beispiel0-SDN-Einfuehrung", {
@@ -442,7 +444,10 @@ environments.set("Example1-Repeater", {
   description: "Example1-Repeater description",
   assignmentLabSheet: "../assignments/prona-repeater.md",
   assignmentLabSheetLocation: "backend",
-  providerDockerSupplementalPorts: ["80/tcp", "8080/tcp"],
+  //providerDockerSupplementalPorts: ["80/tcp", "8080/tcp"],
+  providerProxmoxTemplateTag: "learn-sdn-hub-develop-template-acn-p4",
+  useCollaboration: true,
+  useLanguageClient: false,
 });
 
 environments.set("Example2-MinimalisticSwitch", {
@@ -513,6 +518,9 @@ environments.set("Example2-MinimalisticSwitch", {
   ],
   description: "Example2-MinimalisticSwitch description",
   assignmentLabSheet: "../assignments/prona-minimalisticswitch.md",
+  providerProxmoxTemplateTag: "learn-sdn-hub-develop-template-acn-p4",
+  useCollaboration: true,
+  useLanguageClient: false,
 });
 
 environments.set("Example3-LearningSwitch", {
@@ -526,21 +534,13 @@ environments.set("Example3-LearningSwitch", {
         params: [],
         provideTty: true,
       },
+    ],
+    [
       {
         type: "Shell",
         name: "bash2",
         cwd: "/home/p4/p4-boilerplate/Example3-LearningSwitch/",
         executable: "./start-terminal2.sh",
-        params: [],
-        provideTty: true,
-      },
-    ],
-    [
-      {
-        type: "Shell",
-        name: "bash3",
-        cwd: "/home/p4/p4-boilerplate/Example3-LearningSwitch/",
-        executable: "./start-terminal3.sh",
         params: [],
         provideTty: true,
       },
@@ -583,18 +583,13 @@ environments.set("Example3-LearningSwitch", {
       params: [],
       provideTty: false,
     },
-    {
-      type: "Shell",
-      name: "bash3",
-      cwd: "/home/p4/p4-boilerplate/Example3-LearningSwitch/",
-      executable: "./stop-terminal3.sh",
-      params: [],
-      provideTty: false,
-    },
   ],
   description: "Example3-LearningSwitch description",
   assignmentLabSheet: "../assignments/prona-learningswitch.md",
-  providerDockerSupplementalPorts: ["80/tcp", "8080/tcp"],
+  //providerDockerSupplementalPorts: ["80/tcp", "8080/tcp"],
+  providerProxmoxTemplateTag: "learn-sdn-hub-develop-template-acn-p4",
+  useCollaboration: true,
+  useLanguageClient: true,
 });
 
 environments.set("Example-p4env", {
@@ -649,18 +644,172 @@ environments.set("Example-p4env", {
   ],
   description: "Example-p4env description",
   assignmentLabSheet: "../assignments/p4env.md",
+  providerProxmoxTemplateTag: "learn-sdn-hub-develop-template-acn-p4",
+});
+
+environments.set("Example5-IPv4Routing", {
+  terminals: [
+    [
+      {
+        type: "Shell",
+        name: "bash",
+        cwd: "/home/p4/p4-boilerplate/Example5-IPv4Routing/",
+        executable: "ls -l",
+        params: [],
+        provideTty: true,
+      },
+    ],
+    [
+      {
+        type: "Shell",
+        name: "bash2",
+        cwd: "/home/p4/p4-boilerplate/Example5-IPv4Routing/",
+        executable: "ls -l",
+        params: [],
+        provideTty: true,
+      },
+    ],
+  ],
+  editableFiles: [
+    {
+      absFilePath:
+        "/home/p4/p4-boilerplate/Example5-IPv4Routing/p4src/ipv4_routing.p4",
+      alias: "ipv4_routing.p4",
+    },
+    {
+      absFilePath:
+        "/home/p4/p4-boilerplate/Example5-IPv4Routing/network.py",
+      alias: "network.py",
+    },
+    {
+      absFilePath: "/home/p4/p4-boilerplate/Example5-IPv4Routing/commands-s1.txt",
+      alias: "commands-s1.txt",
+    },
+    {
+      absFilePath: "/home/p4/p4-boilerplate/Example5-IPv4Routing/commands-s2.txt",
+      alias: "commands-s2.txt",
+    },
+  ],
+  stopCommands: [
+    {
+      type: "Shell",
+      name: "bash",
+      cwd: "/home/p4/p4-boilerplate/Example5-IPv4Routing/",
+      executable: "ls",
+      params: [],
+      provideTty: false,
+    },
+    {
+      type: "Shell",
+      name: "bash2",
+      cwd: "/home/p4/p4-boilerplate/Example5-IPv4Routing/",
+      executable: "ls",
+      params: [],
+      provideTty: false,
+    },
+  ],
+  description: "Example5-IPv4Routing description",
+  //assignmentLabSheet: "../assignments/prona-learningswitch.md",
+  assignmentLabSheetLocation: "instance",
+  assignmentLabSheet: "/home/p4/p4-boilerplate/Example5-IPv4Routing/README.md",
+  //providerDockerSupplementalPorts: ["80/tcp", "8080/tcp"],
+  providerProxmoxTemplateTag: "learn-sdn-hub-develop-template-acn-p4",
+  useCollaboration: true,
+  useLanguageClient: true,
+});
+
+environments.set("Example6-MPLSSwitching", {
+  terminals: [
+    [
+      {
+        type: "Shell",
+        name: "bash",
+        cwd: "/home/p4/p4-boilerplate/Example6-MPLSSwitching/",
+        executable: "ls -l",
+        params: [],
+        provideTty: true,
+      },
+    ],
+    [
+      {
+        type: "Shell",
+        name: "bash2",
+        cwd: "/home/p4/p4-boilerplate/Example6-MPLSSwitching/",
+        executable: "ls -l",
+        params: [],
+        provideTty: true,
+      },
+    ],
+  ],
+  editableFiles: [
+    {
+      absFilePath:
+        "/home/p4/p4-boilerplate/Example6-MPLSSwitching/p4src/mpls.p4",
+      alias: "mpls.p4",
+    },
+    {
+      absFilePath:
+        "/home/p4/p4-boilerplate/Example6-MPLSSwitching/network.py",
+      alias: "network.py",
+    },
+    {
+      absFilePath: "/home/p4/p4-boilerplate/Example6-MPLSSwitching/s1-commands.txt",
+      alias: "s1-commands.txt",
+    },
+    {
+      absFilePath: "/home/p4/p4-boilerplate/Example6-MPLSSwitching/s2-commands.txt",
+      alias: "s2-commands.txt",
+    },
+    {
+      absFilePath: "/home/p4/p4-boilerplate/Example6-MPLSSwitching/s3-commands.txt",
+      alias: "s3-commands.txt",
+    },
+    {
+      absFilePath: "/home/p4/p4-boilerplate/Example6-MPLSSwitching/s4-commands.txt",
+      alias: "s4-commands.txt",
+    },
+    {
+      absFilePath: "/home/p4/p4-boilerplate/Example6-MPLSSwitching/s5-commands.txt",
+      alias: "s5-commands.txt",
+    },
+  ],
+  stopCommands: [
+    {
+      type: "Shell",
+      name: "bash",
+      cwd: "/home/p4/p4-boilerplate/Example6-MPLSSwitching/",
+      executable: "ls",
+      params: [],
+      provideTty: false,
+    },
+    {
+      type: "Shell",
+      name: "bash2",
+      cwd: "/home/p4/p4-boilerplate/Example6-MPLSSwitching/",
+      executable: "ls",
+      params: [],
+      provideTty: false,
+    },
+  ],
+  description: "Example6-MPLSSwitching description",
+  //assignmentLabSheet: "../assignments/prona-learningswitch.md",
+  assignmentLabSheetLocation: "instance",
+  assignmentLabSheet: "/home/p4/p4-boilerplate/Example6-MPLSSwitching/README.md",
+  //providerDockerSupplementalPorts: ["80/tcp", "8080/tcp"],
+  providerProxmoxTemplateTag: "learn-sdn-hub-develop-template-acn-p4",
+  useCollaboration: true,
+  useLanguageClient: true,
 });
 
 //sudo clab inspect &>/dev/null; if [ $? -eq 1 ]; then sudo clab deploy &>/dev/null; fi; docker exec -it clab-kommprot-lab-transport-host1 bash;
-environments.set("KommProt-Ue1-Test", {
+environments.set("KommProt-Uebung1b", {
   terminals: [
     [
       {
         type: "Shell",
         name: "host1",
         cwd: "/home/p4/kommprot-labs/kommprot-lab-application-layer",
-        executable:
-          "while [ true ]; do clear && sudo clab inspect &>/dev/null; if [ $? -eq 1 ]; then sudo clab deploy &>/dev/null; fi; docker exec -it clab-kommprot-lab-transport-host1 bash; done",
+        executable: "while [ true ]; do clear && sudo clab inspect &>/dev/null; if [ $? -eq 1 ]; then sudo clab deploy &>/dev/null; fi; docker exec -it clab-kommprot-lab-application-host1 bash; done",
         params: [],
         provideTty: true,
       },
@@ -670,8 +819,7 @@ environments.set("KommProt-Ue1-Test", {
         type: "Shell",
         name: "host2",
         cwd: "/home/p4/kommprot-labs/kommprot-lab-application-layer",
-        executable:
-          "while [ true ]; do clear && sudo clab inspect &>/dev/null; if [ $? -eq 1 ]; then sudo clab deploy &>/dev/null; fi; docker exec -it clab-kommprot-lab-transport-host2 bash; done",
+        executable: "while [ true ]; do clear && sudo clab inspect &>/dev/null; if [ $? -eq 1 ]; then sudo clab deploy &>/dev/null; fi; docker exec -it clab-kommprot-lab-application-host2 bash; done",
         params: [],
         provideTty: true,
       },
@@ -687,7 +835,7 @@ environments.set("KommProt-Ue1-Test", {
   stopCommands: [
     {
       type: "Shell",
-      name: "host1",
+      name: "bash",
       cwd: "/home/p4/kommprot-labs/kommprot-lab-application-layer",
       executable: "sudo clab destroy",
       params: [],
@@ -695,17 +843,300 @@ environments.set("KommProt-Ue1-Test", {
     },
     {
       type: "Shell",
-      name: "host2",
+      name: "bash2",
       cwd: "/home/p4/kommprot-labs/kommprot-lab-application-layer",
       executable: "",
       params: [],
       provideTty: false,
     },
   ],
-  description: "KommProt-Ue1 description",
+  description: "KommProt-Ue1b application layer",
   assignmentLabSheetLocation: "instance",
-  assignmentLabSheet:
-    "/home/p4/kommprot-labs/kommprot-lab-application-layer/README.md",
+  assignmentLabSheet: "/home/p4/kommprot-labs/kommprot-lab-application-layer/README.md",
+});
+
+environments.set("KommProt-Uebung1c", {
+  terminals: [
+    [
+      {
+        type: "Shell",
+        name: "host1",
+        cwd: "/home/p4/kommprot-labs/kommprot-lab-transport-layer",
+        executable: "while [ true ]; do clear && sudo clab inspect &>/dev/null; if [ $? -eq 1 ]; then sudo clab deploy &>/dev/null; fi; docker exec -it clab-kommprot-lab-transport-host1 bash; done",
+        params: [],
+        provideTty: true,
+      },
+    ],
+    [
+      {
+        type: "Shell",
+        name: "host2",
+        cwd: "/home/p4/kommprot-labs/kommprot-lab-transport-layer",
+        executable: "while [ true ]; do clear && sudo clab inspect &>/dev/null; if [ $? -eq 1 ]; then sudo clab deploy &>/dev/null; fi; docker exec -it clab-kommprot-lab-transport-host2 bash; done",
+        params: [],
+        provideTty: true,
+      },
+    ],
+  ],
+  editableFiles: [
+    {
+      absFilePath:
+        "/home/p4/kommprot-labs/kommprot-lab-transport-layer/lab-notes.md",
+      alias: "lab-notes",
+    },
+    {
+      absFilePath:
+        "/home/p4/kommprot-labs/kommprot-lab-application-layer/README.md",
+      alias: "README",
+    },
+  ],
+  stopCommands: [
+    {
+      type: "Shell",
+      name: "bash",
+      cwd: "/home/p4/kommprot-labs/kommprot-lab-transport-layer",
+      executable: "sudo clab destroy",
+      params: [],
+      provideTty: false,
+    },
+    {
+      type: "Shell",
+      name: "bash2",
+      cwd: "/home/p4/kommprot-labs/kommprot-lab-transport-layer",
+      executable: "",
+      params: [],
+      provideTty: false,
+    },
+  ],
+  description: "KommProt-Ue1c transport layer",
+  assignmentLabSheetLocation: "instance",
+  assignmentLabSheet: "/home/p4/kommprot-labs/kommprot-lab-transport-layer/lab-notes.md",
+});
+
+environments.set("KommProt-Uebung3-SDN", {
+  terminals: [
+    [
+      {
+        type: "Shell",
+        name: "mininet_data-plane",
+        cwd: "/home/p4/p4-boilerplate/Example0-SDN-Intro/",
+        executable: "./start-terminal1.sh",
+        params: [],
+        provideTty: true,
+      },
+    ],
+    [
+      {
+        type: "Shell",
+        name: "SDN-controller_control-plane",
+        cwd: "/home/p4/p4-boilerplate/Example0-SDN-Intro/",
+        executable: "./start-terminal2.sh",
+        params: [],
+        provideTty: true,
+      },
+    ],
+  ],
+  editableFiles: [
+    {
+      absFilePath: "/home/p4/p4-boilerplate/Example0-SDN-Intro/OpenFlowTopo.py",
+      alias: "OpenFlowTopo.py",
+    },
+    {
+      absFilePath: "/home/p4/p4-boilerplate/Example0-SDN-Intro/OpenFlowApp.py",
+      alias: "OpenFlowApp.py",
+    },
+  ],
+  stopCommands: [
+    {
+      type: "Shell",
+      name: "bash",
+      cwd: "/home/p4/p4-boilerplate/Example0-SDN-Intro/",
+      executable: "./stop-terminal1.sh",
+      params: [],
+      provideTty: false,
+    },
+    {
+      type: "Shell",
+      name: "bash2",
+      cwd: "/home/p4/p4-boilerplate/Example0-SDN-Intro/",
+      executable: "./stop-terminal2.sh",
+      params: [],
+      provideTty: false,
+    },
+  ],
+  description: "Beispiel0-SDN-Einfuehrung beschreibung",
+  assignmentLabSheet: "../assignments/prona-sdn-intro-german.md",
+  rootPath: "/home/p4/",
+  workspaceFolders: ["/home/p4/p4-boilerplate/Example0-SDN-Intro/"],
+  useCollaboration: true,
+  useLanguageClient: false,
+});
+
+environments.set("Test-Uebung3-SDN", {
+  terminals: [
+    [
+      {
+        type: "Shell",
+        name: "mininet_data-plane",
+        cwd: "/home/p4/p4-boilerplate/Example0-SDN-Intro/",
+        executable: "./start-terminal1.sh",
+        params: [],
+        provideTty: true,
+      },
+    ],
+    [
+      {
+        type: "Shell",
+        name: "SDN-controller_control-plane",
+        cwd: "/home/p4/p4-boilerplate/Example0-SDN-Intro/",
+        executable: "ls -al",
+        params: [],
+        provideTty: true,
+      },
+    ],
+  ],
+  editableFiles: [
+    {
+      absFilePath: "/home/p4/p4-boilerplate/Example0-SDN-Intro/OpenFlowTopo.py",
+      alias: "OpenFlowTopo.py",
+    },
+    {
+      absFilePath: "/home/p4/p4-boilerplate/Example0-SDN-Intro/OpenFlowApp.py",
+      alias: "OpenFlowApp.py",
+    },
+  ],
+  stopCommands: [
+    {
+      type: "Shell",
+      name: "bash",
+      cwd: "/home/p4/p4-boilerplate/Example0-SDN-Intro/",
+      executable: "ls -al",
+      params: [],
+      provideTty: false,
+    },
+    {
+      type: "Shell",
+      name: "bash2",
+      cwd: "/home/p4/p4-boilerplate/Example0-SDN-Intro/",
+      executable: "ls -al",
+      params: [],
+      provideTty: false,
+    },
+  ],
+  providerProxmoxTemplateTag: "learn-sdn-hub-develop-template-test",
+  description: "Beispiel0-SDN-Einfuehrung beschreibung",
+  assignmentLabSheet: "../assignments/prona-sdn-intro-german.md",
+  rootPath: "/home/p4/",
+  workspaceFolders: ["/home/p4/p4-boilerplate/Example0-SDN-Intro/"],
+  useCollaboration: true,
+  useLanguageClient: true,
+});
+
+// SAL
+environments.set("Containerlab-Test-SAL", {
+  providerProxmoxTemplateTag: "learn-sdn-hub-template-apel",
+  // providerProxmoxTemplateTag: "learn-sdn-hub-develop-template",
+  sshTunnelingPorts: ["50080$(GROUP_ID)"],
+  terminals: [
+    [
+      {
+        type: "Shell",
+        name: "host1",
+        cwd: "/home/p4/containerlab-testlabs/",
+        executable: "./generate_topology.sh",
+        params: ["\"simple_test_lab\"", "$(GROUP_ID)", "1"],
+        provideTty: true,
+      },
+    ],
+    [
+      {
+        type: "Shell",
+        name: "host2",
+        cwd: "/home/p4/containerlab-testlabs/",
+        executable: "./start_container.sh",
+        params: ["\"simple_test_lab\"", "$(GROUP_ID)", "2"],
+        provideTty: true,
+      },
+    ],
+    [
+      {
+        type: "WebApp",
+        name: "Topologie Graph",
+        url: "http://localhost:50080$(GROUP_ID)",
+      },
+    ],
+    [
+      {
+        type: "Shell",
+        name: "topologie_graph",
+        cwd: "/home/p4/containerlab-testlabs/",
+        executable: "./generate_graph.sh",
+        params: ["\"simple_test_lab\"", "$(GROUP_ID)"],
+        provideTty: true, //ToDo SAL: "false" funtkioniert nicht korrekt, evtl. irgendwo noch ein Fehler in SSHConsole?
+      },
+    ],
+    // [
+    //   {
+    //     type: "Shell",
+    //     name: "TEST",
+    //     cwd: "/home/p4/containerlab-testlabs/",
+    //     executable: "echo TEST",
+    //     params: [],
+    //     provideTty: false,
+    //   },
+    // ],
+  ],
+  editableFiles: [
+    {
+      absFilePath:
+        "/home/p4/containerlab-testlabs/lab-notes.md",
+      alias: "lab-notes",
+    }
+  ],
+  stopCommands: [
+    {
+      type: "Shell",
+      name: "bash",
+      cwd: "/home/p4/containerlab-testlabs/",
+      executable: "sudo clab destroy",
+      //ToDo SAL: Auch in Skript mit Parametern, weil man Topology File braucht
+      params: [],
+      provideTty: false,
+    },
+  ],
+  description: "ContainerLab Test SAL",
+  assignmentLabSheetLocation: "instance",
+  assignmentLabSheet: "/home/p4/containerlab-testlabs/README.md",
+});
+// =========================
+
+environments.set("CC-Lab-1", {
+  //providerImage: "cc-container",
+  //providerDockerCmd: "",
+  providerProxmoxTemplateTag: "learn-sdn-hub-develop-cc-template",
+  mountKubeconfig: true,
+  terminals: [
+    [
+      {
+        type: "Shell",
+        name: "host1",
+        cwd: "/home/p4/labs/lab1",
+        executable: "",
+        params: [],
+        provideTty: true,
+      },
+    ],
+  ],
+  editableFiles: [
+    {
+      absFilePath: "/home/p4/labs/lab1/nginx.yaml",
+      alias: "nginx.yaml",
+    },
+  ],
+  stopCommands: [],
+  description: "CC-Test description",
+  assignmentLabSheetLocation: "instance",
+  assignmentLabSheet: "/home/p4/labs/lab1/README.md",
 });
 
 export default environments;
