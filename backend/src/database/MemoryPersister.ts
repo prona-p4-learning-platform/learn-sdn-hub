@@ -1,20 +1,21 @@
 import {
-  Persister,
-  UserEnvironment,
-  UserAccount,
-  UserData,
-  CourseData,
-  ResponseObject,
   AssignmentData,
+  CourseData,
   FileData,
+  Persister,
+  ResponseObject,
+  UserAccount,
+  UserData, UserEntry,
+  UserEnvironment,
+  UserExternalId,
 } from "./Persister";
 import fs from "fs";
 import path from "path";
 import {
-  TerminalStateType,
   Submission,
-  SubmissionFileType,
   SubmissionAdminOverviewEntry,
+  SubmissionFileType,
+  TerminalStateType,
 } from "../Environment";
 
 const userEnvironments = new Map<string, Map<string, UserEnvironment>>();
@@ -37,6 +38,20 @@ export default class MemoryPersister implements Persister {
         else reject(new Error("MemoryPersister: Cannot get user account."));
       }
     });
+  }
+
+  GetUserAccountByExternalId(_externalId: UserExternalId): Promise<UserAccount> {
+    throw new Error(
+      "MemoryPersister: GetUserAccountByExternalId not implemented.",
+    );
+  }
+
+  CreateUserAccount(_userEntry: UserEntry): Promise<ResponseObject> {
+    throw new Error("MemoryPersister: CreateUserAccount not implemented.");
+  }
+
+  AddUserExternalId(_username: string, _externalId: UserExternalId): Promise<void> {
+    throw new Error("MemoryPersister: AddUserExternalId not implemented.");
   }
 
   getUserMapping(username: string): number {

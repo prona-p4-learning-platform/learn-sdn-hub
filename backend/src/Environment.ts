@@ -146,6 +146,10 @@ export interface EnvironmentDescription {
   useCollaboration?: boolean;
   useLanguageClient?: boolean;
   maxBonusPoints?: number;
+  mountKubeconfig?: boolean;
+
+  //SAL
+  sshTunnelingPorts? : string[];
 }
 
 const DenyStartOfMissingInstanceErrorMessage =
@@ -564,6 +568,9 @@ export default class Environment {
             kernelBootARGs: this.configuration.providerKernelBootARGs,
             rootDrive: this.configuration.providerRootDrive,
             proxmoxTemplateTag: this.configuration.providerProxmoxTemplateTag,
+            mountKubeconfig: this.configuration.mountKubeconfig,
+            //SAL
+            sshTunnelingPorts: this.configuration.sshTunnelingPorts,
           },
         );
       } else throw new Error(DenyStartOfMissingInstanceErrorMessage);
@@ -592,7 +599,17 @@ export default class Environment {
       `Added new environment: ${this.environmentId} for user: ${this.username} using endpoint: ${JSON.stringify(endpoint)}`,
     );
 
-    this.filehandler = new FileHandler(
+    //SAL
+    // this.filehandler = new FileHandler(
+    //   this.environmentId,
+    //   this.username,
+    //   this.groupNumber,
+    //   this.sessionId,
+    //   endpoint.IPAddress,
+    //   endpoint.SSHPort,
+    //   endpoint.SSHJumpHost,
+    // );
+    this.filehandler = await FileHandler.create(
       this.environmentId,
       this.username,
       this.groupNumber,
@@ -615,6 +632,9 @@ export default class Environment {
                 JSON.stringify(subterminal),
                 JSON.stringify(endpoint),
               );
+
+              // SAL - replace placeholder in params (ToDo: In Function auslagern, was es für alle subTerminal.Types macht?)
+              subterminal.params = subterminal.params.map(str => str.replace(/\$\((GROUP_ID)\)/g, this.groupNumber.toString()));
 
               await new Promise<void>((resolve, reject) => {
                 const sshConsole = new SSHConsole(
@@ -749,6 +769,13 @@ export default class Environment {
             break;
           case "WebApp":
             {
+              // SAL - replace placeholder in url (ToDo: In Function auslagern, was es für alle subTerminal.Types macht?)
+              const url = subterminal.url.replace(/(\d+)\$\((GROUP_ID)\)/g, (_, port, __) => {
+                // console.log(port);
+                return (Number(port) + this.groupNumber).toString();
+              });
+              subterminal.url = url;
+
               // currently WebApps are instantly treated as ready
               // maybe track WebApp init later
               // maybe also store in activeWebApps var?
