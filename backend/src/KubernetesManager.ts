@@ -98,7 +98,6 @@ export default class KubernetesManager {
     if (!key || !separator || !crt) {
       throw new Error("KubernetesManager: Certificate data is invalid.");
     }
-    // TODO: CHECK separator !== "--------------------"
 
     const k8sCert: KubernetesCert = {
       key: key,
@@ -223,6 +222,11 @@ export default class KubernetesManager {
     return `ns-group-${groupNumber}`;
   }
 
+  /**
+   * This function retrieves a user's certificate from the Kubernetes management node.
+   * @param username - The username of the user whose certificate is to be retrieved.
+   * @returns A promise that resolves with the user's certificate.
+   */
   getUserCert(username: string): Promise<KubernetesCert> {
     return new Promise((resolve, reject) => {
       const certData: string[] = [];
@@ -363,19 +367,5 @@ users:
     }
 
     return `${localPath}/kubeconfig-group-${groupNumber}`;
-  }
-
-  getLocalKubeconfigAsBase64(groupNumber: number): string {
-    const localPath = process.env.KUBECTL_STORE_PATH || "/tmp";
-
-    if (!fs.existsSync(`${localPath}/kubeconfig-group-${groupNumber}`)) {
-      throw new Error("KubernetesManager: Kubeconfig file not found.");
-    }
-
-    const kubeconfig = fs.readFileSync(
-      `${localPath}/kubeconfig-group-${groupNumber}`,
-    );
-
-    return Buffer.from(kubeconfig).toString("base64");
   }
 }

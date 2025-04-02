@@ -1,10 +1,12 @@
-import { useCallback, FormEvent } from "react";
+import { FormEvent, useCallback, useEffect, useRef } from "react";
 import { Box, Button, Container, TextField } from "@mui/material";
 import { useSnackbar } from "notistack";
 import { z } from "zod";
 
 import { useAuthStore } from "../stores/authStore";
-import { APIRequest } from "../api/Request";
+import oidcClient from "../api/OidcClient.ts";
+import { useLocation, useNavigate } from "react-router";
+import { APIRequest } from "../api/Request.ts";
 
 const loginValidator = z.object({
   token: z.string().min(1),
@@ -16,16 +18,21 @@ const loginValidator = z.object({
 export default function Login(): JSX.Element {
   const { enqueueSnackbar } = useSnackbar();
   const { setAuthentication } = useAuthStore();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const initialized = useRef(false);
 
-  const loginRequest = useCallback(
-    async (event: FormEvent<HTMLFormElement>) => {
-      event.preventDefault();
-      const data = new FormData(event.currentTarget);
-      const credentials = {
-        username: data.get("username") ?? "",
-        password: data.get("password") ?? "",
-      };
-
+  const login = useCallback(
+    async (
+      credentials:
+        | { type: "jwt"; token: string }
+        | {
+            type: "basic";
+            username: string;
+            password: string;
+          },
+    ): Promise<void> => {
+      let error;
       try {
         const request = await APIRequest("/user/login", loginValidator, {
           method: "POST",
@@ -42,14 +49,72 @@ export default function Login(): JSX.Element {
             data.token,
             data.role,
           );
-        } else throw request.error;
-      } catch (error) {
-        console.error(error);
-        enqueueSnackbar("Authentication failed!", { variant: "error" });
+          return;
+        }
+
+        error = request.error;
+      } catch (err) {
+        error = err;
       }
+      console.error(error);
+      enqueueSnackbar("Authentication failed!", { variant: "error" });
     },
     [enqueueSnackbar, setAuthentication],
   );
+
+  // Used to detect page load.
+  useEffect(() => {
+    // Workaround because of the configured strict mode that invokes the function twice
+    if (initialized.current) {
+      return;
+    }
+    initialized.current = true;
+
+    const searchParams = new URLSearchParams(location.search);
+
+    if (
+      searchParams.has("state") &&
+      searchParams.has("session_state") &&
+      searchParams.has("code")
+    ) {
+      oidcClient
+        .signinCallback(window.location.href)
+        .then(async (user) => {
+          if (!user) {
+            throw new Error("Oidc authentication failed!");
+          }
+          await login({
+            type: "jwt",
+            token: user.access_token,
+          });
+        })
+        .catch((err) => {
+          enqueueSnackbar("Authentication failed!", { variant: "error" });
+          console.error(err);
+        });
+    }
+  }, [enqueueSnackbar, location, login, navigate, setAuthentication]);
+
+  const loginBasicRequest = useCallback(
+    async (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      const data = new FormData(event.currentTarget);
+      await login({
+        type: "basic",
+        username: (data.get("username") ?? "") as string,
+        password: (data.get("password") ?? "") as string,
+      });
+    },
+    [login],
+  );
+
+  const oidcLoginRequest = useCallback(() => {
+    oidcClient
+      .signinRedirect()
+      .catch((err) => {
+        console.error(err);
+      });
+  }, []);
 
   return (
     <Container component="main" maxWidth="xs">
@@ -63,7 +128,7 @@ export default function Login(): JSX.Element {
       >
         <Box
           component="form"
-          onSubmit={(event) => void loginRequest(event)}
+          onSubmit={(event) => void loginBasicRequest(event)}
           noValidate
           sx={{ mt: 1 }}
         >
@@ -88,10 +153,18 @@ export default function Login(): JSX.Element {
             type="password"
           />
           <Button
+            onClick={() => void oidcLoginRequest()}
+            fullWidth
+            variant="outlined"
+            sx={{ mt: 3 }}
+          >
+            Login with OIDC
+          </Button>
+          <Button
             type="submit"
             fullWidth
             variant="contained"
-            sx={{ mt: 3, mb: 2 }}
+            sx={{ mt: 1, mb: 2 }}
           >
             Login
           </Button>
