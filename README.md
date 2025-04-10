@@ -14,8 +14,9 @@ Initial development was partially funded by the research programme [digLL](https
 * Collaboration support for terminals (tmux), Guacamole (inherently supported by shared remote desktops) as well as collaborative editing in the monaco editor (based on yjs [y-monaco](https://github.com/yjs/y-monaco))
 * Modular authentication backend (included are a simple single user, simple multi user and a MongoDB based authentication backend)
 * Modular assignment host backend (included is an SSH backend for single user, multi user (using hosts, VMs, containers to run the assignments) and an OpenStack (VM), Docker (container) and Firecracker (microVM) provider starting and configuring instances to run the assignments)
-* Support for tests and submissions in assignments
-* Support for assignments in an Kubernetes environment
+* Support for tests and submissions in assignments, e.g., for practical examination or bonus points in labs and courses
+* Support for assignments in a Kubernetes environment
+* Support for OpenID Connect (OIDC) to connect multiple external identity providers, e.g., for federation or common identity sources like GitHub, Google etc.
 
 learn-sdn-hub and the surrounding ProNA ecosystem with p4-container and p4-boilerplate etc. was also published and presented in our paper at NOMS 2024-2024 IEEE Network Operations and Management Symposium [https://ieeexplore.ieee.org/document/10575540](https://ieeexplore.ieee.org/document/10575540).
 
