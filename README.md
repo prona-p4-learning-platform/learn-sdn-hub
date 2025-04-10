@@ -17,6 +17,7 @@ Initial development was partially funded by the research programme [digLL](https
 * Support for tests and submissions in assignments, e.g., for practical examination or bonus points in labs and courses
 * Support for assignments in a Kubernetes environment
 * Support for OpenID Connect (OIDC) to connect multiple external identity providers, e.g., for federation or common identity sources like GitHub, Google etc.
+* Early support for topology visualization for containerlab-based labs using contained [graph](https://github.com/prona-p4-learning-platform/learn-sdn-hub/blob/develop/examples/SAL-Proxmox-Files/containerlab_scripts/generate_graph.sh) feature
 
 learn-sdn-hub and the surrounding ProNA ecosystem with p4-container and p4-boilerplate etc. was also published and presented in our paper at NOMS 2024-2024 IEEE Network Operations and Management Symposium [https://ieeexplore.ieee.org/document/10575540](https://ieeexplore.ieee.org/document/10575540).
 
@@ -250,7 +251,7 @@ VITE_REACT_APP_YJS_WEBSOCKET_HOST = "localhost"
 VITE_REACT_APP_YJS_WEBSOCKET_PORT = "1234"
 ```
 
-Convergence server can be started, e.g., using:
+Collaboration server backend can be started, e.g., using:
 
 ```sh
 cd backend
@@ -283,8 +284,11 @@ K8S_MGMT_PASSWORD="..."
 K8S_CLUSTER_IP="https://xxx.xxx.xxx.xxx:6443" 
 
 # The certificate authority data (base64 encoded) that is used in the kubeconfig file
-K8S_CERT_AUTH_DATA="LS0tLS1CRUd..." 
+K8S_CERT_AUTH_DATA="LS0tLS1CRUd..."
 
 # The path in the backend where the kubeconfig file is stored
 KUBECTL_STORE_PATH="/tmp" 
 ```
+
+### OIDC example
+An example to use OIDC is provided in the examples folder of this repo [oidc-extension](https://github.com/prona-p4-learning-platform/learn-sdn-hub/tree/develop/examples/oidc-extension).
