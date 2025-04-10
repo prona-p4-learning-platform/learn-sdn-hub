@@ -23,7 +23,7 @@ learn-sdn-hub and the surrounding ProNA ecosystem with p4-container and p4-boile
 
 The following figures show screenshots of the environment, used to teach the basic functions of a P4-based Layer 2 "learning" (flooding & filtering) switch:
 
-![learn-sdn hub assignment roster](/examples/screenshots/prona-learn-sdn-hub-assignment-screenshot.png "overview and deployment of assignments")
+![learn-sdn hub assignment roster](/examples/screenshots/prona-learn-sdn-hub-assignments-screenshot.png "overview and deployment of assignments")
 
 ![learn-sdn hub used for exploratory learning of the basic functions of a P4-based L2 switch](/examples/screenshots/prona-learn-sdn-hub-completion-screenshot.png "web-based environment with markdown lab sheet incl. mermaid figures/diagrams and monaco editor incl. code completion")
 
