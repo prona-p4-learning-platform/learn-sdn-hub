@@ -40,7 +40,7 @@ we provide a docker-compose file. Clone or download this repository and simply r
 docker-compose up
 ```
 
-This should get you a fully functional learn-sdn-hub deployment together with a [p4-container](https://github.com/prona-p4-learning-platform/p4-container) (based on [p4lang/p4app](https://github.com/p4lang/p4app) image) that can be used to test the assignments. You can use the typical docker-compose setup, e.g., ```docker-compose up -d``` and ```docker-compose down``` to start and stop the entire environment in the background. Configuration of required environment variables can be done using provided [.env](https://github.com/prona-p4-learning-platform/learn-sdn-hub/blob/master/.env) file. The contained parameters can also be overridden by setting env vars with the same name. You can use ```source examples/sample-config-env.sh``` as a starting point to set the environment variables.
+This should get you a fully functional learn-sdn-hub deployment together with a [p4-container](https://github.com/prona-p4-learning-platform/p4-container) (based on [p4lang/p4app](https://github.com/p4lang/p4app) image) that can be used to test the assignments. You can use the typical docker-compose setup, e.g., ```docker-compose up -d``` and ```docker-compose down``` to start and stop the entire environment in the background. Configuration of required environment variables can be done using provided [.env](/.env) file. The contained parameters can also be overridden by setting env vars with the same name. You can use ```source examples/sample-config-env.sh``` as a starting point to set the environment variables.
 Again, this is not intended to be used in production environments. Proper setup for production environments is described below.
 
 If you change the IP address used for VBOX_IP_ADDRESSES in .env file for docker-compose, you can login using a user defined in BACKEND_USERS, e.g., user: user1 and password: password1, login to learn-sdn-hub and deploy assignments to the started p4-container or other hosts capable of compiling and running P4, you specified in the .env file.
@@ -64,11 +64,11 @@ Configuration of assignments, editable files, lab sheets, SSH consoles etc. need
 docker run -it --mount type=bind,source="$(pwd)"/assignments,target=/home/p4/learn-sdn-hub/backend/src/assignments --mount type=bind,source="$(pwd)"/Configuration.ts,target=/home/p4/learn-sdn-hub/backend/src/Configuration.ts --rm -p 3001:3001 prona/learn-sdn-hub -t $BACKEND_TYPE -a $VBOX_IP_ADDRESSES
 ```
 
-Examples for the Configuration.ts file and the assignments directory are provided in [examples](https://github.com/prona-p4-learning-platform/learn-sdn-hub/tree/master/examples).
+Examples for the Configuration.ts file and the assignments directory are provided in [examples](/examples).
 
-More sophisticated examples to run learn-sdn-hub in production environments are provided in [docker-container-scripts](https://github.com/prona-p4-learning-platform/learn-sdn-hub/tree/master/examples/docker-container-scripts).
+More sophisticated examples to run learn-sdn-hub in production environments are provided in [docker-container-scripts](/examples/docker-container-scripts).
 
-The startup script [start-learn-sdn-hub.sh](https://github.com/prona-p4-learning-platform/learn-sdn-hub/tree/master/examples/start-learn-sdn-hub.sh) for the container image entrypoint can be used as a reference.
+The startup script [start-learn-sdn-hub.sh](/examples/start-learn-sdn-hub.sh) for the container image entrypoint can be used as a reference.
 
 ## Manual Installation
 
@@ -98,12 +98,12 @@ npm install
 npm run build
 ```
 
-You can copy the production build of the frontend to the static directory of the backend. This way, the frontend is included and served in the backend. See [Dockerfile](https://github.com/prona-p4-learning-platform/learn-sdn-hub/tree/master/Dockerfile)
+You can copy the production build of the frontend to the static directory of the backend. This way, the frontend is included and served in the backend. See [Dockerfile](/Dockerfile)
 
 ## Configuration
 
 ### Run the backend using Docker instances for assignments
-(using [DockerProvider.ts](https://github.com/prona-p4-learning-platform/learn-sdn-hub/blob/master/backend/src/providers/DockerProvider.ts))
+(using [DockerProvider.ts](/backend/src/providers/DockerProvider.ts))
 
 Assignments for users and their groups can be started using Docker containers offering a light weight
 instance format. 
@@ -149,7 +149,7 @@ DOCKER_MAX_INSTANCE_LIFETIME_MINUTES="120"
 Further configuration options can be specified on a per-assignment basis in the assignment configuration file.
 
 ### Run the backend using OpenStack instances for assignments
-(using [OpenStackProvider.ts](https://github.com/prona-p4-learning-platform/learn-sdn-hub/blob/master/backend/src/providers/OpenStackProvider.ts))
+(using [OpenStackProvider.ts](/backend/src/providers/OpenStackProvider.ts))
 
 Instead of using a preinstalled local VM or host to run your P4 code and assignments, also an OpenStack provider is available, that creates OpenStack instances for deployed assignments. In OpenStack an image is necessary, that contains p4 tool chain etc., as documented above for the local VM use-case. The provider is based on [pkgcloud](https://github.com/pkgcloud/pkgcloud). OpenStack keystone needs to be available using v3.
 
@@ -167,11 +167,11 @@ npm run start
 ```
 Optionally you can also ```export SSH_PRIVATE_KEY_PATH=<SSH keyfile>``` to use an SSH keyfile for the connections to the host running your P4 assignments.
 
-[start-learn-sdn-hub.sh](https://github.com/prona-p4-learning-platform/learn-sdn-hub/tree/master/examples/start-learn-sdn-hub.sh) can be used as a reference to create a startup script.
+[start-learn-sdn-hub.sh](/examples/start-learn-sdn-hub.sh) can be used as a reference to create a startup script.
 
 
 ### Run the backend using Firecracker microVMs for assignments
-(using [FirecrackerProvider.ts](https://github.com/prona-p4-learning-platform/learn-sdn-hub/blob/master/backend/src/providers/FirecrackerProvider.ts))
+(using [FirecrackerProvider.ts](/backend/src/providers/FirecrackerProvider.ts))
 
 t.b.w.
 
@@ -293,4 +293,4 @@ KUBECTL_STORE_PATH="/tmp"
 ```
 
 ### OIDC example
-An example to use OIDC is provided in the examples folder of this repo [oidc-extension](https://github.com/prona-p4-learning-platform/learn-sdn-hub/tree/develop/examples/oidc-extension).
+An example to use OIDC is provided in the examples folder of this repo [oidc-extension](/examples/oidc-extension).
