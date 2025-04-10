@@ -151,7 +151,7 @@ Further configuration options can be specified on a per-assignment basis in the 
 ### Run the backend using OpenStack instances for assignments
 (using [OpenStackProvider.ts](/backend/src/providers/OpenStackProvider.ts))
 
-Instead of using a preinstalled local VM or host to run your P4 code and assignments, also an OpenStack provider is available, that creates OpenStack instances for deployed assignments. In OpenStack an image is necessary, that contains p4 tool chain etc., as documented above for the local VM use-case. The provider is based on [pkgcloud](https://github.com/pkgcloud/pkgcloud). OpenStack keystone needs to be available using v3.
+Instead of using a preinstalled local VM or host to run your P4 code and assignments, also an OpenStack provider is available, that creates OpenStack instances for deployed assignments. In OpenStack an image is necessary, that contains p4 tool chain etc., as documented above for the local VM use-case. OpenStack keystone needs to be available using v3.
 
 ```
 export OPENSTACK_USERNAME=<Username to access OpenStack API>
