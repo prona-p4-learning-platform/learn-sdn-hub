@@ -9,6 +9,8 @@ import Environment from "../Environment";
 import proxmoxApi, { Proxmox, ProxmoxEngineOptions } from "proxmox-api";
 import fs from "fs";
 import { Netmask } from "netmask";
+import KubernetesManager from "../KubernetesManager";
+import { SSHConnection } from 'node-ssh-forward'
 
 const schedulerIntervalSeconds = 5 * 60;
 
@@ -56,6 +58,8 @@ export default class ProxmoxProvider implements InstanceProvider {
   private vmSSHTimeoutSeconds = 120;
 
   private proxmoxTemplateTag: string;
+  private proxmoxTag: string
+  private proxmoxPool: string
   private proxmoxTargetHost: string;
 
   // currently IPv4 only ;) what a shame ;)
@@ -78,6 +82,9 @@ export default class ProxmoxProvider implements InstanceProvider {
   private static semaphoreNextIPAddress = 0;
   private static semaphoreNextID = 0;
 
+  //SAL
+  private static sshTunnelConnections: Map<string, SSHConnection[] | undefined>;
+
   constructor() {
     this.auth = {
       host: process.env.PROXMOX_HOST ?? "localhost",
@@ -88,6 +95,8 @@ export default class ProxmoxProvider implements InstanceProvider {
     this.proxmox = proxmoxApi(this.auth);
 
     this.proxmoxTemplateTag = process.env.PROXMOX_TEMPLATE_TAG ?? "";
+    this.proxmoxTag = process.env.PROXMOX_TAG ?? "learn-sdn-hub";
+    this.proxmoxPool = process.env.PROXMOX_POOL ?? "learn-sdn-hub";
 
     this.proxmoxTargetHost = process.env.PROXMOX_TARGET_HOST ?? "";
     this.sshJumpHostIPAddress = process.env.PROXMOX_SSH_JUMP_HOST ?? "";
@@ -114,11 +123,11 @@ export default class ProxmoxProvider implements InstanceProvider {
                   .lxc.$(vm.vmid)
                   .status.current.$get()
                   .then(async (current) => {
-                    // check if instance has a tag "learn-sdn-hub" and hence was created by this provider
+                    // check if instance has a lean-sdn-hub tag and hence was created by this provider
                     if (
                       current.tags
                         ?.split(";")
-                        .find((tag) => tag === "learn-sdn-hub")
+                        .find((tag) => tag === this.proxmoxTag)
                     ) {
                       // only stopped or running instances are valid instances
                       if (
@@ -245,6 +254,9 @@ export default class ProxmoxProvider implements InstanceProvider {
       );
     }
 
+    //SAL
+    ProxmoxProvider.sshTunnelConnections = new Map<string, SSHConnection[]>;
+    
     ProxmoxProvider.proxmoxVMInstances = new Map<string, proxmoxVMInstance>();
     this.networkCIDR.forEach((ip) => {
       // reserve the first and last IP address for the host
@@ -342,6 +354,9 @@ export default class ProxmoxProvider implements InstanceProvider {
     environment: string,
     options: {
       proxmoxTemplateTag?: string;
+      mountKubeconfig?: boolean;
+      //SAL
+      sshTunnelingPorts?: string[];
     },
   ): Promise<VMEndpoint> {
     let proxmoxTemplateTag = options.proxmoxTemplateTag;
@@ -412,9 +427,12 @@ export default class ProxmoxProvider implements InstanceProvider {
               .lxc.$(lxc.vmid)
               .config.$get()
               .then((config) => {
+                //SAL
                 if (config.template) {
                   templateID = lxc.vmid;
                 }
+                // console.log(config.template);
+                // templateID = lxc.vmid;
               });
             // template found, no need to search further
             if (templateID !== undefined) {
@@ -456,7 +474,7 @@ export default class ProxmoxProvider implements InstanceProvider {
         .clone.$post({
           newid: vmID,
           hostname: vmHostname,
-          pool: "learn-sdn-hub",
+          pool: this.proxmoxPool,
           target: targetNode.node,
           full: false,
         })
@@ -591,11 +609,11 @@ export default class ProxmoxProvider implements InstanceProvider {
         );
       });
 
-    // add tag "learn-sdn-hub" to the VM
+    // add learn-sdn-hub tag to the VM
     await this.proxmox.nodes
       .$(targetNode.node)
       .lxc.$(vmID)
-      .config.$put({ tags: "learn-sdn-hub" })
+      .config.$put({ tags: this.proxmoxTag })
       .catch((reason) => {
         const originalMessage =
           reason instanceof Error ? reason.message : "Unknown error";
@@ -648,6 +666,390 @@ export default class ProxmoxProvider implements InstanceProvider {
 
     console.info("ProxmoxProvider: VM SSH ready");
 
+    //SAL
+    //Create SSH tunnel on any port (to be provided by option)
+    if (options.sshTunnelingPorts !== undefined) {
+      const activePorts: Set<number> = new Set(); // Speichert die aktiven Ports
+      options.sshTunnelingPorts.forEach(portStr => {
+        portStr = portStr.replace(/(\d+)\$\((GROUP_ID)\)/g, (_, port, __) => {
+          // console.log(port);
+          return (Number(port) + groupNumber).toString();
+        });
+        
+        const port = Number(portStr);
+        if (port > 1024 && !activePorts.has(port)) {
+          const createSSHTunnel = () => {
+            return new Promise<boolean>((resolve, reject) => {
+              console.log(`SSH Tunnel zu ${vmIPAddress}:${port} wird versucht...`);
+
+              try {
+                const sshConnection = new SSHConnection({
+                  endHost: vmIPAddress,
+                  bastionHost: this.sshJumpHostIPAddress,
+                  // port: this.sshJumpHostPort,
+                  username: this.sshJumpHostUser,
+                  password: this.sshJumpHostPassword,
+                  // privateKey: this.sshJumpHostPrivateKey
+                  //   ? fs.readFileSync(this.sshJumpHostPrivateKey)
+                  //   : undefined,
+                  skipAutoPrivateKey: true               
+                });
+
+                if (!sshConnection)
+                  return reject(new Error(`SSH Tunnel zu ${vmIPAddress}:${port} fehlgeschlagen`));
+
+                sshConnection.forward({
+                  fromPort: port,
+                  toHost: vmIPAddress,
+                  toPort: port
+                }).then(() => {
+                  console.log(`SSH Tunnel zu ${vmIPAddress}:${port} erfolgreich hergestellt`);
+                  // console.log(result);
+                }).catch((error: unknown) => {
+                  if (error instanceof Error) {
+                    console.error(`SSH Tunnel beenden fehlgeschlagen: ${error.message}`);
+                  }
+                  // console.error(error);
+                });
+
+                if (!ProxmoxProvider.sshTunnelConnections.has(vmIPAddress)) {
+                  ProxmoxProvider.sshTunnelConnections.set(vmIPAddress, []); // Falls IP noch nicht existiert, leere Liste erstellen
+                }
+                ProxmoxProvider.sshTunnelConnections.get(vmIPAddress)!.push(sshConnection); // Verbindung zur Liste hinzufügen
+            
+                activePorts.add(port); // Port als aktiv markieren
+                return resolve(true);
+              } catch (error) {
+                reject(new Error(`SSH Tunnel zu ${vmIPAddress}:${port} fehlgeschlagen`));
+                console.error(`SSH Tunnel zu ${vmIPAddress}:${port} fehlgeschlagen`);
+                console.error(error);
+              } 
+            });
+          };
+
+          const createSSHTunnelWithRetry = (maxRetries: number, timeout: number) => {
+            let retries = 0;
+          
+            const attemptTunnelCreation = () => {
+              if (retries >= maxRetries) {
+                console.error("SSH Tunnel: Timed out waiting for SSH connection.");
+                return;
+              }
+          
+              console.log(`Versuch ${retries + 1} von ${maxRetries}`);
+          
+              createSSHTunnel()
+                .then((connected) => {
+                  if (connected) {
+                    console.log("SSH Tunnel erfolgreich erstellt!");
+                  } else {
+                    retries++;
+                    setTimeout(attemptTunnelCreation, timeout);  // Wiederhole nach timeout
+                  }
+                })
+                .catch((err) => {
+                  console.error("Fehler beim Tunnelaufbau:", err);
+                  retries++;
+                  setTimeout(attemptTunnelCreation, timeout);  // Wiederhole nach timeout
+                });
+            };
+          
+            attemptTunnelCreation();
+          };
+          
+          createSSHTunnelWithRetry(10, 3000); // Maximal 5 Versuche, mit 1 Sekunde Pause zwischen den Versuchen          
+        }
+      });
+    }
+
+    // Add kubeconfig to container if requested
+    if (options.mountKubeconfig) {
+      const containerKubeconfigPath: string = "/home/" + process.env.SSH_USERNAME + "/.kube/config";
+      let kubeconfigPath: string;
+
+      const k8s: KubernetesManager = new KubernetesManager();
+      try {
+        kubeconfigPath = k8s.getLocalKubeconfigPath(groupNumber);
+      } catch (err) {
+        throw new Error(
+          "ProxmoxProvider: Could not get kubeconfig path.\n" +
+            (err as Error).message,
+        );
+      }
+
+      // mkdir -p /home/p4/.kube
+      const sshJumpHostMkdirConnection = new Client();
+      const sshMkdirKubeconfig = new Client();
+
+      await new Promise<void>((resolve, reject) => {
+        sshJumpHostMkdirConnection
+          .on("ready", () => {
+            //console.log(
+            //  "ProxmoxProvider: SSH jump host connection for mkdir kubeconfig ready. Trying to forward and connect to instance.",
+            //);
+            sshJumpHostMkdirConnection.forwardOut(
+              "127.0.0.1",
+              0,
+              vmIPAddress,
+              providerInstance.sshPort,
+              (err, stream) => {
+                if (err) {
+                  console.error(
+                    "ProxmoxProvider: SSH connection forward for mkdir kubeconfig failed. " +
+                      err.message,
+                  );
+                  stream.end();
+                  sshMkdirKubeconfig.end();
+                  sshJumpHostMkdirConnection.end();
+                  reject(err);
+                } else {
+                  sshMkdirKubeconfig
+                  .on("ready", () => {
+                    sshMkdirKubeconfig.exec(
+                      "mkdir -p /home/" + process.env.SSH_USERNAME + "/.kube",
+                      (err, stream) => {
+                        if (err) {
+                          reject(
+                            new Error(
+                              "ProxmoxProvider: Could not create kubeconfig directory on new VM (" +
+                                vmID +
+                                ").\n" +
+                                err.message,
+                            ),
+                          );
+                        } else {
+                          stream.on("error", (err: { message: string; }) => {
+                            console.error(
+                              "ProxmoxProvider: mkdir kubeconfig error: " +
+                                err.message,
+                            );
+                            stream.end();
+                            sshMkdirKubeconfig.end();
+                            sshJumpHostMkdirConnection.end();
+                            reject(new Error(err.message));
+                          });
+                          stream.on("exit", (code) => {
+                            console.debug(
+                              "ProxmoxProvider: mkdir kubeconfig exit: " + code,
+                            );
+                            if (code === 0) {
+                              stream.end();
+                              sshMkdirKubeconfig.end();
+                              sshJumpHostMkdirConnection.end();
+                              resolve();
+                            } else {
+                              stream.end();
+                              sshMkdirKubeconfig.end();
+                              sshJumpHostMkdirConnection.end();
+                              reject(
+                                new Error(
+                                  "ProxmoxProvider: Could not create kubeconfig directory on new VM (" +
+                                    vmID +
+                                    ").\n" +
+                                    "Exit code: " +
+                                    code,
+                                ),
+                              );
+                            }                            
+                          });
+                        }
+                      },
+                    );
+                  })
+                  // close is handled inside exec command above
+                  .on("close", () => {
+                    // console.debug(
+                    //  "ProxmoxProvider: SSH instance connection for mkdir kubeconfig closed."
+                    // );
+                    stream.end();
+                    sshMkdirKubeconfig.end();
+                    sshJumpHostMkdirConnection.end();
+                  })
+                  .on("error", (err) => {
+                    console.error(
+                      "ProxmoxProvider: SSH instance connection for mkdir kubeconfig error. " +
+                        err.message,
+                    );
+                    stream.end();
+                    sshMkdirKubeconfig.end();
+                    sshJumpHostMkdirConnection.end();
+                    reject(err);
+                  })
+                  .connect({
+                    sock: stream,
+                    username: process.env.SSH_USERNAME,
+                    password: process.env.SSH_PASSWORD,
+                    privateKey: process.env.SSH_PRIVATE_KEY_PATH
+                      ? fs.readFileSync(process.env.SSH_PRIVATE_KEY_PATH)
+                      : undefined,
+                    readyTimeout: 1000,
+                    //debug: (debug) => {
+                    //  console.log(debug)
+                    //},
+                  });
+                }
+              },
+            );
+          })
+          .on("error", (err) => {
+            console.error(
+              "ProxmoxProvider: SSH jump host connection for mkdir kubeconfig error. " + err.message,
+            );
+            sshMkdirKubeconfig.end();
+            sshJumpHostMkdirConnection.end();
+            reject(err);
+          })
+          .connect({
+            host: this.sshJumpHostIPAddress,
+            port: this.sshJumpHostPort,
+            username: this.sshJumpHostUser,
+            password: this.sshJumpHostPassword,
+            privateKey: this.sshJumpHostPrivateKey
+              ? fs.readFileSync(this.sshJumpHostPrivateKey)
+              : undefined,
+            readyTimeout: 1000,
+            //debug: (debug) => {
+            //  console.debug(debug)
+            //},
+          });
+
+      }).catch((reason) => {
+        const originalMessage =
+          reason instanceof Error ? reason.message : "Unknown error";
+        throw new Error(
+          `ProxmoxProvider: Could not create kubeconfig directory on new VM (${vmID}).\n` +
+            originalMessage,
+        );
+      });
+
+      // scp kubeconfig to container
+      const sshJumpHostCopyConnection = new Client();
+      const sshCopyKubeconfig = new Client();
+      await new Promise<void>((resolve, reject) => {
+        sshJumpHostCopyConnection
+          .on("ready", () => {
+            // console.log(
+            //  "ProxmoxProvider: SSH jump host connection for copy kubeconfig ready. Trying to forward and connect to instance.",
+            // );
+
+            sshJumpHostCopyConnection.forwardOut(
+              "127.0.0.1",
+              0,
+              vmIPAddress,
+              providerInstance.sshPort,
+              (err, stream) => {
+                if (err) {
+                  console.error(
+                    "ProxmoxProvider: SSH connection forward for copy kubeconfig failed. " +
+                      err.message,
+                  );
+                  stream.end();
+                  sshCopyKubeconfig.end();
+                  sshJumpHostCopyConnection.end();
+                  reject(err);
+                } else {
+
+                  sshCopyKubeconfig
+                  .on("ready", () => {
+                    sshCopyKubeconfig.sftp((err, sftp) => {
+                      if (err) {
+                        reject(
+                          new Error(
+                            "ProxmoxProvider: Could not establish SFTP connection to new VM (" +
+                              vmID +
+                              ") to copy kubeconfig.\n" +
+                              err.message,
+                          ),
+                        );
+                      } else {
+                        sftp.fastPut(kubeconfigPath, containerKubeconfigPath, (err) => {
+                          if (err) {
+                            sftp.end();
+                            sshCopyKubeconfig.end();
+                            sshJumpHostCopyConnection.end();
+                            reject(
+                            new Error(
+                              "ProxmoxProvider: Could not copy kubeconfig to new VM (" +
+                                vmID +
+                                ").\n" +
+                                err.message,
+                            ),
+                            );
+                          } else {
+                            sftp.end();
+                            sshCopyKubeconfig.end();
+                            sshJumpHostCopyConnection.end();
+                            resolve();  
+                          }
+                        });  
+                      }
+                    });
+                  })
+                  .on("close", () => {
+                    //console.debug(
+                    //  "ProxmoxProvider: SSH instance connection for copy kubeconfig closed."
+                    //);
+                    stream.end();
+                    sshCopyKubeconfig.end();
+                    sshJumpHostCopyConnection.end();
+                  })
+                  .on("error", (err) => {
+                    console.error(
+                      "ProxmoxProvider: SSH instance connection for copy kubeconfig error. " +
+                        err.message,
+                    );
+                    stream.end();
+                    sshCopyKubeconfig.end();
+                    sshJumpHostCopyConnection.end();
+                    reject(err);
+                  })
+                  .connect({
+                    sock: stream,
+                    username: process.env.SSH_USERNAME,
+                    password: process.env.SSH_PASSWORD,
+                    privateKey: process.env.SSH_PRIVATE_KEY_PATH
+                      ? fs.readFileSync(process.env.SSH_PRIVATE_KEY_PATH)
+                      : undefined,
+                    readyTimeout: 1000,
+                    //debug: (debug) => {
+                    //  console.log(debug)
+                    //},
+                  });
+                }
+              },
+            );
+          })
+          .on("error", (err) => {
+            console.error(
+              "ProxmoxProvider: SSH jump host connection for copy kubeconfig error. " + err.message,
+            );
+            sshCopyKubeconfig.end();
+            sshJumpHostCopyConnection.end();
+            reject(err);
+          })
+          .connect({
+            host: this.sshJumpHostIPAddress,
+            port: this.sshJumpHostPort,
+            username: this.sshJumpHostUser,
+            password: this.sshJumpHostPassword,
+            privateKey: this.sshJumpHostPrivateKey
+              ? fs.readFileSync(this.sshJumpHostPrivateKey)
+              : undefined,
+            readyTimeout: 1000,
+            //debug: (debug) => {
+            //  console.debug(debug)
+            //},
+          });
+      }).catch((reason) => {
+        const originalMessage =
+          reason instanceof Error ? reason.message : "Unknown error";
+        throw new Error(
+          `ProxmoxProvider: Could not copy kubeconfig to new VM (${vmID}).\n` +
+            originalMessage,
+        );
+      });
+    }
+
     ProxmoxProvider.proxmoxVMInstances.set(vmIPAddress, {
       type: proxmoxInstanceType.lxc,
       vmid: vmID,
@@ -696,7 +1098,7 @@ export default class ProxmoxProvider implements InstanceProvider {
         .config.$get()
         .then(async (vmConfig) => {
           if (
-            vmConfig.tags?.split(";").find((tag) => tag === "learn-sdn-hub")
+            vmConfig.tags?.split(";").find((tag) => tag === this.proxmoxTag)
           ) {
             await this.proxmox.nodes
               .$(node.node)
@@ -781,7 +1183,7 @@ export default class ProxmoxProvider implements InstanceProvider {
             vmIPAddress = ipAddress[1];
           }
           if (
-            vmConfig.tags?.split(";").find((tag) => tag === "learn-sdn-hub")
+            vmConfig.tags?.split(";").find((tag) => tag === this.proxmoxTag)
           ) {
             await this.proxmox.nodes
               .$(node.node)
@@ -926,6 +1328,26 @@ export default class ProxmoxProvider implements InstanceProvider {
     }
     ProxmoxProvider.proxmoxVMInstances.set(vmIPAddress, proxmoxVMInstance);
 
+    //SAL
+    const sshTunnelConnections = ProxmoxProvider.sshTunnelConnections.get(vmIPAddress);
+    if (sshTunnelConnections && Array.isArray(sshTunnelConnections)) {
+      sshTunnelConnections.forEach(sshTunnelConnection => {
+        if (!sshTunnelConnection) {
+          return;
+        }
+
+        sshTunnelConnection.shutdown().then(() => {
+          console.log(`SSH Tunnel erfolgreich beendet`);
+          // console.log(result);
+        }).catch((error: unknown) => {
+          if (error instanceof Error) {
+            console.error(`SSH Tunnel beenden fehlgeschlagen: ${error.message}`);
+          }
+          // console.error(error);
+        });
+      });
+    }
+
     //console.debug("Deleted VM: " + instance);
 
     return Promise.resolve();
@@ -944,7 +1366,7 @@ export default class ProxmoxProvider implements InstanceProvider {
         deadline.toISOString(),
     );
 
-    // get all VMs with tag learn-sdn-hub on all nodes
+    // get all VMs with learn-sdn-hub tag on all nodes
     await this.proxmox.nodes
       .$get()
       .then(async (nodes) => {
@@ -962,7 +1384,7 @@ export default class ProxmoxProvider implements InstanceProvider {
                     if (
                       current.tags
                         ?.split(";")
-                        .find((tag) => tag === "learn-sdn-hub")
+                        .find((tag) => tag === this.proxmoxTag)
                     ) {
                       if (
                         current.status === "stopped" ||
@@ -1087,8 +1509,7 @@ export default class ProxmoxProvider implements InstanceProvider {
                     })
                     .on("close", () => {
                       //console.debug(
-                      //  "ProxmoxProvider: SSH instance connection closed. Had error: " +
-                      //    hadError,
+                      //  "ProxmoxProvider: SSH instance connection closed."
                       //);
                       stream.end();
                       sshConnection.end();

@@ -135,8 +135,8 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
     queryValidator,
     (req, res) => {
       const reqWithUser = req as RequestWithUser;
-      const environment = reqWithUser.query.environment;
-      const targetEnv = environments.get(String(environment));
+      const environment = reqWithUser.query.environment as string;
+      const targetEnv = environments.get(environment);
 
       if (targetEnv === undefined) {
         res
@@ -149,7 +149,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
         reqWithUser.user.username,
         reqWithUser.user.groupNumber,
         reqWithUser.user.sessionId,
-        String(environment),
+        environment,
         targetEnv,
         provider,
         persister,
@@ -172,8 +172,8 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
     queryValidator,
     (req, res) => {
       const reqWithUser = req as RequestWithUser;
-      const environment = reqWithUser.query.environment;
-      const targetEnv = environments.get(String(environment));
+      const environment = reqWithUser.query.environment as string;
+      const targetEnv = environments.get(environment);
 
       if (targetEnv === undefined) {
         res
@@ -182,10 +182,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
         return;
       }
 
-      Environment.deleteEnvironment(
-        reqWithUser.user.groupNumber,
-        String(environment),
-      )
+      Environment.deleteEnvironment(reqWithUser.user.groupNumber, environment)
         .then((deleted) => {
           if (deleted) {
             res.status(200).json({ status: "success" });

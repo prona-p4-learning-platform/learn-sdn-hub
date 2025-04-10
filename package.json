@@ -15,5 +15,16 @@
   "workspaces": [
     "backend",
     "frontend"
-  ]
+  ],
+  "overrides": {
+    "@types/connect-history-api-fallback@1.5.4": {
+      "@types/express-serve-static-core": "^4"
+    }
+  },
+  "engines": {
+    "node": ">=20.11.0"
+  },
+  "dependencies": {
+    "node-ssh-forward": "^0.7.2"
+  }
 }

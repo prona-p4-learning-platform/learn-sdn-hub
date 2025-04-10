@@ -106,7 +106,7 @@ class microVM {
             detached: true,
           },
         );
-      } catch (err) {
+      } catch (_) {
         reject(
           new Error("FirecrackerProvider: Could not spawn firecracker process"),
         );
@@ -176,7 +176,7 @@ class microVM {
         .then((response: { data: FirecrackerLogger }) => {
           resolve(response.data);
         })
-        .catch((err) => {
+        .catch((err: Error) => {
           reject(err);
         });
     });
@@ -191,7 +191,7 @@ class microVM {
         .then((response: { data: FirecrackerMachineConfig }) => {
           resolve(response.data);
         })
-        .catch((err) => {
+        .catch((err: Error) => {
           reject(err);
         });
     });
@@ -206,7 +206,7 @@ class microVM {
         .then((response: { data: FirecrackerBalloonMemory }) => {
           resolve(response.data);
         })
-        .catch((err) => {
+        .catch((err: Error) => {
           reject(err);
         });
     });
@@ -219,7 +219,7 @@ class microVM {
         .then((response: { data: FirecrackerBootSource }) => {
           resolve(response.data);
         })
-        .catch((err) => {
+        .catch((err: Error) => {
           reject(err);
         });
     });
@@ -232,7 +232,7 @@ class microVM {
         .then((response: { data: FirecrackerDrive }) => {
           resolve(response.data);
         })
-        .catch((err) => {
+        .catch((err: Error) => {
           reject(err);
         });
     });
@@ -248,7 +248,7 @@ class microVM {
         .then((response: { data: FirecrackerNetworkInterface }) => {
           resolve(response.data);
         })
-        .catch((err) => {
+        .catch((err: Error) => {
           reject(err);
         });
     });
@@ -261,7 +261,7 @@ class microVM {
         .then((response: { data: FirecrackerActionState }) => {
           resolve(response.data);
         })
-        .catch((err) => {
+        .catch((err: Error) => {
           reject(err);
         });
     });
@@ -606,7 +606,7 @@ export default class FirecrackerProvider implements InstanceProvider {
           " " +
           tap_id,
       );
-    } catch (error) {
+    } catch (_) {
       mv.kill();
       throw new Error("FirecrackerProvider: Unable to create TAP device.");
     }
@@ -740,35 +740,35 @@ export default class FirecrackerProvider implements InstanceProvider {
 
     for (const [microVMId, microVM] of this.firecrackers.entries()) {
       if (microVM.expirationDate < deadline) {
-        const deleted = await Environment.deleteInstanceEnvironments(microVMId).catch(
-          (reason) => {
-            const originalMessage =
-              reason instanceof Error ? reason.message : "Unknown error";
-            throw new Error(
-              `FirecrackerProvider: Could not delete instance for expired microVM (${microVMId}) during pruning.\n` +
-                originalMessage,
-            );
-          },
-        );
+        const deleted = await Environment.deleteInstanceEnvironments(
+          microVMId,
+        ).catch((reason) => {
+          const originalMessage =
+            reason instanceof Error ? reason.message : "Unknown error";
+          throw new Error(
+            `FirecrackerProvider: Could not delete instance for expired microVM (${microVMId}) during pruning.\n` +
+              originalMessage,
+          );
+        });
         if (!deleted) {
           console.log(
             `FirecrackerProvider: Could not delete environment during pruning, environment seams to be gone already, deleting leftover microVM: (${microVMId}).`,
           );
           await this.deleteServer(microVMId).catch((reason) => {
             const originalMessage =
-            reason instanceof Error ? reason.message : "Unknown error";
-            throw(new Error(
+              reason instanceof Error ? reason.message : "Unknown error";
+            throw new Error(
               `FirecrackerProvider: Could not delete expired microVM (${microVMId}) during pruning.\n` +
                 originalMessage,
-            ));
-          })
+            );
+          });
         } else {
           console.log(
             "FirecrackerProvider: deleted expired microVM: " +
               microVMId +
               " expiration date: " +
               microVM.expirationDate.toISOString(),
-          ); 
+          );
         }
         return;
       }
@@ -835,7 +835,9 @@ export default class FirecrackerProvider implements InstanceProvider {
       await this.sleep(1000);
     }
 
-    throw new Error("FirecrackerProvider: Timed out waiting for SSH connection.");
+    throw new Error(
+      "FirecrackerProvider: Timed out waiting for SSH connection.",
+    );
   }
 
   sleep(ms: number): Promise<void> {

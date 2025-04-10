@@ -8,7 +8,10 @@ export default function (
   groupNumber: number,
   desktopQueryString: string,
 ): void {
-  const envInstance = Environment.getActiveEnvironment(environment, groupNumber);
+  const envInstance = Environment.getActiveEnvironment(
+    environment,
+    groupNumber,
+  );
   if (envInstance !== undefined) {
     // guacamole exmple:
     //   wss://guacamole-host.example.org/guacamole/websocket-tunnel?token=<token-here>&GUAC_DATA_SOURCE=mysql&GUAC_ID=16&GUAC_TYPE=c&GUAC_WIDTH=2940&GUAC_HEIGHT=1279&GUAC_DPI=96&GUAC_TIMEZONE=Europe%2FBerlin&GUAC_AUDIO=audio%2FL8&GUAC_AUDIO=audio%2FL16&GUAC_IMAGE=image%2Fjpeg&GUAC_IMAGE=image%2Fpng&GUAC_IMAGE=image%2Fwebp
