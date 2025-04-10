@@ -23,11 +23,11 @@ learn-sdn-hub and the surrounding ProNA ecosystem with p4-container and p4-boile
 
 The following figures show screenshots of the environment, used to teach the basic functions of a P4-based Layer 2 "learning" (flooding & filtering) switch:
 
-![learn-sdn hub assignment roster](https://raw.githubusercontent.com/prona-p4-learning-platform/learn-sdn-hub/develop/examples/screenshots/prona-learn-sdn-hub-assignment-screenshot "overview and deployment of assignments")
+![learn-sdn hub assignment roster](/examples/screenshots/prona-learn-sdn-hub-assignment-screenshot.png "overview and deployment of assignments")
 
-![learn-sdn hub used for exploratory learning of the basic functions of a P4-based L2 switch](https://raw.githubusercontent.com/prona-p4-learning-platform/learn-sdn-hub/develop/examples/screenshots/prona-learn-sdn-hub-completion-screenshot "web-based environment with markdown lab sheet incl. mermaid figures/diagrams and monaco editor incl. code completion")
+![learn-sdn hub used for exploratory learning of the basic functions of a P4-based L2 switch](/examples/screenshots/prona-learn-sdn-hub-completion-screenshot.png "web-based environment with markdown lab sheet incl. mermaid figures/diagrams and monaco editor incl. code completion")
 
-![gns3 proxy setup figure including external clients, backend servers and the proxy in the middle as well as its functions](https://raw.githubusercontent.com/prona-p4-learning-platform/learn-sdn-hub/develop/examples/screenshots/prona-learn-sdn-hub-terminal-split-completion-screenshot "terminal access to mininet and collaborative editing of Python code of the controller app in the monaco editor")
+![gns3 proxy setup figure including external clients, backend servers and the proxy in the middle as well as its functions](https://raw.githubusercontent.com/prona-p4-learning-platform/learn-sdn-hub/develop/examples/screenshots/prona-learn-sdn-hub-terminal-split-completion-screenshot.png "terminal access to mininet and collaborative editing of Python code of the controller app in the monaco editor")
 
 The assignment shown in the screenshots was based on the [p4-boilerplate](https://github.com/prona-p4-learning-platform/p4-boilerplate). You can find the code and lab exercises in [Example3-LearningSwitch](https://github.com/prona-p4-learning-platform/p4-boilerplate/tree/main/Example3-LearningSwitch). [p4-container](https://github.com/prona-p4-learning-platform/p4-container) can be used as container image for the instances using the docker providerto run the tasks of the assignment. It already contains all requirements for a learn-sdn-hub instance (primarily, SSH server and LSP proxy).
 
