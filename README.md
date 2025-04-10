@@ -17,7 +17,7 @@ Initial development was partially funded by the research programme [digLL](https
 * Support for tests and submissions in assignments, e.g., for practical examination or bonus points in labs and courses
 * Support for assignments in a Kubernetes environment
 * Support for OpenID Connect (OIDC) to connect multiple external identity providers, e.g., for federation or common identity sources like GitHub, Google etc.
-* Early support for topology visualization for containerlab-based labs using contained [graph](https://github.com/prona-p4-learning-platform/learn-sdn-hub/blob/develop/examples/SAL-Proxmox-Files/containerlab_scripts/generate_graph.sh) feature
+* Early support for topology visualization for containerlab-based labs using contained [graph](/examples/SAL-Proxmox-Files/containerlab_scripts/generate_graph.sh) feature
 
 learn-sdn-hub and the surrounding ProNA ecosystem with p4-container and p4-boilerplate etc. was also published and presented in our paper at NOMS 2024-2024 IEEE Network Operations and Management Symposium [https://ieeexplore.ieee.org/document/10575540](https://ieeexplore.ieee.org/document/10575540).
 
@@ -27,7 +27,7 @@ The following figures show screenshots of the environment, used to teach the bas
 
 ![learn-sdn hub used for exploratory learning of the basic functions of a P4-based L2 switch](/examples/screenshots/prona-learn-sdn-hub-completion-screenshot.png "web-based environment with markdown lab sheet incl. mermaid figures/diagrams and monaco editor incl. code completion")
 
-![gns3 proxy setup figure including external clients, backend servers and the proxy in the middle as well as its functions](https://raw.githubusercontent.com/prona-p4-learning-platform/learn-sdn-hub/develop/examples/screenshots/prona-learn-sdn-hub-terminal-split-completion-screenshot.png "terminal access to mininet and collaborative editing of Python code of the controller app in the monaco editor")
+![gns3 proxy setup figure including external clients, backend servers and the proxy in the middle as well as its functions](/examples/screenshots/prona-learn-sdn-hub-terminal-split-completion-screenshot.png "terminal access to mininet and collaborative editing of Python code of the controller app in the monaco editor")
 
 The assignment shown in the screenshots was based on the [p4-boilerplate](https://github.com/prona-p4-learning-platform/p4-boilerplate). You can find the code and lab exercises in [Example3-LearningSwitch](https://github.com/prona-p4-learning-platform/p4-boilerplate/tree/main/Example3-LearningSwitch). [p4-container](https://github.com/prona-p4-learning-platform/p4-container) can be used as container image for the instances using the docker providerto run the tasks of the assignment. It already contains all requirements for a learn-sdn-hub instance (primarily, SSH server and LSP proxy).
 
