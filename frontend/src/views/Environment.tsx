@@ -210,6 +210,11 @@ function Environment(): JSX.Element {
     setShowSubmitDialog(false);
   }
 
+  useEffect(() => {
+    // if the last step is reached, steps are completed and finish / submission of assignment can be enabled
+    setStepsCompleted(activeStep === state.stepLabels.length);
+  }, [activeStep, state]);
+
   async function checkStepTest() {
     // should send terminalState (maybe even editorState) if needed to backend and wait for result of test
     const testSnack = enqueueSnackbar("Testing step result...", {
@@ -236,10 +241,6 @@ function Environment(): JSX.Element {
 
           if (activeStep < state.stepLabels.length) {
             setActiveStep(activeStep + 1);
-          }
-          // if this was the last step, steps are completed and finish / submission of assignment can be enabled
-          if (activeStep === state.stepLabels.length) {
-            setStepsCompleted(true);
           }
         } else {
           enqueueSnackbar(payload.data.message, { variant: "error" });
