@@ -1,5 +1,7 @@
 import { EnvironmentDescription } from "./Environment";
 
+// Configuration.ts holds the main configuration regarding the assignments that can be deployed, its contents can also be red from MongoDB, which would make this file obsolete
+
 const environments = new Map<string, EnvironmentDescription>();
 
 environments.set("p4basic-with-guacamole", {

@@ -1,5 +1,10 @@
 import { InstanceProvider, VMEndpoint } from "./Provider";
 
+// LocalMultiuserVMProvider is only used for standalone demo builds, e.g., using the provided docker compose file.
+// The provider is using already running VMs or instances that can be reached using SSH.
+// Therefore, this provider does not include several features that are only possible with real virtualization
+// environments to deploy and start labs.
+
 // better use env var to allow configuration of port numbers?
 const lsPort = 3005;
 

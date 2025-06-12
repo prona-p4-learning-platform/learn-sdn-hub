@@ -4,7 +4,7 @@ import express from "express";
 import { MongoClient } from "mongodb";
 import MongoDBPersister from "../../src/database/MongoDBPersister";
 import MongoDBAuthenticationProvider from "../../src/authentication/MongoDBAuthenticationProvider";
-import LocalVMProvider from "../../src/providers/LocalVMProvider";
+import LocalMultiuserVMProvider from "../../src/providers/LocalMultiuserVMProvider";
 import { beforeAll, describe, it, expect, afterAll } from "@jest/globals";
 
 const app = express();
@@ -33,7 +33,7 @@ beforeAll(async () => {
     APIRoutes(
       instance,
       [new MongoDBAuthenticationProvider(instance)],
-      new LocalVMProvider(),
+      new LocalMultiuserVMProvider(),
     ),
   );
 });
