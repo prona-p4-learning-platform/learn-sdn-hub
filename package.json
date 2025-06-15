@@ -23,8 +23,5 @@
   },
   "engines": {
     "node": ">=20.11.0"
-  },
-  "dependencies": {
-    "node-ssh-forward": "^0.7.2"
   }
 }
