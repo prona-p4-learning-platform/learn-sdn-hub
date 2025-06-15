@@ -10,7 +10,7 @@ import proxmoxApi, { Proxmox, ProxmoxEngineOptions } from "proxmox-api";
 import fs from "fs";
 import { Netmask } from "netmask";
 import KubernetesManager from "../KubernetesManager";
-import { SSHConnection } from 'node-ssh-forward'
+import { SSHConnection } from '../utils/SSHConnection';
 
 const schedulerIntervalSeconds = 5 * 60;
 
@@ -685,14 +685,13 @@ export default class ProxmoxProvider implements InstanceProvider {
               try {
                 const sshConnection = new SSHConnection({
                   endHost: vmIPAddress,
-                  bastionHost: this.sshJumpHostIPAddress,
+                  jumpHost: this.sshJumpHostIPAddress,
                   // port: this.sshJumpHostPort,
                   username: this.sshJumpHostUser,
                   password: this.sshJumpHostPassword,
                   // privateKey: this.sshJumpHostPrivateKey
                   //   ? fs.readFileSync(this.sshJumpHostPrivateKey)
-                  //   : undefined,
-                  skipAutoPrivateKey: true               
+                  //   : undefined,        
                 });
 
                 if (!sshConnection)
