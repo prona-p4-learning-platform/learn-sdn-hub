@@ -46,6 +46,7 @@ it("successfully adds a new environment to a user's existing list of environment
     "some-uuid",
     "some-description",
     "some-instance",
+    "test-backend",
   );
   const result = await connection
     .db()

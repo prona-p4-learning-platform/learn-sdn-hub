@@ -11,6 +11,7 @@ import {
   InstanceNotFoundErrorMessage,
 } from "./providers/Provider";
 import { Persister } from "./database/Persister";
+import { getBackendIdentifier } from "./utils/BackendIdentifier";
 
 export interface AliasedFile {
   absFilePath: string;
@@ -349,6 +350,7 @@ export default class Environment {
           environmentId,
           env.description,
           existingInstance,
+          getBackendIdentifier(),
         )
         .catch((err) => {
           return Promise.reject(
@@ -429,7 +431,7 @@ export default class Environment {
         
         // Remove environment from all group users
         for (const user of groupUsers) {
-          await persister.RemoveUserEnvironment(user.username, environmentId)
+          await persister.RemoveUserEnvironment(user.username, environmentId, getBackendIdentifier())
             .catch((err: Error) => {
               console.log(`Warning: Could not remove environment for user ${user.username}: ${err.message}`);
             });
@@ -452,7 +454,7 @@ export default class Environment {
           const groupUsers = allUsers.filter(user => user.groupNumber === groupNumber);
           
           for (const user of groupUsers) {
-            await persister.RemoveUserEnvironment(user.username, environmentId)
+            await persister.RemoveUserEnvironment(user.username, environmentId, getBackendIdentifier())
               .catch((removeErr: Error) => {
                 console.log(`Warning: Could not remove environment for user ${user.username}: ${removeErr.message}`);
               });
@@ -550,6 +552,7 @@ export default class Environment {
             await this.persister.RemoveUserEnvironment(
               this.username,
               filtered[0].environment,
+              getBackendIdentifier(),
             );
           }
 
@@ -595,6 +598,7 @@ export default class Environment {
       this.environmentId,
       this.configuration.description,
       endpoint.instance,
+      getBackendIdentifier(),
     );
 
     console.log(
@@ -875,7 +879,7 @@ export default class Environment {
         .deleteServer(endpoint.instance)
         .then(async () => {
           await this.persister
-            .RemoveUserEnvironment(this.username, this.environmentId)
+            .RemoveUserEnvironment(this.username, this.environmentId, getBackendIdentifier())
             .catch((err: Error) => {
               throw new Error(
                 "Error: Unable to remove UserEnvironment.\n" + err.message,
@@ -884,7 +888,7 @@ export default class Environment {
 
           for (const user of activeUsers) {
             await this.persister
-              .RemoveUserEnvironment(user, this.environmentId)
+              .RemoveUserEnvironment(user, this.environmentId, getBackendIdentifier())
               .catch((err: Error) => {
                 throw new Error(
                   `Error: Unable to remove UserEnvironment for group member ${user}.\n${err.message}`,

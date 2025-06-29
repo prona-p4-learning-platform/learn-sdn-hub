@@ -102,6 +102,7 @@ export default class MemoryPersister implements Persister {
     environment: string,
     description: string,
     instance: string,
+    backend: string,
   ): Promise<void> {
     return new Promise((resolve) => {
       let userEnv = userEnvironments.get(username);
@@ -111,20 +112,23 @@ export default class MemoryPersister implements Persister {
         userEnvironments.set(username, userEnv);
       }
 
+      // backend identifier is not used in MemoryPersister (memory of backend host is used), but kept for compatibility
       userEnv.set(environment, {
         environment,
         description,
         instance,
+        backend
       });
 
       resolve();
     });
   }
 
-  RemoveUserEnvironment(username: string, environment: string): Promise<void> {
+  // backend identifier is not used in MemoryPersister (memory of backend host is used), but kept for compatibility
+  RemoveUserEnvironment(username: string, environment: string, _backend: string): Promise<void> {
     return new Promise((resolve) => {
       userEnvironments.get(username)?.delete(environment);
-
+      
       resolve();
     });
   }

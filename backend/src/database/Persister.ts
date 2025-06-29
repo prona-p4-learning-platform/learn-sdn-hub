@@ -36,6 +36,7 @@ export interface UserEnvironment {
   environment: string;
   description: string;
   instance: string;
+  backend: string;
 }
 
 export interface UserData {
@@ -87,10 +88,12 @@ export interface Persister {
     environment: string,
     description: string,
     instance: string,
+    backend: string,
   ) => Promise<void>;
   RemoveUserEnvironment: (
     username: string,
     environment: string,
+    backend: string,
   ) => Promise<void>;
   CreateUserSubmission: (
     username: string,

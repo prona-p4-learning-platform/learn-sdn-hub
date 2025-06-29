@@ -20,6 +20,7 @@ import {
   TerminalStateType,
 } from "../Environment";
 import environments, { updateEnvironments } from "../Configuration";
+import { getBackendIdentifier } from "../utils/BackendIdentifier";
 
 const saltRounds = 10;
 
@@ -196,12 +197,18 @@ export default class MongoDBPersister implements Persister {
 
   async GetUserEnvironments(username: string): Promise<UserEnvironment[]> {
     const client = await this.getClient();
+    const backendId = getBackendIdentifier();
+    
     return await client
       .db()
       .collection<UserEntry>("users")
       .findOne({ username }, { projection: { environments: 1 } })
       .then((result) => {
-        return result && result.environments ? result.environments : [];
+        if (result && result.environments) {
+          // Filter environments to only return those for the current backend
+          return result.environments.filter(env => env.backend === backendId);
+        }
+        return [];
       });
   }
 
@@ -210,14 +217,25 @@ export default class MongoDBPersister implements Persister {
     environment: string,
     description: string,
     instance: string,
+    backend: string,
   ): Promise<void> {
     const client = await this.getClient();
     await client
       .db()
       .collection<UserEntry>("users")
       .findOneAndUpdate(
-        { username, "environments.environment": { $ne: environment } },
-        { $push: { environments: { environment, description, instance } } },
+        { 
+          username, 
+          "environments": { 
+            $not: { 
+              $elemMatch: { 
+                environment: environment, 
+                backend: backend 
+              } 
+            } 
+          } 
+        },
+        { $push: { environments: { environment, description, instance, backend } } },
         {
           projection: { environments: 1 },
         },
@@ -227,14 +245,15 @@ export default class MongoDBPersister implements Persister {
   async RemoveUserEnvironment(
     username: string,
     environment: string,
+    backend: string,
   ): Promise<void> {
     const client = await this.getClient();
     await client
       .db()
       .collection<UserEntry>("users")
       .findOneAndUpdate(
-        { username, "environments.environment": { $eq: environment } },
-        { $pull: { environments: { environment } } },
+        { username },
+        { $pull: { environments: { environment, backend } } },
         {
           projection: { environments: 1 },
         },
