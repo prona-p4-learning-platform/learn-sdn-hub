@@ -7,6 +7,8 @@ import LanguageServerHandler from "./LanguageServerHandler";
 import RemoteDesktopHandler from "./RemoteDesktopHandler";
 import { TokenPayload } from "../authentication/AuthenticationMiddleware";
 import jwt from "jsonwebtoken";
+import { Persister } from "../database/Persister";
+import { InstanceProvider } from "../providers/Provider";
 
 type WebsocketPathParams = {
   environment: string;
@@ -33,7 +35,11 @@ const rdMatcher = match<RDPathParams>(
   "/ws/environment/:environment/desktop/:alias",
 );
 
-export default function wrapWSWithExpressApp(server: Server): void {
+export default function wrapWSWithExpressApp(
+  server: Server,
+  persister: Persister,
+  provider: InstanceProvider,
+): void {
   const wss = new WebSocket.Server({ server });
   wss.on("connection", function (ws, request) {
     ws.once("message", (message) => {
@@ -74,13 +80,29 @@ export default function wrapWSWithExpressApp(server: Server): void {
               user.groupNumber,
               user.sessionId,
               type,
+              persister,
+              provider,
             );
           } else if (lspMatchResult !== false) {
             const { environment, language } = lspMatchResult.params;
-            LanguageServerHandler(ws, environment, user.groupNumber, language);
+            LanguageServerHandler(
+              ws,
+              environment,
+              user.groupNumber,
+              language,
+              persister,
+              provider,
+            );
           } else if (rdMatchResult !== false) {
             const { environment, alias } = rdMatchResult.params;
-            RemoteDesktopHandler(ws, environment, user.groupNumber, alias);
+            RemoteDesktopHandler(
+              ws,
+              environment,
+              user.groupNumber,
+              alias,
+              persister,
+              provider,
+            );
           } else {
             ws.send("No route handler.");
             ws.close();

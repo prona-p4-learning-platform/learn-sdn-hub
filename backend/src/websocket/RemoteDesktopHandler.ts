@@ -1,18 +1,27 @@
 import WebSocket from "ws";
 import Environment from "../Environment";
 import { addConnection, removeConnection } from "./CurrentConnections";
+import { Persister } from "../database/Persister";
+import { InstanceProvider } from "../providers/Provider";
+import environments from "../Configuration";
 
 export default function (
   wsFromBrowser: WebSocket,
   environment: string,
   groupNumber: number,
   desktopQueryString: string,
+  persister: Persister,
+  provider: InstanceProvider,
 ): void {
-  const envInstance = Environment.getActiveEnvironment(
+  Environment.getEnvironmentForWebsocket(
     environment,
     groupNumber,
-  );
-  if (envInstance !== undefined) {
+    "websocket-session", // Use a generic session ID for websockets
+    persister,
+    provider,
+    environments,
+  ).then((envInstance) => {
+    if (envInstance !== undefined) {
     // guacamole exmple:
     //   wss://guacamole-host.example.org/guacamole/websocket-tunnel?token=<token-here>&GUAC_DATA_SOURCE=mysql&GUAC_ID=16&GUAC_TYPE=c&GUAC_WIDTH=2940&GUAC_HEIGHT=1279&GUAC_DPI=96&GUAC_TIMEZONE=Europe%2FBerlin&GUAC_AUDIO=audio%2FL8&GUAC_AUDIO=audio%2FL16&GUAC_IMAGE=image%2Fjpeg&GUAC_IMAGE=image%2Fpng&GUAC_IMAGE=image%2Fwebp
     const desktop = envInstance.getDesktopByAlias(desktopQueryString);
@@ -70,8 +79,13 @@ export default function (
       wsFromBrowser.send("No desktop found, closing connection.");
       wsFromBrowser.close();
     }
-  } else {
-    wsFromBrowser.send("No environment found, closing connection.");
+    } else {
+      wsFromBrowser.send("No environment found, closing connection.");
+      wsFromBrowser.close();
+    }
+  }).catch((error) => {
+    console.log(`Failed to get environment for websocket: ${error}`);
+    wsFromBrowser.send("Failed to connect to environment, closing connection.");
     wsFromBrowser.close();
-  }
+  });
 }

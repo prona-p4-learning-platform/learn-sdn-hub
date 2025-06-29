@@ -1,5 +1,8 @@
 import WebSocket from "ws";
 import Environment from "../Environment";
+import { Persister } from "../database/Persister";
+import { InstanceProvider } from "../providers/Provider";
+import environments from "../Configuration";
 
 export default function (
   ws: WebSocket,
@@ -7,13 +10,18 @@ export default function (
   groupNumber: number,
   sessionId: string,
   type: string,
+  persister: Persister,
+  provider: InstanceProvider,
 ): void {
-  const envInstance = Environment.getActiveEnvironment(
+  Environment.getEnvironmentForWebsocket(
     environment,
     groupNumber,
     sessionId,
-  );
-  if (envInstance !== undefined) {
+    persister,
+    provider,
+    environments,
+  ).then((envInstance) => {
+    if (envInstance !== undefined) {
     const envConsole = envInstance.getConsoleByAlias(type);
     if (envConsole === undefined) {
       ws.close();
@@ -65,8 +73,13 @@ export default function (
     ws.on("close", function () {
       console.log("WS Session closed.");
     });
-  } else {
-    ws.send(`${environment} is not active or has no console of type ${type}`);
+    } else {
+      ws.send(`${environment} is not active or has no console of type ${type}`);
+      ws.close();
+    }
+  }).catch((error) => {
+    console.log(`Failed to get environment for websocket: ${error}`);
+    ws.send(`Failed to connect to environment ${environment}`);
     ws.close();
-  }
+  });
 }

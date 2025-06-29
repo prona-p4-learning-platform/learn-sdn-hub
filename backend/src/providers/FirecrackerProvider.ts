@@ -6,7 +6,6 @@ import {
 import axios, { AxiosInstance } from "axios";
 import { ToadScheduler, SimpleIntervalJob, AsyncTask } from "toad-scheduler";
 import { Client } from "ssh2";
-import Environment from "../Environment";
 import fs from "fs/promises";
 import { Netmask } from "netmask";
 import { ChildProcess, exec, execSync, spawn } from "child_process";
@@ -740,36 +739,26 @@ export default class FirecrackerProvider implements InstanceProvider {
 
     for (const [microVMId, microVM] of this.firecrackers.entries()) {
       if (microVM.expirationDate < deadline) {
-        const deleted = await Environment.deleteInstanceEnvironments(
-          microVMId,
-        ).catch((reason) => {
+        // Just delete the microVM directly during pruning
+        // Environment cleanup should be handled at a higher level
+        console.log(
+          `FirecrackerProvider: Deleting expired microVM: ${microVMId}.`,
+        );
+        await this.deleteServer(microVMId).catch((reason) => {
           const originalMessage =
             reason instanceof Error ? reason.message : "Unknown error";
-          throw new Error(
-            `FirecrackerProvider: Could not delete instance for expired microVM (${microVMId}) during pruning.\n` +
+          console.log(
+            `FirecrackerProvider: Could not delete expired microVM (${microVMId}) during pruning.\n` +
               originalMessage,
           );
         });
-        if (!deleted) {
-          console.log(
-            `FirecrackerProvider: Could not delete environment during pruning, environment seams to be gone already, deleting leftover microVM: (${microVMId}).`,
-          );
-          await this.deleteServer(microVMId).catch((reason) => {
-            const originalMessage =
-              reason instanceof Error ? reason.message : "Unknown error";
-            throw new Error(
-              `FirecrackerProvider: Could not delete expired microVM (${microVMId}) during pruning.\n` +
-                originalMessage,
-            );
-          });
-        } else {
-          console.log(
-            "FirecrackerProvider: deleted expired microVM: " +
-              microVMId +
-              " expiration date: " +
-              microVM.expirationDate.toISOString(),
-          );
-        }
+        
+        console.log(
+          "FirecrackerProvider: deleted expired microVM: " +
+            microVMId +
+            " expiration date: " +
+            microVM.expirationDate.toISOString(),
+        );
         return;
       }
     }

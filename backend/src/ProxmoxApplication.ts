@@ -8,6 +8,7 @@ const MONGODB_URL = process.env.MONGODB_URL;
 
 if (MONGODB_URL) {
   const persister = new MongoDBPersister(MONGODB_URL);
+  const provider = new ProxmoxProvider();
 
   console.log("Attempting to start Proxmox Application.");
 
@@ -15,8 +16,10 @@ if (MONGODB_URL) {
     api(
       persister,
       [new MongoDBAuthenticationProvider(persister)],
-      new ProxmoxProvider(),
+      provider,
     ),
+    persister,
+    provider,
   );
 } else {
   console.log("MongoDB URL not set. Aborting...");

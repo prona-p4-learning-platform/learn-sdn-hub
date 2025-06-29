@@ -3,18 +3,27 @@ import Environment from "../Environment";
 import { Client } from "ssh2";
 import { AddressInfo, createServer, Server } from "net";
 import fs from "fs";
+import { Persister } from "../database/Persister";
+import { InstanceProvider } from "../providers/Provider";
+import environments from "../Configuration";
 
 export default function (
   wsFromBrowser: WebSocket,
   environment: string,
   groupNumber: number,
   language: string,
+  persister: Persister,
+  provider: InstanceProvider,
 ): void {
-  const envInstance = Environment.getActiveEnvironment(
+  Environment.getEnvironmentForWebsocket(
     environment,
     groupNumber,
-  );
-  if (envInstance !== undefined) {
+    "websocket-session", // Use a generic session ID for websockets
+    persister,
+    provider,
+    environments,
+  ).then((envInstance) => {
+    if (envInstance !== undefined) {
     Promise.all([
       envInstance.getLanguageServerPort(),
       envInstance.getIPAddress(),
@@ -193,10 +202,15 @@ export default function (
         );
         wsFromBrowser.close();
       });
-  } else {
-    wsFromBrowser.send("No P4 environment found, closing connection.");
+    } else {
+      wsFromBrowser.send("No P4 environment found, closing connection.");
+      wsFromBrowser.close();
+    }
+  }).catch((error) => {
+    console.log(`Failed to get environment for websocket: ${error}`);
+    wsFromBrowser.send("Failed to connect to environment language server, closing connection.");
     wsFromBrowser.close();
-  }
+  });
 }
 
 function sleep(ms: number): Promise<void> {

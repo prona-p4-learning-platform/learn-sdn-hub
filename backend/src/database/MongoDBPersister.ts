@@ -241,7 +241,7 @@ export default class MongoDBPersister implements Persister {
       );
   }
 
-  async SubmitUserEnvironment(
+  async CreateUserSubmission(
     username: string,
     groupNumber: number,
     environment: string,

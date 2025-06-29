@@ -8,10 +8,13 @@ console.log(
   "Attempting to start Local Multiuser VM Application using static user to host mapping.",
 );
 const persister = new MemoryPersister();
+const provider = new LocalMultiuserVMProvider();
 serverCreator(
   api(
     persister,
     [new PlaintextMultiuserAuthenticationProvider(persister)],
-    new LocalMultiuserVMProvider(),
+    provider,
   ),
+  persister,
+  provider,
 );

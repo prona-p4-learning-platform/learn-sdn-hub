@@ -129,7 +129,7 @@ export default class MemoryPersister implements Persister {
     });
   }
 
-  SubmitUserEnvironment(
+  CreateUserSubmission(
     username: string,
     groupNumber: number,
     environment: string,

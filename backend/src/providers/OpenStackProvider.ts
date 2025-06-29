@@ -15,7 +15,6 @@ import {
 import axios, { AxiosInstance } from "axios";
 import { Client } from "ssh2";
 import { ToadScheduler, SimpleIntervalJob, AsyncTask } from "toad-scheduler";
-import Environment from "../Environment";
 
 const defaultAxiosTimeout = 30000;
 const schedulerIntervalSeconds = 5 * 60;
@@ -790,25 +789,21 @@ export default class OpenStackProvider implements InstanceProvider {
                         timestampCreated.toISOString() +
                         "and should be deleted",
                     );
-                    const deleted =
-                      await Environment.deleteInstanceEnvironments(server.id);
-                    if (!deleted) {
-                      console.log(
-                        `OpenStackProvider: Could not delete environment during pruning, environment seams to be gone already, deleting leftover instance: (${server.id}).`,
-                      );
-                      await providerInstance
-                        .deleteServer(server.id)
-                        .catch((reason) => {
-                          const originalMessage =
-                            reason instanceof Error
-                              ? reason.message
-                              : "Unknown error";
-                          throw new Error(
-                            `OpenStackProvider: Failed to delete instance (${server.id}) to be pruned.\n` +
-                              originalMessage,
-                          );
-                        });
-                    }
+                    // Just delete the server directly during pruning
+                    // Environment cleanup should be handled at a higher level
+                    console.log(`OpenStackProvider: Deleting expired server: ${server.id}.`);
+                    await providerInstance
+                      .deleteServer(server.id)
+                      .catch((reason) => {
+                        const originalMessage =
+                          reason instanceof Error
+                            ? reason.message
+                            : "Unknown error";
+                        console.log(
+                          `OpenStackProvider: Failed to delete instance (${server.id}) to be pruned.\n` +
+                            originalMessage,
+                        );
+                      });
                   }
                 }
               }

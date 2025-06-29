@@ -92,7 +92,7 @@ export interface Persister {
     username: string,
     environment: string,
   ) => Promise<void>;
-  SubmitUserEnvironment: (
+  CreateUserSubmission: (
     username: string,
     groupNumber: number,
     environment: string,

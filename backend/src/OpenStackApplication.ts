@@ -8,6 +8,7 @@ const MONGODB_URL = process.env.MONGODB_URL;
 
 if (MONGODB_URL) {
   const persister = new MongoDBPersister(MONGODB_URL);
+  const provider = new OpenStackProvider();
 
   console.log("Attempting to start OpenStack Application.");
 
@@ -15,8 +16,10 @@ if (MONGODB_URL) {
     api(
       persister,
       [new MongoDBAuthenticationProvider(persister)],
-      new OpenStackProvider(),
+      provider,
     ),
+    persister,
+    provider,
   );
 
   if (process.env.BACKEND_ASSIGNMENT_TYPE === "mongodb") {

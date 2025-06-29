@@ -162,8 +162,6 @@ export default class Environment {
   private static activeCollabDocs = new Map<string, string>();
   private configuration: EnvironmentDescription;
   private environmentId: string;
-  private instanceId?: string;
-  private static activeEnvironments = new Map<string, Environment>();
   private environmentProvider: InstanceProvider;
   private persister: Persister;
   private username: string;
@@ -171,58 +169,74 @@ export default class Environment {
   private groupNumber: number;
   private sessionId: string;
 
-  public static getActiveEnvironment(
+  public static async getDeployedUserSessionEnvironmentList(
+    persister: Persister,
+    username: string,
+  ): Promise<Array<string>> {
+    const userEnvironments = await persister.GetUserEnvironments(username);
+    return userEnvironments.map(env => env.environment);
+  }
+
+  public static async getDeployedGroupEnvironmentList(
+    persister: Persister,
+    groupNumber: number,
+  ): Promise<string[]> {
+    // Get all users in the group and their environments
+    const allUsers = await persister.GetAllUsers();
+    const groupUsers = allUsers.filter(user => user.groupNumber === groupNumber);
+    
+    const deployedEnvironments = new Set<string>();
+    
+    for (const user of groupUsers) {
+      const userEnvironments = await persister.GetUserEnvironments(user.username);
+      userEnvironments.forEach(env => deployedEnvironments.add(env.environment));
+    }
+    
+    return Array.from(deployedEnvironments);
+  }
+
+  // Helper method for websocket handlers to get an Environment instance for a deployed environment
+  public static async getEnvironmentForWebsocket(
     environmentId: string,
     groupNumber: number,
-    // sessionId can be omitted, if any environment of the group can be returned, e.g., during deletion
-    sessionId?: string,
-  ): Environment | undefined {
-    const activeEnvironment: Array<Environment> = new Array<Environment>();
-
-    for (const [, value] of Environment.activeEnvironments) {
-      if (sessionId) {
-        if (
-          value.environmentId === environmentId &&
-          value.groupNumber === groupNumber &&
-          value.sessionId === sessionId
-        ) {
-          activeEnvironment.push(value);
-        }
-      } else {
-        if (
-          value.environmentId === environmentId &&
-          value.groupNumber === groupNumber
-        ) {
-          activeEnvironment.push(value);
-        }
-      }
-    }
-    return activeEnvironment[0];
-  }
-
-  public static getDeployedUserSessionEnvironmentList(
-    username: string,
     sessionId: string,
-  ): Array<string> {
-    const deployedEnvironmentsForUserSession: Array<string> =
-      new Array<string>();
-
-    for (const [, value] of Environment.activeEnvironments) {
-      if (value.username === username && value.sessionId === sessionId)
-        deployedEnvironmentsForUserSession.push(value.environmentId);
-    }
-    return deployedEnvironmentsForUserSession;
-  }
-
-  public static getDeployedGroupEnvironmentList(groupNumber: number): string[] {
-    const deployedEnvironmentsForGroup: string[] = [];
-
-    for (const [, value] of Environment.activeEnvironments) {
-      if (value.groupNumber === groupNumber) {
-        deployedEnvironmentsForGroup.push(value.environmentId);
+    persister: Persister,
+    provider: InstanceProvider,
+    environmentConfigs: Map<string, EnvironmentDescription>,
+  ): Promise<Environment | undefined> {
+    // Find any user in the group that has this environment deployed
+    const allUsers = await persister.GetAllUsers();
+    const groupUsers = allUsers.filter(user => user.groupNumber === groupNumber);
+    
+    for (const user of groupUsers) {
+      const userEnvironments = await persister.GetUserEnvironments(user.username);
+      const deployedEnv = userEnvironments.find(env => env.environment === environmentId);
+      
+      if (deployedEnv) {
+        const targetEnv = environmentConfigs.get(environmentId);
+        if (targetEnv) {
+          try {
+            // Create an Environment instance for this websocket connection
+            // Use the first user found who has the environment deployed
+            return await Environment.createEnvironment(
+              user.username,
+              groupNumber,
+              sessionId,
+              environmentId,
+              targetEnv,
+              provider,
+              persister,
+            );
+          } catch (error) {
+            console.log(`Failed to create environment instance for websocket: ${String(error)}`);
+            return undefined;
+          }
+        }
+        break;
       }
     }
-    return deployedEnvironmentsForGroup;
+    
+    return undefined;
   }
 
   private constructor(
@@ -302,73 +316,39 @@ export default class Environment {
         sessionId,
     );
 
-    const activeEnvironmentsForGroup = Array<Environment>();
-    for (const [, environment] of Environment.activeEnvironments) {
-      if (environment.groupNumber === groupNumber) {
-        if (environment.environmentId !== environmentId) {
-          return Promise.reject(
-            new Error(
-              "You or your group already deployed another environment. Please reload assignment list.",
-            ),
-          );
-        } else {
-          activeEnvironmentsForGroup.push(environment);
-        }
+    // Check if group already has environments deployed
+    const groupEnvironments = await Environment.getDeployedGroupEnvironmentList(persister, groupNumber);
+    
+    if (groupEnvironments.length > 0 && !groupEnvironments.includes(environmentId)) {
+      return Promise.reject(
+        new Error(
+          "You or your group already deployed another environment. Please reload assignment list.",
+        ),
+      );
+    }
+
+    // Check if this environment is already deployed by someone in the group
+    const allUsers = await persister.GetAllUsers();
+    const groupUsers = allUsers.filter(user => user.groupNumber === groupNumber);
+    
+    let existingInstance: string | undefined;
+    for (const user of groupUsers) {
+      const userEnvironments = await persister.GetUserEnvironments(user.username);
+      const existingEnv = userEnvironments.find(env => env.environment === environmentId);
+      if (existingEnv) {
+        existingInstance = existingEnv.instance;
+        break;
       }
     }
 
-    if (activeEnvironmentsForGroup.length === 0) {
-      await environment
-        .start(env, sessionId, true)
-        .then((endpoint) => {
-          environment.instanceId = endpoint.instance;
-          Environment.activeEnvironments.set(
-            `${username}-${groupNumber}-${sessionId}-${environmentId}`,
-            environment,
-          );
-
-          return Promise.resolve(environment);
-        })
-        .catch((err) => {
-          Environment.activeEnvironments.delete(
-            `${username}-${groupNumber}-${sessionId}-${environmentId}`,
-          );
-
-          return Promise.reject(
-            new Error("Start of environment failed. " + err),
-          );
-        });
-    } else {
-      // the group already runs an environment, add this user to it and reuse instance
-      let groupEnvironmentInstance;
-      const userEnvironmentsOfOtherGroupUser = await persister
-        .GetUserEnvironments(activeEnvironmentsForGroup[0].username)
-        .catch((err) => {
-          return Promise.reject(
-            new Error(
-              "Error: Unable to get UserEnvironments of group member " +
-                activeEnvironmentsForGroup[0].username +
-                "." +
-                err,
-            ),
-          );
-        });
-
-      for (const userEnvironmentOfOtherGroupUser of userEnvironmentsOfOtherGroupUser) {
-        if (
-          userEnvironmentOfOtherGroupUser.environment ===
-          activeEnvironmentsForGroup[0].environmentId
-        ) {
-          groupEnvironmentInstance = userEnvironmentOfOtherGroupUser.instance;
-        }
-      }
-
+    if (existingInstance) {
+      // Join existing environment
       await persister
         .AddUserEnvironment(
           username,
-          activeEnvironmentsForGroup[0].environmentId,
-          activeEnvironmentsForGroup[0].configuration.description,
-          groupEnvironmentInstance ?? "",
+          environmentId,
+          env.description,
+          existingInstance,
         )
         .catch((err) => {
           return Promise.reject(
@@ -386,113 +366,132 @@ export default class Environment {
           environmentId +
           " for user: " +
           username +
-          " from user: " +
-          activeEnvironmentsForGroup[0].username +
           " in group: " +
           groupNumber +
           " session: " +
           sessionId +
           " using instance: " +
-          groupEnvironmentInstance,
+          existingInstance,
       );
 
       await environment
         .start(env, sessionId, false)
-        .then((endpoint) => {
-          environment.instanceId = endpoint.instance;
-          Environment.activeEnvironments.set(
-            `${username}-${groupNumber}-${sessionId}-${environmentId}`,
-            environment,
-          );
+        .then(() => {
           return Promise.resolve(environment);
         })
         .catch((err) => {
-          Environment.activeEnvironments.delete(
-            `${username}-${groupNumber}-${sessionId}-${environmentId}`,
-          );
           return Promise.reject(
             new Error("Failed to join environment of your group." + err),
           );
         });
+    } else {
+      // Create new environment
+      await environment
+        .start(env, sessionId, true)
+        .then(() => {
+          return Promise.resolve(environment);
+        })
+        .catch((err) => {
+          return Promise.reject(
+            new Error("Start of environment failed. " + err),
+          );
+        });
     }
+    
     return Promise.resolve(environment);
   }
 
   static async deleteEnvironment(
+    persister: Persister,
+    provider: InstanceProvider,
     groupNumber: number,
     environmentId: string,
   ): Promise<boolean> {
-    const environment = this.getActiveEnvironment(environmentId, groupNumber);
+    try {
+      // Get all users in the group
+      const allUsers = await persister.GetAllUsers();
+      const groupUsers = allUsers.filter(user => user.groupNumber === groupNumber);
+      
+      // Find the instance for this environment
+      let instanceToDelete: string | undefined;
+      for (const user of groupUsers) {
+        const userEnvironments = await persister.GetUserEnvironments(user.username);
+        const envToDelete = userEnvironments.find(env => env.environment === environmentId);
+        if (envToDelete) {
+          instanceToDelete = envToDelete.instance;
+          break;
+        }
+      }
 
-    if (environment) {
-      const groupNumber = environment.groupNumber;
-
-      return await environment
-        .stop()
-        .then(async () => {
-          // search for other activeEnvironments for this group and delete them
-          for (const [key, env] of Environment.activeEnvironments) {
-            if (env.groupNumber === groupNumber) {
-              await Environment.cleanUp(env);
-              Environment.activeEnvironments.delete(key);
-            }
+      if (instanceToDelete) {
+        // Delete the instance
+        await provider.deleteServer(instanceToDelete);
+        
+        // Remove environment from all group users
+        for (const user of groupUsers) {
+          await persister.RemoveUserEnvironment(user.username, environmentId)
+            .catch((err: Error) => {
+              console.log(`Warning: Could not remove environment for user ${user.username}: ${err.message}`);
+            });
+        }
+        
+        return true;
+      } else {
+        console.log("Environment not found in persister.");
+        return false;
+      }
+    } catch (err) {
+      if (err instanceof Error) {
+        if (err.message.includes(InstanceNotFoundErrorMessage)) {
+          console.log(
+            "Environment was already stopped. Silently deleting leftovers in user session.",
+          );
+          
+          // Remove environment from all group users even if instance is gone
+          const allUsers = await persister.GetAllUsers();
+          const groupUsers = allUsers.filter(user => user.groupNumber === groupNumber);
+          
+          for (const user of groupUsers) {
+            await persister.RemoveUserEnvironment(user.username, environmentId)
+              .catch((removeErr: Error) => {
+                console.log(`Warning: Could not remove environment for user ${user.username}: ${removeErr.message}`);
+              });
           }
+          
           return true;
-        })
-        .catch(async (err: Error) => {
-          if (
-            err.message.match(
-              "(.*)" + DenyStartOfMissingInstanceErrorMessage + "(.*)",
-            )
-          ) {
-            console.log(
-              "Environment was already stopped. Silently deleting leftovers in user session.",
-            );
-            // search for other activeEnvironments in the same group
-            for (const [key, env] of this.activeEnvironments) {
-              if (env.groupNumber === groupNumber) {
-                await Environment.cleanUp(env);
-                Environment.activeEnvironments.delete(key);
-              }
-            }
-
-            return true;
-          } else {
-            console.log("Failed to stop environment. " + JSON.stringify(err));
-            throw err;
-          }
-        });
-    } else {
-      console.log("Environment not found.");
-      return false;
+        } else {
+          console.log("Failed to stop environment. " + JSON.stringify(err));
+          throw err;
+        }
+      }
+      throw err;
     }
   }
 
-  private static async cleanUp(env: Environment) {
-    env.activeConsoles.forEach((sshConsole: Console, key: string) => {
-      //console.debug("Deleting leftover console: " + key);
-      sshConsole.close(env.environmentId, env.groupNumber);
-      env.activeConsoles.delete(key);
-    });
-    await env.filehandler?.close();
-    env.filehandler = undefined;
-    env.activeDesktops.forEach((_desktop: DesktopInstance, key: string) => {
-      //console.debug("Deleting leftover desktop: " + key);
-      env.activeDesktops.delete(key);
-    });
-  }
 
-  static async deleteInstanceEnvironments(instance: string): Promise<boolean> {
+  static async deleteInstanceEnvironments(
+    persister: Persister,
+    provider: InstanceProvider,
+    instance: string,
+  ): Promise<boolean> {
     let instanceEnvironmentFound = false;
 
-    for (const activeEnvironment of this.activeEnvironments.values()) {
-      if (activeEnvironment.instanceId === instance) {
+    // Get all users and check their environments for this instance
+    const allUsers = await persister.GetAllUsers();
+    
+    for (const user of allUsers) {
+      const userEnvironments = await persister.GetUserEnvironments(user.username);
+      const envWithInstance = userEnvironments.find(env => env.instance === instance);
+      
+      if (envWithInstance) {
         instanceEnvironmentFound = true;
 
         // the environment uses the specified instance and should be deleted
         await this.deleteEnvironment(
-          activeEnvironment.groupNumber,
-          activeEnvironment.environmentId,
+          persister,
+          provider,
+          user.groupNumber,
+          envWithInstance.environment,
         ).then((result) => {
           if (!result) {
             // unable to delete environment
@@ -501,6 +500,9 @@ export default class Environment {
             );
           }
         });
+        
+        // Break after finding the first match since all users in the group should share the same instance
+        break;
       }
     }
 
@@ -575,9 +577,9 @@ export default class Environment {
         );
       } else throw new Error(DenyStartOfMissingInstanceErrorMessage);
     } else {
-      throw new Error(
-        `More than 1 environment exists for user ${this.username}. Remove duplicate environments from persister ${typeof this.persister}! Envs found:\n ${JSON.stringify(filtered, null, 2)}`,
-      );
+        throw new Error(
+          `More than 1 environment exists for user ${this.username}. Remove duplicate environments from persister! Envs found:\n ${JSON.stringify(filtered, null, 2)}`,
+        );
     }
   }
 
@@ -820,13 +822,14 @@ export default class Environment {
       }
 
       // get other active users in group
+      const allUsers = await this.persister.GetAllUsers();
+      const groupUsers = allUsers.filter(user => user.groupNumber === this.groupNumber && user.username !== this.username);
       const activeUsers: string[] = [];
-      for (const [_, env] of Environment.activeEnvironments) {
-        if (
-          env.groupNumber === this.groupNumber &&
-          env.username !== this.username
-        ) {
-          activeUsers.push(env.username);
+      
+      for (const user of groupUsers) {
+        const userEnvironments = await this.persister.GetUserEnvironments(user.username);
+        if (userEnvironments.some(env => env.environment === this.environmentId)) {
+          activeUsers.push(user.username);
         }
       }
 
@@ -957,21 +960,9 @@ export default class Environment {
     }
 
     console.log("Stop commands finished...");
-    Environment.activeEnvironments.forEach((value: Environment) => {
-      if (value.groupNumber === this.groupNumber) {
-        //console.log("Found group env " + value.environmentId + "...");
-        const terminal = value.getConsoles();
-        terminal.forEach((value: Console) => {
-          //console.log("Found active console in " + value.cwd + "...");
-          // write command to console
-          value.write("cd " + value.cwd + "\n");
-          //console.log(
-          //  "Executing " + value.command + " " + value.args.join(" ") + "\n",
-          //);
-          value.write(value.command + " " + value.args.join(" ") + "\n");
-        });
-      }
-    });
+    // Note: The restart functionality that relied on activeEnvironments has been removed
+    // as environments are now managed through the persister. Individual console restart
+    // should be handled differently if needed.
   }
 
   async runSSHCommand(
@@ -1189,7 +1180,7 @@ export default class Environment {
       }
     }
 
-    await this.persister.SubmitUserEnvironment(
+    await this.persister.CreateUserSubmission(
       this.username,
       this.groupNumber,
       this.environmentId,
@@ -1247,20 +1238,20 @@ export default class Environment {
   }
 
   // Create a yjs Doc, handle intial content and return it
+  // Note: This method now requires an Environment instance to be passed
+  // since we no longer maintain a static activeEnvironments map
   public static async getCollabDoc(
     alias: string,
-    environmentId: string,
-    groupNumber: number,
+    environment: Environment,
   ): Promise<string> {
     if (this.activeCollabDocs.get(alias) === undefined) {
-      const env = Environment.getActiveEnvironment(environmentId, groupNumber);
-      const resolvedPath = env?.editableFiles.get(alias);
+      const resolvedPath = environment.editableFiles.get(alias);
 
-      if (!env || resolvedPath === undefined) {
+      if (resolvedPath === undefined) {
         throw new Error("Could not resolve alias.");
       }
 
-      const content = await env.filehandler?.readFile(resolvedPath);
+      const content = await environment.filehandler?.readFile(resolvedPath);
       if (content === undefined) {
         throw new Error(
           "Could not read file content to populate collaboration document " +

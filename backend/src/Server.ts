@@ -5,13 +5,21 @@ import cors from "cors";
 import { errors } from "celebrate";
 import path from "path";
 import history from "connect-history-api-fallback";
+import { Persister } from "./database/Persister";
+import { InstanceProvider } from "./providers/Provider";
 
-export default function (api: Router): void {
+export default function (
+  api: Router,
+  persister: Persister,
+  provider: InstanceProvider,
+): void {
   let port = 3001;
+  let host = "0.0.0.0";
+
   const app = express();
   const server = createServer(app);
 
-  WSSetupFunction(server);
+  WSSetupFunction(server, persister, provider);
 
   app.use(cors());
   app.use(api);
@@ -27,7 +35,11 @@ export default function (api: Router): void {
     port = parseInt(process.env.BACKEND_HTTP_PORT);
   }
 
-  server.listen(port, function () {
+  if (process.env.BACKEND_HTTP_HOST !== undefined) {
+    host = process.env.BACKEND_HTTP_HOST;
+  }
+
+  server.listen(port, host, function () {
     console.log(`HTTP Server listening on port ${port}`);
   });
 }

@@ -5,7 +5,6 @@ import {
 } from "./Provider";
 import { ToadScheduler, SimpleIntervalJob, AsyncTask } from "toad-scheduler";
 import { Client } from "ssh2";
-import Environment from "../Environment";
 import proxmoxApi, { Proxmox, ProxmoxEngineOptions } from "proxmox-api";
 import fs from "fs";
 import { Netmask } from "netmask";
@@ -1392,24 +1391,19 @@ export default class ProxmoxProvider implements InstanceProvider {
                             this.maxInstanceLifetimeMinutes * 60)
                       ) {
                         // delete expired VM
-                        //console.log("ProxmoxProvider: Deleting expired VM: " + vm.vmid);
-                        const instanceEnvironmentFound =
-                          await Environment.deleteInstanceEnvironments(
-                            vm.vmid.toString(),
-                          ).catch((reason) => {
-                            const originalMessage =
-                              reason instanceof Error
-                                ? reason.message
-                                : "Unknown error";
-                            throw new Error(
-                              `ProxmoxProvider: Could not delete instance for expired VM (${vm.vmid}) during pruning.\n` +
-                                originalMessage,
-                            );
-                          });
-                        if (!instanceEnvironmentFound) {
-                          // no environment found for instance, ensuring instance is deleted
-                          await this.deleteServer(vm.vmid.toString());
-                        }
+                        // Just delete the VM directly during pruning
+                        // Environment cleanup should be handled at a higher level
+                        console.log(`ProxmoxProvider: Deleting expired VM: ${vm.vmid}.`);
+                        await this.deleteServer(vm.vmid.toString()).catch((reason) => {
+                          const originalMessage =
+                            reason instanceof Error
+                              ? reason.message
+                              : "Unknown error";
+                          console.log(
+                            `ProxmoxProvider: Could not delete instance for expired VM (${vm.vmid}) during pruning.\n` +
+                              originalMessage,
+                          );
+                        });
                         console.log(
                           "ProxmoxProvider: deleted expired VM: " + vm.vmid,
                         );

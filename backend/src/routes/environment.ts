@@ -89,29 +89,44 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
       // if assignmentLabSheetLocation specified as "instance",
       // get lab sheet from instance filesystem
       if (targetEnv.assignmentLabSheetLocation === "instance") {
-        const env = Environment.getActiveEnvironment(
-          reqWithUser.params.environment,
-          reqWithUser.user.groupNumber,
-          reqWithUser.user.sessionId,
-        );
-
-        if (env) {
-          env
-            .readFile(targetEnv.assignmentLabSheet, true)
-            .then((markdown) => {
-              res.status(200).json({ content: markdown });
-            })
-            .catch((err) => {
-              let message = "Unknown error";
-              if (err instanceof Error) message = err.message;
-
-              res.status(500).json({ status: "error", message });
-            });
-        } else {
-          res
-            .status(500)
-            .send({ status: "error", message: "Environment not found." });
-        }
+        // Check if user has this environment deployed
+        persister.GetUserEnvironments(reqWithUser.user.username)
+          .then((userEnvironments) => {
+            const deployedEnv = userEnvironments.find(env => env.environment === environment);
+            if (deployedEnv) {
+              // Create a temporary environment instance to read the file
+              Environment.createEnvironment(
+                reqWithUser.user.username,
+                reqWithUser.user.groupNumber,
+                reqWithUser.user.sessionId,
+                environment,
+                targetEnv,
+                provider,
+                persister,
+              )
+                .then((env) => {
+                  return env.readFile(targetEnv.assignmentLabSheet, true);
+                })
+                .then((markdown) => {
+                  res.status(200).json({ content: markdown });
+                })
+                .catch((err) => {
+                  let message = "Unknown error";
+                  if (err instanceof Error) message = err.message;
+                  res.status(500).json({ status: "error", message });
+                });
+            } else {
+              res.status(500).send({ 
+                status: "error", 
+                message: "Environment not deployed. Please deploy the environment first." 
+              });
+            }
+          })
+          .catch((err) => {
+            let message = "Unknown error";
+            if (err instanceof Error) message = err.message;
+            res.status(500).json({ status: "error", message });
+          });
       } else {
         try {
           const markdown = fs
@@ -182,7 +197,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
         return;
       }
 
-      Environment.deleteEnvironment(reqWithUser.user.groupNumber, environment)
+      Environment.deleteEnvironment(persister, provider, reqWithUser.user.groupNumber, environment)
         .then((deleted) => {
           if (deleted) {
             res.status(200).json({ status: "success" });
@@ -212,39 +227,65 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
     environmentPathParamWithAliasValidator,
     (req, res) => {
       const reqWithUser = req as RequestWithUser;
-      const env = Environment.getActiveEnvironment(
-        reqWithUser.params.environment,
-        reqWithUser.user.groupNumber,
-        reqWithUser.user.sessionId,
-      );
+      const environment = reqWithUser.params.environment;
+      const targetEnv = environments.get(String(environment));
 
-      if (env) {
-        env
-          .readFile(reqWithUser.params.alias)
-          .then((content: string | undefined) => {
-            if (content === undefined) {
-              res.status(404).json({
-                status: "error",
-                message: "File not found or handler not initialized",
-              });
-              return;
-            }
-            res.status(200).json({
-              content,
-              location: env.getFilePathByAlias(reqWithUser.params.alias),
-            });
-          })
-          .catch((err) => {
-            let message = "Unknown error";
-            if (err instanceof Error) message = err.message;
-
-            res.status(500).json({ status: "error", message });
-          });
-      } else {
+      if (targetEnv === undefined) {
         res
-          .status(500)
-          .json({ status: "error", message: "No active environment found." });
+          .status(404)
+          .json({ status: "error", message: "Environment not found" });
+        return;
       }
+
+      // Check if user has this environment deployed
+      persister.GetUserEnvironments(reqWithUser.user.username)
+        .then((userEnvironments) => {
+          const deployedEnv = userEnvironments.find(env => env.environment === environment);
+          if (deployedEnv) {
+            // Create a temporary environment instance to read the file
+            Environment.createEnvironment(
+              reqWithUser.user.username,
+              reqWithUser.user.groupNumber,
+              reqWithUser.user.sessionId,
+              environment,
+              targetEnv,
+              provider,
+              persister,
+            )
+              .then((env) => {
+                return env.readFile(reqWithUser.params.alias);
+              })
+              .then((content: string | undefined) => {
+                if (content === undefined) {
+                  res.status(404).json({
+                    status: "error",
+                    message: "File not found or handler not initialized",
+                  });
+                  return;
+                }
+                res.status(200).json({
+                  content,
+                  location: targetEnv.editableFiles.find(f => f.alias === reqWithUser.params.alias)?.absFilePath,
+                });
+              })
+              .catch((err) => {
+                let message = "Unknown error";
+                if (err instanceof Error) message = err.message;
+
+                res.status(500).json({ status: "error", message });
+              });
+          } else {
+            res.status(500).json({ 
+              status: "error", 
+              message: "Environment not deployed. Please deploy the environment first." 
+            });
+          }
+        })
+        .catch((err) => {
+          let message = "Unknown error";
+          if (err instanceof Error) message = err.message;
+          res.status(500).json({ status: "error", message });
+        });
     },
   );
 
@@ -255,31 +296,56 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
     environmentPathParamWithAliasValidator,
     (req, res) => {
       const reqWithUser = req as RequestWithUser;
-      const env = Environment.getActiveEnvironment(
-        reqWithUser.params.environment,
-        reqWithUser.user.groupNumber,
-        reqWithUser.user.sessionId,
-      );
+      const environment = reqWithUser.params.environment;
+      const targetEnv = environments.get(String(environment));
 
-      if (env) {
-        const body = reqWithUser.body as Record<string, unknown>; // TODO: add validator
-
-        env
-          .writeFile(reqWithUser.params.alias, body.data as string)
-          .then(() => {
-            res.status(200).json({ status: "success" });
-          })
-          .catch((err) => {
-            let message = "Unknown error";
-            if (err instanceof Error) message = err.message;
-
-            res.status(400).json({ status: "error", message });
-          });
-      } else {
+      if (targetEnv === undefined) {
         res
-          .status(500)
-          .json({ status: "error", message: "No active environment found." });
+          .status(404)
+          .json({ status: "error", message: "Environment not found" });
+        return;
       }
+
+      // Check if user has this environment deployed
+      persister.GetUserEnvironments(reqWithUser.user.username)
+        .then((userEnvironments) => {
+          const deployedEnv = userEnvironments.find(env => env.environment === environment);
+          if (deployedEnv) {
+            // Create a temporary environment instance to write the file
+            Environment.createEnvironment(
+              reqWithUser.user.username,
+              reqWithUser.user.groupNumber,
+              reqWithUser.user.sessionId,
+              environment,
+              targetEnv,
+              provider,
+              persister,
+            )
+              .then((env) => {
+                const body = reqWithUser.body as Record<string, unknown>; // TODO: add validator
+                return env.writeFile(reqWithUser.params.alias, body.data as string);
+              })
+              .then(() => {
+                res.status(200).json({ status: "success" });
+              })
+              .catch((err) => {
+                let message = "Unknown error";
+                if (err instanceof Error) message = err.message;
+
+                res.status(400).json({ status: "error", message });
+              });
+          } else {
+            res.status(500).json({ 
+              status: "error", 
+              message: "Environment not deployed. Please deploy the environment first." 
+            });
+          }
+        })
+        .catch((err) => {
+          let message = "Unknown error";
+          if (err instanceof Error) message = err.message;
+          res.status(500).json({ status: "error", message });
+        });
     },
   );
 
@@ -289,19 +355,53 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
     environmentPathParamWithAliasValidator,
     (req, res) => {
       const reqWithUser = req as RequestWithUser;
+      const environment = reqWithUser.params.environment;
+      const targetEnv = environments.get(String(environment));
 
-      Environment.getCollabDoc(
-        reqWithUser.params.alias,
-        reqWithUser.params.environment,
-        reqWithUser.user.groupNumber,
-      )
-        .then((content) => {
-          res.status(200).json({ content });
+      if (targetEnv === undefined) {
+        res
+          .status(404)
+          .json({ status: "error", message: "Environment not found" });
+        return;
+      }
+
+      // Check if user has this environment deployed
+      persister.GetUserEnvironments(reqWithUser.user.username)
+        .then((userEnvironments) => {
+          const deployedEnv = userEnvironments.find(env => env.environment === environment);
+          if (deployedEnv) {
+            // Create a temporary environment instance for collaboration document
+            Environment.createEnvironment(
+              reqWithUser.user.username,
+              reqWithUser.user.groupNumber,
+              reqWithUser.user.sessionId,
+              environment,
+              targetEnv,
+              provider,
+              persister,
+            )
+              .then((env) => {
+                return Environment.getCollabDoc(reqWithUser.params.alias, env);
+              })
+              .then((content) => {
+                res.status(200).json({ content });
+              })
+              .catch((err) => {
+                let message = "Unknown error";
+                if (err instanceof Error) message = err.message;
+
+                res.status(500).json({ status: "error", message });
+              });
+          } else {
+            res.status(500).json({ 
+              status: "error", 
+              message: "Environment not deployed. Please deploy the environment first." 
+            });
+          }
         })
         .catch((err) => {
           let message = "Unknown error";
           if (err instanceof Error) message = err.message;
-
           res.status(500).json({ status: "error", message });
         });
     },
@@ -313,31 +413,57 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
     environmentPathParamValidator,
     (req, res) => {
       const reqWithUser = req as RequestWithUser;
-      const env = Environment.getActiveEnvironment(
-        reqWithUser.params.environment,
-        reqWithUser.user.groupNumber,
-        reqWithUser.user.sessionId,
-      );
+      const environment = reqWithUser.params.environment;
+      const targetEnv = environments.get(String(environment));
 
-      if (env) {
-        env
-          .restart(reqWithUser.user.sessionId)
-          .then(() => {
-            res
-              .status(200)
-              .json({ status: "finished", message: "Restart complete" });
-          })
-          .catch((err) => {
-            let message = "Unknown error";
-            if (err instanceof Error) message = err.message;
-
-            res.status(500).json({ status: "error", message });
-          });
-      } else {
+      if (targetEnv === undefined) {
         res
-          .status(500)
-          .json({ status: "error", message: "No active environment found." });
+          .status(404)
+          .json({ status: "error", message: "Environment not found" });
+        return;
       }
+
+      // Check if user has this environment deployed
+      persister.GetUserEnvironments(reqWithUser.user.username)
+        .then((userEnvironments) => {
+          const deployedEnv = userEnvironments.find(env => env.environment === environment);
+          if (deployedEnv) {
+            // Create a temporary environment instance to restart
+            Environment.createEnvironment(
+              reqWithUser.user.username,
+              reqWithUser.user.groupNumber,
+              reqWithUser.user.sessionId,
+              environment,
+              targetEnv,
+              provider,
+              persister,
+            )
+              .then((env) => {
+                return env.restart(reqWithUser.user.sessionId);
+              })
+              .then(() => {
+                res
+                  .status(200)
+                  .json({ status: "finished", message: "Restart complete" });
+              })
+              .catch((err) => {
+                let message = "Unknown error";
+                if (err instanceof Error) message = err.message;
+
+                res.status(500).json({ status: "error", message });
+              });
+          } else {
+            res.status(500).json({ 
+              status: "error", 
+              message: "Environment not deployed. Please deploy the environment first." 
+            });
+          }
+        })
+        .catch((err) => {
+          let message = "Unknown error";
+          if (err instanceof Error) message = err.message;
+          res.status(500).json({ status: "error", message });
+        });
     },
   );
 
@@ -348,43 +474,69 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
     environmentPathParamValidator,
     (req, res) => {
       const reqWithUser = req as RequestWithUser;
-      const env = Environment.getActiveEnvironment(
-        reqWithUser.params.environment,
-        reqWithUser.user.groupNumber,
-        reqWithUser.user.sessionId,
-      );
+      const environment = reqWithUser.params.environment;
+      const targetEnv = environments.get(String(environment));
       const { activeStep, terminalState } = reqWithUser.body as {
         activeStep: string;
         terminalState: TerminalStateType[];
       };
 
-      if (env) {
-        env
-          .test(activeStep, terminalState)
-          .then((testResult) => {
-            if (testResult.code >= 200 && testResult.code < 251) {
-              res.status(testResult.code).json({
-                status: "passed",
-                message: testResult.message,
-              });
-            } else {
-              res.status(testResult.code).json({
-                status: "failed",
-                message: testResult.message,
-              });
-            }
-          })
-          .catch((err) => {
-            let message = "Unknown error";
-            if (err instanceof Error) message = err.message;
-
-            res.status(500).json({ status: "error", message });
-          });
-      } else {
+      if (targetEnv === undefined) {
         res
-          .status(500)
-          .json({ status: "error", message: "No active environment found." });
+          .status(404)
+          .json({ status: "error", message: "Environment not found" });
+        return;
       }
+
+      // Check if user has this environment deployed
+      persister.GetUserEnvironments(reqWithUser.user.username)
+        .then((userEnvironments) => {
+          const deployedEnv = userEnvironments.find(env => env.environment === environment);
+          if (deployedEnv) {
+            // Create a temporary environment instance to run tests
+            Environment.createEnvironment(
+              reqWithUser.user.username,
+              reqWithUser.user.groupNumber,
+              reqWithUser.user.sessionId,
+              environment,
+              targetEnv,
+              provider,
+              persister,
+            )
+              .then((env) => {
+                return env.test(activeStep, terminalState);
+              })
+              .then((testResult) => {
+                if (testResult.code >= 200 && testResult.code < 251) {
+                  res.status(testResult.code).json({
+                    status: "passed",
+                    message: testResult.message,
+                  });
+                } else {
+                  res.status(testResult.code).json({
+                    status: "failed",
+                    message: testResult.message,
+                  });
+                }
+              })
+              .catch((err) => {
+                let message = "Unknown error";
+                if (err instanceof Error) message = err.message;
+
+                res.status(500).json({ status: "error", message });
+              });
+          } else {
+            res.status(500).json({ 
+              status: "error", 
+              message: "Environment not deployed. Please deploy the environment first." 
+            });
+          }
+        })
+        .catch((err) => {
+          let message = "Unknown error";
+          if (err instanceof Error) message = err.message;
+          res.status(500).json({ status: "error", message });
+        });
     },
   );
 
@@ -395,38 +547,64 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
     environmentPathParamValidator,
     (req, res) => {
       const reqWithUser = req as RequestWithUser;
-      const env = Environment.getActiveEnvironment(
-        reqWithUser.params.environment,
-        reqWithUser.user.groupNumber,
-        reqWithUser.user.sessionId,
-      );
+      const environment = reqWithUser.params.environment;
+      const targetEnv = environments.get(String(environment));
       // TODO: add validator
       const { activeStep, terminalState } = reqWithUser.body as {
         activeStep: string;
         terminalState: TerminalStateType[];
       };
 
-      if (env) {
-        env
-          .submit(activeStep, terminalState)
-          .then(() => {
-            res.status(200).json({
-              status: "finished",
-              message:
-                "Terminal content and files submitted! Assignment finished!",
-            });
-          })
-          .catch((err) => {
-            let message = "Unknown error";
-            if (err instanceof Error) message = err.message;
-
-            res.status(500).json({ status: "error", message });
-          });
-      } else {
+      if (targetEnv === undefined) {
         res
-          .status(500)
-          .json({ status: "error", message: "No active environment found." });
+          .status(404)
+          .json({ status: "error", message: "Environment not found" });
+        return;
       }
+
+      // Check if user has this environment deployed
+      persister.GetUserEnvironments(reqWithUser.user.username)
+        .then((userEnvironments) => {
+          const deployedEnv = userEnvironments.find(env => env.environment === environment);
+          if (deployedEnv) {
+            // Create a temporary environment instance to submit
+            Environment.createEnvironment(
+              reqWithUser.user.username,
+              reqWithUser.user.groupNumber,
+              reqWithUser.user.sessionId,
+              environment,
+              targetEnv,
+              provider,
+              persister,
+            )
+              .then((env) => {
+                return env.submit(activeStep, terminalState);
+              })
+              .then(() => {
+                res.status(200).json({
+                  status: "finished",
+                  message:
+                    "Terminal content and files submitted! Assignment finished!",
+                });
+              })
+              .catch((err) => {
+                let message = "Unknown error";
+                if (err instanceof Error) message = err.message;
+
+                res.status(500).json({ status: "error", message });
+              });
+          } else {
+            res.status(500).json({ 
+              status: "error", 
+              message: "Environment not deployed. Please deploy the environment first." 
+            });
+          }
+        })
+        .catch((err) => {
+          let message = "Unknown error";
+          if (err instanceof Error) message = err.message;
+          res.status(500).json({ status: "error", message });
+        });
     },
   );
 
@@ -435,12 +613,18 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
     authenticationMiddleware,
     (req, res) => {
       const reqWithUser = req as RequestWithUser;
-      const deployedEnvList = Environment.getDeployedUserSessionEnvironmentList(
+      Environment.getDeployedUserSessionEnvironmentList(
+        persister,
         reqWithUser.user.username,
-        reqWithUser.user.sessionId,
-      );
-
-      res.status(200).json(deployedEnvList);
+      )
+        .then((deployedEnvList) => {
+          res.status(200).json(deployedEnvList);
+        })
+        .catch((err) => {
+          let message = "Unknown error";
+          if (err instanceof Error) message = err.message;
+          res.status(500).json({ status: "error", message });
+        });
     },
   );
 
@@ -449,11 +633,18 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
     authenticationMiddleware,
     (req, res) => {
       const reqWithUser = req as RequestWithUser;
-      const deployedEndpList = Environment.getDeployedGroupEnvironmentList(
+      Environment.getDeployedGroupEnvironmentList(
+        persister,
         reqWithUser.user.groupNumber,
-      );
-
-      res.status(200).json(deployedEndpList);
+      )
+        .then((deployedEndpList) => {
+          res.status(200).json(deployedEndpList);
+        })
+        .catch((err) => {
+          let message = "Unknown error";
+          if (err instanceof Error) message = err.message;
+          res.status(500).json({ status: "error", message });
+        });
     },
   );
 
@@ -480,26 +671,52 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
     environmentPathParamValidator,
     (req, res) => {
       const reqWithUser = req as RequestWithUser;
-      const env = Environment.getActiveEnvironment(
-        reqWithUser.params.environment,
-        reqWithUser.user.groupNumber,
-        reqWithUser.user.sessionId,
-      );
+      const environment = reqWithUser.params.environment;
+      const targetEnv = environments.get(String(environment));
 
-      if (env) {
-        env
-          .getProviderInstanceStatus()
-          .then((value) => {
-            res.status(200).json({ status: "success", message: value });
-          })
-          .catch(() => {
-            res.status(200).json({ status: "success", message: "" });
-          });
-      } else {
+      if (targetEnv === undefined) {
         res
-          .status(500)
-          .json({ status: "error", message: "No active environment found." });
+          .status(404)
+          .json({ status: "error", message: "Environment not found" });
+        return;
       }
+
+      // Check if user has this environment deployed
+      persister.GetUserEnvironments(reqWithUser.user.username)
+        .then((userEnvironments) => {
+          const deployedEnv = userEnvironments.find(env => env.environment === environment);
+          if (deployedEnv) {
+            // Create a temporary environment instance to get provider status
+            Environment.createEnvironment(
+              reqWithUser.user.username,
+              reqWithUser.user.groupNumber,
+              reqWithUser.user.sessionId,
+              environment,
+              targetEnv,
+              provider,
+              persister,
+            )
+              .then((env) => {
+                return env.getProviderInstanceStatus();
+              })
+              .then((value: string) => {
+                res.status(200).json({ status: "success", message: value });
+              })
+              .catch(() => {
+                res.status(200).json({ status: "success", message: "" });
+              });
+          } else {
+            res.status(500).json({ 
+              status: "error", 
+              message: "Environment not deployed. Please deploy the environment first." 
+            });
+          }
+        })
+        .catch((err) => {
+          let message = "Unknown error";
+          if (err instanceof Error) message = err.message;
+          res.status(500).json({ status: "error", message });
+        });
     },
   );
 

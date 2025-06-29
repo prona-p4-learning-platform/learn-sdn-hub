@@ -10,7 +10,6 @@ import Dockerode, {
 } from "dockerode";
 import { ToadScheduler, SimpleIntervalJob, AsyncTask } from "toad-scheduler";
 import { Client } from "ssh2";
-import Environment from "../Environment";
 import KubernetesManager from "../KubernetesManager";
 
 const schedulerIntervalSeconds = 5 * 60;
@@ -372,29 +371,19 @@ export default class DockerProvider implements InstanceProvider {
             `${container.Names[0]} was created at ${createdAt.toISOString()} and should be deleted`,
           );
 
-          const deleted = await Environment.deleteInstanceEnvironments(
-            container.Id,
-          ).catch((reason) => {
+          // Just delete the container directly during pruning
+          // Environment cleanup should be handled at a higher level
+          console.log(
+            `DockerProvider: Deleting expired container: (${container.Names[0]}).`,
+          );
+          await this.deleteServer(container.Id).catch((reason) => {
             const originalMessage =
               reason instanceof Error ? reason.message : "Unknown error";
-            console.log(
-              `DockerProvider: Error while deleting environment after pruning container (${container.Names[0]}).\n` +
+            throw new Error(
+              `DockerProvider: Failed to delete container (${container.Names[0]}) to be pruned.\n` +
                 originalMessage,
             );
           });
-          if (!deleted) {
-            console.log(
-              `DockerProvider: Could not delete environment during pruning, environment seams to be gone already, deleting leftover container: (${container.Names[0]}).`,
-            );
-            await this.deleteServer(container.Id).catch((reason) => {
-              const originalMessage =
-                reason instanceof Error ? reason.message : "Unknown error";
-              throw new Error(
-                `DockerProvider: Failed to delete container (${container.Names[0]}) to be pruned.\n` +
-                  originalMessage,
-              );
-            });
-          }
         }
       }
     }
