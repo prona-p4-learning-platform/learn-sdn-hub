@@ -47,7 +47,7 @@ export default function Theme(): JSX.Element {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <SnackbarProvider
-        anchorOrigin={{ horizontal: "left", vertical: "bottom" }}
+        anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
         Components={{
           info: ColorSwitchingSnackbar,
           success: ColorSwitchingSnackbar,

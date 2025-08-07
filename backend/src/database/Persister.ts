@@ -98,6 +98,7 @@ export interface Persister {
     environment: string,
     terminalStates: TerminalStateType[],
     submittedFiles: SubmissionFileType[],
+    bonusPoints: number
   ) => Promise<void>;
   GetUserSubmissions: (
     username: string,

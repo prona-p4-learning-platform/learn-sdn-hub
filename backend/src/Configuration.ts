@@ -452,6 +452,90 @@ environments.set("Example1-Repeater", {
   useLanguageClient: false,
 });
 
+environments.set("NQN-Test", {
+  terminals: [
+    [
+      {
+        type: "Shell",
+        name: "bash",
+        cwd: "/home/p4/p4-boilerplate/Example1-Repeater/",
+        executable: "./start-terminal2.sh",
+        params: [],
+        provideTty: true,
+      },
+    ],
+  ],
+  editableFiles: [
+    {
+      absFilePath:
+        "/home/p4/p4-boilerplate/Example1-Repeater/README.md",
+      alias: "README.md",
+    }
+  ],
+  stopCommands: [
+    {
+      type: "Shell",
+      name: "bash",
+      cwd: "/home/p4/p4-boilerplate/Example1-Repeater/",
+      executable: "./stop-terminal2.sh",
+      params: [],
+      provideTty: false,
+    },
+  ],
+  steps: [
+    {
+      name: "1",
+      label: "write true to console",
+      tests: [
+        {
+          type: "TerminalBufferSearch",
+          terminal: "(.*)",
+          match: "(.*)echo \"true\"(.*)",
+          successMessage: "true found",
+          errorHint: "true not found",
+          gradualAssistance: [
+            {
+              failedCounter: 1,
+              hint: "You have to print out \"true\" within a terminal session"
+            },
+            {
+              failedCounter: 5,
+              hint: "Write 'echo \"true\"' in the terminal window and press enter."
+            }
+          ]
+        },
+      ],
+      bonusPoints: 5
+    },
+    {
+      name: "2",
+      label: "write false to console",
+      tests: [
+        {
+          type: "TerminalBufferSearch",
+          terminal: "(.*)",
+          match: "(.*)echo \"false\"(.*)",
+          successMessage: "false found",
+          errorHint: "false not found"
+        },
+      ],
+      bonusPoints: 5
+    }
+  ],
+  submissionPrepareCommand:
+    "tar zcvf /tmp/$user-$environment.tar.gz /home/p4/p4-boilerplate/Example1-Repeater/",
+  submissionSupplementalFiles: ["/tmp/$user-$environment.tar.gz"],
+  submissionCleanupCommand: "rm /tmp/$user-$environment.tar.gz",
+  description: "Example1-Repeater description",
+  assignmentLabSheet: "../assignments/prona-repeater.md",
+  assignmentLabSheetLocation: "backend",
+  //providerDockerSupplementalPorts: ["80/tcp", "8080/tcp"],
+  providerProxmoxTemplateTag: "learn-sdn-hub-develop-template-acn-p4",
+  useCollaboration: true,
+  useLanguageClient: false,
+  maxBonusPoints: 10
+});
+
 environments.set("Example2-MinimalisticSwitch", {
   terminals: [
     [

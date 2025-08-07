@@ -135,6 +135,7 @@ export default class MemoryPersister implements Persister {
     environment: string,
     terminalStates: TerminalStateType[],
     submittedFiles: SubmissionFileType[],
+    bonusPoints: number
   ): Promise<void> {
     return new Promise((resolve) => {
       console.log(
@@ -170,6 +171,12 @@ export default class MemoryPersister implements Persister {
           "binary",
         );
       }
+
+      fs.writeFileSync(
+        path.resolve(resultPath, "bonusPoints.txt"),
+        bonusPoints.toString(),
+        "utf8"
+      );
 
       resolve();
     });
@@ -208,9 +215,14 @@ export default class MemoryPersister implements Persister {
               assignmentName = submissionDir.substring(username.length + 1);
             }
 
+            let bonusPoints = Number.parseInt(fs.readFileSync(path.resolve(submissionDir, "bonusPoints.txt"), {encoding: "utf8"}));
+            if (isNaN(bonusPoints))
+              bonusPoints = 0;
+
             const submission = {
               assignmentName: assignmentName,
               lastChanged: lastMTime,
+              points: bonusPoints
             };
 
             submissions.push(submission);

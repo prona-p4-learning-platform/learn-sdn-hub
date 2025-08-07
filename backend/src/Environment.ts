@@ -64,6 +64,12 @@ export interface AssignmentStep {
   name: string;
   label: string;
   tests: Array<AssignmentStepTestType>;
+  bonusPoints?: number;
+}
+
+interface GradualAssistanceType {
+  failedCounter: number;
+  hint: string;
 }
 
 interface AssignmentStepTestSSHCommand {
@@ -72,6 +78,7 @@ interface AssignmentStepTestSSHCommand {
   stdOutMatch: string;
   successMessage: string;
   errorHint: string;
+  gradualAssistance?: Array<GradualAssistanceType>;
 }
 
 interface AssignmentStepTestTerminalBufferSearch {
@@ -80,6 +87,7 @@ interface AssignmentStepTestTerminalBufferSearch {
   match: string;
   successMessage: string;
   errorHint: string;
+  gradualAssistance?: Array<GradualAssistanceType>;
 }
 
 type AssignmentStepTestType =
@@ -170,6 +178,21 @@ export default class Environment {
   private filehandler!: FileHandler | undefined;
   private groupNumber: number;
   private sessionId: string;
+  private testCounter: Map<string, number> = new Map<string, number>();
+
+  private getErrorHint(test: AssignmentStepTestType, stepIndex: string) {
+    if (test.gradualAssistance === undefined)
+      return test.errorHint;
+
+    const tries = (this.testCounter.get(stepIndex) || 0) + 1;
+    this.testCounter.set(stepIndex, tries);
+
+    const assistances = test.gradualAssistance.filter(a => a.failedCounter <= tries).sort((a, b) => b.failedCounter - a.failedCounter);
+    if (assistances.length === 0)
+      return test.errorHint;
+
+    return assistances[0].hint;
+  }
 
   public static getActiveEnvironment(
     environmentId: string,
@@ -1072,8 +1095,9 @@ export default class Environment {
                 }
               }
             }
+
             if (testPassed !== true)
-              testOutput += "FAILED: " + test.errorHint + " ";
+              testOutput += "FAILED: " + this.getErrorHint(test, stepIndex);
           }
         } else if (test.type === "SSHCommand") {
           await this.runSSHCommand(test.command, test.stdOutMatch)
@@ -1082,14 +1106,16 @@ export default class Environment {
               testPassed = true;
             })
             .catch(() => {
-              testOutput += "FAILED: " + test.errorHint + " ";
+              testOutput += "FAILED: " + this.getErrorHint(test, stepIndex) + " ";
             });
         }
+
         // if any of the terminalStates matched
         if (testPassed === true && someTestsFailed !== true)
           someTestsFailed = false;
         else someTestsFailed = true;
       }
+
       if (someTestsFailed !== undefined && someTestsFailed === false)
         return Promise.resolve({
           code: 201,
@@ -1189,12 +1215,23 @@ export default class Environment {
       }
     }
 
+    let bonusPoints = 0;
+    if (this.configuration.steps !== undefined) {
+      for (let i = 0; i < parseInt(stepIndex); i++) {
+        const step = this.configuration.steps[i];
+        const testResult = await this.test(i.toString(), terminalStates);
+        if (testResult.code === 201)
+          bonusPoints += step.bonusPoints ?? 0;
+      }
+    }
+    
     await this.persister.SubmitUserEnvironment(
       this.username,
       this.groupNumber,
       this.environmentId,
       terminalStates,
       submittedFiles,
+      bonusPoints
     );
   }
 

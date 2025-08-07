@@ -20,6 +20,7 @@ import {
   TerminalStateType,
 } from "../Environment";
 import environments, { updateEnvironments } from "../Configuration";
+import { randomUUID } from "crypto";
 
 const saltRounds = 10;
 
@@ -247,6 +248,7 @@ export default class MongoDBPersister implements Persister {
     environment: string,
     terminalStates: TerminalStateType[],
     submittedFiles: SubmissionFileType[],
+    bonusPoints: number
   ): Promise<void> {
     console.log(
       "Storing assignment result for user: " +
@@ -308,6 +310,7 @@ export default class MongoDBPersister implements Persister {
         submissionCreated: now,
         terminalStatus: terminalStates,
         submittedFiles: submittedFiles,
+        points: bonusPoints
       })
       .catch((err) => {
         throw new Error("Failed to store submissions in mongodb.\n" + err);
@@ -544,11 +547,20 @@ export default class MongoDBPersister implements Persister {
 
   async GetAllAssignments(): Promise<AssignmentData[]> {
     const client = await this.getClient();
-    return client
+    const assignments = await client
       .db()
       .collection<AssignmentData>("assignments")
       .find({}, { projection: { _id: 1, name: 1, maxBonusPoints: 1 } })
       .toArray();
+
+    assignments.push({_id: randomUUID().toString(), name: "NQN-Test", maxBonusPoints: 10});
+
+    return assignments;
+    // return client
+    //   .db()
+    //   .collection<AssignmentData>("assignments")
+    //   .find({}, { projection: { _id: 1, name: 1, maxBonusPoints: 1 } })
+    //   .toArray();
   }
 
   async UpdateAssignementsForCourse(
