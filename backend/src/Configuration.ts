@@ -1163,7 +1163,7 @@ export function updateEnvironments(
   });
 }
 
-export function updateEnvironment(env: EnvironmentDescription | AssignmentData) {
+export function updateEnvironment(env: EnvironmentDescription | AssignmentData): void {
   const bonusPoints = env.steps?.reduce((sum, step) => sum + (step.bonusPoints ?? 0), 0) ?? 0;
 
   if (env.maxBonusPoints !== undefined && bonusPoints > env.maxBonusPoints) {
