@@ -19,8 +19,7 @@ import {
   SubmissionFileType,
   TerminalStateType,
 } from "../Environment";
-import environments, { updateEnvironments } from "../Configuration";
-import { randomUUID } from "crypto";
+import environments, { updateEnvironments, updateEnvironment } from "../Configuration";
 
 const saltRounds = 10;
 
@@ -547,20 +546,15 @@ export default class MongoDBPersister implements Persister {
 
   async GetAllAssignments(): Promise<AssignmentData[]> {
     const client = await this.getClient();
-    const assignments = await client
+    return client
       .db()
       .collection<AssignmentData>("assignments")
-      .find({}, { projection: { _id: 1, name: 1, maxBonusPoints: 1 } })
-      .toArray();
-
-    assignments.push({_id: randomUUID().toString(), name: "NQN-Test", maxBonusPoints: 10});
-
-    return assignments;
-    // return client
-    //   .db()
-    //   .collection<AssignmentData>("assignments")
-    //   .find({}, { projection: { _id: 1, name: 1, maxBonusPoints: 1 } })
-    //   .toArray();
+      .find({}, { projection: { _id: 1, name: 1, steps: 1, maxBonusPoints: 1 } })
+      .toArray()
+      .then(assignments => {
+        assignments.forEach(a => updateEnvironment(a));
+        return assignments;
+      });
   }
 
   async UpdateAssignementsForCourse(
@@ -600,7 +594,11 @@ export default class MongoDBPersister implements Persister {
         { $unwind: "$assignments" },
         { $replaceRoot: { newRoot: "$assignments" } },
       ])
-      .toArray();
+      .toArray()
+      .then(assignments => {
+        assignments.forEach(a => updateEnvironment(a));
+        return assignments;
+      });
   }
 
   async GetAllSubmissions(): Promise<SubmissionAdminOverviewEntry[]> {

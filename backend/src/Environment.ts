@@ -181,15 +181,17 @@ export default class Environment {
   private testCounter: Map<string, number> = new Map<string, number>();
 
   private getErrorHint(test: AssignmentStepTestType, stepIndex: string) {
-    if (test.gradualAssistance === undefined)
+    if (test.gradualAssistance === undefined) {
       return test.errorHint;
+    }
 
-    const tries = (this.testCounter.get(stepIndex) || 0) + 1;
-    this.testCounter.set(stepIndex, tries);
+    const attempts = (this.testCounter.get(stepIndex) ?? 0) + 1;
+    this.testCounter.set(stepIndex, attempts);
 
-    const assistances = test.gradualAssistance.filter(a => a.failedCounter <= tries).sort((a, b) => b.failedCounter - a.failedCounter);
-    if (assistances.length === 0)
+    const assistances = test.gradualAssistance.filter(a => a.failedCounter <= attempts).sort((a, b) => b.failedCounter - a.failedCounter);
+    if (assistances.length === 0) {
       return test.errorHint;
+    }
 
     return assistances[0].hint;
   }

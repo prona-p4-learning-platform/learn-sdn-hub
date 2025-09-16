@@ -1,4 +1,5 @@
 import {
+  AssignmentStep,
   Submission,
   SubmissionAdminOverviewEntry,
   SubmissionFileType,
@@ -62,6 +63,7 @@ export interface ResponseObject {
 export interface AssignmentData {
   _id: string;
   name: string;
+  steps?: Array<AssignmentStep>;
   maxBonusPoints?: number;
 }
 
