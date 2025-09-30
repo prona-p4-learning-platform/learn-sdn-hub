@@ -7,6 +7,7 @@ import LanguageServerHandler from "./LanguageServerHandler";
 import RemoteDesktopHandler from "./RemoteDesktopHandler";
 import { TokenPayload } from "../authentication/AuthenticationMiddleware";
 import jwt from "jsonwebtoken";
+import SheetHandler from "./SheetHandler";
 
 type WebsocketPathParams = {
   environment: string;
@@ -23,6 +24,10 @@ type RDPathParams = {
   alias: string;
 };
 
+type SheetPathParams = {
+  environment: string;
+};
+
 const envMatcher = match<WebsocketPathParams>(
   "/ws/environment/:environment/type/:type",
 );
@@ -32,13 +37,16 @@ const lsMatcher = match<LSPathParams>(
 const rdMatcher = match<RDPathParams>(
   "/ws/environment/:environment/desktop/:alias",
 );
+const sheetMatcher = match<SheetPathParams>(
+  "/ws/environment/:environment/labsheet",
+)
 
 export default function wrapWSWithExpressApp(server: Server): void {
   const wss = new WebSocket.Server({ server });
   wss.on("connection", function (ws, request) {
     ws.once("message", (message) => {
       // eslint-disable-next-line @typescript-eslint/no-base-to-string
-      const [auth, token] = message.toString().split(" ");
+      const [auth, token, groupNumber] = message.toString().split(" ");
       if (auth !== "auth") {
         ws.send("Not authenticated.");
         ws.close();
@@ -65,14 +73,17 @@ export default function wrapWSWithExpressApp(server: Server): void {
           const envMatchResult = envMatcher(path);
           const lspMatchResult = lsMatcher(path);
           const rdMatchResult = rdMatcher(path);
+          const sheetMatchResult = sheetMatcher(path);
 
           if (envMatchResult !== false) {
             const { environment, type } = envMatchResult.params;
+            const isAdmin = user.role === "admin";
+
             ConsoleHandler(
               ws,
               environment,
-              user.groupNumber,
-              user.sessionId,
+              isAdmin && groupNumber !== undefined ? Number(groupNumber) : user.groupNumber,
+              isAdmin ? undefined : user.sessionId,
               type,
             );
           } else if (lspMatchResult !== false) {
@@ -81,7 +92,11 @@ export default function wrapWSWithExpressApp(server: Server): void {
           } else if (rdMatchResult !== false) {
             const { environment, alias } = rdMatchResult.params;
             RemoteDesktopHandler(ws, environment, user.groupNumber, alias);
-          } else {
+          } else if (sheetMatchResult !== false) {
+            const { environment } = sheetMatchResult.params;
+            SheetHandler(ws, environment);
+          }
+          else {
             ws.send("No route handler.");
             ws.close();
           }

@@ -2,8 +2,11 @@ import { ClientSession, MongoClient, ObjectId, PullOperator } from "mongodb";
 import { hash } from "@node-rs/bcrypt";
 import {
   AssignmentData,
+  AssignmentDelete,
+  AssignmentUpdate,
   CourseData,
   FileData,
+  LabSheet,
   Persister,
   ResponseObject,
   UserAccount,
@@ -20,6 +23,7 @@ import {
   TerminalStateType,
 } from "../Environment";
 import environments, { updateEnvironments } from "../Configuration";
+import { NewAssignment } from "frontend/src/typings/assignment/AssignmentType";
 
 const saltRounds = 10;
 
@@ -37,6 +41,17 @@ export interface SubmissionEntry {
   terminalStatus: TerminalStateType[];
   submittedFiles: SubmissionFileType[];
   points?: number;
+}
+
+type MongoAssignment = NewAssignment & {
+  _id: ObjectId;
+  sheetId?: ObjectId;
+};
+
+interface MongoLabSheet {
+  _id: ObjectId;
+  name: string;
+  content: string;
 }
 
 interface SubmissionAdminEntry extends SubmissionEntry {
@@ -210,6 +225,8 @@ export default class MongoDBPersister implements Persister {
     environment: string,
     description: string,
     instance: string,
+    ipAddress: string,
+    port: number | undefined,
   ): Promise<void> {
     const client = await this.getClient();
     await client
@@ -217,7 +234,7 @@ export default class MongoDBPersister implements Persister {
       .collection<UserEntry>("users")
       .findOneAndUpdate(
         { username, "environments.environment": { $ne: environment } },
-        { $push: { environments: { environment, description, instance } } },
+        { $push: { environments: { environment, description, instance, ipAddress, port } } },
         {
           projection: { environments: 1 },
         },
@@ -365,6 +382,32 @@ export default class MongoDBPersister implements Persister {
         },
       )
       .toArray();
+  }
+
+  async GetActiveEnvironments(): Promise<UserEntry[]> {
+    const client = await this.getClient();
+    const users = await client
+      .db()
+      .collection<UserEntry>("users")
+      .find(
+        {
+          environments: { $exists: true, $ne: [] },
+        },
+        {
+          projection: {
+            _id: 1,
+            username: 1,
+            groupNumber: 1,
+            environments: 1,
+          },
+        },
+      )
+      .toArray();
+
+    return users.map(user => ({
+      ...user,
+      environmentIPs: user.environments.map(env => env.ipAddress),
+    }));
   }
 
   async GetAllCourses(): Promise<CourseData[]> {
@@ -542,13 +585,162 @@ export default class MongoDBPersister implements Persister {
     return insertedAssignments;
   }
 
+  async CreateAssignment(assignment: NewAssignment): Promise<AssignmentData> {
+    const client = await this.getClient();
+    const sheetsCollection = client
+      .db()
+      .collection("assignmentLabSheets");
+    const assignmentsCollection = client.db().collection("assignments");
+
+    await assignmentsCollection.createIndex({ name: 1 }, { unique: true });
+
+    const existing = await assignmentsCollection.findOne({ name: assignment.name });
+    if (existing) {
+      throw new Error(`Assignment with name "${assignment.name}" already exists`);
+    }
+
+    let sheetId: ObjectId | undefined;
+    if (assignment.assignmentLabSheet) {
+      const sheetResult = await sheetsCollection.insertOne({
+        name: assignment.labSheetName,
+        content: assignment.assignmentLabSheet,
+      });
+      sheetId = sheetResult.insertedId;
+    }
+
+    const assignmentToInsert = {
+      name: assignment.name,
+      assignmentLabSheetLocation: "database",
+      ...(assignment.maxBonusPoints !== undefined && { maxBonusPoints: assignment.maxBonusPoints }),
+      ...(assignment.assignmentLabSheet !== undefined && { assignmentLabSheet: assignment.assignmentLabSheet }),
+      ...(sheetId && { sheetId }),
+    };
+
+    const result = await assignmentsCollection.insertOne(assignmentToInsert);
+
+    const insertedAssignment = await assignmentsCollection.findOne<MongoAssignment>({
+      _id: result.insertedId,
+    });
+
+    if (!insertedAssignment) {
+      throw new Error("Failed to create assignment");
+    }
+
+    return {
+      _id: insertedAssignment._id.toString(),
+      name: insertedAssignment.name,
+      maxBonusPoints: insertedAssignment.maxBonusPoints ?? undefined,
+      assignmentLabSheet: insertedAssignment.assignmentLabSheet ?? undefined,
+    };
+  }
+
+  async DeleteAssignment(assignment: AssignmentDelete): Promise<void> {
+    const client = await this.getClient();
+
+    const { _id, _sheetId } = assignment;
+
+    if (!_id) {
+      throw new Error("DeleteAssignment called without _id");
+    }
+
+    const assignmentId = new ObjectId(_id);
+    const labSheetId = _sheetId ? new ObjectId(_sheetId) : null;
+    const assignmentResult = await client
+      .db()
+      .collection("assignments")
+      .deleteOne({ _id: assignmentId });
+
+    if (assignmentResult.deletedCount === 0) {
+      throw new Error(`Assignment with id ${_id} not found`);
+    }
+
+    if (labSheetId) {
+      const sheetResult = await client
+        .db()
+        .collection("assignmentLabSheets")
+        .deleteOne({ _id: labSheetId });
+
+      if (sheetResult.deletedCount === 0) {
+        console.warn(`LabSheet with id ${_sheetId} not found`);
+      }
+    }
+  }
+
+  async UpdateAssignment(update: AssignmentUpdate): Promise<void> {
+    const client = await this.getClient();
+
+    const { _id, _sheetId, description, maxBonusPoints, name, labSheetContent, labSheetName } = update;
+    const assignmentId = new ObjectId(_id);
+    const labSheetId = new ObjectId(_sheetId);
+
+    console.log("UpdateAssignment", update);
+
+    await client
+      .db()
+      .collection("assignments")
+      .updateOne(
+        { _id: assignmentId },
+        { $set: { description: description, maxBonusPoints: maxBonusPoints, name: name }},
+      )
+      .then(() => undefined)
+
+    await client
+      .db()
+      .collection("assignmentLabSheets")
+      .updateOne(
+        { _id: labSheetId },
+        { $set: { content: labSheetContent, name: labSheetName }},
+      )
+  }
+
   async GetAllAssignments(): Promise<AssignmentData[]> {
     const client = await this.getClient();
-    return client
+    const assignments = await client
       .db()
       .collection<AssignmentData>("assignments")
-      .find({}, { projection: { _id: 1, name: 1, maxBonusPoints: 1 } })
+      .find(
+        {},
+        {
+          projection: {
+            _id: 1,
+            name: 1,
+            maxBonusPoints: 1,
+            assignmentLabSheet: 1,
+            sheetId: 1,
+            assignmentLabSheetLocation: 1,
+          },
+        }
+      )
       .toArray();
+
+    return assignments.map(a => ({
+      _id: a._id,
+      name: a.name,
+      maxBonusPoints: a.maxBonusPoints ?? undefined,
+      assignmentLabSheet: a.assignmentLabSheet ?? undefined,
+      sheetId: a.sheetId ?? undefined,
+      assignmentLabSheetLocation: (a.assignmentLabSheetLocation as "backend" | "instance" | "database") ?? undefined,
+    }));
+  }
+
+  async GetLabSheetContent(sheetId: string): Promise<LabSheet | null> {
+    const client = await this.getClient();
+
+    const doc = await client
+      .db()
+      .collection<MongoLabSheet>("assignmentLabSheets")
+      .findOne(
+        { _id: new ObjectId(sheetId) },
+        { projection: { _id: 1, name: 1, content: 1 } }
+      );
+
+    if (!doc) return null;
+
+    return {
+      _sheetId: doc._id.toString(),
+      labSheetName: doc.name,
+      labSheetContent: doc.content,
+    };
   }
 
   async UpdateAssignementsForCourse(

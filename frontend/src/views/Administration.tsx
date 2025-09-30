@@ -4,7 +4,7 @@ import { useSnackbar } from "notistack";
 import { z } from "zod";
 
 import type { User } from "../typings/user/UserType";
-import type { Assignment } from "../typings/assignment/AssignmentType";
+import type { Assignment, NewAssignment } from "../typings/assignment/AssignmentType";
 import type { Course } from "../typings/course/CourseType";
 
 import AdminTabs from "../components/AdminTabs";
@@ -12,16 +12,118 @@ import UserAssignment from "../components/UserAssignment";
 import CourseAssignments from "../components/CourseAssignments";
 import AddEntryDialog from "../components/AddEntryDialog";
 import SubmissionOverview from "../components/SubmissionOverview";
+import ActiveEnvironmentsOverview from "../components/ActiveEnvironmentsOverview.tsx";
+import ConfigurationEditor from "../components/AssignmentEditor.tsx";
 
 import { APIRequest } from "../api/Request";
+
+// TODO: Most of these Validators are not in use right now, but can bes used to create assignments in the future
+
+const ShellValidator = z.object({
+  type: z.literal("Shell"),
+  name: z.string(),
+  executable: z.string(),
+  cwd: z.string(),
+  params: z.array(z.string()),
+  provideTty: z.boolean(),
+});
+
+const WebAppValidator = z.object({
+  type: z.literal("WebApp"),
+  name: z.string(),
+  url: z.string(),
+});
+
+const DesktopValidator = z.object({
+  type: z.literal("Desktop"),
+  name: z.string(),
+  guacamoleServerURL: z.string(),
+  remoteDesktopProtocol: z.enum(["vnc", "rdp"]),
+  remoteDesktopPort: z.number(),
+  remoteDesktopUsername: z.string().optional(),
+  remoteDesktopPassword: z.string(),
+  remoteDesktopHostname: z.string().optional(),
+});
+
+const TerminalTypeValidator = z.union([
+  ShellValidator,
+  WebAppValidator,
+  DesktopValidator,
+]);
+
+const AliasedFileValidator = z.object({
+  absFilePath: z.string(),
+  alias: z.string(),
+})
+
+const AssignmentStepTestSSHCommandValidator = z.object({
+  type: z.literal("SSHCommand"),
+  command: z.string(),
+  stdOutMatch: z.string(),
+  successMessage: z.string(),
+  errorHint: z.string(),
+});
+
+const AssignmentStepTestTerminalBufferSearchValidator = z.object({
+  type: z.literal("TerminalBufferSearch"),
+  terminal: z.string(),
+  match: z.string(),
+  successMessage: z.string(),
+  errorHint: z.string(),
+});
+
+const AssignmentStepTestTypeValidator = z.union([
+  AssignmentStepTestSSHCommandValidator,
+  AssignmentStepTestTerminalBufferSearchValidator,
+]);
+
+export const AssignmentStepValidator = z.object({
+  name: z.string(),
+  label: z.string(),
+  tests: z.array(AssignmentStepTestTypeValidator),
+});
 
 const assignmentValidator = z.object({
   _id: z.string(),
   name: z.string(),
   maxBonusPoints: z.number().optional(),
+  assignmentLabSheet: z.string().optional(),
+  labSheetName: z.string().optional(),
+  sheetId: z.string().optional(),
+  assignmentLabSheetLocation: z.enum(["backend", "instance", "database"]).optional(),
+  description: z.string().optional(),
+  providerImage: z.string().optional(),
+  providerDockerCmd: z.string().optional(),
+  providerKernelImage: z.string().optional(),
+  submissionCleanupCommand: z.string().optional(),
+  providerKernelBootARGs: z.string().optional(),
+  submissionPrepareCommand: z.string().optional(),
+  providerRootDrive: z.string().optional(),
+  providerProxmoxTemplateTag: z.string().optional(),
+  rootPath: z.string().optional(),
+  useCollaboration: z.boolean().optional(),
+  useLanguageClient: z.boolean().optional(),
+  mountKubeconfig: z.boolean().optional(),
+  terminals: z.array(z.array(TerminalTypeValidator)).optional(),
+  editableFiles: z.array(AliasedFileValidator).optional(),
+  stopCommands: z.array(TerminalTypeValidator).optional(),
+  steps: z.array(AssignmentStepValidator).optional(),
+  submissionSupplementalFiles: z.array(z.string()).optional(),
+  providerDockerSupplementalPorts: z.array(z.string()).optional(),
+  workspaceFolders: z.array(z.string()).optional(),
+  markdownFiles: z.array(z.string()).optional(),
+  sshTunnelingPorts: z.array(z.string()).optional(),
 });
 
 const assignmentsArrayValidator = z.array(assignmentValidator);
+
+const environmentValidator = z.object({
+  environment: z.string(),
+  description: z.string().nullable().optional(),
+  instance: z.string(),
+  ipAddress: z.string().optional(),
+  port: z.number().optional(),
+})
 
 const assignmentsUnionArrayValidator = z.union([
   z.array(assignmentValidator),
@@ -42,6 +144,7 @@ const userValidator = z.object({
   groupNumber: z.number().nonnegative(),
   role: z.string().optional(),
   courses: z.array(z.string()).optional(),
+  environments: z.array(environmentValidator).optional(),
 });
 
 const usersArrayValidator = z.array(userValidator);
@@ -53,11 +156,18 @@ const messageValidator = z.object({
   id: z.string().optional(),
 });
 
+const deleteValidator = z.object({
+  success: z.boolean(),
+});
+
+const defaultValidator = z.object({});
+
 function Administration(): JSX.Element {
   const { enqueueSnackbar } = useSnackbar();
   const [authorized, setAuthorized] = useState(false);
   const [load, setLoad] = useState(true);
   const [users, setUsers] = useState<User[]>([]);
+  const [activeUsers, setActiveUsers] = useState<User[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [openDialog, setOpenDialog] = useState<boolean>(false);
@@ -143,6 +253,115 @@ function Administration(): JSX.Element {
     //   });
   }, [addLocalAssignmentsToDB, authorized, showError]);
 
+  // TODO: Create Assignment for future work
+  const createAssignment = useCallback(async (assignment: Partial<NewAssignment>) => {
+    try {
+      const result = await APIRequest(
+        "/admin/assignments/createNew",
+        assignmentValidator,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            name: assignment.name,
+            maxBonusPoints: assignment.maxBonusPoints,
+            assignmentLabSheet: assignment.assignmentLabSheet,
+            labSheetName: assignment.labSheetName,
+          }),
+          headers: {
+            "Content-Type": "application/json",
+          },
+        },
+      );
+      if (result.success) {
+        enqueueSnackbar("Assignment successfully created!", { variant: "success" });
+        //setAssignment(result.data);
+        await fetchAssignments();
+        console.log("Assignments:", assignments);
+      } else {
+        throw new Error(result.error.message);
+      }
+    } catch (error) {
+      showError(error);
+    }
+  }, [assignments, enqueueSnackbar, fetchAssignments, showError]);
+
+  const updateAssignment = useCallback(async (update: Partial<NewAssignment>) => {
+    try {
+      const result = await APIRequest(
+        `admin/assignment/${update._id}/update`,
+        defaultValidator,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: update.name,
+            maxBonusPoints: update.maxBonusPoints,
+            assignmentLabSheet: update.assignmentLabSheet,
+            _sheetId: update.sheetId,
+            //description: update.description,
+            labSheetName: update.labSheetName,
+            labSheetContent: update.assignmentLabSheet,
+          }),
+        });
+      if (result.success) {
+        enqueueSnackbar("Assignment successfully updated!", { variant: "success" });
+        await fetchAssignments();
+        console.log("Assignments Updated:", assignments);
+      } else {
+        throw new Error(result.error.message);
+      }
+    } catch (error) {
+      showError(error);
+    }
+  }, [enqueueSnackbar, fetchAssignments, assignments, showError]);
+
+  // TODO: Can be extended in the future
+  const deleteAssignment = useCallback(
+    async (assignment: Partial<NewAssignment>) => {
+      try {
+        const result = await APIRequest(
+          "admin/assignments/delete",
+          deleteValidator,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              _id: assignment._id,
+              _sheetId: assignment.sheetId ?? null,
+            }),
+          },
+        );
+        if (result.success) {
+          enqueueSnackbar("Assignment successfully deleted!", { variant: "success" });
+          await fetchAssignments();
+        } else {
+          throw new Error(result.error.message);
+        }
+      } catch (error) {
+        showError(error);
+      }
+    },
+    [enqueueSnackbar, fetchAssignments, showError]
+  );
+
+  const fetchActiveEnvironments = useCallback(async () => {
+    if (!authorized) return;
+
+    try {
+      const result = await APIRequest("/admin/activeEnvironments", usersArrayValidator);
+
+      if (result.success) {
+        setActiveUsers(result.data);
+      } else {
+        throw new Error(result.error.message);
+      }
+    } catch (error) {
+      showError(error);
+    }
+  }, [ authorized, showError]);
+
   const fetchCourses = useCallback(async () => {
     if (!authorized) return;
 
@@ -209,6 +428,11 @@ function Administration(): JSX.Element {
     fetchUsers().catch((error) => {
       showError(error);
     });
+
+    fetchActiveEnvironments().catch((error) => {
+      showError(error);
+    });
+
     // setLoad(false);
     // fetch(
     //   APIRequest("/admin/users", {
@@ -240,6 +464,7 @@ function Administration(): JSX.Element {
     handleAuthorization,
     showError,
     enqueueSnackbar,
+    fetchActiveEnvironments,
   ]);
 
   const openCreateNewCourseModal = () => {
@@ -357,6 +582,8 @@ function Administration(): JSX.Element {
               "Assign Users",
               "Course Assignments",
               "Submission Overview",
+              "Active Environments",
+              "Assignment Editor"
             ]}
           >
             <UserAssignment
@@ -375,6 +602,20 @@ function Administration(): JSX.Element {
               key="submissionOverview"
               assignments={assignments}
             ></SubmissionOverview>
+            <ActiveEnvironmentsOverview
+                key="assignmentCreation"
+                activeUsers={activeUsers}
+                reloadActiveUsers={fetchActiveEnvironments}
+            ></ActiveEnvironmentsOverview>
+            <ConfigurationEditor
+              assignments={assignments}
+              createAssignment={createAssignment}
+              updateAssignment={updateAssignment}
+              deleteAssignment={deleteAssignment}
+              activeUsers={activeUsers}
+              reloadActiveUsers={fetchActiveEnvironments}
+            >
+            </ConfigurationEditor>
           </AdminTabs>
         </Grid>
       ) : null}
