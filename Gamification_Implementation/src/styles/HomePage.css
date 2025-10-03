@@ -1,0 +1,144 @@
+.homepage-container {
+  display: flex;
+  gap: 24px;
+  flex-wrap: nowrap;
+  align-items: flex-start;
+}
+
+.homepage-sidebar {
+  flex: 0 0 280px;
+}
+
+.role-title {
+  color: #6bd1ff;
+  font-family: 'Press Start 2P', cursive;
+  font-size: 0.85rem;
+  margin-bottom: 8px;
+}
+
+.role-description {
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.level-bar-wrapper {
+  margin-top: 16px;
+  margin-bottom: 20px;
+}
+
+.level-text {
+  color: #6bd1ff;
+  font-size: 0.75rem;
+  margin-bottom: 4px;
+}
+
+.level-bar-container {
+  width: 100%;
+  height: 16px;
+  background: #1f1f1f;
+  border: 3px solid #444;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.level-bar-fill {
+  height: 100%;
+  background: #6bd1ff;
+  border-radius: 16px;
+}
+
+.xp-text {
+  font-size: 0.7rem;
+  margin-top: 4px;
+}
+
+.sidebar-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.profile-button {
+  border: none;
+  border-radius: 4px;
+  padding: 14px;
+  cursor: pointer;
+  background: #2a2a2a;
+  color: #6bd1ff;
+}
+
+.profile-button:hover {
+  background: #333;
+}
+
+.start-coop-btn,
+.start-task-btn {
+  font-family: 'Press Start 2P', cursive;
+  font-size: 0.85rem;
+  padding: 12px 24px;
+  color: #6bd1ff;
+}
+
+.waiting-text {
+  color: #6bd1ff;
+  margin-top: 12px;
+}
+
+.coop-popup {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(17, 17, 17, 0.9);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+}
+
+.coop-popup-content {
+  background: #222;
+  border: 3px solid #555;
+  border-radius: 6px;
+  padding: 24px;
+  width: 90%;
+  max-width: 400px;
+  box-shadow: 0 0 0 4px #111;
+  color: #fff;
+}
+
+.coop-popup-content h3 {
+  font-family: 'Press Start 2P', cursive;
+  font-size: 0.95rem;
+}
+
+.coop-user-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.coop-user-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.add-user {
+  font-family: 'Press Start 2P', cursive;
+}
+
+@media (max-width: 768px) {
+  .homepage-container {
+    flex-direction: column;
+  }
+
+  .homepage-sidebar {
+    flex: none;
+  }
+
+  .homepage-main {
+    min-width: auto;
+  }
+}

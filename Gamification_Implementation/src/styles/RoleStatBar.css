@@ -1,0 +1,29 @@
+.role-stat-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    margin-bottom: 5px;
+}
+
+.role-stat-label {
+    color: #6bd1ff;
+}
+
+.role-stat-track {
+    flex: 1;
+    height: 4px;
+    background-color: #1f1f1f;
+    overflow: hidden;
+    border-radius: 2px;
+}
+
+.role-stat-fill {
+    height: 100%;
+    transition: width 0.3s ease-in-out;
+}
+
+.role-stat-value {
+    color: #cfcfcf;
+    font-size: 0.75rem;
+}

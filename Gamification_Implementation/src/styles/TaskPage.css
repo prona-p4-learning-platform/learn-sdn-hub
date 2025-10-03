@@ -1,0 +1,89 @@
+.avatars-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.avatar-block {
+  text-align: center;
+}
+
+.progress-bar-container {
+  position: relative;
+  width: 100%;
+  height: 24px;
+  background: #1f1f1f;
+  border: 3px solid #444;
+  overflow: hidden;
+  border-radius: 16px;
+  margin-bottom: 18px;
+}
+
+.progress-bar {
+  height: 100%;
+  background: #6bd1ff;
+  border-radius: 16px;
+}
+
+.packet-icon {
+  position: absolute;
+  top: 0px;
+  transform: translateX(-50%);
+}
+
+.task-button {
+  border-radius: 4px;
+  padding: 18px;
+  cursor: pointer;
+  color: #6bd1ff;
+}
+
+.task-button[data-disabled="true"] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.task-complete-section {
+  margin-top: 16px;
+  text-align: center;
+}
+
+.task-complete-text {
+  color: #6bd1ff;
+  margin-bottom: 16px;
+}
+
+.messages-container {
+  text-align: left;
+  margin-bottom: 12px;
+}
+
+.message {
+  font-size: 0.9rem;
+  margin-bottom: 6px;
+}
+
+.send-message-row {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  align-items: center;
+}
+
+.message-input {
+  padding: 8px;
+  width: 70%;
+  font-family: VT323, monospace;
+  font-size: 1rem;
+  background: #111;
+  color: #e5e5e5;
+  border: 2px solid #555;
+  border-radius: 6px;
+}
+
+.send-button {
+  padding: 8px 16px;
+  font-family: 'Press Start 2P', cursive;
+  font-size: 0.9rem;
+  color: #6bd1ff;
+}
