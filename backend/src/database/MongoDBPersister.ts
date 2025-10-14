@@ -43,7 +43,7 @@ export interface SubmissionEntry {
   points?: number;
 }
 
-type MongoAssignment = NewAssignment & {
+export type MongoAssignment = Omit<NewAssignment, "_id" | "sheetId"> & {
   _id: ObjectId;
   sheetId?: ObjectId;
 };
