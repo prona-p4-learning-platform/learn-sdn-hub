@@ -15,4 +15,6 @@ export interface NewAssignment extends EnvironmentDescription {
   name: string;
   labSheetName?: string;
   sheetId?: string;
+  assignmentLabSheet?: string;
+  maxBonusPoints?: number;
 }

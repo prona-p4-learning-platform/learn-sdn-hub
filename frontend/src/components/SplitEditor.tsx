@@ -7,7 +7,7 @@ import { useOptionsStore } from "../stores/optionsStore.ts";
 
 interface SplitEditorProps {
   newAssignment: Partial<NewAssignment> | null;
-  setNewAssignment: React.Dispatch<React.SetStateAction<Partial<NewAssignment | null>>>;
+  setNewAssignment: React.Dispatch<React.SetStateAction<Partial<NewAssignment> | null>>;
 }
 
 export default function SplitEditor({ newAssignment, setNewAssignment }: SplitEditorProps): JSX.Element {
