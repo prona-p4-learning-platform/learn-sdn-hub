@@ -23,7 +23,6 @@ import {
   TerminalStateType,
 } from "../Environment";
 import environments, { updateEnvironments } from "../Configuration";
-import { NewAssignment } from "frontend/src/typings/assignment/AssignmentType";
 
 const saltRounds = 10;
 
@@ -47,6 +46,14 @@ export type MongoAssignment = Omit<NewAssignment, "_id" | "sheetId"> & {
   _id: ObjectId;
   sheetId?: ObjectId;
 };
+
+interface NewAssignment {
+  _id: ObjectId;
+  name: string;
+  assignmentLabSheet?: string | undefined;
+  labSheetName?: string | undefined;
+  maxBonusPoints?: number | undefined;
+}
 
 interface MongoLabSheet {
   _id: ObjectId;
