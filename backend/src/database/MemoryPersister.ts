@@ -2,6 +2,7 @@ import {
   AssignmentData,
   CourseData,
   FileData,
+  LabSheet,
   Persister,
   ResponseObject,
   UserAccount,
@@ -115,6 +116,8 @@ export default class MemoryPersister implements Persister {
         environment,
         description,
         instance,
+        ipAddress: "",
+        port: undefined,
       });
 
       resolve();
@@ -229,6 +232,26 @@ export default class MemoryPersister implements Persister {
 
   GetAllCourses(): Promise<CourseData[]> {
     // TODO: implement
+    throw new Error("Method not implemented.");
+  }
+
+  GetActiveEnvironments(): Promise<UserEntry[]> {
+    throw new Error("Method not implemented.");
+  }
+
+  CreateAssignment(): Promise<AssignmentData> {
+    throw new Error("Method not implemented.");
+  }
+
+  UpdateAssignment(): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
+
+  DeleteAssignment(): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
+
+  GetLabSheetContent(): Promise<LabSheet | null> {
     throw new Error("Method not implemented.");
   }
 
