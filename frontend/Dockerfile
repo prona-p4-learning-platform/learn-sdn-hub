@@ -1,8 +1,5 @@
 # stage I: build wit node
-
-# image can be changed
-# found this to be quite small and nice
-FROM node:20-bookworm-slim AS build
+FROM node:22
 
 LABEL de.hs-fulda.netlab.name="prona/learn-sdn-hub" \
       de.hs-fulda.netlab.description="P4 and SDN learning environment" \
