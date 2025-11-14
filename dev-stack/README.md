@@ -19,7 +19,17 @@ k3d cluster delete learn-sdn-hub
 ## Terrafrom
 The complete dev environment is defined as terrafrom resources. To setup your local dev environment just apply the terraform files in the `terraform` directory.
 
+### Install providers
+To install all required providers run
+```shell
+terrafrom init
+```
+
 ### Apply dev environment
 ```shell
 terraform apply
 ```
+
+## Components in k8s cluster
+- [nginx-ingress-controller](https://artifacthub.io/packages/helm/ingress-nginx/ingress-nginx)
+- [fluxcd](https://fluxcd.control-plane.io/operator/install/)
