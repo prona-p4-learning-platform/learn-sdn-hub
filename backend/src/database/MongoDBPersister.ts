@@ -723,8 +723,8 @@ export default class MongoDBPersister implements Persister {
       )
       .toArray()
       .then((assignments) => {
-        assignments.forEach(a => updateEnvironment(a))
-        return assignments
+        assignments.forEach(a => updateEnvironment(a));
+        return assignments;
       });
 
     return assignments.map(a => ({
