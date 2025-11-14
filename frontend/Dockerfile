@@ -22,7 +22,7 @@ COPY . .
 RUN npm run build    # produces /home/p4/learn-sdn-hub/frontend
 
 # stage II: Runtime with nginx
-FROM nginx:alpine AS runtime
+FROM nginx:1.29-trixie AS runtime
 
 # nginx-config (SPA-Routing)
 COPY nginx.conf /etc/nginx/conf.d/default.conf
@@ -31,6 +31,6 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /home/p4/learn-sdn-hub/frontend/build /usr/share/nginx/html
 
 # port for nginx
-EXPOSE 3000/tcp
+EXPOSE 80
 
 CMD ["nginx", "-g", "daemon off;"]
