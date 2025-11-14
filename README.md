@@ -292,5 +292,8 @@ K8S_CERT_AUTH_DATA="LS0tLS1CRUd..."
 KUBECTL_STORE_PATH="/tmp" 
 ```
 
+#### Kubernetes Doku
+[Hier](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/) ist geht es zu der Kubernetes Rest Api Doku
+
 ### OIDC example
 An example to use OIDC is provided in the examples folder of this repo [oidc-extension](/examples/oidc-extension).
