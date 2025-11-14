@@ -62,6 +62,7 @@ const environmentConfigurationValidator = z.object({
   workspaceFolders: z.array(z.string()).default([]),
   useCollaboration: z.boolean().default(false),
   useLanguageClient: z.boolean().default(false),
+  isExam: z.boolean().default(false),
 });
 
 const environmentAssignmentValidator = z.object({
@@ -106,6 +107,7 @@ type EnvironmentState = {
   workspaceFolders: string[];
   useCollaboration: boolean;
   useLanguageClient: boolean;
+  isExam: boolean;
 };
 
 function Environment(): JSX.Element {
@@ -137,6 +139,7 @@ function Environment(): JSX.Element {
     workspaceFolders: [],
     useCollaboration: false,
     useLanguageClient: false,
+    isExam: false,
   });
   const [terminalState, setTerminalState] = useState<TerminalStateType[]>([]);
   const [activeStep, setActiveStep] = useState<number>(0);
@@ -161,6 +164,7 @@ function Environment(): JSX.Element {
           if (payload.data.stepLabels.length < 1) {
             setStepsCompleted(true);
           }
+          console.log(`Assignment "${environmentName}" - isExam:`, payload.data.isExam);
           setState(payload.data);
         } else throw payload.error;
       })

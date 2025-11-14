@@ -47,6 +47,8 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
         return;
       }
 
+      console.log(`Configuration for "${environment}" - isExam:`, targetEnv.isExam);
+
       res.status(200).json({
         files: targetEnv.editableFiles.map((file) => file.alias),
         filePaths: targetEnv.editableFiles.map((file) => file.absFilePath),
@@ -65,6 +67,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
         workspaceFolders: targetEnv.workspaceFolders,
         useCollaboration: targetEnv.useCollaboration,
         useLanguageClient: targetEnv.useLanguageClient,
+        isExam: targetEnv.isExam ?? false,
       });
     },
   );
