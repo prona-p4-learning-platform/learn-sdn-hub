@@ -570,9 +570,11 @@ function Assignments(): JSX.Element {
                     onClick={() => {
                       void navigate(`/environment/${assignment}`);
                     }}
-                    sx={{ margin: theme.spacing(1) }}
+                    sx={{ margin: theme.spacing(1), width: "15em", justifyContent: "space-between", whiteSpace: "nowrap" }}
                   >
+                    <div style={{ width: "100%" }}></div>
                     {assignmentTypes.get(assignment) === true ? "Start Exam" : "Start Assignment"}
+                    <div style={{ width: "100%" }}></div>
                   </Button>
                   <Button
                     variant="contained"
