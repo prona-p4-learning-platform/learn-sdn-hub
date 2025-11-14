@@ -22,7 +22,7 @@ import {
   SubmissionFileType,
   TerminalStateType,
 } from "../Environment";
-import environments, { updateEnvironments } from "../Configuration";
+import environments, { updateEnvironments, updateEnvironment } from "../Configuration";
 
 const saltRounds = 10;
 
@@ -271,6 +271,7 @@ export default class MongoDBPersister implements Persister {
     environment: string,
     terminalStates: TerminalStateType[],
     submittedFiles: SubmissionFileType[],
+    bonusPoints: number
   ): Promise<void> {
     console.log(
       "Storing assignment result for user: " +
@@ -332,6 +333,7 @@ export default class MongoDBPersister implements Persister {
         submissionCreated: now,
         terminalStatus: terminalStates,
         submittedFiles: submittedFiles,
+        points: bonusPoints
       })
       .catch((err) => {
         throw new Error("Failed to store submissions in mongodb.\n" + err);
@@ -711,6 +713,7 @@ export default class MongoDBPersister implements Persister {
           projection: {
             _id: 1,
             name: 1,
+            steps: 1,
             maxBonusPoints: 1,
             assignmentLabSheet: 1,
             sheetId: 1,
@@ -718,7 +721,11 @@ export default class MongoDBPersister implements Persister {
           },
         }
       )
-      .toArray();
+      .toArray()
+      .then((assignments) => {
+        assignments.forEach(a => updateEnvironment(a))
+        return assignments
+      });
 
     return assignments.map(a => ({
       _id: a._id,
@@ -787,7 +794,11 @@ export default class MongoDBPersister implements Persister {
         { $unwind: "$assignments" },
         { $replaceRoot: { newRoot: "$assignments" } },
       ])
-      .toArray();
+      .toArray()
+      .then(assignments => {
+        assignments.forEach(a => updateEnvironment(a));
+        return assignments;
+      });
   }
 
   async GetAllSubmissions(): Promise<SubmissionAdminOverviewEntry[]> {

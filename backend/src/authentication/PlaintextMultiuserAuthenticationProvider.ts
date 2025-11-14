@@ -5,6 +5,10 @@ import {
 } from "./AuthenticationProvider";
 import MemoryPersister from "../database/MemoryPersister";
 
+// PlaintextMultiuserAuthenticationProvider is only used for standalone demo builds, e.g., using the provided docker compose file.
+// The provider is using users that are defined in an environment variable.
+// Therefore, this provider does not include several features that are only possible with a database or identity management providers.
+
 export default class PlaintextMultiuserAuthenticationProvider
   implements AuthenticationProvider
 {

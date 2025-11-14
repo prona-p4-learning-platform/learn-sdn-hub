@@ -1,4 +1,7 @@
 // /tmp/test-wbo225/test.p4(13):syntax error, unexpected TYPEDEF, expecting ;
+
+// currently only used in old test case (/test/unit/CompilationsResultExtractor.test.ts), new P4 LSP and monaco support needed to revive it
+
 export interface CompilationError {
   line: number;
   message: string;

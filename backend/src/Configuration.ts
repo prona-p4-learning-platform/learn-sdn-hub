@@ -1,4 +1,7 @@
+import { AssignmentData } from "./database/Persister";
 import { EnvironmentDescription } from "./Environment";
+
+// Configuration.ts holds the main configuration regarding the assignments that can be deployed, its contents can also be red from MongoDB, which would make this file obsolete
 
 const environments = new Map<string, EnvironmentDescription>();
 
@@ -1139,7 +1142,15 @@ environments.set("CC-Lab-1", {
   assignmentLabSheet: "/home/p4/labs/lab1/README.md",
 });
 
-export default environments;
+function getEnvironments(): Map<string, EnvironmentDescription> {
+  return new Map(
+    Array.from(environments.entries())
+      .map(([key, value]) => {
+        updateEnvironment(value);
+        return [key, value];
+      })
+  );
+}
 
 export function updateEnvironments(
   updatedEnvironments: Map<string, EnvironmentDescription>,
@@ -1147,6 +1158,19 @@ export function updateEnvironments(
   environments.clear();
 
   updatedEnvironments.forEach((value, key) => {
+    updateEnvironment(value)
     environments.set(key, value);
   });
 }
+
+export function updateEnvironment(env: EnvironmentDescription | AssignmentData): void {
+  const bonusPoints = env.steps?.reduce((sum, step) => sum + (step.bonusPoints ?? 0), 0) ?? 0;
+
+  if (env.maxBonusPoints !== undefined && bonusPoints > env.maxBonusPoints) {
+    env.maxBonusPoints = bonusPoints;
+  } else if (env.maxBonusPoints === undefined && bonusPoints > 0) {
+    env.maxBonusPoints = bonusPoints;
+  }
+}
+
+export default getEnvironments();

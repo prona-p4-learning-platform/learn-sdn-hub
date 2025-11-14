@@ -1,4 +1,5 @@
 import {
+  AssignmentStep,
   Submission,
   SubmissionAdminOverviewEntry,
   SubmissionFileType,
@@ -83,6 +84,7 @@ export interface ResponseObject {
 export interface AssignmentData {
   _id: string;
   name: string;
+  steps?: Array<AssignmentStep>;
   maxBonusPoints?: number;
   assignmentLabSheet?: string;
   labSheetName?: string;
@@ -130,6 +132,7 @@ export interface Persister {
     environment: string,
     terminalStates: TerminalStateType[],
     submittedFiles: SubmissionFileType[],
+    bonusPoints: number
   ) => Promise<void>;
   GetUserSubmissions: (
     username: string,
