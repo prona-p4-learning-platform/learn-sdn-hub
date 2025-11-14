@@ -160,6 +160,9 @@ export interface EnvironmentDescription {
 
   //SAL
   sshTunnelingPorts? : string[];
+
+  // Exam
+  isExam?: boolean;
 }
 
 const DenyStartOfMissingInstanceErrorMessage =

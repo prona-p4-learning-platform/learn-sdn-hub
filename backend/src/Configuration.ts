@@ -451,6 +451,8 @@ environments.set("Example1-Repeater", {
   providerProxmoxTemplateTag: "learn-sdn-hub-develop-template-acn-p4",
   useCollaboration: true,
   useLanguageClient: false,
+
+  isExam: true,   
 });
 
 environments.set("Example2-MinimalisticSwitch", {

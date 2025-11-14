@@ -39,7 +39,11 @@ interface SubmissionType {
   points?: number;
 }
 
-const assignmentsValidator = z.array(z.array(z.string()));
+//const assignmentsValidator = z.array(z.array(z.string()));
+const assignmentsValidator = z.object({
+  assignments: z.array(z.array(z.string())),
+  types: z.record(z.boolean()),
+});
 const pointsValidator = z.record(z.number());
 const deployedUserEnvsValidator = z.array(z.string());
 const deployedGroupEnvsValidator = z.array(z.string());
@@ -57,6 +61,7 @@ const defaultValidator = z.object({});
 function Assignments(): JSX.Element {
   const { enqueueSnackbar, closeSnackbar } = useSnackbar();
   const [assignments, setAssignments] = useState<string[][]>([]);
+  const [assignmentTypes, setAssignmentTypes] = useState<Map<string, boolean>>(new Map());
   const [submittedAssignments, setSubmittedAssignments] = useState<
     SubmissionType[]
   >([]);
@@ -164,7 +169,8 @@ function Assignments(): JSX.Element {
     APIRequest("/user/assignments", assignmentsValidator)
       .then((payload) => {
         if (payload.success) {
-          setAssignments(payload.data);
+          setAssignments(payload.data.assignments);
+          setAssignmentTypes(new Map(Object.entries(payload.data.types)));
         } else throw payload.error;
       })
       .catch(() => {
@@ -566,7 +572,7 @@ function Assignments(): JSX.Element {
                     }}
                     sx={{ margin: theme.spacing(1) }}
                   >
-                    Start Assignment
+                    {assignmentTypes.get(assignment) === true ? "Start Exam" : "Start Assignment"}
                   </Button>
                   <Button
                     variant="contained"
