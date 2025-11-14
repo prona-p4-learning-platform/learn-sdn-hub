@@ -1,0 +1,17 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: learn-sdn-hub-frontend-ingress
+  namespace: learn-sdn-hub
+spec:
+  ingressClassName: nginx
+  rules:
+  - http:
+      paths:
+      - pathType: Prefix
+        path: "/"
+        backend:
+          service:
+            name: learn-sdn-hub-frontend
+            port: 
+              number: 80
