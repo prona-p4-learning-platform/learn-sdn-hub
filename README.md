@@ -89,12 +89,8 @@ Make sure to close and reopen the shell afterwards to have nvm automatically in 
 ```sh
 git clone https://github.com/prona-p4-learning-platform/learn-sdn-hub.git
 cd learn-sdn-hub
-cd backend
 npm install
-npm run compile
-cd ..
 cd frontend
-npm install
 npm run build
 ```
 
