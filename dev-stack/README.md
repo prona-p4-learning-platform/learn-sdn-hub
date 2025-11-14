@@ -8,7 +8,7 @@
 ## K3d
 ### Create local kubernetes cluster
 ```shell
-k3d cluster create learn-sdn-hub --k3s-arg "--disable=traefik@server:*"
+k3d cluster create learn-sdn-hub --k3s-arg "--disable=traefik@server:*" -p "80:80@loadbalancer"
 ```
 
 ### Delete local kubernetes cluster
