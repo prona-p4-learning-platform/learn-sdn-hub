@@ -1,4 +1,15 @@
-version: "3.7"
+services:
+  p4host:
+    privileged: true
+    image: prona/p4-container
+    working_dir: /home/p4
+    command: -s
+    container_name: p4-container
+    restart: unless-stopped
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backendversion: "3.7"
 
 services:
   p4host:
@@ -11,8 +22,8 @@ services:
     command: -s
     container_name: p4-container
     restart: unless-stopped
-  learn-sdn-hub:
-    image: prona/learn-sdn-hub
+  learn-sdn-hub-backend:
+    image: learn-sdn-hub-backend
     ports:
       - 0.0.0.0:3001:3001
     environment: 
@@ -25,5 +36,20 @@ services:
       - BACKEND_USERS="${BACKEND_USERS}"
       - BACKEND_USER_MAPPING="${BACKEND_USER_MAPPING}"
     command: -p ${BACKEND_HTTP_PORT} -t ${BACKEND_TYPE} -a ${VBOX_IP_ADDRESSES} -s ${VBOX_SSH_PORTS} -u ${SSH_USERNAME} -w ${SSH_PASSWORD} -b ${BACKEND_USERS} -m ${BACKEND_USER_MAPPING}
-    container_name: learn-sdn-hub
+    container_name: learn-sdn-hub-backend
+    restart: unless-stopped
+
+    ports:
+      - 0.0.0.0:3001:3001
+    environment: 
+      - BACKEND_HTTP_PORT="${BACKEND_HTTP_PORT}"
+      - BACKEND_TYPE="${BACKEND_TYPE}"
+      - VBOX_IP_ADDRESSES="${VBOX_IP_ADDRESSES}"
+      - VBOX_SSH_PORTS="${VBOX_SSH_PORTS}"
+      - SSH_USERNAME="${SSH_USERNAME}"
+      - SSH_PASSWORD="${SSH_PASSWORD}"
+      - BACKEND_USERS="${BACKEND_USERS}"
+      - BACKEND_USER_MAPPING="${BACKEND_USER_MAPPING}"
+    command: -p ${BACKEND_HTTP_PORT} -t ${BACKEND_TYPE} -a ${VBOX_IP_ADDRESSES} -s ${VBOX_SSH_PORTS} -u ${SSH_USERNAME} -w ${SSH_PASSWORD} -b ${BACKEND_USERS} -m ${BACKEND_USER_MAPPING}
+    container_name: learn-sdn-hub-backend
     restart: unless-stopped
