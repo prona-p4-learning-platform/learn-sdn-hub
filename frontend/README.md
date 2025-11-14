@@ -11,7 +11,7 @@ docker build -t frontend .
 
 ### Run
 ``` bash
-docker run --rm -p 3001:80 frontend
+docker run --rm -p 3000:80 frontend
 ```
 ---
-Open http://localhost:3001 in your browser.
+Open http://localhost:3000 in your browser.
