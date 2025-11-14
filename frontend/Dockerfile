@@ -1,4 +1,8 @@
-FROM node:22
+# stage I: build wit node
+
+# image can be changed
+# found this to be quite small and nice
+FROM node:20-bookworm-slim AS build
 
 LABEL de.hs-fulda.netlab.name="prona/learn-sdn-hub" \
       de.hs-fulda.netlab.description="P4 and SDN learning environment" \
@@ -6,25 +10,27 @@ LABEL de.hs-fulda.netlab.name="prona/learn-sdn-hub" \
       de.hs-fulda.netlab.vcs-url="https://github.com/prona-p4-learning-platform/learn-sdn-hub" \
       de.hs-fulda.netlab.docker.cmd="docker run -it --rm -p 3001:3001 prona/learn-sdn-hub -t localvm -a 127.0.0.1"
 
-# default port, can be overriden by using -p when running docker and as BACKEND_PORT using -p parameter of start-learn-sdn-hub.sh
-EXPOSE 3001/tcp
-
-# add a user 
 RUN useradd -m -s /bin/bash p4
-WORKDIR /home/p4/learn-sdn-hub
+WORKDIR /home/p4/learn-sdn-hub/frontend
 
-# copy necessary files to image
-COPY ../frontend frontend
-COPY ../package.json .
-COPY ../package-lock.json .
+# install dependencies
+COPY package.json ./
+RUN npm install
 
-# build frontend and create static backend
-#RUN npm clean-install
+# copy source and build for production
+COPY . .
+RUN npm run build    # produces /home/p4/learn-sdn-hub/frontend
 
-RUN npm install && npm run dev
+# stage II: Runtime with nginx
+FROM nginx:alpine AS runtime
 
-# copy example startup script and use it as the entrypoint when running the container
-COPY ../examples/start-learn-sdn-hub.sh start-learn-sdn-hub.sh
-RUN chmod +x start-learn-sdn-hub.sh
+# nginx-config (SPA-Routing)
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-ENTRYPOINT ["/home/p4/learn-sdn-hub/start-learn-sdn-hub.sh"]
+# copy static files to nginx root
+COPY --from=build /home/p4/learn-sdn-hub/frontend/build /usr/share/nginx/html
+
+# port for nginx
+EXPOSE 3000/tcp
+
+CMD ["nginx", "-g", "daemon off;"]
