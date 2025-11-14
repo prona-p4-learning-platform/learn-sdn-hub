@@ -19,6 +19,7 @@ const environmentPathParamValidator = celebrate({
 const queryValidator = celebrate({
   [Segments.QUERY]: Joi.object().keys({
     environment: Joi.string().required(),
+    groupNumber: Joi.number().optional(),
   }),
 });
 
@@ -73,60 +74,52 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
     authenticationMiddleware,
     environmentPathParamValidator,
     (req, res) => {
-      const reqWithUser = req as RequestWithUser;
-      const environment = reqWithUser.params.environment;
-      const targetEnv = environments.get(String(environment));
+      void (async () => {
+        const reqWithUser = req as RequestWithUser;
+        const environment = reqWithUser.params.environment;
+        const targetEnv = environments.get(String(environment));
 
-      console.log("/:environment/assignment");
-
-      if (targetEnv === undefined) {
-        res
-          .status(404)
-          .json({ status: "error", message: "Environment not found" });
-        return;
-      }
-
-      // if assignmentLabSheetLocation specified as "instance",
-      // get lab sheet from instance filesystem
-      if (targetEnv.assignmentLabSheetLocation === "instance") {
-        const env = Environment.getActiveEnvironment(
-          reqWithUser.params.environment,
-          reqWithUser.user.groupNumber,
-          reqWithUser.user.sessionId,
-        );
-
-        if (env) {
-          env
-            .readFile(targetEnv.assignmentLabSheet, true)
-            .then((markdown) => {
-              res.status(200).json({ content: markdown });
-            })
-            .catch((err) => {
-              let message = "Unknown error";
-              if (err instanceof Error) message = err.message;
-
-              res.status(500).json({ status: "error", message });
-            });
-        } else {
-          res
-            .status(500)
-            .send({ status: "error", message: "Environment not found." });
+        if (!targetEnv) {
+          res.status(404).json({ status: "error", message: "Environment not found" });
+          return;
         }
-      } else {
+
         try {
+          if (targetEnv.assignmentLabSheetLocation === "database" && targetEnv.sheetId) {
+            const sheet = await persister.GetLabSheetContent(targetEnv.sheetId);
+            if (sheet) {
+              res.status(200).json({ content: sheet.labSheetContent });
+              return;
+            }
+          }
+          // if assignmentLabSheetLocation specified as "instance",
+          // get lab sheet from instance filesystem
+          if (targetEnv.assignmentLabSheetLocation === "instance") {
+            const env = Environment.getActiveEnvironment(
+              reqWithUser.params.environment,
+              reqWithUser.user.groupNumber,
+              reqWithUser.user.sessionId,
+            );
+            if (env) {
+              const markdown = await env.readFile(targetEnv.assignmentLabSheet, true);
+              res.status(200).json({ content: markdown });
+              return;
+            } else {
+              res.status(500).send({ status: "error", message: "Environment not found." });
+              return;
+            }
+          }
           const markdown = fs
             .readFileSync(path.resolve(__dirname, targetEnv.assignmentLabSheet))
             .toString();
-
           res.status(200).json({ content: markdown });
         } catch (err) {
           let message = "Unknown error";
           if (err instanceof Error) message = err.message;
-
           res.status(500).json({ status: "error", message });
         }
-      }
-    },
+      })();
+    }
   );
 
   router.post(
@@ -175,14 +168,15 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
       const environment = reqWithUser.query.environment as string;
       const targetEnv = environments.get(environment);
 
-      if (targetEnv === undefined) {
+      if (!targetEnv) {
         res
           .status(404)
           .json({ status: "error", message: "Environment not found" });
         return;
       }
+      const groupNumber = reqWithUser.user.role === "admin" && reqWithUser.query.groupNumber !== undefined ? Number(reqWithUser.query.groupNumber) : reqWithUser.user.groupNumber;
 
-      Environment.deleteEnvironment(reqWithUser.user.groupNumber, environment)
+      Environment.deleteEnvironment(groupNumber, environment)
         .then((deleted) => {
           if (deleted) {
             res.status(200).json({ status: "success" });
@@ -212,10 +206,12 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
     environmentPathParamWithAliasValidator,
     (req, res) => {
       const reqWithUser = req as RequestWithUser;
+      const isAdmin = reqWithUser.user.role === "admin";
+      const groupNumber = isAdmin && reqWithUser.query.groupNumber !== undefined ? Number(reqWithUser.query.groupNumber) : reqWithUser.user.groupNumber;
       const env = Environment.getActiveEnvironment(
         reqWithUser.params.environment,
-        reqWithUser.user.groupNumber,
-        reqWithUser.user.sessionId,
+        groupNumber,
+        isAdmin ? undefined : reqWithUser.user.sessionId,
       );
 
       if (env) {
@@ -255,10 +251,12 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
     environmentPathParamWithAliasValidator,
     (req, res) => {
       const reqWithUser = req as RequestWithUser;
+      const isAdmin = reqWithUser.user.role === "admin";
+      const groupNumber = reqWithUser.user.role === "admin" && reqWithUser.query.groupNumber !== undefined ? Number(reqWithUser.query.groupNumber) : reqWithUser.user.groupNumber;
       const env = Environment.getActiveEnvironment(
         reqWithUser.params.environment,
-        reqWithUser.user.groupNumber,
-        reqWithUser.user.sessionId,
+        groupNumber,
+        isAdmin ? undefined : reqWithUser.user.sessionId,
       );
 
       if (env) {
@@ -313,10 +311,12 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
     environmentPathParamValidator,
     (req, res) => {
       const reqWithUser = req as RequestWithUser;
+      const isAdmin = reqWithUser.user.role === "admin";
+      const groupNumber = reqWithUser.user.role === "admin" && reqWithUser.query.groupNumber !== undefined ? Number(reqWithUser.query.groupNumber) : reqWithUser.user.groupNumber;
       const env = Environment.getActiveEnvironment(
         reqWithUser.params.environment,
-        reqWithUser.user.groupNumber,
-        reqWithUser.user.sessionId,
+        groupNumber,
+        isAdmin ? undefined : reqWithUser.user.sessionId,
       );
 
       if (env) {
@@ -480,10 +480,12 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
     environmentPathParamValidator,
     (req, res) => {
       const reqWithUser = req as RequestWithUser;
+      const isAdmin = reqWithUser.user.role === "admin";
+      const groupNumber = reqWithUser.user.role === "admin" && reqWithUser.query.groupNumber !== undefined ? Number(reqWithUser.query.groupNumber) : reqWithUser.user.groupNumber;
       const env = Environment.getActiveEnvironment(
         reqWithUser.params.environment,
-        reqWithUser.user.groupNumber,
-        reqWithUser.user.sessionId,
+        groupNumber,
+        isAdmin ? undefined : reqWithUser.user.sessionId,
       );
 
       if (env) {

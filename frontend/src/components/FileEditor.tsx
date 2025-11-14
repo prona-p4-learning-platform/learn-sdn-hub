@@ -122,6 +122,7 @@ interface FileEditorProps {
   workspaceFolders: string[];
   useCollaboration: boolean;
   useLanguageClient: boolean;
+  groupNumber: number | undefined;
 }
 
 class KeepAliveAwareWebSocketMessageReader extends WebSocketMessageReader {
@@ -220,6 +221,14 @@ export default class FileEditor extends Component<FileEditorProps> {
       aliases: ["JSON", "json"],
       mimetypes: ["application/json"],
     });
+
+    monaco.languages.register({
+      id: "markdown",
+      extensions: [
+          ".md",
+      ],
+      aliases: ["markdown"],
+    })
     // additional file types? make them configurable?
 
     // install Monaco language client services
@@ -261,7 +270,11 @@ export default class FileEditor extends Component<FileEditorProps> {
         try {
           const payload = await APIRequest(
             `/environment/${this.props.environment}/file/${fileName}`,
-            contentValidator,
+            contentValidator, {
+              query: {
+                groupNumber: this.props.groupNumber,
+              }
+            }
           );
 
           if (payload.success) {
@@ -738,6 +751,9 @@ export default class FileEditor extends Component<FileEditorProps> {
         {
           method: "POST",
           body: { data: this.editor.getModel()?.getValue() ?? "" },
+          query: {
+            groupNumber: this.props.groupNumber,
+          }
         },
       );
 
@@ -774,7 +790,11 @@ export default class FileEditor extends Component<FileEditorProps> {
     try {
       const payload = await APIRequest(
         `/environment/${this.props.environment}/file/${this.state.currentFile}`,
-        contentValidator,
+        contentValidator, {
+          query: {
+            groupNumber: this.props.groupNumber,
+          }
+        }
       );
 
       if (payload.success) {

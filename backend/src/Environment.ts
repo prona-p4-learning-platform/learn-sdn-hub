@@ -141,7 +141,7 @@ export interface EnvironmentDescription {
   submissionCleanupCommand?: string;
   description: string;
   assignmentLabSheet: string;
-  assignmentLabSheetLocation?: "backend" | "instance";
+  assignmentLabSheetLocation?: "backend" | "instance" | "database";
   providerImage?: string;
   providerDockerCmd?: string;
   providerDockerSupplementalPorts?: string[];
@@ -155,6 +155,8 @@ export interface EnvironmentDescription {
   useLanguageClient?: boolean;
   maxBonusPoints?: number;
   mountKubeconfig?: boolean;
+  markdownFiles?: Array<string>;
+  sheetId?: string;
 
   //SAL
   sshTunnelingPorts? : string[];
@@ -366,6 +368,8 @@ export default class Environment {
     } else {
       // the group already runs an environment, add this user to it and reuse instance
       let groupEnvironmentInstance;
+      let groupEnvironmentIPAddress;
+      let groupEnvironmentPort;
       const userEnvironmentsOfOtherGroupUser = await persister
         .GetUserEnvironments(activeEnvironmentsForGroup[0].username)
         .catch((err) => {
@@ -385,6 +389,8 @@ export default class Environment {
           activeEnvironmentsForGroup[0].environmentId
         ) {
           groupEnvironmentInstance = userEnvironmentOfOtherGroupUser.instance;
+          groupEnvironmentIPAddress = userEnvironmentOfOtherGroupUser.ipAddress;
+          groupEnvironmentPort = userEnvironmentOfOtherGroupUser.port;
         }
       }
 
@@ -394,6 +400,8 @@ export default class Environment {
           activeEnvironmentsForGroup[0].environmentId,
           activeEnvironmentsForGroup[0].configuration.description,
           groupEnvironmentInstance ?? "",
+          groupEnvironmentIPAddress ?? "",
+          groupEnvironmentPort ?? 0,
         )
         .catch((err) => {
           return Promise.reject(
@@ -618,10 +626,12 @@ export default class Environment {
       this.environmentId,
       this.configuration.description,
       endpoint.instance,
+      endpoint.IPAddress,
+      endpoint.RemoteDesktopPort,
     );
 
     console.log(
-      `Added new environment: ${this.environmentId} for user: ${this.username} using endpoint: ${JSON.stringify(endpoint)}`,
+      `Added new environment: ${this.environmentId} for user: ${this.username} using endpoint: ${JSON.stringify(endpoint)} with IP ${endpoint.IPAddress}:${endpoint.RemoteDesktopPort}`,
     );
 
     //SAL
