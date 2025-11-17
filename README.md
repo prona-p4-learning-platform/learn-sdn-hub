@@ -74,15 +74,7 @@ The startup script [start-learn-sdn-hub.sh](/examples/start-learn-sdn-hub.sh) fo
 
 ### Prerequisites
 
-Both the host running the backend and frontend as well as the VM or host executing the p4 environment need node.js. To install it, you can use, e.g., nvm:
-
-```sh
-wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.37.2/install.sh | bash
-nvm install
-bash
-```
-
-Make sure to close and reopen the shell afterwards to have nvm automatically in your environment.
+Both the host running the backend and frontend as well as the VM or host executing the p4 environment need node.js. To install it, you can use, e.g., [nvm](https://github.com/nvm-sh/nvm). Make sure to close and reopen the shell after installation to have nvm automatically available in your environment.
 
 ### Installation
 
