@@ -26,5 +26,5 @@ jobs:
 
       - name: Build and push images from compose using bake
         run: |
-          docker buildx bake -f docker-compose-build.yml build \
+          docker buildx bake -f docker-compose-build.yml \
             --file docker-compose-build.yml \
