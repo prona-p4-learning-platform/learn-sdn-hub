@@ -92,6 +92,45 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
   );
 
   router.get(
+    "/:environment/timer",
+    authenticationMiddleware,
+    environmentPathParamValidator,
+    (req, res) => {
+      const reqWithUser = req as RequestWithUser;
+      const environment = reqWithUser.params.environment;
+      const targetEnv = environments.get(String(environment));
+
+      if (targetEnv === undefined) {
+        res
+          .status(404)
+          .json({ status: "error", message: "Environment not found" });
+        return;
+      }
+
+      const activeEnv = Environment.getActiveEnvironment(
+        environment,
+        reqWithUser.user.groupNumber,
+        reqWithUser.user.sessionId,
+      );
+
+      if (!activeEnv) {
+        res.status(404).json({ status: "error", message: "Active environment not found" });
+        return;
+      }
+
+      const remainingTime = activeEnv.getRemainingExamTimeFormatted();
+      
+      if (remainingTime === undefined) {
+        res.status(200).json({value: "--:--"});
+      } else {
+        res.status(200).json({ 
+          value: remainingTime 
+        });
+      }
+    },
+  );
+
+  router.get(
     "/:environment/assignment",
     authenticationMiddleware,
     environmentPathParamValidator,

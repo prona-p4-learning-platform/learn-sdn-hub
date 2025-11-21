@@ -279,6 +279,21 @@ export default class Environment {
     return undefined;
   }
 
+  public getRemainingExamTimeFormatted(): string | undefined {
+    const remainingMinutes = this.getRemainingExamTime();
+    if (remainingMinutes === undefined) {
+      return undefined;
+    }
+    
+    const minutes = Math.floor(remainingMinutes);
+    const seconds = Math.floor((remainingMinutes - minutes) * 60);
+    
+    const minutesStr = minutes.toString().padStart(2, '0');
+    const secondsStr = seconds.toString().padStart(2, '0');
+    
+    return `${minutesStr}:${secondsStr}`;
+  }
+
   private constructor(
     username: string,
     groupNumber: number,
