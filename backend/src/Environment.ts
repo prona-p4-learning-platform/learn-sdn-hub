@@ -163,6 +163,7 @@ export interface EnvironmentDescription {
 
   // Exam
   isExam?: boolean;
+  durationMinutes?: number;
 }
 
 const DenyStartOfMissingInstanceErrorMessage =
@@ -261,9 +262,19 @@ export default class Environment {
     console.log(`setExamStartTime for ${this.username} at ${this.examStartTime.toISOString()}`);
   }
 
-  public getExamTime(): number | undefined {
+  public getExamStartTime(): number | undefined {
     if (this.examStartTime) {
       return this.examStartTime.getTime();
+    }
+    return undefined;
+  }
+
+  public getRemainingExamTime(): number | undefined {
+    if (this.configuration.isExam && this.configuration.durationMinutes && this.examStartTime) {
+      const now = new Date();
+      const elapsed = (now.getTime() - this.examStartTime.getTime()) / 60000; // in minutes
+      const remaining = this.configuration.durationMinutes - elapsed;
+      return remaining > 0 ? remaining : 0;
     }
     return undefined;
   }

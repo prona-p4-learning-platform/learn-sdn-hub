@@ -452,7 +452,8 @@ environments.set("Example1-Repeater", {
   useCollaboration: true,
   useLanguageClient: false,
 
-  isExam: true,   
+  isExam: true,
+  durationMinutes: 90,
 });
 
 environments.set("Example2-MinimalisticSwitch", {

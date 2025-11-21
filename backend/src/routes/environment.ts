@@ -55,9 +55,16 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
           reqWithUser.user.groupNumber,
           reqWithUser.user.sessionId,
         );
-        if (activeEnv && !activeEnv.getExamTime()) {
-          console.log(`Starting timer for user: ${reqWithUser.user.username}`);
-          activeEnv.setExamStartTime();
+        if (activeEnv) {
+
+          if(!activeEnv.getExamStartTime()) {
+            console.log(`Starting timer for user: ${reqWithUser.user.username}`);
+            activeEnv.setExamStartTime();   
+          }
+          else{
+            console.log(`Exam time already set. Remaining: ` + activeEnv.getRemainingExamTime() + ` minutes for user: ${reqWithUser.user.username}`);
+          }
+          
         }
       }
 
