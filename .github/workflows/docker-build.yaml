@@ -47,8 +47,13 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push images from compose using bake
-        run: |
-          docker buildx bake -f docker-compose-build.yml \
-            --file docker-compose-build.yml \
-            --push
+      - name: Build and push Backend
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./backend/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ghcr.io/p4-prona/learn-sdn-hub-backend:latest
+            ghcr.io/p4-prona/learn-sdn-hub-backend:${{ github.ref_name }}
