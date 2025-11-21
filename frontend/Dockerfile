@@ -16,7 +16,7 @@ RUN npm install
 
 # copy source and build for production
 COPY . .
-RUN npm run build    # produces /home/p4/learn-sdn-hub/frontend
+RUN npm run build    # produces /home/p4/learn-sdn-hub/frontend/build
 
 # stage II: Runtime with nginx
 FROM nginx:1.29-trixie AS runtime
@@ -27,7 +27,11 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 # copy static files to nginx root
 COPY --from=build /home/p4/learn-sdn-hub/frontend/build /usr/share/nginx/html
 
+# create entry point for github actions
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
 # port for nginx
 EXPOSE 80
 
-CMD ["nginx", "-g", "daemon off;"]
+ENTRYPOINT ["/entrypoint.sh"]
