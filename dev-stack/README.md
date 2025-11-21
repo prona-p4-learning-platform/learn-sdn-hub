@@ -1,0 +1,35 @@
+# dev-stack
+## Requirements
+- [docker](https://docs.docker.com/engine/install)
+- [k3d](https://k3d.io/stable/#releases)
+- [helm](https://helm.sh/docs/intro/install/)
+- [terraform](https://developer.hashicorp.com/terraform/install)
+
+## K3d
+### Create local kubernetes cluster
+```shell
+k3d cluster create learn-sdn-hub --k3s-arg "--disable=traefik@server:*" -p "80:80@loadbalancer"
+```
+
+### Delete local kubernetes cluster
+```shell
+k3d cluster delete learn-sdn-hub
+```
+
+## Terrafrom
+The complete dev environment is defined as terrafrom resources. To setup your local dev environment just apply the terraform files in the `terraform` directory.
+
+### Install providers
+To install all required providers run
+```shell
+terrafrom init
+```
+
+### Apply dev environment
+```shell
+terraform apply
+```
+
+## Components in k8s cluster
+- [nginx-ingress-controller](https://artifacthub.io/packages/helm/ingress-nginx/ingress-nginx)
+- [fluxcd](https://fluxcd.control-plane.io/operator/install/)

@@ -9,3 +9,9 @@ tools
 frontend-old
 frontend/start-frontend.sh
 backend/start-backend.sh
+*scripts.tar.gz
+
+# terrafrom
+.terraform
+terraform.tfstate*
+.terraform.tfstate.lock.info
