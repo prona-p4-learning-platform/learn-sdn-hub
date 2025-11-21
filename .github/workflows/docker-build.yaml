@@ -28,3 +28,4 @@ jobs:
         run: |
           docker buildx bake -f docker-compose-build.yml \
             --file docker-compose-build.yml \
+            --push
