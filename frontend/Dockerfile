@@ -1,5 +1,5 @@
 # stage I: build wit node
-FROM node:22
+FROM node:22 AS build
 
 LABEL de.hs-fulda.netlab.name="prona/learn-sdn-hub" \
       de.hs-fulda.netlab.description="P4 and SDN learning environment" \
