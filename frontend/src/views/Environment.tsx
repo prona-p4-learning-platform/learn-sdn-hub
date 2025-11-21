@@ -25,6 +25,7 @@ import WebFrame from "../components/WebFrame";
 import TabControl from "../components/TabControl";
 import TerminalTabs from "../components/TerminalTabs";
 import FileEditor from "../components/FileEditor";
+import BackendTimer from "../components/BackendTimer";
 
 import { useOptionsStore } from "../stores/optionsStore";
 import { APIRequest, httpStatusValidator, getHttpError } from "../api/Request";
@@ -112,6 +113,8 @@ type EnvironmentState = {
 
 function Environment(): JSX.Element {
   const { environmentName } = useParams();
+  const { environment } = useParams<{ environment: string }>();
+  const environmentName2 = environment ?? "";
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const location = useLocation();
@@ -521,6 +524,11 @@ function Environment(): JSX.Element {
             tabNames={["Assignment", "Terminals"]}
             handleRestart={handleRestartDialogOpen}
             environmentStatus={environmentStatus}
+            timerComponent={
+              state.isExam ? (
+                <BackendTimer environmentName={environmentName2} groupNumber={groupNumber} />
+              ) : undefined
+          }
           >
             <Grid
               container
