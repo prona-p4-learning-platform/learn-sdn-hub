@@ -47,7 +47,8 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
         return;
       }
 
-      console.log(`Configuration for "${environment}" - isExam:`, targetEnv.isExam);
+      //console.log(`Configuration for "${environment}" - isExam:`, targetEnv.isExam);
+      console.log(`Starting timer`);
 
       res.status(200).json({
         files: targetEnv.editableFiles.map((file) => file.alias),
