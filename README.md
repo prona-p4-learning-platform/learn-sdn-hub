@@ -19,9 +19,9 @@ Initial development was partially funded by the research programme [digLL](https
 * Support for OpenID Connect (OIDC) to connect multiple external identity providers, e.g., for federation or common identity sources like GitHub, Google etc.
 * Early support for topology visualization for containerlab-based labs using contained [graph](/examples/SAL-Proxmox-Files/containerlab_scripts/generate_graph.sh) feature
 
-learn-sdn-hub and the surrounding ProNA ecosystem with p4-container and p4-boilerplate etc. was also published and presented in our paper at NOMS 2024-2024 IEEE Network Operations and Management Symposium [https://ieeexplore.ieee.org/document/10575540](https://ieeexplore.ieee.org/document/10575540).
+learn-sdn-hub and the surrounding ProNA ecosystem with p4-container and p4-boilerplate etc. was also published and presented in our paper at NOMS 2024 IEEE Network Operations and Management Symposium [https://ieeexplore.ieee.org/document/10575540](https://ieeexplore.ieee.org/document/10575540).
 
-The following figures show screenshots of the environment, used to teach the basic functions of a P4-based Layer 2 "learning" (flooding & filtering) switch:
+The following screenshots show the environment used to teach the basic functions of P4-based network elements:
 
 ![learn-sdn hub assignment roster](/examples/screenshots/prona-learn-sdn-hub-assignments-screenshot.png "overview and deployment of assignments")
 
@@ -150,9 +150,8 @@ export OPENSTACK_TENANTID=<OpenStack tenant/project ID>
 export OPENSTACK_DOMAINNAME=<OpenStack domain, e.g., "default">
 export SSH_USERNAME=<Username to be used for the ssh connection, e.g., "p4">
 export SSH_PASSWORD=<Password to be used for the ssh connection>
-cd backend
-npm run start
 ```
+
 Optionally you can also ```export SSH_PRIVATE_KEY_PATH=<SSH keyfile>``` to use an SSH keyfile for the connections to the host running your P4 assignments.
 
 [start-learn-sdn-hub.sh](/examples/start-learn-sdn-hub.sh) can be used as a reference to create a startup script.
@@ -161,7 +160,56 @@ Optionally you can also ```export SSH_PRIVATE_KEY_PATH=<SSH keyfile>``` to use a
 ### Run the backend using Firecracker microVMs for assignments
 (using [FirecrackerProvider.ts](/backend/src/providers/FirecrackerProvider.ts))
 
-t.b.w.
+The backend also supports Firecracker microVMs to run the assignments offering a balance between light-weight fast deployment and increased isolation compared to using docker containers. This can for example prevent situations where loops created in networks lead to high load of kernel processes when using containers.
+
+```
+export FIRECRACKER_SOCKET_PATH_PREFIX="/tmp/firecracker.socket"
+
+export FIRECRACKER_KERNEL_IMAGE="/storage/ubuntu-firecracker/ubuntu-vmlinux"
+export FIRECRACKER_KERNEL_BOOT_ARGS="console=ttyS0 reboot=k panic=1 pci=off"
+export FIRECRACKER_ROOTFS_DRIVE="/storage/ubuntu-firecracker/ubuntu-containerlab.ext4"
+
+export FIRECRACKER_VCPU_COUNT="4" 
+export FIRECRACKER_MEM_SIZE_MIB="4096"
+export FIRECRACKER_MEM_BALLOON_SIZE_MIB="2048"#export PROXMOX_MAX_INSTANCE_LIFETIME_MINUTES=5
+
+export FIRECRACKER_NETWORK_CIDR="172.16.0.0/24"
+export FIRECRACKER_BRIDGE_INTERFACE="fc0"
+
+export FIRECRACKER_MAX_INSTANCE_LIFETIME_MINUTES=120
+```
+
+To setup the firecracker bridge, see, e.g., provided [examples](/examples).
+
+
+### Run the backend using proxmox for assignments
+(using [ProxmoxProvider.ts](/backend/src/providers/ProxmoxProvider.ts))
+
+The backend also supports proxmox lxc to run the assignments. 
+
+```
+export PROXMOX_NETWORK_CIDR="172.30.0.0/16"
+export PROXMOX_NETWORK_GATEWAY_IP="172.30.0.1"
+
+export PROXMOX_HOST="10.2.3.4:8006"
+export PROXMOX_TOKENID="user@pam!learn-sdn-hub"
+export PROXMOX_TOKENSECRET="34e..."
+
+export PROXMOX_TEMPLATE_TAG="learn-sdn-hub-template"
+export PROXMOX_TARGET_HOST="pvecompute2"
+
+export PROXMOX_SSH_JUMP_HOST="10.1.2.3"
+export PROXMOX_SSH_JUMP_HOST_PORT="22"
+export PROXMOX_SSH_JUMP_HOST_USER="p4"
+export PROXMOX_SSH_JUMP_HOST_PASSWORD="p4"
+
+export PROXMOX_MAX_INSTANCE_LIFETIME_MINUTES=120
+```
+
+Connection to proxmox a token that is allowed to create lxs containers. Assignments are clone from the specified template (`PROXMOX_TEMPLATE_TAG`) and placed as new lxc containers on the target host (`PROXMOX_TARGET_HOST`) in the proxmox cluster.
+
+To isolate the lxc instances in proxmox, a separate (isolated) virtual network (`PROXMOX_NETWORK_CIDR`) should be created first and an lxc created as a router with an interface in the isolated virtual network for the assignment lxcs (`PROXMOX_NETWORK_GATEWAY_IP`) and an interface connecting to external networks (`PROXMOX_NETWORK_GATEWAY_IP`). The router acts also as an jumphost host on its external IP (`PROXMOX_SSH_JUMP_HOST`) to allow the backend to reach the isolated assignment instances. Another option would be to host the backend on the router.
+
 
 ### Run the frontend separatly (only recommended for development and debugging purposes)
 
@@ -248,7 +296,45 @@ cd backend
 HOST=localhost PORT=1234 npx y-websocket
 ```
 
-The code for FileEditor.tsx also contains a y-webrtc provider example.
+The code for FileEditor.tsx also contains a y-webrtc provider example.#export PROXMOX_MAX_INSTANCE_LIFETIME_MINUTES=5
+export PROXMOX_MAX_INSTANCE_LIFETIME_MINUTES=120
+#export PROXMOX_MAX_INSTANCE_LIFETIME_MINUTES=1
+
+export PROXMOX_NETWORK_CIDR="172.30.0.0/16"
+export PROXMOX_NETWORK_GATEWAY_IP="172.30.0.1"
+
+export PROXMOX_HOST="10.32.12.32:8006"
+#export PROXMOX_TOKENID="learn-sdn-hub@pve!learn-sdn-hub"
+#export PROXMOX_TOKENSECRET="9a20dacd-67c0-4e3f-9d27-a7ec574de2f6"
+export PROXMOX_TOKENID="root@pam!learn-sdn-hub"
+export PROXMOX_TOKENSECRET="48ef6de1-35b1-4051-ad11-f6d56908a200"
+#export PROXMOX_MAX_INSTANCE_LIFETIME_MINUTES=5
+export PROXMOX_MAX_INSTANCE_LIFETIME_MINUTES=120
+#export PROXMOX_MAX_INSTANCE_LIFETIME_MINUTES=1
+
+export PROXMOX_NETWORK_CIDR="172.30.0.0/16"
+export PROXMOX_NETWORK_GATEWAY_IP="172.30.0.1"
+
+export PROXMOX_HOST="10.32.12.32:8006"
+#export PROXMOX_TOKENID="learn-sdn-hub@pve!learn-sdn-hub"
+#export PROXMOX_TOKENSECRET="9a20dacd-67c0-4e3f-9d27-a7ec574de2f6"
+export PROXMOX_TOKENID="root@pam!learn-sdn-hub"
+export PROXMOX_TOKENSECRET="48ef6de1-35b1-4051-ad11-f6d56908a200"
+
+export PROXMOX_TEMPLATE_TAG="learn-sdn-hub-template"
+export PROXMOX_TARGET_HOST="pvecompute2"
+
+export PROXMOX_SSH_JUMP_HOST="10.33.19.17"
+export PROXMOX_SSH_JUMP_HOST_PORT="22"
+export PROXMOX_SSH_JUMP_HOST_USER="p4"
+export PROXMOX_SSH_JUMP_HOST_PASSWORD="p4"
+export PROXMOX_TEMPLATE_TAG="learn-sdn-hub-template"
+export PROXMOX_TARGET_HOST="pvecompute2"
+
+export PROXMOX_SSH_JUMP_HOST="10.33.19.17"
+export PROXMOX_SSH_JUMP_HOST_PORT="22"
+export PROXMOX_SSH_JUMP_HOST_USER="p4"
+export PROXMOX_SSH_JUMP_HOST_PASSWORD="p4"
 
 The examples in the repository also show how to use tmux to allow shared terminal usage.
 
