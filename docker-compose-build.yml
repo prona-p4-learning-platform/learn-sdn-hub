@@ -3,14 +3,14 @@ version: "3.9"
 services:
   p4host:
     privileged: true
-    image: prona/p4-container
+    image: ghcr.io/prona/p4-container:latest
     working_dir: /home/p4
     command: -s
     container_name: p4-container
     restart: unless-stopped
 
   backend:
-    image: prona/learn-sdn-hub-backend:latest
+    image: ghcr.io/prona/learn-sdn-hub-backend:latest
     build:
       context: .
       dockerfile: ./backend/Dockerfile
