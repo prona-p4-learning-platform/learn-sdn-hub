@@ -261,6 +261,13 @@ export default class Environment {
     console.log(`setExamStartTime for ${this.username} at ${this.examStartTime.toISOString()}`);
   }
 
+  public getExamTime(): number | undefined {
+    if (this.examStartTime) {
+      return this.examStartTime.getTime();
+    }
+    return undefined;
+  }
+
   private constructor(
     username: string,
     groupNumber: number,
