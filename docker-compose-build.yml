@@ -1,3 +1,5 @@
+version: "3.9"
+
 services:
   p4host:
     privileged: true
@@ -6,7 +8,9 @@ services:
     command: -s
     container_name: p4-container
     restart: unless-stopped
+
   backend:
+    image: prona/learn-sdn-hub-backend:latest
     build:
       context: .
       dockerfile: ./backend/Dockerfile
