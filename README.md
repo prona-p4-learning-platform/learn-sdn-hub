@@ -118,7 +118,7 @@ containers.
 
 ```sh
 # image must provide SSH port and connection
-export DOCKER_IMAGE="prona/p4-container"
+export DOCKER_IMAGE="prona/p4-container"clearer
 ```
 
 Also, an entrypoint/iniial cmd can be specified. 
@@ -296,45 +296,7 @@ cd backend
 HOST=localhost PORT=1234 npx y-websocket
 ```
 
-The code for FileEditor.tsx also contains a y-webrtc provider example.#export PROXMOX_MAX_INSTANCE_LIFETIME_MINUTES=5
-export PROXMOX_MAX_INSTANCE_LIFETIME_MINUTES=120
-#export PROXMOX_MAX_INSTANCE_LIFETIME_MINUTES=1
-
-export PROXMOX_NETWORK_CIDR="172.30.0.0/16"
-export PROXMOX_NETWORK_GATEWAY_IP="172.30.0.1"
-
-export PROXMOX_HOST="10.32.12.32:8006"
-#export PROXMOX_TOKENID="learn-sdn-hub@pve!learn-sdn-hub"
-#export PROXMOX_TOKENSECRET="9a20dacd-67c0-4e3f-9d27-a7ec574de2f6"
-export PROXMOX_TOKENID="root@pam!learn-sdn-hub"
-export PROXMOX_TOKENSECRET="48ef6de1-35b1-4051-ad11-f6d56908a200"
-#export PROXMOX_MAX_INSTANCE_LIFETIME_MINUTES=5
-export PROXMOX_MAX_INSTANCE_LIFETIME_MINUTES=120
-#export PROXMOX_MAX_INSTANCE_LIFETIME_MINUTES=1
-
-export PROXMOX_NETWORK_CIDR="172.30.0.0/16"
-export PROXMOX_NETWORK_GATEWAY_IP="172.30.0.1"
-
-export PROXMOX_HOST="10.32.12.32:8006"
-#export PROXMOX_TOKENID="learn-sdn-hub@pve!learn-sdn-hub"
-#export PROXMOX_TOKENSECRET="9a20dacd-67c0-4e3f-9d27-a7ec574de2f6"
-export PROXMOX_TOKENID="root@pam!learn-sdn-hub"
-export PROXMOX_TOKENSECRET="48ef6de1-35b1-4051-ad11-f6d56908a200"
-
-export PROXMOX_TEMPLATE_TAG="learn-sdn-hub-template"
-export PROXMOX_TARGET_HOST="pvecompute2"
-
-export PROXMOX_SSH_JUMP_HOST="10.33.19.17"
-export PROXMOX_SSH_JUMP_HOST_PORT="22"
-export PROXMOX_SSH_JUMP_HOST_USER="p4"
-export PROXMOX_SSH_JUMP_HOST_PASSWORD="p4"
-export PROXMOX_TEMPLATE_TAG="learn-sdn-hub-template"
-export PROXMOX_TARGET_HOST="pvecompute2"
-
-export PROXMOX_SSH_JUMP_HOST="10.33.19.17"
-export PROXMOX_SSH_JUMP_HOST_PORT="22"
-export PROXMOX_SSH_JUMP_HOST_USER="p4"
-export PROXMOX_SSH_JUMP_HOST_PASSWORD="p4"
+The code for FileEditor.tsx also contains a y-webrtc provider example.
 
 The examples in the repository also show how to use tmux to allow shared terminal usage.
 
