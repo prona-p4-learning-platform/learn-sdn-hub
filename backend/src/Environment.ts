@@ -184,6 +184,7 @@ export default class Environment {
   private groupNumber: number;
   private sessionId: string;
   private testCounter: Map<string, number> = new Map<string, number>();
+  private examStartTime?: Date;
 
   private getErrorHint(test: AssignmentStepTestType, stepIndex: string) {
     if (test.gradualAssistance === undefined) {
@@ -253,6 +254,11 @@ export default class Environment {
       }
     }
     return deployedEnvironmentsForGroup;
+  }
+
+  public setExamStartTime(): void {
+    this.examStartTime = new Date();
+    console.log(`setExamStartTime for ${this.username} at ${this.examStartTime.toISOString()}`);
   }
 
   private constructor(

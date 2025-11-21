@@ -36,8 +36,10 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
   router.get(
     "/:environment/configuration",
     environmentPathParamValidator,
+    authenticationMiddleware,
     (req, res) => {
-      const environment = req.params.environment;
+      const reqWithUser = req as RequestWithUser;
+      const environment = reqWithUser.params.environment;
       const targetEnv = environments.get(String(environment));
 
       if (targetEnv === undefined) {
@@ -47,8 +49,17 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
         return;
       }
 
-      //console.log(`Configuration for "${environment}" - isExam:`, targetEnv.isExam);
-      console.log(`Starting timer`);
+      if (targetEnv.isExam) {
+        console.log(`Starting timer for user: ${reqWithUser.user.username}`);
+        const activeEnv = Environment.getActiveEnvironment(
+          environment,
+          reqWithUser.user.groupNumber,
+          reqWithUser.user.sessionId,
+        );
+        if (activeEnv) {
+          activeEnv.setExamStartTime();
+        }
+      }
 
       res.status(200).json({
         files: targetEnv.editableFiles.map((file) => file.alias),

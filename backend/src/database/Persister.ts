@@ -15,6 +15,7 @@ export interface UserEntry {
   assignmentListFilter?: string;
   environments: UserEnvironment[];
   externalIds: UserExternalId[];
+  examStartTime?: Date;
 }
 
 export interface UserAccount {
@@ -26,6 +27,7 @@ export interface UserAccount {
   assignmentListFilter?: string;
   role?: string;
   courses?: string[];
+  examStartTime?: Date;
 }
 
 export interface UserExternalId {
