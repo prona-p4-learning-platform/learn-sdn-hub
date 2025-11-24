@@ -1,4 +1,4 @@
-name: Build and Push Docker Image
+name: Build and Push Docker Frontend Image
 
 on:
   push:
@@ -53,8 +53,8 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
-          context: .
-          file: ./frontend/Dockerfile
+          context: ./frontend/
+          file: Dockerfile
           push: true
           # defining platform
           platforms: linux/amd64,linux/arm64
