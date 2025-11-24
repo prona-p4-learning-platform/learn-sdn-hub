@@ -27,6 +27,9 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 # copy static files to nginx root
 COPY --from=build /home/p4/learn-sdn-hub/frontend/build /usr/share/nginx/html
 
+# install bash and tools for action logic
+RUN apt-get update && apt-get install -y bash wget && rm -rf /var/lib/apt/lists/*
+
 # create entry point for github actions
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
