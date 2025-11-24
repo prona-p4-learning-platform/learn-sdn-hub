@@ -32,6 +32,7 @@ RUN apt-get update && apt-get install -y bash wget && rm -rf /var/lib/apt/lists/
 
 # create entry point for github actions
 COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
 # port for nginx
 EXPOSE 80
