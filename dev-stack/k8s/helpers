@@ -20,7 +20,7 @@ create_cluster() {
     --k3s-arg "--disable=traefik@server:*" \
     -p "80:80@loadbalancer" \
     -p "443:443@loadbalancer" \
-    --servers 2
+    --servers 1
   echo "done"
 }
 
