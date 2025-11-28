@@ -16,7 +16,11 @@ check_cluster_exists() {
 
 create_cluster() {
   echo "creating cluster $CLUSTER_NAME"
-  k3d cluster create $CLUSTER_NAME --k3s-arg "--disable=traefik@server:*" -p "80:80@loadbalancer"
+  k3d cluster create $CLUSTER_NAME \
+    --k3s-arg "--disable=traefik@server:*" \
+    -p "80:80@loadbalancer" \
+    -p "443:443@loadbalancer" \
+    --servers 2
   echo "done"
 }
 
