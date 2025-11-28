@@ -9,7 +9,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+  IMAGE_NAME: learn-sdn-hub-frontend
 
 jobs:
   build-and-push:
@@ -55,7 +55,8 @@ jobs:
         with:
           context: ./frontend
           file: ./frontend/Dockerfile
-          push: true
+          push: false
+          # push: ${{ github.event_name != 'pull_request' }}
           # defining platform
           platforms: linux/amd64,linux/arm64
           tags: ${{ steps.meta.outputs.tags }}
