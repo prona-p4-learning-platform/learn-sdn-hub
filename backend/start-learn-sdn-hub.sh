@@ -166,4 +166,4 @@ fi
 echo
 echo "Starting learn-sdn-hub..."
 
-cd backend && npm run start$BACKEND_TYPE
+npm run start$BACKEND_TYPE
