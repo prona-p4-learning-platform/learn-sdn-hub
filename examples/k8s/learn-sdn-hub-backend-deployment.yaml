@@ -19,12 +19,33 @@ spec:
     spec:
       containers:
       - name: learn-sdn-hub-backend
-        image: nginx # add backend image here
+        image: ghcr.io/prona-p4-learning-platform/learn-sdn-hub-backend:254-feature-k8s-docker-images
+        
+        # --- CLI arguments passed to start-learn-sdn-hub.sh ---
+        command: ["/bin/bash", "/home/p4/learn-sdn-hub/start-learn-sdn-hub.sh"]
+        args:
+          - "-t"
+          - "localmultiuservm"
+          - "-p"
+          - "80"
+          - "-a"
+          - "10.0.0.10"
+          - "-s"
+          - "22"
+          - "-u"
+          - "p4"
+          - "-w"
+          - "p4"
+          - "-b"
+          - "p4:p4"
+          - "-m"
+          - "p4:0"
+
         resources:
           requests:
-            memory: "128Mi"
+            memory: "512Mi"
             cpu: "200m"
           limits:
-            memory: "128Mi"
+            memory: "512Mi"
         ports:
         - containerPort: 80
