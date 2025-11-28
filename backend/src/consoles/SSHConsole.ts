@@ -8,6 +8,11 @@ export interface Console {
     listener: () => void,
   ): this;
   on(event: "data", listener: (data: string) => void): this;
+  off(
+    event: "ready" | "close" | "closed" | "finished",
+    listener: () => void,
+  ): this;
+  off(event: "data", listener: (data: string) => void): this;
   write(data: string): void;
   writeLine(data: string): void;
   close(environmentId: string, groupNumber: number, sessionId?: string): void;
