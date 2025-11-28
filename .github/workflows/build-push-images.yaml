@@ -25,14 +25,14 @@ jobs:
         with:
           filters: |
             frontend:
-              - "frontend/**"
+              - 'frontend/**'
             backend:
-              - "backend/**"
+              - 'backend/**'
 
   # JOB 1: FRONTEND
   frontend:
     needs: changes
-    if: ${{ needs.changes.outputs.frontend == "true"}}
+    if: ${{ needs.changes.outputs.frontend == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -81,7 +81,7 @@ jobs:
   # JOB 2: BACKEND
   backend: 
     needs: changes
-    if: ${{ needs.changes.outputs.backend == "true" }}
+    if: ${{ needs.changes.outputs.backend == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -111,6 +111,10 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=tag
+            type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push Docker image
         id: build-and-push
