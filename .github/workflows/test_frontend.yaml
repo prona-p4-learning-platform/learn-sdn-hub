@@ -9,7 +9,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: learn-sdn-hub-frontend
+  IMAGE_NAME: "prona-p4-learning-platform/learn-sdn-hub-frontend"
 
 jobs:
   build-and-push:
