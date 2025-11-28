@@ -306,14 +306,6 @@ export default class Environment {
         sessionId,
     );
 
-    if (!Environment.activeEnvironments.has(`${username}-${groupNumber}-${sessionId}-${environmentId}`)) {
-      // create a stub in activeEnvironments to prevent other group members to start additional instances, will have isReady == false until started
-      Environment.activeEnvironments.set(
-        `${username}-${groupNumber}-${sessionId}-${environmentId}`,
-        environment,
-      );
-    }
-
     const activeEnvironmentsForGroup = Array<Environment>();
     for (const [, environment] of Environment.activeEnvironments) {
       if (environment.groupNumber === groupNumber) {
@@ -327,8 +319,8 @@ export default class Environment {
           if (environment.isReady) {
             activeEnvironmentsForGroup.push(environment);
           } else {
-            // if environment was started in this session, continue, otherwise throw error to show user
-            // that deployment in group is already in progress
+            // if environment that is not ready was started in this session, continue, otherwise throw error 
+            // to show user that deployment in group is already in progress
             if (environment.sessionId !== sessionId) {
               return Promise.reject(
                 new Error(
@@ -341,7 +333,16 @@ export default class Environment {
       }
     }
 
+    console.log("Active environments for group length: " + activeEnvironmentsForGroup.length);
     if (activeEnvironmentsForGroup.length === 0) {
+      // create a stub in activeEnvironments to prevent other group members to start additional instances, will have isReady == false until started
+      console.log("Storing stub for environment to prevent multiple starts.");
+      Environment.activeEnvironments.set(
+        `${username}-${groupNumber}-${sessionId}-${environmentId}`,
+        environment,
+      );
+
+      // no environment for this group exists yet, start a new one
       await environment
         .start(env, sessionId, true)
         .then((endpoint) => {
@@ -571,7 +572,7 @@ export default class Environment {
         `Environment ${this.environmentId} already deployed for user ${this.username}, trying to reopen it...`,
       );
 
-      if (filtered[0].instance == '') {
+      if (filtered[0].instance === '') {
         // the environment found is not ready, instance is empty, remove environment and throw InstanceNotFoundErrorMessage
         console.log(
           `Environment ${this.environmentId} is not ready, starting cleanup...`,
