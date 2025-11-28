@@ -8,9 +8,23 @@ interface BackendTimerProps {
   groupNumber?: number;
 }
 
-const timerValidator = z.object({
-  value: z.string(),
-});
+const timerValidator = z.union([
+  z.object({
+    hasTimer: z.literal(false),
+  }),
+  z.object({
+    hasTimer: z.literal(true),
+    remainingMinutes: z.number(),
+  }),
+]);
+
+function formatTime(minutes: number): string {
+  const mins = Math.floor(minutes);
+  const secs = Math.floor((minutes - mins) * 60);
+  const minutesStr = mins.toString().padStart(2, '0');
+  const secondsStr = secs.toString().padStart(2, '0');
+  return `${minutesStr}:${secondsStr}`;
+}
 
 export default function BackendTimer({ environmentName, groupNumber }: BackendTimerProps) {
   const [value, setValue] = useState<string>("--:--");
@@ -24,7 +38,11 @@ export default function BackendTimer({ environmentName, groupNumber }: BackendTi
           timerValidator,
         );
         if (payload.success) {
-          setValue(payload.data.value);
+          if (payload.data.hasTimer) {
+            setValue(formatTime(payload.data.remainingMinutes));
+          } else {
+            setValue("--:--");
+          }
         } else {
           setValue("--:--");
         }

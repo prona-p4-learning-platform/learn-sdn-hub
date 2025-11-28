@@ -118,15 +118,16 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
         return;
       }
 
-      const remainingTime = activeEnv.getRemainingExamTimeFormatted();
+      const remainingTime = activeEnv.getRemainingExamTime();
 
       console.log(`___________________________\nRemaining exam time for user ${reqWithUser.user.username}: ` + remainingTime);
       
       if (remainingTime === undefined) {
-        res.status(200).json({value: "--:--"});
+        res.status(200).json({ hasTimer: false });
       } else {
         res.status(200).json({ 
-          value: remainingTime 
+          hasTimer: true,
+          remainingMinutes: remainingTime 
         });
       }
     },
