@@ -4,6 +4,8 @@ on:
   push:
     branches: [ "254-feature/k8s/docker-images" ]
   # workflow_dispatch:
+  pull_request:
+    branches: [ "main" ]
 
 env:
   REGISTRY: ghcr.io
