@@ -1,5 +1,8 @@
 # stage I: build with node
-FROM node:22-slim AS build
+ARG NODE_VERSION=22-slim
+ARG NGINX_VERSION=1.29-trixie
+
+FROM node:${NODE_VERSION} AS build
 
 LABEL de.hs-fulda.netlab.name="prona/learn-sdn-hub" \
       de.hs-fulda.netlab.description="P4 and SDN learning environment" \
@@ -10,28 +13,25 @@ LABEL de.hs-fulda.netlab.name="prona/learn-sdn-hub" \
 ENV VITE_REACT_APP_API_HOST=""
 ENV VITE_REACT_APP_WS_HOST=""
 
-RUN useradd -m -s /bin/bash p4
-WORKDIR /home/p4/learn-sdn-hub/frontend
+WORKDIR /app
 
-# install dependencies
-COPY package.json ./
-RUN npm install
-
-# copy source and build for production
 COPY . .
-RUN npm run build    # produces /home/p4/learn-sdn-hub/frontend/build
+
+# install dependencies and build
+RUN npm install && \
+      npm run build
 
 # stage II: Runtime with nginx
-FROM nginx:1.29-trixie AS runtime
+FROM nginx:${NGINX_VERSION} AS runtime
 
 # nginx-config (SPA-Routing)
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 # copy static files to nginx root
-COPY --from=build /home/p4/learn-sdn-hub/frontend/build /usr/share/nginx/html
+COPY --from=build /app/build /app
 
-# install bash and tools for action logic
-RUN apt-get update && apt-get install -y bash wget && rm -rf /var/lib/apt/lists/*
+# change permissions      
+RUN chown -R www-data:www-data /app
 
 # create entry point for github actions
 COPY entrypoint.sh /entrypoint.sh
