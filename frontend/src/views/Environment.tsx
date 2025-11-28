@@ -526,7 +526,7 @@ function Environment(): JSX.Element {
             environmentStatus={environmentStatus}
             timerComponent={
               state.isExam ? (
-                <BackendTimer environmentName={environmentName2} groupNumber={groupNumber} />
+                <BackendTimer environmentName={environmentName ?? ""} groupNumber={groupNumber} />
               ) : undefined
           }
           >

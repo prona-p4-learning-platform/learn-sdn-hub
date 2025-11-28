@@ -1,10 +1,16 @@
 import { useEffect, useState } from "react";
 import { Box, Typography } from "@mui/material";
+import { APIRequest } from "../api/Request";
+import { z } from "zod";
 
 interface BackendTimerProps {
   environmentName: string;
   groupNumber?: number;
 }
+
+const timerValidator = z.object({
+  value: z.string(),
+});
 
 export default function BackendTimer({ environmentName, groupNumber }: BackendTimerProps) {
   const [value, setValue] = useState<string>("--:--");
@@ -13,9 +19,15 @@ export default function BackendTimer({ environmentName, groupNumber }: BackendTi
     const fetchTimer = async () => {
       try {
         const query = groupNumber !== undefined ? `?groupNumber=${groupNumber}` : "";
-        const res = await fetch(`/environment/${environmentName}/timer${query}`);
-        const data = await res.json();
-        setValue(data.value); // z.B. { "value": "02:15" }
+        const payload = await APIRequest(
+          `/environment/${environmentName}/timer${query}`,
+          timerValidator,
+        );
+        if (payload.success) {
+          setValue(payload.data.value);
+        } else {
+          setValue("--:--");
+        }
       } catch (e) {
         setValue("--:--");
         console.error("Failed to fetch timer:", e);
