@@ -172,6 +172,7 @@ export default class Environment {
   private filehandler!: FileHandler | undefined;
   private groupNumber: number;
   private sessionId: string;
+  private isReady: boolean;
 
   public static getActiveEnvironment(
     environmentId: string,
@@ -247,6 +248,7 @@ export default class Environment {
     this.groupNumber = groupNumber;
     this.sessionId = sessionId;
     this.environmentId = environmentId;
+    this.isReady = false;
 
     //TODO go through all environments stored in db and check if instances are still running, if not remove environment in db
 
@@ -304,6 +306,14 @@ export default class Environment {
         sessionId,
     );
 
+    if (!Environment.activeEnvironments.has(`${username}-${groupNumber}-${sessionId}-${environmentId}`)) {
+      // create a stub in activeEnvironments to prevent other group members to start additional instances, will have isReady == false until started
+      Environment.activeEnvironments.set(
+        `${username}-${groupNumber}-${sessionId}-${environmentId}`,
+        environment,
+      );
+    }
+
     const activeEnvironmentsForGroup = Array<Environment>();
     for (const [, environment] of Environment.activeEnvironments) {
       if (environment.groupNumber === groupNumber) {
@@ -314,7 +324,19 @@ export default class Environment {
             ),
           );
         } else {
-          activeEnvironmentsForGroup.push(environment);
+          if (environment.isReady) {
+            activeEnvironmentsForGroup.push(environment);
+          } else {
+            // if environment was started in this session, continue, otherwise throw error to show user
+            // that deployment in group is already in progress
+            if (environment.sessionId !== sessionId) {
+              return Promise.reject(
+                new Error(
+                  "You or your group already started to deploy the environment. Please reload assignment list.",
+                ),
+              );
+            }
+          };
         }
       }
     }
@@ -324,6 +346,7 @@ export default class Environment {
         .start(env, sessionId, true)
         .then((endpoint) => {
           environment.instanceId = endpoint.instance;
+          environment.isReady = true;
           Environment.activeEnvironments.set(
             `${username}-${groupNumber}-${sessionId}-${environmentId}`,
             environment,
@@ -547,6 +570,18 @@ export default class Environment {
       console.log(
         `Environment ${this.environmentId} already deployed for user ${this.username}, trying to reopen it...`,
       );
+
+      if (filtered[0].instance == '') {
+        // the environment found is not ready, instance is empty, remove environment and throw InstanceNotFoundErrorMessage
+        console.log(
+          `Environment ${this.environmentId} is not ready, starting cleanup...`,
+        );
+        await this.persister.RemoveUserEnvironment(
+          this.username,
+          filtered[0].environment,
+        );
+        throw new Error(InstanceNotFoundErrorMessage);
+      }
 
       return await this.environmentProvider
         .getServer(filtered[0].instance)
