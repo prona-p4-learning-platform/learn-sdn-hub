@@ -7,6 +7,9 @@ LABEL de.hs-fulda.netlab.name="prona/learn-sdn-hub" \
       de.hs-fulda.netlab.vcs-url="https://github.com/prona-p4-learning-platform/learn-sdn-hub" \
       de.hs-fulda.netlab.docker.cmd="docker run -it --rm -p 3001:3001 prona/learn-sdn-hub -t localvm -a 127.0.0.1"
 
+ENV VITE_REACT_APP_API_HOST=""
+ENV VITE_REACT_APP_WS_HOST=""
+
 RUN useradd -m -s /bin/bash p4
 WORKDIR /home/p4/learn-sdn-hub/frontend
 
