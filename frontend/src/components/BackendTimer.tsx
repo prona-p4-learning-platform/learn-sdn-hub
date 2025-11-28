@@ -18,6 +18,8 @@ const timerValidator = z.union([
   }),
 ]);
 
+var popupShown = false;
+
 function formatTime(minutes: number): string {
   const mins = Math.floor(minutes);
   const secs = Math.floor((minutes - mins) * 60);
@@ -39,6 +41,11 @@ export default function BackendTimer({ environmentName, groupNumber }: BackendTi
         );
         if (payload.success) {
           if (payload.data.hasTimer) {
+            if (payload.data.remainingMinutes == 0 && !popupShown) {
+              console.log("Zeit um, wurde abgegeben");
+              popupShown = true;
+              alert("Die Prüfungszeit ist abgelaufen. Ihre Arbeit wurde automatisch abgegeben.");
+            }
             setValue(formatTime(payload.data.remainingMinutes));
           } else {
             setValue("--:--");

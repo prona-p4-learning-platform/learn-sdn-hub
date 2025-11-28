@@ -527,6 +527,9 @@ environments.set("Example2-MinimalisticSwitch", {
   providerProxmoxTemplateTag: "learn-sdn-hub-develop-template-acn-p4",
   useCollaboration: true,
   useLanguageClient: false,
+
+  isExam: true,
+  durationMinutes: 0.1,
 });
 
 environments.set("Example3-LearningSwitch", {

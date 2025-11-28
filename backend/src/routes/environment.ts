@@ -119,7 +119,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
       }
 
       const remainingTime = activeEnv.getRemainingExamTime();
-      
+
       if (remainingTime === undefined) {
         res.status(200).json({ hasTimer: false });
       } else {
