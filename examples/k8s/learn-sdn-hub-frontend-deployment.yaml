@@ -19,12 +19,12 @@ spec:
     spec:
       containers:
       - name: learn-sdn-hub-frontend
-        image: nginx # add frontend image here
+        image: ghcr.io/prona-p4-learning-platform/learn-sdn-hub-frontend:254-feature-k8s-docker-images
         resources:
           requests:
-            memory: "128Mi"
+            memory: "512Mi"
             cpu: "200m"
           limits:
-            memory: "128Mi"
+            memory: "512Mi"
         ports:
         - containerPort: 80
