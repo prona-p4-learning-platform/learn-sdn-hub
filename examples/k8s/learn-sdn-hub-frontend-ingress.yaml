@@ -15,3 +15,10 @@ spec:
             name: learn-sdn-hub-frontend
             port: 
               number: 80
+      - pathType: Prefix
+        path: "/api"
+        backend:
+          service:
+            name: learn-sdn-hub-backend
+            port: 
+                number: 80
