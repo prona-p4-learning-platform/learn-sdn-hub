@@ -212,14 +212,16 @@ export default class Environment {
         if (
           value.environmentId === environmentId &&
           value.groupNumber === groupNumber &&
-          value.sessionId === sessionId
+          value.sessionId === sessionId &&
+          value.isReady
         ) {
           activeEnvironment.push(value);
         }
       } else {
         if (
           value.environmentId === environmentId &&
-          value.groupNumber === groupNumber
+          value.groupNumber === groupNumber &&
+          value.isReady
         ) {
           activeEnvironment.push(value);
         }
@@ -236,7 +238,7 @@ export default class Environment {
       new Array<string>();
 
     for (const [, value] of Environment.activeEnvironments) {
-      if (value.username === username && value.sessionId === sessionId)
+      if (value.username === username && value.sessionId === sessionId && value.isReady)
         deployedEnvironmentsForUserSession.push(value.environmentId);
     }
     return deployedEnvironmentsForUserSession;
@@ -246,7 +248,7 @@ export default class Environment {
     const deployedEnvironmentsForGroup: string[] = [];
 
     for (const [, value] of Environment.activeEnvironments) {
-      if (value.groupNumber === groupNumber) {
+      if (value.groupNumber === groupNumber && value.isReady) {
         deployedEnvironmentsForGroup.push(value.environmentId);
       }
     }

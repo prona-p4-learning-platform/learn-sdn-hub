@@ -1184,71 +1184,81 @@ export default class ProxmoxProvider implements InstanceProvider {
           if (
             vmConfig.tags?.split(";").find((tag) => tag === this.proxmoxTag)
           ) {
-            await this.proxmox.nodes
-              .$(node.node)
-              .lxc.$(parseInt(instance))
-              .status.current.$get()
-              .then(async (current) => {
-                if (current.status === "running") {
-                  await this.proxmox.nodes
-                    .$(node.node)
-                    .lxc.$(parseInt(instance))
-                    .status.stop.$post()
-                    .then(async () => {
-                      // wait for stop
-                      let stopTimeout = 10;
-                      while (stopTimeout > 0) {
-                        const current = await this.proxmox.nodes
-                          .$(node.node)
-                          .lxc.$(parseInt(instance))
-                          .status.current.$get();
-                        if (current.status === "stopped") {
-                          vmHostname = vmConfig.hostname ?? "";
-                          vmNode = node.node;
-                          break;
-                        }
-                        await this.sleep(1000);
-                        stopTimeout--;
+            // wait for stop
+            let deleteTimeout = 10;
+            while (deleteTimeout > 0) {
+              const current = await this.proxmox.nodes
+                .$(node.node)
+                .lxc.$(parseInt(instance))
+                .status.current.$get().catch((reason) => {
+                    const originalMessage =
+                      reason instanceof Error
+                        ? reason.message
+                        : "Unknown error" + reason;
+                    // do not throw error here, as node can be unavailable
+                    console.error(
+                      `ProxmoxProvider: Could not access VM (${instance}) on node (${node.node}) during deletion.\n` +
+                        originalMessage,
+                    );
+                });
+
+              if (current?.status === "running") {
+                await this.proxmox.nodes
+                  .$(node.node)
+                  .lxc.$(parseInt(instance))
+                  .status.stop.$post()
+                  .then(async () => {
+                    // wait for stop
+                    let stopTimeout = 10;
+                    while (stopTimeout > 0) {
+                      const current = await this.proxmox.nodes
+                        .$(node.node)
+                        .lxc.$(parseInt(instance))
+                        .status.current.$get();
+                      if (current.status === "stopped") {
+                        vmHostname = vmConfig.hostname ?? "";
+                        vmNode = node.node;
+                        break;
                       }
-                      if (stopTimeout === 0) {
-                        throw new Error(
-                          "ProxmoxProvider: Could not stop VM: " + instance,
-                        );
-                      }
-                    })
-                    .catch((reason) => {
-                      const originalMessage =
-                        reason instanceof Error
-                          ? reason.message
-                          : "Unknown error";
+                      await this.sleep(1000);
+                      stopTimeout--;
+                    }
+                    if (stopTimeout === 0) {
                       throw new Error(
-                        `ProxmoxProvider: Could not stop VM (${instance}) during deletion.\n` +
-                          originalMessage,
+                        "ProxmoxProvider: Could not stop VM: " + instance,
                       );
-                    })
-                    .catch((reason) => {
-                      const originalMessage =
-                        reason instanceof Error
-                          ? reason.message
-                          : "Unknown error" + reason;
-                      // do not throw error here, as node can be unavailable
-                      console.error(
-                        `ProxmoxProvider: Could not access VM (${instance}) on node (${node.node}) during deletion.\n` +
-                          originalMessage,
-                      );
-                    });
-                } else if (current.status === "stopped") {
-                  // instance found
-                  vmHostname = vmConfig.hostname ?? "";
-                  vmNode = node.node;
-                } else {
-                  throw new Error(
-                    "ProxMox provider found VM " +
-                      instance +
-                      " to delete but state is neither running nor stopped.",
-                  );
-                }
-              });
+                    }
+                  })
+                  .catch((reason) => {
+                    const originalMessage =
+                      reason instanceof Error
+                        ? reason.message
+                        : "Unknown error";
+                    throw new Error(
+                      `ProxmoxProvider: Could not stop VM (${instance}) during deletion.\n` +
+                        originalMessage,
+                    );
+                  })
+              } else if (current?.status === "stopped") {
+                // instance found
+                vmHostname = vmConfig.hostname ?? "";
+                vmNode = node.node;
+                break;
+              } else {
+                throw new Error(
+                  "ProxMox provider found VM " +
+                    instance +
+                    " to delete but state is neither running nor stopped.",
+                );
+              }
+              await this.sleep(1000);
+              deleteTimeout--;
+              if (deleteTimeout === 0) {
+                throw new Error(
+                  "ProxmoxProvider: Could not delete VM: " + instance,
+                );
+              }
+            }
           }
         })
         .catch((error: Error) => {
