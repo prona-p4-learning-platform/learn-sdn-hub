@@ -8,6 +8,11 @@ export interface Console {
     listener: () => void,
   ): this;
   on(event: "data", listener: (data: string) => void): this;
+  off(
+    event: "ready" | "close" | "closed" | "finished",
+    listener: () => void,
+  ): this;
+  off(event: "data", listener: (data: string) => void): this;
   write(data: string): void;
   writeLine(data: string): void;
   close(environmentId: string, groupNumber: number, sessionId?: string): void;
@@ -115,6 +120,7 @@ export default class SSHConsole extends EventEmitter implements Console {
         }
       });
       sshConsole.on("close", () => {
+        console.log("SSHConsole: CLOSE on.close line 122");
         //console.debug("SSH connection closed.");
         sshConsole.ready = false;
         this.stream?.end();
@@ -170,6 +176,7 @@ export default class SSHConsole extends EventEmitter implements Console {
                       // );
                     })
                     .on("close", () => {
+                      console.log("SSHConsole: CLOSE on.close line 178");
                       // console.debug(
                       //   "SSH Client connection via jump host :: close",
                       // );
@@ -202,6 +209,7 @@ export default class SSHConsole extends EventEmitter implements Console {
           })
           .on("close", () => {
             //console.debug("SSH jumphost connection close");
+            console.log("SSHConsole: CLOSE on.close line 211");
             this.stream?.end();
             sshConsole.end();
             sshJumpHostConnection.end();
@@ -234,6 +242,13 @@ export default class SSHConsole extends EventEmitter implements Console {
           .on("ready", function () {
             //console.debug("SSH Client :: ready");
           })
+          .on("close", () => {
+            console.log("SSHConsole: CLOSE on.close line 245");
+            //console.debug("SSH Client :: close");
+            this.stream?.end();
+            sshConsole.end();
+            this.emit("close");
+          })
           .on("error", (err) => {
             console.error("SSH console error: ", err);
           })
@@ -261,6 +276,7 @@ export default class SSHConsole extends EventEmitter implements Console {
         this.stream = stream;
         stream
           .on("close", () => {
+            console.log("SSHConsole: CLOSE on.close line 278");
             //console.debug("SSH Stream :: close")
             stream.end();
             this.emit("close");
@@ -289,6 +305,7 @@ export default class SSHConsole extends EventEmitter implements Console {
           if (err) throw err;
           stream
             .on("close", function (code: string, signal: string) {
+              console.log("SSHConsole: CLOSE on.close line 307");
               //console.debug(
               //  "Stream :: close :: code: " + code + ", signal: " + signal,
               //);
@@ -321,6 +338,7 @@ export default class SSHConsole extends EventEmitter implements Console {
   }
 
   close(environmentId: string, groupNumber: number): void {
+    console.log("SSHConsole: CLOSE on.close line 340");
     //console.debug("SSH console close");
     SSHConsole.sshConnections.forEach((value, key, map) => {
       // if the connection is in the same group and environment, close it

@@ -25,14 +25,18 @@ export default function (
       ws.send(initialConsoleBuffer);
     }
 
-    envConsole.on("data", (data: string) => {
+    // Store listener references so they can be removed when WebSocket closes
+    const dataListener = (data: string) => {
       ws.send(data.toString());
-    });
+    };
 
-    envConsole.on("close", () => {
+    const closeListener = () => {
       ws.send("Remote tty has gone.");
       ws.close();
-    });
+    };
+
+    envConsole.on("data", dataListener);
+    envConsole.on("close", closeListener);
 
     ws.on("message", function (message) {
       // eslint-disable-next-line @typescript-eslint/no-base-to-string
@@ -64,6 +68,9 @@ export default function (
 
     ws.on("close", function () {
       console.log("WS Session closed.");
+      // Remove listeners to prevent memory leaks
+      envConsole.off("data", dataListener);
+      envConsole.off("close", closeListener);
     });
   } else {
     ws.send(`${environment} is not active or has no console of type ${type}`);
