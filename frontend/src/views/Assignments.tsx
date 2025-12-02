@@ -13,11 +13,11 @@ import {
   List,
   ListItem,
   ListItemText,
-  ListItemSecondaryAction,
   Tooltip,
   Typography,
   Menu,
-  MenuItem
+  MenuItem,
+  CircularProgress
 } from "@mui/material";
 import { useSnackbar } from "notistack";
 import { FetchError } from "ofetch";
@@ -66,13 +66,20 @@ function Assignments(): JSX.Element {
   const [deployedGroupAssignments, setDeployedGroupAssignments] = useState<
     string[]
   >([]);
+  const [disableAllDeployButtons, setDisableAllDeployButtons] = useState(false);
+  const [disableAllUndeployButtons, setDisableAllUndeployButtons] = useState(false);
+  const [progressAssignment, setProgressAssignment] = useState<string>("");
+
   const [pointLimits, setPointLimits] = useState<PointLimits>({});
+
   const [confirmationUndeployDialogOpen, setConfirmationUndeployDialogOpen] =
     useState({ assignment: "", dialogOpen: false });
   const [confirmationResubmitDialogOpen, setConfirmationResubmitDialogOpen] =
     useState({ assignment: "", dialogOpen: false });
-  const [resubmitAssignment, setResubmitAssignment] = useState("");
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+
+    const [resubmitAssignment, setResubmitAssignment] = useState("");
+
+    const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
   const handleK8sClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     setAnchorEl(event.currentTarget);
@@ -258,6 +265,8 @@ function Assignments(): JSX.Element {
 
   const createEnvironment = useCallback(
     async (assignment: string) => {
+      setDisableAllDeployButtons(true);
+      setProgressAssignment(assignment);
       const creatingSnack = enqueueSnackbar("Creating virtual environment...", {
         variant: "info",
         persist: true,
@@ -272,6 +281,8 @@ function Assignments(): JSX.Element {
           timeout: 300000, // 5 minutes timeout, e.g., proxmox and OpenStack take some time for cloning and startup
         });
 
+        setProgressAssignment("");
+        setDisableAllDeployButtons(false);
         enqueueSnackbar("Deployment successful!", { variant: "success" });
         updateDeployedEnvironments();
       } catch (error) {
@@ -281,10 +292,14 @@ function Assignments(): JSX.Element {
             ? httpError.data.message
             : httpError.error.message;
 
+          setProgressAssignment("");
+          setDisableAllDeployButtons(false);
           enqueueSnackbar("Deployment failed! (" + message + ")", {
             variant: "error",
           });
         } else {
+          setProgressAssignment("");
+          setDisableAllDeployButtons(false);
           enqueueSnackbar("Deployment error while connecting to backend!", {
             variant: "error",
           });
@@ -427,6 +442,8 @@ function Assignments(): JSX.Element {
 
   const deleteEnvironment = useCallback(
     async (assignment: string) => {
+      setProgressAssignment(assignment);
+      setDisableAllUndeployButtons(true);
       const deletingSnack = enqueueSnackbar("Deleting virtual environment...", {
         variant: "info",
         persist: true,
@@ -441,6 +458,8 @@ function Assignments(): JSX.Element {
           timeout: 300000, // 5 minutes seconds timeout, e.g., proxmox and OpenStack take some time to delete instances
         });
 
+        setProgressAssignment("");
+        setDisableAllUndeployButtons(false);
         enqueueSnackbar("Deployment deletion successful!", {
           variant: "success",
         });
@@ -452,10 +471,14 @@ function Assignments(): JSX.Element {
             ? httpError.data.message
             : httpError.error.message;
 
+          setProgressAssignment("");
+          setDisableAllUndeployButtons(false);
           enqueueSnackbar("Deployment deletion failed! (" + message + ")", {
             variant: "error",
           });
         } else {
+          setProgressAssignment("");
+          setDisableAllUndeployButtons(false);
           enqueueSnackbar(
             "Deployment deletion error while connecting to backend!",
             {
@@ -519,7 +542,140 @@ function Assignments(): JSX.Element {
               </div>
             )}
             {assignmentGroup.map((assignment) => (
-              <ListItem key={assignment}>
+              <ListItem key={assignment}
+                secondaryAction={
+                  <Box>
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      startIcon={<CloudUploadIcon />}
+                      disabled={
+                        disableAllDeployButtons ||
+                        deployedUserAssignments.length > 0 ||
+                        (deployedGroupAssignments.length > 0 &&
+                          !deployedGroupAssignments.includes(assignment)) ||
+                        (submittedAssignments.findIndex(
+                          (element) => element.assignmentName === assignment,
+                        ) !== -1 &&
+                          resubmitAssignment !== assignment)
+                      }
+                      onClick={() => {
+                        void createEnvironment(assignment);
+                      }}
+                      sx={{ margin: theme.spacing(1) }}
+                    >
+                      Deploy
+                    </Button>
+                    <Button
+                      variant="contained"
+                      color="secondary"
+                      startIcon={<PlayCircleFilledWhiteIcon />}
+                      disabled={disableAllUndeployButtons || !isActiveDeployment(assignment)}
+                      onClick={() => {
+                        void navigate(`/environment/${assignment}`);
+                      }}
+                      sx={{ margin: theme.spacing(1) }}
+                    >
+                      Start Assignment
+                    </Button>
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      startIcon={<CloudOffIcon />}
+                      disabled={disableAllUndeployButtons || !isActiveDeployment(assignment)}
+                      onClick={() => {
+                        handleConfirmationUndeployDialogOpen(assignment);
+                      }}
+                      sx={{ margin: theme.spacing(1) }}
+                    >
+                      Undeploy
+                    </Button>
+                    <Tooltip title={showSubmissionStatus(assignment)}>
+                      <Checkbox
+                        edge="end"
+                        checked={
+                          submittedAssignments.findIndex(
+                            (element) => element.assignmentName === assignment,
+                          ) !== -1
+                        }
+                        disabled={
+                          submittedAssignments.findIndex(
+                            (element) => element.assignmentName === assignment,
+                          ) === -1
+                        }
+                        color="primary"
+                        onClick={() => {
+                          handleConfirmationResubmitDialogOpen(assignment);
+                        }}
+                      />
+                    </Tooltip>
+                    {pointLimits[assignment] ? (
+                      <Tooltip title={showPointsTooltip(assignment)}>
+                        <Box
+                          sx={{ display: "inline-flex", alignItems: "center", ml: 2 }}
+                        >
+                          {(() => {
+                            const submission = submittedAssignments.find(
+                              (submission) =>
+                                submission.assignmentName === assignment,
+                            );
+                            const hasSubmission = !!submission;
+                            const pointLimit = pointLimits[assignment];
+                            let percentage = 0;
+
+                            if (
+                              hasSubmission &&
+                              submission.points !== undefined &&
+                              pointLimit !== undefined &&
+                              pointLimit !== 0
+                            ) {
+                              percentage = (submission.points / pointLimit) * 100;
+                            }
+
+                            return (
+                              <>
+                                <Box sx={{ width: "100px" }}>
+                                  <LinearProgress
+                                    variant={
+                                      (hasSubmission && submission.points) ||
+                                      !hasSubmission
+                                        ? "determinate"
+                                        : undefined
+                                    }
+                                    value={
+                                      (hasSubmission && submission.points) ||
+                                      !hasSubmission
+                                        ? percentage
+                                        : undefined
+                                    }
+                                    color={hasSubmission ? "primary" : "warning"}
+                                  />
+                                </Box>
+                                <Box sx={{ width: "50px", ml: 1 }}>
+                                  <Typography variant="body2" color="text.secondary">
+                                    {hasSubmission
+                                      ? `${submission?.points ? submission?.points : "?"} / ${pointLimit}`
+                                      : `0 / ${pointLimit}`}
+                                  </Typography>
+                                </Box>
+                              </>
+                            );
+                          })()}
+                        </Box>
+                      </Tooltip>
+                    ) : (
+                      <Box
+                        sx={{ display: "inline-flex", alignItems: "center", ml: 2 }}
+                      >
+                        <Box sx={{ width: "158px" }}>
+                          <Typography variant="body2" color="text.secondary">
+                            No bonus points
+                          </Typography>
+                        </Box>
+                      </Box>
+                    )}
+                  </Box>
+                }>
                 <ListItemText primary={assignment} />
                 {/*
                 <ListItemText primary={assignment} secondary={showDescirption(assignment)}/>
@@ -535,136 +691,7 @@ function Assignments(): JSX.Element {
 
                 maybe also allow resubmission? (e.g., by unticking submission state checkbox?)
                 */}
-                <ListItemSecondaryAction>
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    startIcon={<CloudUploadIcon />}
-                    disabled={
-                      deployedUserAssignments.length > 0 ||
-                      (deployedGroupAssignments.length > 0 &&
-                        !deployedGroupAssignments.includes(assignment)) ||
-                      (submittedAssignments.findIndex(
-                        (element) => element.assignmentName === assignment,
-                      ) !== -1 &&
-                        resubmitAssignment !== assignment)
-                    }
-                    onClick={() => {
-                      void createEnvironment(assignment);
-                    }}
-                    sx={{ margin: theme.spacing(1) }}
-                  >
-                    Deploy
-                  </Button>
-                  <Button
-                    variant="contained"
-                    color="secondary"
-                    startIcon={<PlayCircleFilledWhiteIcon />}
-                    disabled={!isActiveDeployment(assignment)}
-                    onClick={() => {
-                      void navigate(`/environment/${assignment}`);
-                    }}
-                    sx={{ margin: theme.spacing(1) }}
-                  >
-                    Start Assignment
-                  </Button>
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    startIcon={<CloudOffIcon />}
-                    disabled={!isActiveDeployment(assignment)}
-                    onClick={() => {
-                      handleConfirmationUndeployDialogOpen(assignment);
-                    }}
-                    sx={{ margin: theme.spacing(1) }}
-                  >
-                    Undeploy
-                  </Button>
-                  <Tooltip title={showSubmissionStatus(assignment)}>
-                    <Checkbox
-                      edge="end"
-                      checked={
-                        submittedAssignments.findIndex(
-                          (element) => element.assignmentName === assignment,
-                        ) !== -1
-                      }
-                      disabled={
-                        submittedAssignments.findIndex(
-                          (element) => element.assignmentName === assignment,
-                        ) === -1
-                      }
-                      color="primary"
-                      onClick={() => {
-                        handleConfirmationResubmitDialogOpen(assignment);
-                      }}
-                    />
-                  </Tooltip>
-                  {pointLimits[assignment] ? (
-                    <Tooltip title={showPointsTooltip(assignment)}>
-                      <Box
-                        sx={{ display: "inline-flex", alignItems: "center", ml: 2 }}
-                      >
-                        {(() => {
-                          const submission = submittedAssignments.find(
-                            (submission) =>
-                              submission.assignmentName === assignment,
-                          );
-                          const hasSubmission = !!submission;
-                          const pointLimit = pointLimits[assignment];
-                          let percentage = 0;
-
-                          if (
-                            hasSubmission &&
-                            submission.points !== undefined &&
-                            pointLimit !== undefined &&
-                            pointLimit !== 0
-                          ) {
-                            percentage = (submission.points / pointLimit) * 100;
-                          }
-
-                          return (
-                            <>
-                              <Box sx={{ width: "100px" }}>
-                                <LinearProgress
-                                  variant={
-                                    (hasSubmission && submission.points) ||
-                                    !hasSubmission
-                                      ? "determinate"
-                                      : undefined
-                                  }
-                                  value={
-                                    (hasSubmission && submission.points) ||
-                                    !hasSubmission
-                                      ? percentage
-                                      : undefined
-                                  }
-                                  color={hasSubmission ? "primary" : "warning"}
-                                />
-                              </Box>
-                              <Box sx={{ width: "50px", ml: 1 }}>
-                                <Typography variant="body2" color="text.secondary">
-                                  {hasSubmission
-                                    ? `${submission?.points ? submission?.points : "?"} / ${pointLimit}`
-                                    : `0 / ${pointLimit}`}
-                                </Typography>
-                              </Box>
-                            </>
-                          );
-                        })()}
-                      </Box>
-                    </Tooltip>
-                  ) : (
-                    <Box
-                      sx={{ display: "inline-flex", alignItems: "center", ml: 2 }}
-                    >
-                      <Box sx={{ width: "158px" }}>
-                        <Typography variant="body2" color="text.secondary">
-                          No bonus points
-                        </Typography>
-                      </Box>
-                    </Box>
-                  )}
-                </ListItemSecondaryAction>
+                {(progressAssignment === assignment) ? <CircularProgress size={20}/> : null}
               </ListItem>
             ))}
           </div>
