@@ -1185,8 +1185,8 @@ export default class ProxmoxProvider implements InstanceProvider {
             vmConfig.tags?.split(";").find((tag) => tag === this.proxmoxTag)
           ) {
             // wait for stop
-            let deleteTimeout = 10;
-            while (deleteTimeout > 0) {
+            let prepareDeleteTimeout = 10;
+            while (prepareDeleteTimeout > 0) {
               const current = await this.proxmox.nodes
                 .$(node.node)
                 .lxc.$(parseInt(instance))
@@ -1224,9 +1224,7 @@ export default class ProxmoxProvider implements InstanceProvider {
                       stopTimeout--;
                     }
                     if (stopTimeout === 0) {
-                      throw new Error(
-                        "ProxmoxProvider: Could not stop VM: " + instance,
-                      );
+                      console.log(`ProxmoxProvider: Could not stop VM (${instance}) during deletion. Retrying...`);
                     }
                   })
                   .catch((reason) => {
@@ -1234,10 +1232,7 @@ export default class ProxmoxProvider implements InstanceProvider {
                       reason instanceof Error
                         ? reason.message
                         : "Unknown error";
-                    throw new Error(
-                      `ProxmoxProvider: Could not stop VM (${instance}) during deletion.\n` +
-                        originalMessage,
-                    );
+                    console.log(`ProxmoxProvider: Could not stop VM (${instance}) during deletion. Retrying...\n` + originalMessage);
                   })
               } else if (current?.status === "stopped") {
                 // instance found
@@ -1252,8 +1247,8 @@ export default class ProxmoxProvider implements InstanceProvider {
                 );
               }
               await this.sleep(1000);
-              deleteTimeout--;
-              if (deleteTimeout === 0) {
+              prepareDeleteTimeout--;
+              if (prepareDeleteTimeout === 0) {
                 throw new Error(
                   "ProxmoxProvider: Could not delete VM: " + instance,
                 );

@@ -39,10 +39,25 @@ interface SubmissionType {
   points?: number;
 }
 
+interface DeployedEnvironment {
+  assignmentName: string;
+  instance: string;
+  isReady: boolean;
+  isReadyInUserSession: boolean;
+  isReadyInGroup: boolean;
+}
+
 const assignmentsValidator = z.array(z.array(z.string()));
 const pointsValidator = z.record(z.number());
-const deployedUserEnvsValidator = z.array(z.string());
-const deployedGroupEnvsValidator = z.array(z.string());
+const deployedEnvsValidator = z.array(
+  z.object({
+    assignmentName: z.string().min(1),
+    instance: z.string(),
+    isReady: z.boolean(),
+    isReadyInUserSession: z.boolean(),
+    isReadyInGroup: z.boolean(),
+  }),
+);
 const submissionsValidator = z.array(
   z.object({
     assignmentName: z.string().min(1),
@@ -60,12 +75,10 @@ function Assignments(): JSX.Element {
   const [submittedAssignments, setSubmittedAssignments] = useState<
     SubmissionType[]
   >([]);
-  const [deployedUserAssignments, setDeployedUserAssignments] = useState<
-    string[]
+  const [deployedAssignments, setDeployedAssignments] = useState<
+    DeployedEnvironment[]
   >([]);
-  const [deployedGroupAssignments, setDeployedGroupAssignments] = useState<
-    string[]
-  >([]);
+
   const [disableAllDeployButtons, setDisableAllDeployButtons] = useState(false);
   const [disableAllUndeployButtons, setDisableAllUndeployButtons] = useState(false);
   const [progressAssignment, setProgressAssignment] = useState<string>("");
@@ -122,10 +135,26 @@ function Assignments(): JSX.Element {
   };
 
   const isActiveDeployment = (assignment: string) => {
-    return Array.from(deployedUserAssignments).some(
-      (element) => element === assignment,
+    return Array.from(deployedAssignments).some(
+      (element) => element.assignmentName === assignment && element.isReady && element.isReadyInUserSession,
     );
   };
+
+  const getDeployedUserAssignments = () => {
+    return deployedAssignments
+      .filter((element) => element.isReadyInUserSession && element.isReady)
+      .map((element) => element.assignmentName);
+  }
+
+  const getDeployedGroupAssignments = () => {
+    return deployedAssignments
+      .filter((element) => element.isReadyInGroup && element.isReady)
+      .map((element) => element.assignmentName);
+  }
+
+  const hasDeployedGroupAssignments = (assignment: string) => {
+    return getDeployedGroupAssignments().includes(assignment);
+  }
 
   const showSubmissionStatus = (assignment: string) => {
     const submission = submittedAssignments.find(
@@ -190,29 +219,23 @@ function Assignments(): JSX.Element {
 
     const update = () => {
       APIRequest(
-        "/environment/deployed-user-environments",
-        deployedUserEnvsValidator,
+        "/environment/deployed-environments",
+        deployedEnvsValidator,
       )
         .then((payload) => {
           if (payload.success) {
-            setDeployedUserAssignments(payload.data);
+            setDeployedAssignments(payload.data);
+            if (payload.data.some(element => !element.isReady)) {
+              setDisableAllDeployButtons(true);
+              setDisableAllUndeployButtons(true);
+            } else {
+              setDisableAllDeployButtons(false);
+              setDisableAllUndeployButtons(false);
+            }
           } else throw payload.error;
         })
         .catch(() => {
-          console.log("Fetching deployed user environments failed...");
-        });
-
-      APIRequest(
-        "/environment/deployed-group-environments",
-        deployedGroupEnvsValidator,
-      )
-        .then((payload) => {
-          if (payload.success) {
-            setDeployedGroupAssignments(payload.data);
-          } else throw payload.error;
-        })
-        .catch(() => {
-          console.log("Fetching deployed group environments failed...");
+          console.log("Fetching deployed environments failed...");
         });
 
       APIRequest("/environment/submissions", submissionsValidator)
@@ -224,6 +247,7 @@ function Assignments(): JSX.Element {
         .catch(() => {
           console.log("Fetching submissions failed...");
         });
+
     };
 
     update();
@@ -237,29 +261,16 @@ function Assignments(): JSX.Element {
 
   const updateDeployedEnvironments = useCallback(() => {
     APIRequest(
-      "/environment/deployed-user-environments",
-      deployedUserEnvsValidator,
+      "/environment/deployed-environments",
+      deployedEnvsValidator,
     )
       .then((payload) => {
         if (payload.success) {
-          setDeployedUserAssignments(payload.data);
+          setDeployedAssignments(payload.data);
         } else throw payload.error;
       })
       .catch(() => {
-        console.log("Fetching deployed user environments failed...");
-      });
-
-    APIRequest(
-      "/environment/deployed-group-environments",
-      deployedGroupEnvsValidator,
-    )
-      .then((payload) => {
-        if (payload.success) {
-          setDeployedGroupAssignments(payload.data);
-        } else throw payload.error;
-      })
-      .catch(() => {
-        console.log("Fetching deployed group environments failed...");
+        console.log("Fetching deployed environments failed...");
       });
   }, []);
 
@@ -498,16 +509,6 @@ function Assignments(): JSX.Element {
 
   return (
     <div>
-      {deployedUserAssignments.length === 0 &&
-        deployedGroupAssignments.length > 0 && (
-          <Typography>
-            You or your group members are working on{" "}
-            {deployedGroupAssignments[0]}. You can join and open a connection by
-            clicking deploy.
-          </Typography>
-        )}
-
-
       <List component="nav" aria-label="assignment list" style={{ width: 940 }}>
         {assignments.map((assignmentGroup, assignmentGroupIndex) => (
           <div key={`group-${assignmentGroupIndex}`}>
@@ -551,9 +552,9 @@ function Assignments(): JSX.Element {
                       startIcon={<CloudUploadIcon />}
                       disabled={
                         disableAllDeployButtons ||
-                        deployedUserAssignments.length > 0 ||
-                        (deployedGroupAssignments.length > 0 &&
-                          !deployedGroupAssignments.includes(assignment)) ||
+                        getDeployedUserAssignments().length > 0 ||
+                        (getDeployedGroupAssignments().length > 0 &&
+                          !hasDeployedGroupAssignments(assignment)) ||
                         (submittedAssignments.findIndex(
                           (element) => element.assignmentName === assignment,
                         ) !== -1 &&
@@ -564,7 +565,11 @@ function Assignments(): JSX.Element {
                       }}
                       sx={{ margin: theme.spacing(1) }}
                     >
-                      Deploy
+                      {(getDeployedUserAssignments().length === 0 && getDeployedGroupAssignments().length > 0) ? (
+                        "Join"
+                      ) : (
+                        "Deploy"
+                      )}
                     </Button>
                     <Button
                       variant="contained"
@@ -691,7 +696,7 @@ function Assignments(): JSX.Element {
 
                 maybe also allow resubmission? (e.g., by unticking submission state checkbox?)
                 */}
-                {(progressAssignment === assignment) ? <CircularProgress size={20}/> : null}
+                {(progressAssignment === assignment) ? <Box sx={{ display: "inline-flex", alignItems: "center", ml: 2 }}><CircularProgress size={16}/></Box> : null}
               </ListItem>
             ))}
           </div>
@@ -707,7 +712,7 @@ function Assignments(): JSX.Element {
               <br />
               All processes and unsubmitted changes will be lost.
               <br />
-              {deployedGroupAssignments.length > 0
+              {getDeployedGroupAssignments.length > 0
                 ? "Other users still using the environment " +
                   "will also be disconnected."
                 : ""}
@@ -758,6 +763,22 @@ function Assignments(): JSX.Element {
           </DialogActions>
         </Dialog>
       </List>
+
+      {getDeployedUserAssignments().length === 0 &&
+        getDeployedGroupAssignments().length > 0 && (
+          <Typography style={{ marginLeft: '1rem', marginTop: '1rem' }} color="info.main">
+            You or your group members are working on{" "}
+            {getDeployedGroupAssignments()[0]}. You can join and open a connection by
+            clicking JOIN .
+          </Typography>
+        )}
+
+      {(disableAllDeployButtons || disableAllUndeployButtons) && (
+          <Typography style={{ marginLeft: '1rem', marginTop: '1rem' }} color="warning.main">
+            Deployment actions are temporarily disabled while an environment is being prepared for you or one of your group members.
+          </Typography>
+        )}
+
     </div>
   );
 }
