@@ -252,18 +252,20 @@ export default class Environment {
       new Array<DeployedEnvironment>();
 
     for (const [, value] of Environment.activeEnvironments) {
-      const isReadyInUserSession = value.username === username && value.sessionId === sessionId && value.isReady;
-      const isReadyInGroup = value.groupNumber === groupNumber && value.isReady;
-      const deployedEnvironment: DeployedEnvironment = {
-        assignmentName: value.environmentId,
-        instance: value.instanceId ?? "",
-        isReady: value.isReady,
-        isReadyInUserSession: isReadyInUserSession,
-        isReadyInGroup: isReadyInGroup,
-        // possibly add IPAddress, SSHPort, LanguageServerPort etc. here later for advanced use cases beyond 
-        // learn-sdn-hub web interface usage
-      };
-      deployedEnvironments.push(deployedEnvironment);
+      if (value.username === username || value.groupNumber === groupNumber) {
+        const isReadyInUserSession = value.username === username && value.sessionId === sessionId && value.isReady;
+        const isReadyInGroup = value.groupNumber === groupNumber && value.isReady;
+        const deployedEnvironment: DeployedEnvironment = {
+          assignmentName: value.environmentId,
+          instance: value.instanceId ?? "",
+          isReady: value.isReady,
+          isReadyInUserSession: isReadyInUserSession,
+          isReadyInGroup: isReadyInGroup,
+          // possibly add IPAddress, SSHPort, LanguageServerPort etc. here later for advanced use cases beyond 
+          // learn-sdn-hub web interface usage
+        };
+        deployedEnvironments.push(deployedEnvironment);
+      }
     }
     return deployedEnvironments;
   }
