@@ -87,6 +87,11 @@ const contentValidator = z.object({
   content: z.string(),
   location: z.string().optional(),
 });
+const collabDocValidator = z.object({
+  alias: z.string().min(1),
+  content: z.string(),
+  initialContent: z.boolean(),
+});
 
 interface Disposable {
   dispose: () => void;
@@ -381,15 +386,11 @@ export default class FileEditor extends Component<FileEditorProps> {
     try {
       const payload = await APIRequest(
         `/environment/${this.props.environment}/collabdoc/${fileName}`,
-        contentValidator,
+        collabDocValidator,
       );
 
       if (payload.success) {
         const { data } = payload;
-
-        Y.applyUpdate(doc, toUint8Array(data.content));
-
-        // Check for double document, if environment was not undeployed
 
         // Websocket provider
         this.collaborationProvider = new WebsocketProvider(
@@ -418,6 +419,10 @@ export default class FileEditor extends Component<FileEditorProps> {
         //     ],
         //   }
         // );
+
+        // initialize document with content from backend if not already initialized
+        if (data.initialContent && doc.getText("monaco").length === 0)
+          Y.applyUpdate(doc, toUint8Array(data.content));
 
         const type = doc.getText("monaco");
 

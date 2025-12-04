@@ -131,6 +131,19 @@ export type SubmissionFileType = {
   fileContent: string;
 };
 
+export type CollabDoc = {
+  alias: string;
+  content: string | undefined;
+  initialContent: boolean;
+};
+export interface DeployedEnvironment {
+  assignmentName: string;
+  instance: string;
+  isReady: boolean;
+  isReadyInUserSession: boolean;
+  isReadyInGroup: boolean;
+}
+
 export interface EnvironmentDescription {
   terminals: Array<Array<TerminalType>>;
   editableFiles: Array<AliasedFile>;
@@ -230,29 +243,29 @@ export default class Environment {
     return activeEnvironment[0];
   }
 
-  public static getDeployedUserSessionEnvironmentList(
+  public static getDeployedEnvironmentList(
     username: string,
     sessionId: string,
-  ): Array<string> {
-    const deployedEnvironmentsForUserSession: Array<string> =
-      new Array<string>();
+    groupNumber: number,
+  ): Array<DeployedEnvironment> {
+    const deployedEnvironments: Array<DeployedEnvironment> =
+      new Array<DeployedEnvironment>();
 
     for (const [, value] of Environment.activeEnvironments) {
-      if (value.username === username && value.sessionId === sessionId && value.isReady)
-        deployedEnvironmentsForUserSession.push(value.environmentId);
+      const isReadyInUserSession = value.username === username && value.sessionId === sessionId && value.isReady;
+      const isReadyInGroup = value.groupNumber === groupNumber && value.isReady;
+      const deployedEnvironment: DeployedEnvironment = {
+        assignmentName: value.environmentId,
+        instance: value.instanceId ?? "",
+        isReady: value.isReady,
+        isReadyInUserSession: isReadyInUserSession,
+        isReadyInGroup: isReadyInGroup,
+        // possibly add IPAddress, SSHPort, LanguageServerPort etc. here later for advanced use cases beyond 
+        // learn-sdn-hub web interface usage
+      };
+      deployedEnvironments.push(deployedEnvironment);
     }
-    return deployedEnvironmentsForUserSession;
-  }
-
-  public static getDeployedGroupEnvironmentList(groupNumber: number): string[] {
-    const deployedEnvironmentsForGroup: string[] = [];
-
-    for (const [, value] of Environment.activeEnvironments) {
-      if (value.groupNumber === groupNumber && value.isReady) {
-        deployedEnvironmentsForGroup.push(value.environmentId);
-      }
-    }
-    return deployedEnvironmentsForGroup;
+    return deployedEnvironments;
   }
 
   private constructor(
@@ -458,6 +471,7 @@ export default class Environment {
         .start(env, sessionId, false)
         .then((endpoint) => {
           environment.instanceId = endpoint.instance;
+          environment.isReady = true;
           Environment.activeEnvironments.set(
             `${username}-${groupNumber}-${sessionId}-${environmentId}`,
             environment,
@@ -484,6 +498,13 @@ export default class Environment {
 
     if (environment) {
       const groupNumber = environment.groupNumber;
+
+      // mark environment as not ready to prevent new connections and show its state in assignment list
+      environment.isReady = false;
+      Environment.activeEnvironments.set(
+        `${environment?.username}-${groupNumber}-${environmentId}`,
+        environment,
+      )
 
       return await environment
         .stop()
@@ -1337,7 +1358,8 @@ export default class Environment {
     alias: string,
     environmentId: string,
     groupNumber: number,
-  ): Promise<string> {
+  ): Promise<CollabDoc> {
+    let initialContent = false;
     if (this.activeCollabDocs.get(alias) === undefined) {
       const env = Environment.getActiveEnvironment(environmentId, groupNumber);
       const resolvedPath = env?.editableFiles.get(alias);
@@ -1358,13 +1380,20 @@ export default class Environment {
       const ytext = ydoc.getText("monaco");
 
       ytext.insert(0, content);
+      initialContent = true;
       this.activeCollabDocs.set(
         alias,
         fromUint8Array(Y.encodeStateAsUpdate(ydoc)),
       );
     }
 
-    return this.activeCollabDocs.get(alias)!; // TODO: might be undefined?
+    const newCollabDoc: CollabDoc = {
+      alias,
+      content: this.activeCollabDocs.get(alias)!, // TODO: might be undefined?
+      initialContent: initialContent,
+    };
+
+    return newCollabDoc;
   }
 
   async getProviderInstanceStatus(): Promise<string> {
