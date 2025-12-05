@@ -669,7 +669,7 @@ export default class ProxmoxProvider implements InstanceProvider {
     //SAL
     //Create SSH tunnel on any port (to be provided by option)
     if (options.sshTunnelingPorts !== undefined) {
-      const activePorts: Set<number> = new Set(); // Speichert die aktiven Ports
+      const activePorts: Set<number> = new Set(); // stores active ports
       options.sshTunnelingPorts.forEach(portStr => {
         portStr = portStr.replace(/(\d+)\$\((GROUP_ID)\)/g, (_, port, __) => {
           // console.log(port);
@@ -680,7 +680,7 @@ export default class ProxmoxProvider implements InstanceProvider {
         if (port > 1024 && !activePorts.has(port)) {
           const createSSHTunnel = () => {
             return new Promise<boolean>((resolve, reject) => {
-              console.log(`SSH Tunnel zu ${vmIPAddress}:${port} wird versucht...`);
+              console.log(`ProxmoxProvider: Trying to establish SSH tunnel to ${vmIPAddress}:${port}...`);
 
               try {
                 const sshConnection = new SSHConnection({
@@ -695,32 +695,32 @@ export default class ProxmoxProvider implements InstanceProvider {
                 });
 
                 if (!sshConnection)
-                  return reject(new Error(`SSH Tunnel zu ${vmIPAddress}:${port} fehlgeschlagen`));
+                  return reject(new Error(`ProxmoxProvider: SSH tunnel to ${vmIPAddress}:${port} failed`));
 
                 sshConnection.forward({
                   fromPort: port,
                   toHost: vmIPAddress,
                   toPort: port
                 }).then(() => {
-                  console.log(`SSH Tunnel zu ${vmIPAddress}:${port} erfolgreich hergestellt`);
+                  console.log(`ProxmoxProvider: SSH tunnel to ${vmIPAddress}:${port} established`);
                   // console.log(result);
                 }).catch((error: unknown) => {
                   if (error instanceof Error) {
-                    console.error(`SSH Tunnel beenden fehlgeschlagen: ${error.message}`);
+                    console.error(`ProxmoxProvider: SSH tunnel forward failed: ${error.message}`);
                   }
                   // console.error(error);
                 });
 
                 if (!ProxmoxProvider.sshTunnelConnections.has(vmIPAddress)) {
-                  ProxmoxProvider.sshTunnelConnections.set(vmIPAddress, []); // Falls IP noch nicht existiert, leere Liste erstellen
+                  ProxmoxProvider.sshTunnelConnections.set(vmIPAddress, []); // if the IP does not exist, create an empty list
                 }
-                ProxmoxProvider.sshTunnelConnections.get(vmIPAddress)!.push(sshConnection); // Verbindung zur Liste hinzufügen
+                ProxmoxProvider.sshTunnelConnections.get(vmIPAddress)!.push(sshConnection); // add connection to list
             
-                activePorts.add(port); // Port als aktiv markieren
+                activePorts.add(port); // mark port as active
                 return resolve(true);
               } catch (error) {
-                reject(new Error(`SSH Tunnel zu ${vmIPAddress}:${port} fehlgeschlagen`));
-                console.error(`SSH Tunnel zu ${vmIPAddress}:${port} fehlgeschlagen`);
+                reject(new Error(`ProxmoxProvider: SSH tunnel to ${vmIPAddress}:${port} failed`));
+                console.error(`ProxmoxProvider: SSH tunnel to ${vmIPAddress}:${port} failed`);
                 console.error(error);
               } 
             });
@@ -731,32 +731,32 @@ export default class ProxmoxProvider implements InstanceProvider {
           
             const attemptTunnelCreation = () => {
               if (retries >= maxRetries) {
-                console.error("SSH Tunnel: Timed out waiting for SSH connection.");
+                console.error("ProxmoxProvider: SSH tunnel timed out waiting for SSH connection");
                 return;
               }
           
-              console.log(`Versuch ${retries + 1} von ${maxRetries}`);
+              console.log(`Try ${retries + 1} of ${maxRetries}`);
           
               createSSHTunnel()
                 .then((connected) => {
                   if (connected) {
-                    console.log("SSH Tunnel erfolgreich erstellt!");
+                    console.log("ProxmoxProvider: SSH tunnel successfully established!");
                   } else {
                     retries++;
-                    setTimeout(attemptTunnelCreation, timeout);  // Wiederhole nach timeout
+                    setTimeout(attemptTunnelCreation, timeout);  // repeat on timeout
                   }
                 })
                 .catch((err) => {
-                  console.error("Fehler beim Tunnelaufbau:", err);
+                  console.error("ProxmoxProvider: SSH tunnel error during tunnel creation:", err);
                   retries++;
-                  setTimeout(attemptTunnelCreation, timeout);  // Wiederhole nach timeout
+                  setTimeout(attemptTunnelCreation, timeout);  // repeat on timeout
                 });
             };
           
             attemptTunnelCreation();
           };
           
-          createSSHTunnelWithRetry(10, 3000); // Maximal 5 Versuche, mit 1 Sekunde Pause zwischen den Versuchen          
+          createSSHTunnelWithRetry(10, 3000); // max 5 retries with 1 sec pause between attempts
         }
       });
     }
