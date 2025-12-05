@@ -118,7 +118,10 @@ export default class ContainerLabProvider implements InstanceProvider {
 
     scheduler.addSimpleIntervalJob(job);
 
-    console.log("ContainerlabProvider: " + this.clab_username + " " + this.clab_password + " " + this.clab_apiUrl + " " + this.clab_token + " " + this.maxInstanceLifetimeMinutes + " " + this.providerInstance);
+    if (this.clab_token && this.providerInstance) {
+      console.log("ContainerlabProvider: " + this.clab_username + " " + this.clab_password + " " +
+          this.clab_apiUrl + " " + this.maxInstanceLifetimeMinutes);
+    }
 
   }
 
