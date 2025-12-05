@@ -1109,7 +1109,7 @@ environments.set("Containerlab-Test-SAL", {
         cwd: "/home/p4/containerlab-testlabs/",
         executable: "./generate_graph.sh",
         params: ["\"simple_test_lab\"", "$(GROUP_ID)"],
-        provideTty: true, //ToDo SAL: "false" funtkioniert nicht korrekt, evtl. irgendwo noch ein Fehler in SSHConsole?
+        provideTty: true, //TODO SAL: "false" does not work correctly in this case (though used correcly during undeploy and running tests in the backend), possibly some error in SSHConsole?
       },
     ],
     // [
@@ -1136,7 +1136,7 @@ environments.set("Containerlab-Test-SAL", {
       name: "bash",
       cwd: "/home/p4/containerlab-testlabs/",
       executable: "sudo clab destroy",
-      //ToDo SAL: Auch in Skript mit Parametern, weil man Topology File braucht
+      //TODO: SAL: also in the script with additional parameters, as a topology file must be specified
       params: [],
       provideTty: false,
     },
