@@ -17,6 +17,8 @@ spec:
         app.kubernetes.io/component: backend
         app.kubernetes.io/instance: learn-sdn-hub-backend
     spec:
+      serviceAccountName: learn-sdn-hub
+      automountServiceAccountToken: true
       containers:
       - name: learn-sdn-hub-backend
         # image: ghcr.io/prona-p4-learning-platform/learn-sdn-hub-backend:254-feature-k8s-docker-images

@@ -1,0 +1,12 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: learn-sdn-hub-admin
+subjects:
+- kind: ServiceAccount
+  name: learn-sdn-hub
+  namespace: learn-sdn-hub
+roleRef:
+  kind: ClusterRole
+  name: backend-role
+  apiGroup: rbac.authorization.k8s.io
