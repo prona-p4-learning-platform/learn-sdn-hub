@@ -95,6 +95,7 @@ export default class ContainerLabProvider implements InstanceProvider {
   private os_username: string;
   private os_password: string;
   private os_url: string;
+  private os_authUrl: string;
   private os_region: string;
   private os_projectId: string;
   private os_domainName: string;
@@ -146,7 +147,10 @@ export default class ContainerLabProvider implements InstanceProvider {
 
     // check for ContainerLab auth url
     const ENV_URL = process.env.CLAB_URL;
-    if (ENV_URL) this.os_url = ENV_URL;
+    if (ENV_URL) {
+      this.os_url = ENV_URL;
+      this.os_authUrl = ENV_URL + "/login";
+    }
     else {
       throw new Error(
         "ContainerLabProvider: No auth url provided (CONTAINERLAB_AUTHURL).",
@@ -333,7 +337,7 @@ export default class ContainerLabProvider implements InstanceProvider {
         };
 
         providerInstance.axiosInstance
-          .post(providerInstance.os_url + "/login", data_auth)
+          .post(providerInstance.os_authUrl, data_auth)
           .then(function (response) {
             // extract and store token
             const token = response.headers["x-subject-token"] as string;
@@ -422,8 +426,7 @@ export default class ContainerLabProvider implements InstanceProvider {
             },
           };
           providerInstance.axiosInstance
-            .post(
-              providerInstance.endpointPublicComputeURL + "/servers",
+            .post(providerInstance.os_url + "/servers",
               data_server,
             )
             .then(function (response) {
@@ -463,7 +466,7 @@ export default class ContainerLabProvider implements InstanceProvider {
                         // get port id from server
                         providerInstance.axiosInstance
                           .get(
-                            providerInstance.endpointPublicComputeURL +
+                            providerInstance.os_url +
                               "/servers/" +
                               serverId +
                               "/os-interface",
@@ -611,7 +614,7 @@ export default class ContainerLabProvider implements InstanceProvider {
           // also relevant for similar lines of code for the entire backend
           providerInstance.axiosInstance
             .get(
-              providerInstance.endpointPublicComputeURL +
+              providerInstance.os_url +
                 "/servers/" +
                 instance,
             )
@@ -680,7 +683,7 @@ export default class ContainerLabProvider implements InstanceProvider {
           // also relevant for similar lines of code for the entire backend
           providerInstance.axiosInstance
             .delete(
-              providerInstance.endpointPublicComputeURL +
+              providerInstance.os_url +
                 "/servers/" +
                 instance,
             )
@@ -776,7 +779,7 @@ export default class ContainerLabProvider implements InstanceProvider {
               deadline.toISOString(),
           );
           providerInstance.axiosInstance
-            .get(providerInstance.endpointPublicComputeURL + "/servers/detail")
+            .get(providerInstance.os_url + "/servers/detail")
             .then(async function (response) {
               const servers = response.data.servers as Array<Server>;
               for (const server of servers) {
@@ -841,7 +844,7 @@ export default class ContainerLabProvider implements InstanceProvider {
         );
         providerInstance.axiosInstance
           .get(
-            providerInstance.endpointPublicComputeURL +
+            providerInstance.os_url +
               "/servers/" +
               serverId +
               "/ips",
