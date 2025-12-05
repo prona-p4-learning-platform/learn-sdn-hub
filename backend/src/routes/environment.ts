@@ -356,7 +356,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
         reqWithUser.user.groupNumber,
       )
         .then((content) => {
-          res.status(200).json({ content });
+          res.status(200).json(content);
         })
         .catch((err) => {
           let message = "Unknown error";
@@ -493,29 +493,17 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
   );
 
   router.get(
-    "/deployed-user-environments",
+    "/deployed-environments",
     authenticationMiddleware,
     (req, res) => {
       const reqWithUser = req as RequestWithUser;
-      const deployedEnvList = Environment.getDeployedUserSessionEnvironmentList(
+      const deployedEnvList = Environment.getDeployedEnvironmentList(
         reqWithUser.user.username,
         reqWithUser.user.sessionId,
-      );
-
-      res.status(200).json(deployedEnvList);
-    },
-  );
-
-  router.get(
-    "/deployed-group-environments",
-    authenticationMiddleware,
-    (req, res) => {
-      const reqWithUser = req as RequestWithUser;
-      const deployedEndpList = Environment.getDeployedGroupEnvironmentList(
         reqWithUser.user.groupNumber,
       );
 
-      res.status(200).json(deployedEndpList);
+      res.status(200).json(deployedEnvList);
     },
   );
 

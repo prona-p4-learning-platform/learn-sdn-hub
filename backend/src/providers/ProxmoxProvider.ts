@@ -669,7 +669,7 @@ export default class ProxmoxProvider implements InstanceProvider {
     //SAL
     //Create SSH tunnel on any port (to be provided by option)
     if (options.sshTunnelingPorts !== undefined) {
-      const activePorts: Set<number> = new Set(); // Speichert die aktiven Ports
+      const activePorts: Set<number> = new Set(); // stores active ports
       options.sshTunnelingPorts.forEach(portStr => {
         portStr = portStr.replace(/(\d+)\$\((GROUP_ID)\)/g, (_, port, __) => {
           // console.log(port);
@@ -680,7 +680,7 @@ export default class ProxmoxProvider implements InstanceProvider {
         if (port > 1024 && !activePorts.has(port)) {
           const createSSHTunnel = () => {
             return new Promise<boolean>((resolve, reject) => {
-              console.log(`SSH Tunnel zu ${vmIPAddress}:${port} wird versucht...`);
+              console.log(`ProxmoxProvider: Trying to establish SSH tunnel to ${vmIPAddress}:${port}...`);
 
               try {
                 const sshConnection = new SSHConnection({
@@ -695,32 +695,32 @@ export default class ProxmoxProvider implements InstanceProvider {
                 });
 
                 if (!sshConnection)
-                  return reject(new Error(`SSH Tunnel zu ${vmIPAddress}:${port} fehlgeschlagen`));
+                  return reject(new Error(`ProxmoxProvider: SSH tunnel to ${vmIPAddress}:${port} failed`));
 
                 sshConnection.forward({
                   fromPort: port,
                   toHost: vmIPAddress,
                   toPort: port
                 }).then(() => {
-                  console.log(`SSH Tunnel zu ${vmIPAddress}:${port} erfolgreich hergestellt`);
+                  console.log(`ProxmoxProvider: SSH tunnel to ${vmIPAddress}:${port} established`);
                   // console.log(result);
                 }).catch((error: unknown) => {
                   if (error instanceof Error) {
-                    console.error(`SSH Tunnel beenden fehlgeschlagen: ${error.message}`);
+                    console.error(`ProxmoxProvider: SSH tunnel forward failed: ${error.message}`);
                   }
                   // console.error(error);
                 });
 
                 if (!ProxmoxProvider.sshTunnelConnections.has(vmIPAddress)) {
-                  ProxmoxProvider.sshTunnelConnections.set(vmIPAddress, []); // Falls IP noch nicht existiert, leere Liste erstellen
+                  ProxmoxProvider.sshTunnelConnections.set(vmIPAddress, []); // if the IP does not exist, create an empty list
                 }
-                ProxmoxProvider.sshTunnelConnections.get(vmIPAddress)!.push(sshConnection); // Verbindung zur Liste hinzufügen
+                ProxmoxProvider.sshTunnelConnections.get(vmIPAddress)!.push(sshConnection); // add connection to list
             
-                activePorts.add(port); // Port als aktiv markieren
+                activePorts.add(port); // mark port as active
                 return resolve(true);
               } catch (error) {
-                reject(new Error(`SSH Tunnel zu ${vmIPAddress}:${port} fehlgeschlagen`));
-                console.error(`SSH Tunnel zu ${vmIPAddress}:${port} fehlgeschlagen`);
+                reject(new Error(`ProxmoxProvider: SSH tunnel to ${vmIPAddress}:${port} failed`));
+                console.error(`ProxmoxProvider: SSH tunnel to ${vmIPAddress}:${port} failed`);
                 console.error(error);
               } 
             });
@@ -731,32 +731,32 @@ export default class ProxmoxProvider implements InstanceProvider {
           
             const attemptTunnelCreation = () => {
               if (retries >= maxRetries) {
-                console.error("SSH Tunnel: Timed out waiting for SSH connection.");
+                console.error("ProxmoxProvider: SSH tunnel timed out waiting for SSH connection");
                 return;
               }
           
-              console.log(`Versuch ${retries + 1} von ${maxRetries}`);
+              console.log(`Try ${retries + 1} of ${maxRetries}`);
           
               createSSHTunnel()
                 .then((connected) => {
                   if (connected) {
-                    console.log("SSH Tunnel erfolgreich erstellt!");
+                    console.log("ProxmoxProvider: SSH tunnel successfully established!");
                   } else {
                     retries++;
-                    setTimeout(attemptTunnelCreation, timeout);  // Wiederhole nach timeout
+                    setTimeout(attemptTunnelCreation, timeout);  // repeat on timeout
                   }
                 })
                 .catch((err) => {
-                  console.error("Fehler beim Tunnelaufbau:", err);
+                  console.error("ProxmoxProvider: SSH tunnel error during tunnel creation:", err);
                   retries++;
-                  setTimeout(attemptTunnelCreation, timeout);  // Wiederhole nach timeout
+                  setTimeout(attemptTunnelCreation, timeout);  // repeat on timeout
                 });
             };
           
             attemptTunnelCreation();
           };
           
-          createSSHTunnelWithRetry(10, 3000); // Maximal 5 Versuche, mit 1 Sekunde Pause zwischen den Versuchen          
+          createSSHTunnelWithRetry(10, 3000); // max 5 retries with 1 sec pause between attempts
         }
       });
     }
@@ -1184,71 +1184,76 @@ export default class ProxmoxProvider implements InstanceProvider {
           if (
             vmConfig.tags?.split(";").find((tag) => tag === this.proxmoxTag)
           ) {
-            await this.proxmox.nodes
-              .$(node.node)
-              .lxc.$(parseInt(instance))
-              .status.current.$get()
-              .then(async (current) => {
-                if (current.status === "running") {
-                  await this.proxmox.nodes
-                    .$(node.node)
-                    .lxc.$(parseInt(instance))
-                    .status.stop.$post()
-                    .then(async () => {
-                      // wait for stop
-                      let stopTimeout = 10;
-                      while (stopTimeout > 0) {
-                        const current = await this.proxmox.nodes
-                          .$(node.node)
-                          .lxc.$(parseInt(instance))
-                          .status.current.$get();
-                        if (current.status === "stopped") {
-                          vmHostname = vmConfig.hostname ?? "";
-                          vmNode = node.node;
-                          break;
-                        }
-                        await this.sleep(1000);
-                        stopTimeout--;
+            // wait for stop
+            let prepareDeleteTimeout = 10;
+            while (prepareDeleteTimeout > 0) {
+              const current = await this.proxmox.nodes
+                .$(node.node)
+                .lxc.$(parseInt(instance))
+                .status.current.$get().catch((reason) => {
+                    const originalMessage =
+                      reason instanceof Error
+                        ? reason.message
+                        : "Unknown error" + reason;
+                    // do not throw error here, as node can be unavailable
+                    console.error(
+                      `ProxmoxProvider: Could not access VM (${instance}) on node (${node.node}) during deletion.\n` +
+                        originalMessage,
+                    );
+                });
+
+              if (current?.status === "running") {
+                await this.proxmox.nodes
+                  .$(node.node)
+                  .lxc.$(parseInt(instance))
+                  .status.stop.$post()
+                  .then(async () => {
+                    // wait for stop
+                    let stopTimeout = 10;
+                    while (stopTimeout > 0) {
+                      const current = await this.proxmox.nodes
+                        .$(node.node)
+                        .lxc.$(parseInt(instance))
+                        .status.current.$get();
+                      if (current.status === "stopped") {
+                        vmHostname = vmConfig.hostname ?? "";
+                        vmNode = node.node;
+                        break;
                       }
-                      if (stopTimeout === 0) {
-                        throw new Error(
-                          "ProxmoxProvider: Could not stop VM: " + instance,
-                        );
-                      }
-                    })
-                    .catch((reason) => {
-                      const originalMessage =
-                        reason instanceof Error
-                          ? reason.message
-                          : "Unknown error";
-                      throw new Error(
-                        `ProxmoxProvider: Could not stop VM (${instance}) during deletion.\n` +
-                          originalMessage,
-                      );
-                    })
-                    .catch((reason) => {
-                      const originalMessage =
-                        reason instanceof Error
-                          ? reason.message
-                          : "Unknown error" + reason;
-                      // do not throw error here, as node can be unavailable
-                      console.error(
-                        `ProxmoxProvider: Could not access VM (${instance}) on node (${node.node}) during deletion.\n` +
-                          originalMessage,
-                      );
-                    });
-                } else if (current.status === "stopped") {
-                  // instance found
-                  vmHostname = vmConfig.hostname ?? "";
-                  vmNode = node.node;
-                } else {
-                  throw new Error(
-                    "ProxMox provider found VM " +
-                      instance +
-                      " to delete but state is neither running nor stopped.",
-                  );
-                }
-              });
+                      await this.sleep(1000);
+                      stopTimeout--;
+                    }
+                    if (stopTimeout === 0) {
+                      console.log(`ProxmoxProvider: Could not stop VM (${instance}) during deletion. Retrying...`);
+                    }
+                  })
+                  .catch((reason) => {
+                    const originalMessage =
+                      reason instanceof Error
+                        ? reason.message
+                        : "Unknown error";
+                    console.log(`ProxmoxProvider: Could not stop VM (${instance}) during deletion. Retrying...\n` + originalMessage);
+                  })
+              } else if (current?.status === "stopped") {
+                // instance found
+                vmHostname = vmConfig.hostname ?? "";
+                vmNode = node.node;
+                break;
+              } else {
+                throw new Error(
+                  "ProxMox provider found VM " +
+                    instance +
+                    " to delete but state is neither running nor stopped.",
+                );
+              }
+              await this.sleep(1000);
+              prepareDeleteTimeout--;
+              if (prepareDeleteTimeout === 0) {
+                throw new Error(
+                  "ProxmoxProvider: Could not delete VM: " + instance,
+                );
+              }
+            }
           }
         })
         .catch((error: Error) => {
@@ -1583,7 +1588,15 @@ export default class ProxmoxProvider implements InstanceProvider {
       if (connected) return;
 
       usedTime = Math.floor((Date.now() - startTime) / 1000);
-      await this.sleep(1000);
+      // use randomized sleep to avoid thundering herd problem due to single ssh jump host
+      // other option is to increase MaxStartups 10:30:60 (default only 10 unauth incoming conns) 
+      // and MaxSessions (default: 10) maybe also /proc/sys/net/core/somaxconn on ssh jump host
+      // otherwise in log on jumphost: "learn-sdn-hub-r1 ssh.socket Too many imcoming connections",
+      const sleepTime = 500 + Math.floor(Math.random() * 2500);
+      console.log(
+        `ProxmoxProvider: Waiting for SSH connection to ${ip}:${port}... (${usedTime}s elapsed, retrying in ${sleepTime}ms)`,
+      );
+      await this.sleep(sleepTime);
     }
 
     throw new Error("ProxmoxProvider: Timed out waiting for SSH connection.");
