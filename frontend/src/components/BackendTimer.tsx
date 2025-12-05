@@ -6,6 +6,7 @@ import { z } from "zod";
 interface BackendTimerProps {
   environmentName: string;
   groupNumber?: number;
+  onTimerExpired?: () => Promise<void> | void;
 }
 
 const timerValidator = z.union([
@@ -28,7 +29,7 @@ function formatTime(minutes: number): string {
   return `${minutesStr}:${secondsStr}`;
 }
 
-export default function BackendTimer({ environmentName, groupNumber }: BackendTimerProps) {
+export default function BackendTimer({ environmentName, groupNumber, onTimerExpired }: BackendTimerProps) {
   const [value, setValue] = useState<string>("--:--");
 
   useEffect(() => {
@@ -43,7 +44,9 @@ export default function BackendTimer({ environmentName, groupNumber }: BackendTi
           if (payload.data.hasTimer) {
             if (payload.data.remainingMinutes == 0 && !popupShown) {
               console.log("Zeit um, wurde abgegeben");
+              if (onTimerExpired) await onTimerExpired();
               popupShown = true;
+              
               alert("Die Prüfungszeit ist abgelaufen. Ihre Arbeit wurde automatisch abgegeben.");
             }
             setValue(formatTime(payload.data.remainingMinutes));
