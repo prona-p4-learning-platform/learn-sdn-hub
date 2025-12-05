@@ -47,7 +47,11 @@ interface DeployedEnvironment {
   isReadyInGroup: boolean;
 }
 
-const assignmentsValidator = z.array(z.array(z.string()));
+const assignmentsValidator = z.object({
+  assignments: z.array(z.array(z.string())),
+  types: z.record(z.boolean()),
+});
+
 const pointsValidator = z.record(z.number());
 const deployedEnvsValidator = z.array(
   z.object({
@@ -72,6 +76,7 @@ const defaultValidator = z.object({});
 function Assignments(): JSX.Element {
   const { enqueueSnackbar, closeSnackbar } = useSnackbar();
   const [assignments, setAssignments] = useState<string[][]>([]);
+  const [assignmentTypes, setAssignmentTypes] = useState<Map<string, boolean>>(new Map());
   const [submittedAssignments, setSubmittedAssignments] = useState<
     SubmissionType[]
   >([]);
@@ -200,7 +205,8 @@ function Assignments(): JSX.Element {
     APIRequest("/user/assignments", assignmentsValidator)
       .then((payload) => {
         if (payload.success) {
-          setAssignments(payload.data);
+          setAssignments(payload.data.assignments);
+          setAssignmentTypes(new Map(Object.entries(payload.data.types)));
         } else throw payload.error;
       })
       .catch(() => {
@@ -579,9 +585,11 @@ function Assignments(): JSX.Element {
                       onClick={() => {
                         void navigate(`/environment/${assignment}`);
                       }}
-                      sx={{ margin: theme.spacing(1) }}
+                      sx={{ margin: theme.spacing(1), width: "15em", justifyContent: "space-between", whiteSpace: "nowrap" }}
                     >
-                      Start Assignment
+                      <div style={{ width: "100%" }}></div>
+                      {assignmentTypes.get(assignment) === true ? "Start Exam" : "Start Assignment"}
+                      <div style={{ width: "100%" }}></div>
                     </Button>
                     <Button
                       variant="contained"

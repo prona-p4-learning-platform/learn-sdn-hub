@@ -173,6 +173,10 @@ export interface EnvironmentDescription {
 
   //SAL
   sshTunnelingPorts? : string[];
+
+  // Exam
+  isExam?: boolean;
+  durationMinutes?: number;
 }
 
 const DenyStartOfMissingInstanceErrorMessage =
@@ -195,6 +199,7 @@ export default class Environment {
   private sessionId: string;
   private testCounter: Map<string, number> = new Map<string, number>();
   private isReady: boolean;
+  private examStartTime?: Date;
 
   private getErrorHint(test: AssignmentStepTestType, stepIndex: string) {
     if (test.gradualAssistance === undefined) {
@@ -268,6 +273,28 @@ export default class Environment {
       }
     }
     return deployedEnvironments;
+  }
+
+  public setExamStartTime(): void {
+    this.examStartTime = new Date();
+    console.log(`setExamStartTime for ${this.username} at ${this.examStartTime.toISOString()}`);
+  }
+
+  public getExamStartTime(): number | undefined {
+    if (this.examStartTime) {
+      return this.examStartTime.getTime();
+    }
+    return undefined;
+  }
+
+  public getRemainingExamTime(): number | undefined {
+    if (this.configuration.isExam && this.configuration.durationMinutes && this.examStartTime) {
+      const now = new Date();
+      const elapsed = (now.getTime() - this.examStartTime.getTime()) / 60000; // in minutes
+      const remaining = this.configuration.durationMinutes - elapsed;
+      return remaining > 0 ? remaining : 0;
+    }
+    return undefined;
   }
 
   private constructor(

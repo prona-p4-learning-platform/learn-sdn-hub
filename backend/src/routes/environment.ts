@@ -36,8 +36,10 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
   router.get(
     "/:environment/configuration",
     environmentPathParamValidator,
+    authenticationMiddleware,
     (req, res) => {
-      const environment = req.params.environment;
+      const reqWithUser = req as RequestWithUser;
+      const environment = reqWithUser.params.environment;
       const targetEnv = environments.get(String(environment));
 
       if (targetEnv === undefined) {
@@ -45,6 +47,25 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
           .status(404)
           .json({ status: "error", message: "Environment not found" });
         return;
+      }
+
+      if (targetEnv.isExam) {
+        const activeEnv = Environment.getActiveEnvironment(
+          environment,
+          reqWithUser.user.groupNumber,
+          reqWithUser.user.sessionId,
+        );
+        if (activeEnv) {
+
+          if(!activeEnv.getExamStartTime()) {
+            console.log(`Starting timer for user: ${reqWithUser.user.username}`);
+            activeEnv.setExamStartTime();   
+          }
+          else{
+            console.log(`Exam time already set. Remaining: ` + activeEnv.getRemainingExamTime() + ` minutes for user: ${reqWithUser.user.username}`);
+          }
+          
+        }
       }
 
       res.status(200).json({
@@ -65,7 +86,48 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
         workspaceFolders: targetEnv.workspaceFolders,
         useCollaboration: targetEnv.useCollaboration,
         useLanguageClient: targetEnv.useLanguageClient,
+        isExam: targetEnv.isExam ?? false,
       });
+    },
+  );
+
+  router.get(
+    "/:environment/timer",
+    authenticationMiddleware,
+    environmentPathParamValidator,
+    (req, res) => {
+      const reqWithUser = req as RequestWithUser;
+      const environment = reqWithUser.params.environment;
+      const targetEnv = environments.get(String(environment));
+
+      if (targetEnv === undefined) {
+        res
+          .status(404)
+          .json({ status: "error", message: "Environment not found" });
+        return;
+      }
+
+      const activeEnv = Environment.getActiveEnvironment(
+        environment,
+        reqWithUser.user.groupNumber,
+        reqWithUser.user.sessionId,
+      );
+
+      if (!activeEnv) {
+        res.status(404).json({ status: "error", message: "Active environment not found" });
+        return;
+      }
+
+      const remainingTime = activeEnv.getRemainingExamTime();
+
+      if (remainingTime === undefined) {
+        res.status(200).json({ hasTimer: false });
+      } else {
+        res.status(200).json({ 
+          hasTimer: true,
+          remainingMinutes: remainingTime 
+        });
+      }
     },
   );
 

@@ -25,6 +25,7 @@ import WebFrame from "../components/WebFrame";
 import TabControl from "../components/TabControl";
 import TerminalTabs from "../components/TerminalTabs";
 import FileEditor from "../components/FileEditor";
+import BackendTimer from "../components/BackendTimer";
 
 import { useOptionsStore } from "../stores/optionsStore";
 import { APIRequest, httpStatusValidator, getHttpError } from "../api/Request";
@@ -62,6 +63,7 @@ const environmentConfigurationValidator = z.object({
   workspaceFolders: z.array(z.string()).default([]),
   useCollaboration: z.boolean().default(false),
   useLanguageClient: z.boolean().default(false),
+  isExam: z.boolean().default(false),
 });
 
 const environmentAssignmentValidator = z.object({
@@ -106,10 +108,13 @@ type EnvironmentState = {
   workspaceFolders: string[];
   useCollaboration: boolean;
   useLanguageClient: boolean;
+  isExam: boolean;
 };
 
 function Environment(): JSX.Element {
   const { environmentName } = useParams();
+  //const { environment } = useParams<{ environment: string }>();
+  //const environmentName2 = environment ?? "";
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const location = useLocation();
@@ -137,6 +142,7 @@ function Environment(): JSX.Element {
     workspaceFolders: [],
     useCollaboration: false,
     useLanguageClient: false,
+    isExam: false,
   });
   const [terminalState, setTerminalState] = useState<TerminalStateType[]>([]);
   const [activeStep, setActiveStep] = useState<number>(0);
@@ -507,6 +513,11 @@ function Environment(): JSX.Element {
             tabNames={["Assignment", "Terminals"]}
             handleRestart={handleRestartDialogOpen}
             environmentStatus={environmentStatus}
+            timerComponent={
+              state.isExam ? (
+                <BackendTimer environmentName={environmentName ?? ""} groupNumber={groupNumber} />
+              ) : undefined
+          }
           >
             <Grid
               container
