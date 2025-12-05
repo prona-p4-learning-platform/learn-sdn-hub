@@ -94,7 +94,7 @@ export default class ContainerLabProvider implements InstanceProvider {
   // ContainerLab config
   private os_username: string;
   private os_password: string;
-  private os_authUrl: string;
+  private os_url: string;
   private os_region: string;
   private os_projectId: string;
   private os_domainName: string;
@@ -145,8 +145,8 @@ export default class ContainerLabProvider implements InstanceProvider {
     }
 
     // check for ContainerLab auth url
-    const ENV_AUTHURL = process.env.CLAB_AUTHURL;
-    if (ENV_AUTHURL) this.os_authUrl = ENV_AUTHURL;
+    const ENV_URL = process.env.CLAB_URL;
+    if (ENV_URL) this.os_url = ENV_URL;
     else {
       throw new Error(
         "ContainerLabProvider: No auth url provided (CONTAINERLAB_AUTHURL).",
@@ -333,7 +333,7 @@ export default class ContainerLabProvider implements InstanceProvider {
         };
 
         providerInstance.axiosInstance
-          .post(providerInstance.os_authUrl + "/login", data_auth)
+          .post(providerInstance.os_url + "/login", data_auth)
           .then(function (response) {
             // extract and store token
             const token = response.headers["x-subject-token"] as string;
