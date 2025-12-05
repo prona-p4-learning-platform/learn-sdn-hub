@@ -47,6 +47,7 @@
     "typescript-eslint": "^8.18.1"
   },
   "dependencies": {
+    "@kubernetes/client-node": "^1.4.0",
     "@node-rs/bcrypt": "^1.10.7",
     "axios": "^1.7.9",
     "celebrate": "^15.0.3",
