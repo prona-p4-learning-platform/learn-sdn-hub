@@ -33,6 +33,18 @@ Default bootstrap password: `admin`
 
 To change rancher settings edit `dev-stack/k8s/components/helm/rancher-values.yaml`.
 
+## Import local images to k3d for dev
+Build images in /frontend and /backend with:
+```shell
+docker build . -f learn-sdn-hub-frontend
+docker build . -f learn-sdn-hub-backend
+```
+Import images to k3d cluster:
+```shell
+k3d image import learn-sdn-hub-frontend:latest -c learn-sdn-hub
+k3d image import learn-sdn-hub-backend:latest -c learn-sdn-hub
+```
+
 ## Cert-manager
 To change cert-manager settings edit `dev-stack/k8s/components/helm/cert-manager-values.yaml`.
 
