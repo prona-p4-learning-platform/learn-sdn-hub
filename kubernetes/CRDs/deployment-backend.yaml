@@ -19,10 +19,10 @@ spec:
     spec:
       containers:
       - name: learn-sdn-hub-backend
-        image: ghcr.io/prona-p4-learning-platform/learn-sdn-hub-backend:254-feature-k8s-docker-images
+        # image: ghcr.io/prona-p4-learning-platform/learn-sdn-hub-backend:254-feature-k8s-docker-images
+        image: learn-sdn-hub-backend:latest
+        imagePullPolicy: IfNotPresent
         
-        # --- CLI arguments passed to start-learn-sdn-hub.sh ---
-        command: ["/bin/bash", "/home/p4/learn-sdn-hub/start-learn-sdn-hub.sh"]
         args:
           - "-t"
           - "localmultiuservm"
