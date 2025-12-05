@@ -19,6 +19,7 @@ const timerValidator = z.union([
 ]);
 
 var popupShown = false;
+var fiveMinNotified = false;
 
 function formatTime(minutes: number): string {
   const mins = Math.floor(minutes);
@@ -45,6 +46,15 @@ export default function BackendTimer({ environmentName, groupNumber }: BackendTi
               console.log("Zeit um, wurde abgegeben");
               popupShown = true;
               alert("Die Prüfungszeit ist abgelaufen. Ihre Arbeit wurde automatisch abgegeben.");
+            }
+            // wenn nur noch 5 Minuten oder weniger verbleiben, sende ein einmaliges Event
+            if (payload.data.remainingMinutes <= 5 && payload.data.remainingMinutes > 0 && !fiveMinNotified) {
+              fiveMinNotified = true;
+              try {
+                window.dispatchEvent(new CustomEvent('timer-five-min-warning', { detail: { remainingMinutes: payload.data.remainingMinutes } }));
+              } catch (e) {
+                console.warn('Could not dispatch timer-five-min-warning event', e);
+              }
             }
             setValue(formatTime(payload.data.remainingMinutes));
           } else {

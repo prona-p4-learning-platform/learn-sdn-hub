@@ -1,4 +1,4 @@
-import { useState, ChangeEvent } from "react";
+import { useState, ChangeEvent, useEffect } from "react";
 import {
   Box,
   Grid,
@@ -64,6 +64,15 @@ export default function TabControl(props: TabControlProps): JSX.Element {
   const handleRestartConfirmation = () => {
     props.handleRestart();
   };
+
+  useEffect(() => {
+    const handler = () => {
+      // ein Broadcast-Event von BackendTimer, setzt showTimer auf true
+      setShowTimer(true);
+    };
+    window.addEventListener("timer-five-min-warning", handler as EventListener);
+    return () => window.removeEventListener("timer-five-min-warning", handler as EventListener);
+  }, []);
 
   return (
     <>
