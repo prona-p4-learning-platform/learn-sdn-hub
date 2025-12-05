@@ -3,22 +3,31 @@ kind: Ingress
 metadata:
   name: learn-sdn-hub-frontend-ingress
   namespace: learn-sdn-hub
+  annotations:
+    cert-manager.io/cluster-issuer: selfsigned
 spec:
   ingressClassName: nginx
+
+  tls:
+  - hosts:
+      - prona.local
+    secretName: prona-local-tls
+
   rules:
-  - http:
+  - host: prona.local
+    http:
       paths:
-      - pathType: Prefix
-        path: "/"
+      - path: /
+        pathType: Prefix
         backend:
           service:
             name: learn-sdn-hub-frontend
-            port: 
+            port:
               number: 80
-      - pathType: Prefix
-        path: "/api"
+      - path: /api
+        pathType: Prefix
         backend:
           service:
             name: learn-sdn-hub-backend
-            port: 
-                number: 80
+            port:
+              number: 80
