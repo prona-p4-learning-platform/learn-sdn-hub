@@ -140,7 +140,6 @@ function Environment(): JSX.Element {
   });
   const [terminalState, setTerminalState] = useState<TerminalStateType[]>([]);
   const [activeStep, setActiveStep] = useState<number>(0);
-  const [stepsCompleted, setStepsCompleted] = useState<boolean>(false);
   const [showRestartDialog, setShowRestartDialog] = useState(false);
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
 
@@ -157,10 +156,6 @@ function Environment(): JSX.Element {
     )
       .then((payload) => {
         if (payload.success) {
-          // check for completion
-          if (payload.data.stepLabels.length < 1) {
-            setStepsCompleted(true);
-          }
           setState(payload.data);
         } else throw payload.error;
       })
@@ -233,11 +228,6 @@ function Environment(): JSX.Element {
     void submitAssignment();
     setShowSubmitDialog(false);
   }
-
-  useEffect(() => {
-    // if the last step is reached, steps are completed and finish / submission of assignment can be enabled
-    setStepsCompleted(activeStep === state.stepLabels.length);
-  }, [activeStep, state]);
 
   async function checkStepTest() {
     // should send terminalState (maybe even editorState) if needed to backend and wait for result of test
@@ -565,7 +555,6 @@ function Environment(): JSX.Element {
                       variant="contained"
                       color="primary"
                       onClick={handleSubmitDialogOpen}
-                      disabled={!stepsCompleted}
                     >
                       Finish & Submit
                     </Button>
