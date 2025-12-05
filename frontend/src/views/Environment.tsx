@@ -113,8 +113,6 @@ type EnvironmentState = {
 
 function Environment(): JSX.Element {
   const { environmentName } = useParams();
-  //const { environment } = useParams<{ environment: string }>();
-  //const environmentName2 = environment ?? "";
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const location = useLocation();

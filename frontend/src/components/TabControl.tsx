@@ -7,6 +7,7 @@ import {
   Tabs,
   Tooltip,
   Typography,
+  Checkbox
 } from "@mui/material";
 
 import RestartAltIcon from "@mui/icons-material/RestartAlt";
@@ -48,9 +49,16 @@ interface TabControlProps {
 
 export default function TabControl(props: TabControlProps): JSX.Element {
   const [value, setValue] = useState(0);
+  const [showTimer, setShowTimer] = useState(true);
 
   const handleChange = (_event: ChangeEvent<unknown>, newValue: number) => {
     setValue(newValue);
+  };
+
+  const handleTimerCheckboxChange = (
+    _event: ChangeEvent<HTMLInputElement>
+  ) => {
+    setShowTimer(_event.target.checked);
   };
 
   const handleRestartConfirmation = () => {
@@ -71,9 +79,24 @@ export default function TabControl(props: TabControlProps): JSX.Element {
           ))}
         </Tabs>
         <Box sx={{ mx: "auto " }} />
-        <Grid item sx={{ flexGrow: 1, textAlign: "center" }}>
-          {props.timerComponent && props.timerComponent}
-        </Grid>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mx: 2 }}>
+          <Grid item sx={{ display: showTimer ? "block" : "none" }}>
+            {props.timerComponent && props.timerComponent}
+          </Grid>
+          {props.timerComponent && (
+            <>
+              <Checkbox
+                color="primary"
+                checked={showTimer}
+                onChange={handleTimerCheckboxChange}
+                sx={{ ml: -1 }}
+              />
+              <Typography variant="body2" color="text.secondary" sx={{ ml: -1 }}>
+                show timer
+              </Typography>
+            </>
+          )}
+        </Box>
         <Box sx={{ mx: "auto " }} />
         <Grid item>
           <Typography align="center" variant="body2">
