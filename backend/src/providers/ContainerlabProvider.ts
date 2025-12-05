@@ -5,7 +5,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 // TODO: fix eslint instead of disabling rules
-// currently postponed, as the OpenStack provider is not actively used in our envs
+// currently in developement, as the ContainerLab provider is not actively used in our envs
 
 import {
   InstanceProvider,
@@ -69,7 +69,7 @@ interface PortDetails {
 }
 
 // only the most essential attibutes defined here,
-// a lot more are provided in OpenStack server list response
+// a lot more are provided in ContainerLab server list response
 interface Server {
   id: string;
   name: string;
@@ -90,8 +90,8 @@ interface Token {
   expires_at: string;
 }
 
-export default class OpenStackProvider implements InstanceProvider {
-  // OpenStack config
+export default class ContainerLabProvider implements InstanceProvider {
+  // ContainerLab config
   private os_username: string;
   private os_password: string;
   private os_authUrl: string;
@@ -111,7 +111,7 @@ export default class OpenStackProvider implements InstanceProvider {
   private endpointPublicComputeURL?: string;
   private endpointPublicNetworkURL?: string;
 
-  // OpenStack Provider config
+  // ContainerLab Provider config
   private associateFloatingIP: string;
   private maxInstanceLifetimeMinutes: number;
 
@@ -121,122 +121,122 @@ export default class OpenStackProvider implements InstanceProvider {
 
   private axiosInstance: AxiosInstance;
 
-  private providerInstance: OpenStackProvider;
+  private providerInstance: ContainerLabProvider;
 
   constructor() {
     this.os_secgroup = "default";
 
-    // check for open stack username
-    const ENV_USERNAME = process.env.OPENSTACK_USERNAME;
+    // check for ContainerLab username
+    const ENV_USERNAME = process.env.CLAB_USERNAME;
     if (ENV_USERNAME) this.os_username = ENV_USERNAME;
     else {
       throw new Error(
-        "OpenStackProvider: No username provided (OPENSTACK_USERNAME).",
+        "ContainerLabProvider: No username provided (CONTAINERLAB_USERNAME).",
       );
     }
 
-    // check for open stack password
-    const ENV_PASSWORD = process.env.OPENSTACK_PASSWORD;
+    // check for ContainerLab password
+    const ENV_PASSWORD = process.env.CLAB_PASSWORD;
     if (ENV_PASSWORD) this.os_password = ENV_PASSWORD;
     else {
       throw new Error(
-        "OpenStackProvider: No password provided (OPENSTACK_PASSWORD).",
+        "ContainerLabProvider: No password provided (CONTAINERLAB_PASSWORD).",
       );
     }
 
-    // check for open stack auth url
-    const ENV_AUTHURL = process.env.OPENSTACK_AUTHURL;
+    // check for ContainerLab auth url
+    const ENV_AUTHURL = process.env.CLAB_AUTHURL;
     if (ENV_AUTHURL) this.os_authUrl = ENV_AUTHURL;
     else {
       throw new Error(
-        "OpenStackProvider: No auth url provided (OPENSTACK_AUTHURL).",
+        "ContainerLabProvider: No auth url provided (CONTAINERLAB_AUTHURL).",
       );
     }
 
-    // check for open stack region
-    const ENV_REGION = process.env.OPENSTACK_REGION;
+    // check for ContainerLab region
+    const ENV_REGION = process.env.CLAB_REGION;
     if (ENV_REGION) this.os_region = ENV_REGION;
     else {
       throw new Error(
-        "OpenStackProvider: No region provided (OPENSTACK_REGION).",
+        "ContainerLabProvider: No region provided (CONTAINERLAB_REGION).",
       );
     }
 
-    // check for open stack project id
-    const ENV_PROJECT_ID = process.env.OPENSTACK_PROJECTID;
+    // check for ContainerLab project id
+    const ENV_PROJECT_ID = process.env.CLAB_PROJECTID;
     if (ENV_PROJECT_ID) this.os_projectId = ENV_PROJECT_ID;
     else {
       throw new Error(
-        "OpenStackProvider: No project id provided (OPENSTACK_PROJECTID).",
+        "ContainerLabProvider: No project id provided (CONTAINERLAB_PROJECTID).",
       );
     }
 
-    // check for open stack domain name
-    const ENV_DOMAIN = process.env.OPENSTACK_DOMAINNAME;
+    // check for ContainerLab domain name
+    const ENV_DOMAIN = process.env.CLAB_DOMAINNAME;
     if (ENV_DOMAIN) this.os_domainName = ENV_DOMAIN;
     else {
       throw new Error(
-        "OpenStackProvider: No domain name provided (OPENSTACK_DOMAINNAME).",
+        "ContainerLabProvider: No domain name provided (CONTAINERLAB_DOMAINNAME).",
       );
     }
 
-    // check for open stack image id
-    const ENV_IMAGE = process.env.OPENSTACK_P4_HOST_IMAGE;
+    // check for ContainerLab image id
+    const ENV_IMAGE = process.env.CLAB_P4_HOST_IMAGE;
     if (ENV_IMAGE) this.os_imageId = ENV_IMAGE;
     else {
       throw new Error(
-        "OpenStackProvider: No p4 host image id provided (OPENSTACK_P4_HOST_IMAGE).",
+        "ContainerLabProvider: No p4 host image id provided (CONTAINERLAB_P4_HOST_IMAGE).",
       );
     }
 
-    // check for open stack flavor
-    const ENV_FLAVOR = process.env.OPENSTACK_FLAVOR;
+    // check for ContainerLab flavor
+    const ENV_FLAVOR = process.env.CLAB_FLAVOR;
     if (ENV_FLAVOR) this.os_flavor = ENV_FLAVOR;
     else {
       throw new Error(
-        "OpenStackProvider: No flavor provided (OPENSTACK_FLAVOR).",
+        "ContainerLabProvider: No flavor provided (CONTAINERLAB_FLAVOR).",
       );
     }
 
-    // check for open stack network id
-    const ENV_NETWORK_ID = process.env.OPENSTACK_NETWORKID;
+    // check for ContainerLab network id
+    const ENV_NETWORK_ID = process.env.CLAB_NETWORKID;
     if (ENV_NETWORK_ID) this.os_networkId = ENV_NETWORK_ID;
     else {
       throw new Error(
-        "OpenStackProvider: No network id provided (OPENSTACK_NETWORKID).",
+        "ContainerLabProvider: No network id provided (CONTAINERLAB_NETWORKID).",
       );
     }
 
-    // check for open stack keyname
-    const ENV_KEYNAME = process.env.OPENSTACK_KEYNAME;
+    // check for ContainerLab keyname
+    const ENV_KEYNAME = process.env.CLAB_KEYNAME;
     if (ENV_KEYNAME) this.os_keyname = ENV_KEYNAME;
     else {
       throw new Error(
-        "OpenStackProvider: No keyname provided (OPENSTACK_KEYNAME).",
+        "ContainerLabProvider: No keyname provided (CONTAINERLAB_KEYNAME).",
       );
     }
 
-    // check for open stack floating network id
-    const ENV_FLOATING_ID = process.env.OPENSTACK_FLOATING_NETWORKID;
+    // check for ContainerLab floating network id
+    const ENV_FLOATING_ID = process.env.CLAB_FLOATING_NETWORKID;
     if (ENV_FLOATING_ID) this.os_floatingNetworkId = ENV_FLOATING_ID;
     else {
       throw new Error(
-        "OpenStackProvider: No floating network id provided (OPENSTACK_FLOATING_NETWORKID).",
+        "ContainerLabProvider: No floating network id provided (CONTAINERLAB_FLOATING_NETWORKID).",
       );
     }
 
-    // check for open stack floating ip association
-    const ENV_FLOATING_ASSOCIATE = process.env.OPENSTACK_ASSOCIATE_FLOATING_IP;
+    // check for ContainerLab floating ip association
+    const ENV_FLOATING_ASSOCIATE = process.env.CLAB_ASSOCIATE_FLOATING_IP;
     if (ENV_FLOATING_ASSOCIATE)
       this.associateFloatingIP = ENV_FLOATING_ASSOCIATE.toLowerCase();
     else {
       throw new Error(
-        "OpenStackProvider: No floating ip association provided (OPENSTACK_ASSOCIATE_FLOATING_IP).",
+        "ContainerLabProvider: No floating ip association provided (CONTAINERLAB_ASSOCIATE_FLOATING_IP).",
       );
     }
 
     // check for max instance lifetime
-    const ENV_LIFETIME = process.env.OPENSTACK_MAX_INSTANCE_LIFETIME_MINUTES;
+    const ENV_LIFETIME = process.env.CLAB_MAX_INSTANCE_LIFETIME_MINUTES;
     if (ENV_LIFETIME) {
       const parsedLifetime = parseInt(ENV_LIFETIME);
 
@@ -244,12 +244,12 @@ export default class OpenStackProvider implements InstanceProvider {
         this.maxInstanceLifetimeMinutes = parsedLifetime;
       else {
         throw new Error(
-          "OpenStackProvider: Provided instance lifetime cannot be parsed (OPENSTACK_MAX_INSTANCE_LIFETIME_MINUTES).",
+          "ContainerLabProvider: Provided instance lifetime cannot be parsed (CONTAINERLAB_MAX_INSTANCE_LIFETIME_MINUTES).",
         );
       }
     } else {
       throw new Error(
-        "DockerProvider: No instance lifetime provided (OPENSTACK_MAX_INSTANCE_LIFETIME_MINUTES).",
+        "DockerProvider: No instance lifetime provided (CONTAINERLAB_MAX_INSTANCE_LIFETIME_MINUTES).",
       );
     }
 
@@ -268,13 +268,13 @@ export default class OpenStackProvider implements InstanceProvider {
     const scheduler = new ToadScheduler();
 
     const task = new AsyncTask(
-      "OpenStackProvider Instance Pruning Task",
+      "ContainerLabProvider Instance Pruning Task",
       () => {
         return this.pruneServerInstance();
       },
       (err: Error) => {
         console.log(
-          "OpenStackProvider: Could not prune stale server instances..." +
+          "ConatinerLabProvider: Could not prune stale server instances..." +
             err.message,
         );
       },
@@ -310,7 +310,7 @@ export default class OpenStackProvider implements InstanceProvider {
       ) {
         return resolve();
       } else {
-        // authenticate to OpenStack and get a token
+        // authenticate to ContainerLab and get a token
         const data_auth = {
           auth: {
             identity: {
@@ -333,7 +333,7 @@ export default class OpenStackProvider implements InstanceProvider {
         };
 
         providerInstance.axiosInstance
-          .post(providerInstance.os_authUrl + "/v3/auth/tokens", data_auth)
+          .post(providerInstance.os_authUrl + "/login", data_auth)
           .then(function (response) {
             // extract and store token
             const token = response.headers["x-subject-token"] as string;
@@ -345,7 +345,7 @@ export default class OpenStackProvider implements InstanceProvider {
 
             // currently the default microversion for compute API is sufficient
             //axiosInstance.defaults.headers.common[
-            //  "X-OpenStack-Nova-API-Version"
+            //  "X-ContainerLab-Nova-API-Version"
             //] = "2.66";
 
             // get compute and network public endpoint urls from received service catalog
@@ -379,7 +379,7 @@ export default class OpenStackProvider implements InstanceProvider {
             providerInstance.endpointPublicComputeURL = undefined;
             providerInstance.endpointPublicNetworkURL = undefined;
             return reject(
-              new Error("OpenStackProvider: Authentication failed: " + err),
+              new Error("ContainerLabProvider: Authentication failed: " + err),
             );
           });
       }
@@ -437,7 +437,7 @@ export default class OpenStackProvider implements InstanceProvider {
                 .waitForServerAddresses(serverId, 60)
                 .then((result) => {
                   const fixedIpAddress = result;
-                  console.log("OpenStackProvider: Created server: " + serverId);
+                  console.log("ContainerLabProvider: Created server: " + serverId);
 
                   // if floating ip should be associated, allocate floating ip and associate it
                   if (providerInstance.associateFloatingIP === "true") {
@@ -510,7 +510,7 @@ export default class OpenStackProvider implements InstanceProvider {
                                   .catch((err) => {
                                     return reject(
                                       new Error(
-                                        "OpenStackProvider: Initial SSH connection failed. " +
+                                        "ContainerLabProvider: Initial SSH connection failed. " +
                                           err,
                                       ),
                                     );
@@ -519,7 +519,7 @@ export default class OpenStackProvider implements InstanceProvider {
                               .catch(function (err) {
                                 return reject(
                                   new Error(
-                                    "OpenStackProvider: Could not associate floating ip to port id from server: " +
+                                    "ContainerLabProvider: Could not associate floating ip to port id from server: " +
                                       err,
                                   ),
                                 );
@@ -528,7 +528,7 @@ export default class OpenStackProvider implements InstanceProvider {
                           .catch(function (err) {
                             return reject(
                               new Error(
-                                "OpenStackProvider: Could not get port id from server: " +
+                                "ContainerLabProvider: Could not get port id from server: " +
                                   err,
                               ),
                             );
@@ -537,7 +537,7 @@ export default class OpenStackProvider implements InstanceProvider {
                       .catch(function (err) {
                         return reject(
                           new Error(
-                            "OpenStackProvider: Could not allocate new Floating IP: " +
+                            "ContainerLabProvider: Could not allocate new Floating IP: " +
                               err,
                           ),
                         );
@@ -565,7 +565,7 @@ export default class OpenStackProvider implements InstanceProvider {
                       .catch((err) => {
                         return reject(
                           new Error(
-                            "OpenStackProvider: Initial SSH connection failed. " +
+                            "ContainerLabProvider: Initial SSH connection failed. " +
                               err,
                           ),
                         );
@@ -575,7 +575,7 @@ export default class OpenStackProvider implements InstanceProvider {
                 .catch(function (err) {
                   return reject(
                     new Error(
-                      "OpenStackProvider: Timed out waiting for instance: " +
+                      "ContainerLabProvider: Timed out waiting for instance: " +
                         err,
                     ),
                   );
@@ -583,7 +583,7 @@ export default class OpenStackProvider implements InstanceProvider {
             })
             .catch(function (err) {
               return reject(
-                new Error("OpenStackProvider: Server Creation failed: " + err),
+                new Error("ContainerLabProvider: Server Creation failed: " + err),
               );
             });
         })
@@ -604,7 +604,7 @@ export default class OpenStackProvider implements InstanceProvider {
           // get server ips
           let address: string;
           console.log(
-            "OpenStackProvider: Getting server instance " + instance + ")",
+            "ContainerLabProvider: Getting server instance " + instance + ")",
           );
           // check identifier format to inhibit injection?
           // minor issue, as we produce and hold the id in the backend?
@@ -625,7 +625,7 @@ export default class OpenStackProvider implements InstanceProvider {
                   result.addresses[Object.keys(result.addresses)[0]];
                 if (providerInstance.associateFloatingIP === "true") {
                   // our instances only have one interface/network, so the second
-                  // entry is the floating ip, sadly OpenStack does not returen a
+                  // entry is the floating ip, sadly ConatinerLab does not returen a
                   // label, e.g., floatin/public in result
                   address = firstAddress["1"].addr;
                 } else {
@@ -652,7 +652,7 @@ export default class OpenStackProvider implements InstanceProvider {
                 return reject(new Error(InstanceNotFoundErrorMessage));
               } else {
                 return reject(
-                  "OpenStackProvider: Failed to get server instance. " + err,
+                  "ContainerLabProvider: Failed to get server instance. " + err,
                 );
               }
             });
@@ -673,7 +673,7 @@ export default class OpenStackProvider implements InstanceProvider {
         .then(() => {
           // delete server instance
           console.log(
-            "OpenStackProvider: Deleting server instance " + instance + ")",
+            "ContainerLabProvider: Deleting server instance " + instance + ")",
           );
           // check identifier format to inhibit injection?
           // minor issue, as we produce and hold the id in the backend?
@@ -699,7 +699,7 @@ export default class OpenStackProvider implements InstanceProvider {
                     );
                     if (used_floating_ip !== undefined) {
                       console.log(
-                        "OpenStackProvider: Deleting floating ip " +
+                        "ContainerLabProvider: Deleting floating ip " +
                           used_floating_ip.floating_ip_address,
                       );
                       providerInstance.axiosInstance
@@ -714,7 +714,7 @@ export default class OpenStackProvider implements InstanceProvider {
                         .catch((err) => {
                           return reject(
                             new Error(
-                              "OpenStackProvider: Could not delete floating ip" +
+                              "ContainerLabProvider: Could not delete floating ip" +
                                 err,
                             ),
                           );
@@ -722,7 +722,7 @@ export default class OpenStackProvider implements InstanceProvider {
                     } else {
                       return reject(
                         new Error(
-                          "OpenStackProvider: Could not find floating ip",
+                          "ContainerLabProvider: Could not find floating ip",
                         ),
                       );
                     }
@@ -730,7 +730,7 @@ export default class OpenStackProvider implements InstanceProvider {
                   .catch(function (err) {
                     return reject(
                       new Error(
-                        "OpenStackProvider: Could not get floating ip list: " +
+                        "ContainerLabProvider: Could not get floating ip list: " +
                           err,
                       ),
                     );
@@ -745,7 +745,7 @@ export default class OpenStackProvider implements InstanceProvider {
                 return reject(new Error(InstanceNotFoundErrorMessage));
               } else {
                 return reject(
-                  "OpenStackProvider: Failed to delete instance. " + err,
+                  "ContainerLabProvider: Failed to delete instance. " + err,
                 );
               }
             });
@@ -760,7 +760,7 @@ export default class OpenStackProvider implements InstanceProvider {
   async pruneServerInstance(): Promise<void> {
     const providerInstance = this.providerInstance;
 
-    console.log("OpenStackProvider: Pruning stale server instances...");
+    console.log("ContainerLabProvider: Pruning stale server instances...");
 
     return new Promise((resolve, reject) => {
       providerInstance
@@ -772,7 +772,7 @@ export default class OpenStackProvider implements InstanceProvider {
               providerInstance.maxInstanceLifetimeMinutes * 60 * 1000,
           );
           console.log(
-            "OpenStackProvider: Pruning server instances older than " +
+            "ContainerLabProvider: Pruning server instances older than " +
               deadline.toISOString(),
           );
           providerInstance.axiosInstance
@@ -794,7 +794,7 @@ export default class OpenStackProvider implements InstanceProvider {
                       await Environment.deleteInstanceEnvironments(server.id);
                     if (!deleted) {
                       console.log(
-                        `OpenStackProvider: Could not delete environment during pruning, environment seams to be gone already, deleting leftover instance: (${server.id}).`,
+                        `ContainerLabProvider: Could not delete environment during pruning, environment seams to be gone already, deleting leftover instance: (${server.id}).`,
                       );
                       await providerInstance
                         .deleteServer(server.id)
@@ -804,7 +804,7 @@ export default class OpenStackProvider implements InstanceProvider {
                               ? reason.message
                               : "Unknown error";
                           throw new Error(
-                            `OpenStackProvider: Failed to delete instance (${server.id}) to be pruned.\n` +
+                            `ContainerLabProvider: Failed to delete instance (${server.id}) to be pruned.\n` +
                               originalMessage,
                           );
                         });
@@ -816,7 +816,7 @@ export default class OpenStackProvider implements InstanceProvider {
             })
             .catch(function (err) {
               return reject(
-                "OpenStackProvider: Failed get list of server instances to prune. " +
+                "ContainerLabProvider: Failed get list of server instances to prune. " +
                   err,
               );
             });
@@ -835,7 +835,7 @@ export default class OpenStackProvider implements InstanceProvider {
       let address;
       while (timeout > 0 && address === undefined) {
         console.log(
-          "OpenStackProvider: Waiting for server to get ready... (timeout: " +
+          "ContainerLabProvider: Waiting for server to get ready... (timeout: " +
             timeout +
             ")",
         );
@@ -861,14 +861,14 @@ export default class OpenStackProvider implements InstanceProvider {
           .catch(function (err) {
             return reject(
               new Error(
-                "OpenStackProvider: Could not get server instance ips." + err,
+                "ContainerLabProvider: Could not get server instance ips." + err,
               ),
             );
           });
         await providerInstance.sleep(5000);
         timeout -= 5;
       }
-      return reject("OpenStackProvider: Timed out waiting for IPs.");
+      return reject("ContainerLabProvider: Timed out waiting for IPs.");
     });
   }
 
@@ -889,7 +889,7 @@ export default class OpenStackProvider implements InstanceProvider {
           .on("error", (err) => {
             sshConn.end();
             console.log(
-              "OpenStackProvider: SSH connection failed - retrying... " +
+              "ContainerLabProvider: SSH connection failed - retrying... " +
                 err.message,
             );
           })
@@ -905,7 +905,7 @@ export default class OpenStackProvider implements InstanceProvider {
       }
       if (!resolved)
         return reject(
-          "OpenStackProvider: Timed out waiting for SSH connection.",
+          "ContainerLabProvider: Timed out waiting for SSH connection.",
         );
     });
   }
