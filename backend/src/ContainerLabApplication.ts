@@ -2,7 +2,7 @@ import api from "./Api";
 import serverCreator from "./Server";
 import MongoDBPersister from "./database/MongoDBPersister";
 import MongoDBAuthenticationProvider from "./authentication/MongoDBAuthenticationProvider";
-import ContainerlabProvider from "./providers/ContainerlabProvider";
+import ContainerLabProvider from "./providers/ContainerlabProvider";
 
 const MONGODB_URL = process.env.MONGODB_URL;
 
@@ -15,7 +15,7 @@ if (MONGODB_URL) {
     api(
       persister,
       [new MongoDBAuthenticationProvider(persister)],
-      new ContainerlabProvider(),
+      new ContainerLabProvider(),
     ),
   );
 } else {
