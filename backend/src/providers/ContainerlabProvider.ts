@@ -312,26 +312,42 @@ export default class ContainerLabProvider implements InstanceProvider {
       } else {
         // authenticate to ContainerLab and get a token
         const data_auth = {
-          auth: {
-            identity: {
-              methods: ["password"],
-              password: {
-                user: {
-                  name: providerInstance.os_username,
-                  domain: { name: providerInstance.os_domainName },
-                  password: providerInstance.os_password,
-                },
-              },
-            },
-            scope: {
-              project: {
-                domain: { name: providerInstance.os_domainName },
-                id: providerInstance.os_projectId,
-              },
-            },
-          },
+            "username": this.os_username,
+            "password": this.os_password,
         };
-
+        fetch(providerInstance.os_authUrl,{
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(data_auth)
+        }).then(async response => {
+          if(response.ok){
+            if(response.body) {
+              response.json().then(data => {
+                if(!data.token){
+                  return reject(
+                    new Error("ContainerLabProvider: Authentication failed: No token received"),
+                  );
+                }
+                const token = data.token as string;
+                if(providerInstance.os_token === undefined){
+                  providerInstance.os_token = {} as Token;
+                }
+                providerInstance.os_token.token = token;
+                return resolve();
+            });
+          }}
+          else{
+            return reject(
+              new Error("ContainerLabProvider: Authentication failed: No token received"),
+            );
+          }
+          }).catch(function (err) {
+          return reject(
+            new Error("ContainerLabProvider: Authentication failed: " + err),
+          );
+        });
         providerInstance.axiosInstance
           .post(providerInstance.os_authUrl + "/login", data_auth)
           .then(function (response) {
