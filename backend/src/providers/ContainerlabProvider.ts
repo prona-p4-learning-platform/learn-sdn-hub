@@ -7,6 +7,7 @@
 // TODO: fix eslint instead of disabling rules
 // currently in developement, as the ContainerLab provider is not actively used in our envs
 
+import { time } from "node:console";
 import {
   InstanceProvider,
   VMEndpoint,
@@ -32,6 +33,7 @@ export default class ContainerLabProvider implements InstanceProvider {
 
   // the authentication token from keystone
   private clab_token?: Token;
+  private clab_token_duration: number;
 
   // ContainerLab Provider config
   private maxInstanceLifetimeMinutes: number;
@@ -91,6 +93,21 @@ export default class ContainerLabProvider implements InstanceProvider {
       );
     }
 
+    const ENV_TOKEN_DURATION = process.env.CLAB_TOKEN_DURATION_IN_MINUTES
+    if(ENV_TOKEN_DURATION) {
+      const TOKEN_DURATION = parseInt(ENV_TOKEN_DURATION);
+      if(!isNaN(TOKEN_DURATION)) {
+        this.clab_token_duration = TOKEN_DURATION*60*1000;
+      }
+      else {
+        throw new Error(
+          "ContainerLabProvider: Provided token duration cannot be parsed (CLAB_TOKEN_DURATION_IN_MINUTES).",
+        );
+      }
+    }
+    else {
+      this.clab_token_duration = 60*60*1000; // default token duration 60 minutes
+    }
     this.providerInstance = this;
 
     // better use env var to allow configuration of port numbers?
@@ -131,7 +148,6 @@ export default class ContainerLabProvider implements InstanceProvider {
   }
 
   async getToken(): Promise<void> {
-    //return new Promise(() => {});
     const providerInstance = this.providerInstance;
     return new Promise((resolve, reject) => {
       const tokenExpires = Date.parse(
@@ -152,17 +168,15 @@ export default class ContainerLabProvider implements InstanceProvider {
         now <= tokenExpires + 5000
       ) {
         return resolve();
-      } else {
-        console.log(
-          "ContainerLabProvider: Authenticating to ContainerLab API at " +
-            providerInstance.clab_apiUrl,
-        );
+      } 
+      else {
         // authenticate to ContainerLab and get a token
         const data_auth = {
             "username": this.clab_username,
             "password": this.clab_password,
         };
-        fetch(providerInstance.clab_apiUrl,{
+        fetch(providerInstance.clab_apiUrl + "login",{
+          signal: AbortSignal.timeout(10000), // 10 seconds timeout
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -170,80 +184,34 @@ export default class ContainerLabProvider implements InstanceProvider {
           body: JSON.stringify(data_auth)
         })
         .then(response => {
-          if(response.ok){
+          if(response.ok) {
             if(response.body) {
               return response.json().then(data => {
-                if(!data.token){
+                if(!data.token) {
                   return reject(
                     new Error("ContainerLabProvider: Authentication failed: No token received"),
                   );
                 }
+                const issued_at = Date.now()
                 const token = data.token as string;
+                
                 if(providerInstance.clab_token === undefined){
                   providerInstance.clab_token = {} as Token;
                 }
+
                 providerInstance.clab_token.token = token;
+                providerInstance.clab_token.issued_at = (issued_at - 10000).toString(); // workaround, set issued at to 10 sec in the past, because 10 sec timeout above
+                providerInstance.clab_token.expires_at = (issued_at + this.clab_token_duration).toString(); // token valid for configured duration
                 return resolve();
-            });
-          }}
+              });
+            }}
           return reject(
             new Error("ContainerLabProvider: Authentication failed: No token received"),
           );
-          })
-          .catch(function (err) {
-            return reject(new Error("ContainerLabProvider: Authentication failed: " + err));
-          });
-         /*providerInstance.axiosInstance
-          .post(providerInstance.os_authUrl + "/login", data_auth)
-          .then(function (response) {
-            // extract and store token
-            const token = response.headers["x-subject-token"] as string;
-            providerInstance.axiosInstance.defaults.headers.common[
-              "X-Auth-Token"
-            ] = token;
-
-            providerInstance.os_token = response.data.token as Token;
-
-            // currently the default microversion for compute API is sufficient
-            //axiosInstance.defaults.headers.common[
-            //  "X-ContainerLab-Nova-API-Version"
-            //] = "2.66";
-
-            // get compute and network public endpoint urls from received service catalog
-            const catalog = response.data.token.catalog as Array<Service>;
-            const serviceCompute = catalog.find(
-              (element) => element.type === "compute",
-            );
-            providerInstance.endpointPublicComputeURL =
-              serviceCompute?.endpoints.find(
-                (element) =>
-                  element.interface === "public" &&
-                  element.region === providerInstance.os_region,
-              )?.url;
-            const serviceNetwork = catalog.find(
-              (element) => element.type === "network",
-            );
-            providerInstance.endpointPublicNetworkURL =
-              serviceNetwork?.endpoints.find(
-                (element) =>
-                  element.interface === "public" &&
-                  element.region === providerInstance.os_region,
-              )?.url;
-            return resolve();
-          })
-          .catch(function (err) {
-            // expire token information
-            providerInstance.axiosInstance.defaults.headers.common[
-              "X-Auth-Token"
-            ] = "";
-            providerInstance.os_token = undefined;
-            providerInstance.endpointPublicComputeURL = undefined;
-            providerInstance.endpointPublicNetworkURL = undefined;
-            return reject(
-              new Error("ContainerLabProvider: Authentication failed: " + err),
-            );
-          });
-      }*/
+        })
+        .catch(function (err) {
+          return reject(new Error("ContainerLabProvider: Authentication failed: " + err));
+        });
       }
     });
   }
