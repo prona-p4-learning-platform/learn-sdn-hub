@@ -7,7 +7,6 @@
 // TODO: fix eslint instead of disabling rules
 // currently in developement, as the ContainerLab provider is not actively used in our envs
 
-import { time } from "node:console";
 import {
   InstanceProvider,
   VMEndpoint,
