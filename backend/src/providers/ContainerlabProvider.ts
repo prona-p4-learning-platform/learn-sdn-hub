@@ -122,10 +122,16 @@ export default class ContainerLabProvider implements InstanceProvider {
       console.log("ContainerlabProvider: " + this.clab_username + " " + this.clab_password + " " +
           this.clab_apiUrl + " " + this.maxInstanceLifetimeMinutes);
     }
-
+    this.getToken().catch((err) => {
+      console.log(
+        "ContainerLabProvider: Initial authentication to ContainerLab failed: " +
+          err.message,
+      );
+    });
   }
 
   async getToken(): Promise<void> {
+    //return new Promise(() => {});
     const providerInstance = this.providerInstance;
     return new Promise((resolve, reject) => {
       const tokenExpires = Date.parse(
@@ -147,6 +153,10 @@ export default class ContainerLabProvider implements InstanceProvider {
       ) {
         return resolve();
       } else {
+        console.log(
+          "ContainerLabProvider: Authenticating to ContainerLab API at " +
+            providerInstance.clab_apiUrl,
+        );
         // authenticate to ContainerLab and get a token
         const data_auth = {
             "username": this.clab_username,
@@ -158,10 +168,11 @@ export default class ContainerLabProvider implements InstanceProvider {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify(data_auth)
-        }).then(async response => {
+        })
+        .then(response => {
           if(response.ok){
             if(response.body) {
-              response.json().then(data => {
+              return response.json().then(data => {
                 if(!data.token){
                   return reject(
                     new Error("ContainerLabProvider: Authentication failed: No token received"),
@@ -175,11 +186,9 @@ export default class ContainerLabProvider implements InstanceProvider {
                 return resolve();
             });
           }}
-          else{
-            return reject(
-              new Error("ContainerLabProvider: Authentication failed: No token received"),
-            );
-          }
+          return reject(
+            new Error("ContainerLabProvider: Authentication failed: No token received"),
+          );
           })
           .catch(function (err) {
             return reject(new Error("ContainerLabProvider: Authentication failed: " + err));
