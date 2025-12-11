@@ -32,6 +32,7 @@ export default class ContainerLabProvider implements InstanceProvider {
 
   // the authentication token from keystone
   private clab_token?: Token;
+  private clab_token_duration: number;
 
   // ContainerLab Provider config
   private maxInstanceLifetimeMinutes: number;
@@ -91,6 +92,21 @@ export default class ContainerLabProvider implements InstanceProvider {
       );
     }
 
+    const ENV_TOKEN_DURATION = process.env.CLAB_TOKEN_DURATION_IN_MINUTES
+    if(ENV_TOKEN_DURATION) {
+      const TOKEN_DURATION = parseInt(ENV_TOKEN_DURATION);
+      if(!isNaN(TOKEN_DURATION)) {
+        this.clab_token_duration = TOKEN_DURATION*60*1000;
+      }
+      else {
+        throw new Error(
+          "ContainerLabProvider: Provided token duration cannot be parsed (CLAB_TOKEN_DURATION_IN_MINUTES).",
+        );
+      }
+    }
+    else {
+      this.clab_token_duration = 60*60*1000; // default token duration 60 minutes
+    }
     this.providerInstance = this;
 
     // better use env var to allow configuration of port numbers?
@@ -122,12 +138,81 @@ export default class ContainerLabProvider implements InstanceProvider {
       console.log("ContainerlabProvider: " + this.clab_username + " " + this.clab_password + " " +
           this.clab_apiUrl + " " + this.maxInstanceLifetimeMinutes);
     }
-
+    this.getToken().catch((err) => {
+      console.log(
+        "ContainerLabProvider: Initial authentication to ContainerLab failed: " +
+          err.message,
+      );
+    });
   }
 
   async getToken(): Promise<void> {
+    const providerInstance = this.providerInstance;
+    return new Promise((resolve, reject) => {
+      const tokenExpires = Date.parse(
+        providerInstance.clab_token?.expires_at ?? Date(),
+      );
+      const now = Date.now();
 
-    return new Promise(() => {});
+      console.log(
+        "Token expires at: " +
+          new Date(tokenExpires).toISOString() +
+          " now: " +
+          new Date(now).toISOString(),
+      );
+
+      // add 5 sec for the token to be valid for subsequent operations
+      if (
+        providerInstance.clab_token !== undefined &&
+        now <= tokenExpires + 5000
+      ) {
+        return resolve();
+      } 
+      else {
+        // authenticate to ContainerLab and get a token
+        const data_auth = {
+            "username": this.clab_username,
+            "password": this.clab_password,
+        };
+        fetch(providerInstance.clab_apiUrl + "login",{
+          signal: AbortSignal.timeout(10000), // 10 seconds timeout
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(data_auth)
+        })
+        .then(response => {
+          if(response.ok) {
+            if(response.body) {
+              return response.json().then(data => {
+                if(!data.token) {
+                  return reject(
+                    new Error("ContainerLabProvider: Authentication failed: No token received"),
+                  );
+                }
+                const issued_at = Date.now()
+                const token = data.token as string;
+                
+                if(providerInstance.clab_token === undefined){
+                  providerInstance.clab_token = {} as Token;
+                }
+
+                providerInstance.clab_token.token = token;
+                providerInstance.clab_token.issued_at = (issued_at - 10000).toString(); // workaround, set issued at to 10 sec in the past, because 10 sec timeout above
+                providerInstance.clab_token.expires_at = (issued_at + this.clab_token_duration).toString(); // token valid for configured duration
+                return resolve();
+              });
+            }}
+          return reject(
+            new Error("ContainerLabProvider: Authentication failed: No token received"),
+          );
+        })
+        .catch(function (err) {
+          return reject(new Error("ContainerLabProvider: Authentication failed: " + err));
+        });
+      }
+    });
   }
 
   async createServer(): Promise<VMEndpoint> {
