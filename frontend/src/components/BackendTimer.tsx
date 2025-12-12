@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Box, Typography } from "@mui/material";
+import { Box, Typography, Dialog, DialogContent, DialogContentText, DialogActions, Button } from "@mui/material";
 import { APIRequest } from "../api/Request";
 import { z } from "zod";
 
@@ -32,6 +32,7 @@ function formatTime(minutes: number): string {
 
 export default function BackendTimer({ environmentName, groupNumber, onTimerExpired }: BackendTimerProps) {
   const [value, setValue] = useState<string>("--:--");
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   useEffect(() => {
     const fetchTimer = async () => {
@@ -48,7 +49,7 @@ export default function BackendTimer({ environmentName, groupNumber, onTimerExpi
               if (onTimerExpired) await onTimerExpired();
               popupShown = true;
               
-              alert("Die Prüfungszeit ist abgelaufen. Ihre Arbeit wurde automatisch abgegeben.");
+              setDialogOpen(true);
             }
             // wenn nur noch 5 Minuten oder weniger verbleiben, sende ein einmaliges Event
             if (payload.data.remainingMinutes <= 5 && payload.data.remainingMinutes > 0 && !fiveMinNotified) {
@@ -81,19 +82,35 @@ export default function BackendTimer({ environmentName, groupNumber, onTimerExpi
   }, [environmentName, groupNumber]);
 
   return (
-    <Box
-      sx={{
-        px: 2,
-        py: 0.5,
-        borderRadius: 1,
-        backgroundColor: "#E3000F", //"rgba(255,0,0,0.1)", // optional transparenter rote Box
-        //border: "2px solid red", // bei transparenter Box roter Rand
-        display: "inline-block",
-      }}
-    >
-      <Typography sx={{ color: "white", fontWeight: "bold" }}>
-        {value}
-      </Typography>
-    </Box>
+    <>
+      <Box
+        sx={{
+          px: 2,
+          py: 0.5,
+          borderRadius: 1,
+          backgroundColor: "#E3000F", //"rgba(255,0,0,0.1)", // optional transparenter rote Box
+          //border: "2px solid red", // bei transparenter Box roter Rand
+          display: "inline-block",
+        }}
+      >
+        <Typography sx={{ color: "white", fontWeight: "bold" }}>
+          {value}
+        </Typography>
+      </Box>
+      <Dialog
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        aria-describedby="alert-dialog-timer-expired-description"
+      >
+        <DialogContent>
+          <DialogContentText id="alert-dialog-timer-expired-description">
+            Die Prüfungszeit ist abgelaufen. Ihre Arbeit wurde automatisch abgegeben.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDialogOpen(false)}>Finish</Button>
+        </DialogActions>
+      </Dialog>
+    </>
   );
 }
