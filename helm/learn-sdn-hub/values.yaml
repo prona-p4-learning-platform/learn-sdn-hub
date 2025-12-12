@@ -41,6 +41,9 @@ frontend:
 
 # ingress configuration
 ingress:
+  mongoExpress:
+    path: /mongo(/|$)(.*)
+    pathType: ImplementationSpecific
   enabled: true
   className: nginx
   hosts:
@@ -58,7 +61,7 @@ ingress:
         - prona.local
   clusterIssuer: selfsigned
 
-# mongodb configuration
+# mongodb + mongo-express configuration
 mongodb:
   enable: true
   storageClass: "standard" # or custom Class name
@@ -72,3 +75,10 @@ mongodb:
     password:
       ref: "{{ .Release.Name }}-mongodb-secret"
       key: "password"
+  service:
+    port: 27017
+  ressources:
+    requests:
+      storage: 5Gi
+mongoExpress:
+  enabled: true

@@ -9,4 +9,4 @@ spec:
     - port: {{ .Values.mongodb.service.port | default 27017}}
       targetPort: 27017
   selector:
-    app: mongodb
+    app: {{ .Release.Name }}-mongodb
