@@ -1,0 +1,74 @@
+# global settings
+nameOverride: ""
+fullnameOverride: ""
+
+ingress-nginx:
+  enabled: true
+cert-manager:
+  enabled: true
+  installCRDs: true
+fluxcd:
+  enabled: false
+
+# backend configuration
+backend:
+  image:
+    repository: learn-sdn-hub-backend
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicaCount: 1
+  service:
+    port: 80
+  args:
+    t: "localmultiuservm"
+    p: "80"
+    a: "10.0.0.10"
+    s: "22"
+    u: "p4"
+    w: "p4"
+    b: "p4:p4"
+    m: "p4:0"
+
+# frontend configuration
+frontend:
+  image:
+    repository: learn-sdn-hub-frontend
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicaCount: 1
+  service:
+    port: 80
+
+# ingress configuration
+ingress:
+  enabled: true
+  className: nginx
+  hosts:
+    - host: prona.local
+      paths:
+        - path: /
+          pathType: Prefix
+          service: frontend
+        - path: /api
+          pathType: Prefix
+          service: backend
+  tls:
+    - secretName: prona-local-tls
+      hosts: 
+        - prona.local
+  clusterIssuer: selfsigned
+
+# mongodb coniguration
+mongodb:
+  enable: true
+  storageClass: "standard" # or custom Class name
+  auth:
+    rootPassword: "password123"
+    username: "p4"
+    password: "password123"
+    database: "p4"
+  credentials:
+    username: "p4"
+    password:
+      ref: "mongodb-secret"
+      key: "mongodb-password"
