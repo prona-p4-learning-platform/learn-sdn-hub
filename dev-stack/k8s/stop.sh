@@ -3,6 +3,6 @@ CLUSTER_NAME="learn-sdn-hub"
 
 set -e
 
-source ./helpers
+source ./helpers.sh
 
 delete_cluster

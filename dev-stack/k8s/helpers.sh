@@ -20,7 +20,8 @@ create_cluster() {
     --k3s-arg "--disable=traefik@server:*" \
     -p "80:80@loadbalancer" \
     -p "443:443@loadbalancer" \
-    --servers 1
+    --servers 1 \
+    --api-port 7428
   echo "done"
 }
 

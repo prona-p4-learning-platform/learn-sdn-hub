@@ -3,7 +3,7 @@ CLUSTER_NAME="learn-sdn-hub"
 
 set -e
 
-source ./helpers
+source ./helpers.sh
 
 echo "start dependency checks..."
 check_dependency jq
