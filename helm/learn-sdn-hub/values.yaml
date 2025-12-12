@@ -58,7 +58,7 @@ ingress:
         - prona.local
   clusterIssuer: selfsigned
 
-# mongodb coniguration
+# mongodb configuration
 mongodb:
   enable: true
   storageClass: "standard" # or custom Class name
@@ -70,5 +70,5 @@ mongodb:
   credentials:
     username: "p4"
     password:
-      ref: "mongodb-secret"
-      key: "mongodb-password"
+      ref: "{{ .Release.Name }}-mongodb-secret"
+      key: "password"

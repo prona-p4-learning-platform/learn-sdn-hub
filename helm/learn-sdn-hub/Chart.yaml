@@ -22,8 +22,3 @@ dependencies:
     version: 2.13.0
     repository: https://fluxcd-community.github.io/helm-charts
     condition: fluxcd.enabled
-
-  - name: mongodb
-    version: 14.1.0
-    repository: https://charts.bitnami.com/bitnami
-    condition: mongodb.enable
