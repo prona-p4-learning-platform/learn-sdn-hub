@@ -26,6 +26,11 @@
       // Apply theme class immediately to prevent flash of wrong theme
       (function () {
         try {
+          // Check if localStorage is available
+          if (typeof localStorage === "undefined") {
+            document.documentElement.classList.add("light-mode");
+            return;
+          }
           var stored = localStorage.getItem("optionsStore");
           var darkMode = false;
           if (stored) {
