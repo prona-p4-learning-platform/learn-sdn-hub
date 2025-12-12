@@ -1445,7 +1445,14 @@ export default class Environment {
     // Safely get the content from the map
     const collabDocContent = this.activeCollabDocs.get(collabDocKey);
     if (collabDocContent === undefined) {
-      throw new Error("Collaboration document not found after initialization.");
+      // This should never happen since we just set the value above
+      // If it does, it indicates a serious concurrency issue
+      console.error(
+        `CRITICAL: Collaboration document not found after initialization. Key: ${collabDocKey}, Map size: ${this.activeCollabDocs.size}`,
+      );
+      throw new Error(
+        `Collaboration document not found after initialization for key: ${collabDocKey}`,
+      );
     }
 
     const newCollabDoc: CollabDoc = {

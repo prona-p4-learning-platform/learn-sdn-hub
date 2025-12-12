@@ -431,18 +431,6 @@ export default class FileEditor extends Component<FileEditorProps> {
             }
           };
 
-          // Set a timeout to prevent hanging if sync event doesn't fire
-          const timeout = setTimeout(() => {
-            if (!resolved) {
-              resolved = true;
-              console.log(
-                "Collaboration sync timeout - initializing document anyway",
-              );
-              initializeDocIfEmpty();
-              resolve();
-            }
-          }, 5000); // 5 second timeout
-
           const syncHandler = (isSynced: boolean) => {
             if (isSynced && !resolved) {
               resolved = true;
@@ -455,6 +443,20 @@ export default class FileEditor extends Component<FileEditorProps> {
               resolve();
             }
           };
+
+          // Set a timeout to prevent hanging if sync event doesn't fire
+          const timeout = setTimeout(() => {
+            if (!resolved) {
+              resolved = true;
+              console.log(
+                "Collaboration sync timeout - initializing document anyway",
+              );
+              initializeDocIfEmpty();
+              // Clean up the event listener even on timeout
+              this.collaborationProvider!.off("sync", syncHandler);
+              resolve();
+            }
+          }, 5000); // 5 second timeout
 
           this.collaborationProvider!.on("sync", syncHandler);
         });
