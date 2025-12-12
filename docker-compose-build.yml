@@ -1,15 +1,19 @@
-version: "3.7"
+version: "3.9"
 
 services:
   p4host:
     privileged: true
-    image: prona/p4-container
+    image: ghcr.io/prona/p4-container:latest
     working_dir: /home/p4
     command: -s
     container_name: p4-container
     restart: unless-stopped
-  learn-sdn-hub:
-    build: .
+
+  backend:
+    image: ghcr.io/prona/learn-sdn-hub-backend:latest
+    build:
+      context: .
+      dockerfile: ./backend/Dockerfile
     ports:
       - 0.0.0.0:3001:3001
     environment: 
@@ -22,5 +26,5 @@ services:
       - BACKEND_USERS="${BACKEND_USERS}"
       - BACKEND_USER_MAPPING="${BACKEND_USER_MAPPING}"
     command: -p ${BACKEND_HTTP_PORT} -t ${BACKEND_TYPE} -a ${VBOX_IP_ADDRESSES} -s ${VBOX_SSH_PORTS} -u ${SSH_USERNAME} -w ${SSH_PASSWORD} -b ${BACKEND_USERS} -m ${BACKEND_USER_MAPPING}
-    container_name: learn-sdn-hub-build
+    container_name: learn-sdn-hub-backend
     restart: unless-stopped
