@@ -72,6 +72,8 @@ export default function BackendTimer({ environmentName, groupNumber, onTimerExpi
       }
     };
 
+
+    popupShown = false;
     // initial fetch + alle 1 Sekunde aktualisieren
     fetchTimer();
     const intervalId = setInterval(fetchTimer, 1000);
