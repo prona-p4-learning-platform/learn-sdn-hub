@@ -424,6 +424,13 @@ export default class FileEditor extends Component<FileEditorProps> {
         await new Promise<void>((resolve) => {
           let resolved = false;
 
+          // Helper function to initialize document if needed
+          const initializeDocIfEmpty = () => {
+            if (doc.getText("monaco").length === 0 && data.initialContent) {
+              Y.applyUpdate(doc, toUint8Array(data.content));
+            }
+          };
+
           // Set a timeout to prevent hanging if sync event doesn't fire
           const timeout = setTimeout(() => {
             if (!resolved) {
@@ -431,25 +438,25 @@ export default class FileEditor extends Component<FileEditorProps> {
               console.log(
                 "Collaboration sync timeout - initializing document anyway",
               );
-              if (doc.getText("monaco").length === 0 && data.initialContent) {
-                Y.applyUpdate(doc, toUint8Array(data.content));
-              }
+              initializeDocIfEmpty();
               resolve();
             }
           }, 5000); // 5 second timeout
 
-          this.collaborationProvider!.on("sync", (isSynced: boolean) => {
+          const syncHandler = (isSynced: boolean) => {
             if (isSynced && !resolved) {
               resolved = true;
               clearTimeout(timeout);
               // Only initialize document with content from backend if the document is empty after sync
               // This handles the case where the backend was restarted but the yjs server still has the document
-              if (doc.getText("monaco").length === 0 && data.initialContent) {
-                Y.applyUpdate(doc, toUint8Array(data.content));
-              }
+              initializeDocIfEmpty();
+              // Clean up the event listener
+              this.collaborationProvider!.off("sync", syncHandler);
               resolve();
             }
-          });
+          };
+
+          this.collaborationProvider!.on("sync", syncHandler);
         });
 
         const type = doc.getText("monaco");

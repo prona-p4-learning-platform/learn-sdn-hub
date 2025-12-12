@@ -1442,9 +1442,15 @@ export default class Environment {
       );
     }
 
+    // Safely get the content from the map
+    const collabDocContent = this.activeCollabDocs.get(collabDocKey);
+    if (collabDocContent === undefined) {
+      throw new Error("Collaboration document not found after initialization.");
+    }
+
     const newCollabDoc: CollabDoc = {
       alias,
-      content: this.activeCollabDocs.get(collabDocKey)!,
+      content: collabDocContent,
       initialContent: initialContent,
     };
 
