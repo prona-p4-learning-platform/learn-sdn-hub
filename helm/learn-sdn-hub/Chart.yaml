@@ -8,22 +8,22 @@ appVersion: "1.0.0"
 dependencies:
   # Ingress Controller
   - name: ingress-nginx
-    version: 4.8.x
+    version: 4.14.0
     repository: https://kubernetes.github.io/ingress-nginx
     condition: ingress-nginx.enabled
 
   # Cert Manager
   - name: cert-manager
-    version: 1.13.x
+    version: 1.19.0
     repository: https://charts.jetstack.io
     condition: cert-manager.enabled
 
   - name: flux2
-    version: 2.x.x
+    version: 2.13.0
     repository: https://fluxcd-community.github.io/helm-charts
     condition: fluxcd.enabled
 
   - name: mongodb
-    version: 14.x.x
+    version: 14.1.0
     repository: https://charts.bitnami.com/bitnami
     condition: mongodb.enable

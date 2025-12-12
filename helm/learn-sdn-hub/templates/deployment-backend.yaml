@@ -22,7 +22,7 @@ spec:
       automountServiceAccountToken: true
       containers:
       - name: backend
-        # image: ghcr.io/prona-p4-learning-platform/learn-sdn-hub-backend:254-feature-k8s-docker-images
+        # image: learn-sdn-hub-backend:latest ##### for local development
         image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}"
         imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
         ports:
