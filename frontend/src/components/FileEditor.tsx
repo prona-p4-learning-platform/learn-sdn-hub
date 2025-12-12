@@ -229,11 +229,9 @@ export default class FileEditor extends Component<FileEditorProps> {
 
     monaco.languages.register({
       id: "markdown",
-      extensions: [
-          ".md",
-      ],
+      extensions: [".md"],
       aliases: ["markdown"],
-    })
+    });
     // additional file types? make them configurable?
 
     // install Monaco language client services
@@ -275,11 +273,12 @@ export default class FileEditor extends Component<FileEditorProps> {
         try {
           const payload = await APIRequest(
             `/environment/${this.props.environment}/file/${fileName}`,
-            contentValidator, {
+            contentValidator,
+            {
               query: {
                 groupNumber: this.props.groupNumber,
-              }
-            }
+              },
+            },
           );
 
           if (payload.success) {
@@ -420,9 +419,20 @@ export default class FileEditor extends Component<FileEditorProps> {
         //   }
         // );
 
-        // initialize document with content from backend if not already initialized
-        if (data.initialContent && doc.getText("monaco").length === 0)
-          Y.applyUpdate(doc, toUint8Array(data.content));
+        // Wait for the provider to sync before initializing document content
+        // This prevents duplicating content if the yjs server already has the document
+        await new Promise<void>((resolve) => {
+          this.collaborationProvider!.on("sync", (isSynced: boolean) => {
+            if (isSynced) {
+              // Only initialize document with content from backend if the document is empty after sync
+              // This handles the case where the backend was restarted but the yjs server still has the document
+              if (doc.getText("monaco").length === 0 && data.initialContent) {
+                Y.applyUpdate(doc, toUint8Array(data.content));
+              }
+              resolve();
+            }
+          });
+        });
 
         const type = doc.getText("monaco");
 
@@ -758,7 +768,7 @@ export default class FileEditor extends Component<FileEditorProps> {
           body: { data: this.editor.getModel()?.getValue() ?? "" },
           query: {
             groupNumber: this.props.groupNumber,
-          }
+          },
         },
       );
 
@@ -795,11 +805,12 @@ export default class FileEditor extends Component<FileEditorProps> {
     try {
       const payload = await APIRequest(
         `/environment/${this.props.environment}/file/${this.state.currentFile}`,
-        contentValidator, {
+        contentValidator,
+        {
           query: {
             groupNumber: this.props.groupNumber,
-          }
-        }
+          },
+        },
       );
 
       if (payload.success) {
