@@ -431,19 +431,7 @@ export default class FileEditor extends Component<FileEditorProps> {
             }
           };
 
-          const syncHandler = (isSynced: boolean) => {
-            if (isSynced && !resolved) {
-              resolved = true;
-              clearTimeout(timeout);
-              // Only initialize document with content from backend if the document is empty after sync
-              // This handles the case where the backend was restarted but the yjs server still has the document
-              initializeDocIfEmpty();
-              // Clean up the event listener
-              this.collaborationProvider!.off("sync", syncHandler);
-              resolve();
-            }
-          };
-
+          // Declare timeout variable first so it can be referenced in syncHandler
           // Set a timeout to prevent hanging if sync event doesn't fire
           const timeout = setTimeout(() => {
             if (!resolved) {
@@ -457,6 +445,19 @@ export default class FileEditor extends Component<FileEditorProps> {
               resolve();
             }
           }, 5000); // 5 second timeout
+
+          const syncHandler = (isSynced: boolean) => {
+            if (isSynced && !resolved) {
+              resolved = true;
+              clearTimeout(timeout);
+              // Only initialize document with content from backend if the document is empty after sync
+              // This handles the case where the backend was restarted but the yjs server still has the document
+              initializeDocIfEmpty();
+              // Clean up the event listener
+              this.collaborationProvider!.off("sync", syncHandler);
+              resolve();
+            }
+          };
 
           this.collaborationProvider!.on("sync", syncHandler);
         });
