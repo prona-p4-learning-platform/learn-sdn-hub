@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { ThemeProvider } from "@emotion/react";
 import { CssBaseline } from "@mui/material";
 import { SnackbarProvider, MaterialDesignContent } from "notistack";
@@ -15,6 +16,17 @@ import "@fontsource/roboto/700.css";
 
 export default function Theme(): JSX.Element {
   const { darkMode } = useOptionsStore();
+
+  // Sync theme class on html element when dark mode changes
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add("dark-mode");
+      document.documentElement.classList.remove("light-mode");
+    } else {
+      document.documentElement.classList.add("light-mode");
+      document.documentElement.classList.remove("dark-mode");
+    }
+  }, [darkMode]);
   const theme = createTheme({
     palette: {
       mode: darkMode ? "dark" : "light",
