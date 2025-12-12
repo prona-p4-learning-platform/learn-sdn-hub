@@ -8,6 +8,39 @@
     <link rel="apple-touch-icon" href="/logo192.png" />
     <link rel="manifest" href="/manifest.json" />
     <title>learn-sdn-hub</title>
+    <style>
+      /* Prevent white flash on reload in dark mode */
+      html.light-mode {
+        background-color: #fff;
+        color-scheme: light;
+      }
+      html.dark-mode {
+        background-color: #121212;
+        color-scheme: dark;
+      }
+      html.dark-mode body {
+        background-color: #121212;
+      }
+    </style>
+    <script>
+      // Apply theme class immediately to prevent flash of wrong theme
+      (function () {
+        try {
+          var stored = localStorage.getItem("optionsStore");
+          if (stored) {
+            var data = JSON.parse(stored);
+            var darkMode = data.state && data.state.darkMode;
+            document.documentElement.className = darkMode
+              ? "dark-mode"
+              : "light-mode";
+          } else {
+            document.documentElement.className = "light-mode";
+          }
+        } catch (e) {
+          document.documentElement.className = "light-mode";
+        }
+      })();
+    </script>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
