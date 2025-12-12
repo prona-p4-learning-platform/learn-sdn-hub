@@ -15,6 +15,7 @@
     "start:docker-dev": "nodemon src/DockerApplication.ts",
     "start:firecracker": "ts-node --files src/FirecrackerApplication.ts",
     "start:proxmox": "ts-node --files src/ProxmoxApplication.ts",
+    "start:k8sdebug": "ts-node --files src/debug_k8s-client.ts",
     "format": "prettier . --write --ignore-unknown",
     "format:check": "prettier . --check --ignore-unknown",
     "lint": "eslint . --cache",
