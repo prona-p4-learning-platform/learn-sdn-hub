@@ -172,7 +172,7 @@ export interface EnvironmentDescription {
   sheetId?: string;
 
   //SAL
-  sshTunnelingPorts? : string[];
+  sshTunnelingPorts?: string[];
 
   // Exam
   isExam?: boolean;
@@ -209,7 +209,9 @@ export default class Environment {
     const attempts = (this.testCounter.get(stepIndex) ?? 0) + 1;
     this.testCounter.set(stepIndex, attempts);
 
-    const assistances = test.gradualAssistance.filter(a => a.failedCounter <= attempts).sort((a, b) => b.failedCounter - a.failedCounter);
+    const assistances = test.gradualAssistance
+      .filter((a) => a.failedCounter <= attempts)
+      .sort((a, b) => b.failedCounter - a.failedCounter);
     if (assistances.length === 0) {
       return test.errorHint;
     }
@@ -258,15 +260,19 @@ export default class Environment {
 
     for (const [, value] of Environment.activeEnvironments) {
       if (value.username === username || value.groupNumber === groupNumber) {
-        const isReadyInUserSession = value.username === username && value.sessionId === sessionId && value.isReady;
-        const isReadyInGroup = value.groupNumber === groupNumber && value.isReady;
+        const isReadyInUserSession =
+          value.username === username &&
+          value.sessionId === sessionId &&
+          value.isReady;
+        const isReadyInGroup =
+          value.groupNumber === groupNumber && value.isReady;
         const deployedEnvironment: DeployedEnvironment = {
           assignmentName: value.environmentId,
           instance: value.instanceId ?? "",
           isReady: value.isReady,
           isReadyInUserSession: isReadyInUserSession,
           isReadyInGroup: isReadyInGroup,
-          // possibly add IPAddress, SSHPort, LanguageServerPort etc. here later for advanced use cases beyond 
+          // possibly add IPAddress, SSHPort, LanguageServerPort etc. here later for advanced use cases beyond
           // learn-sdn-hub web interface usage
         };
         deployedEnvironments.push(deployedEnvironment);
@@ -277,7 +283,9 @@ export default class Environment {
 
   public setExamStartTime(): void {
     this.examStartTime = new Date();
-    console.log(`setExamStartTime for ${this.username} at ${this.examStartTime.toISOString()}`);
+    console.log(
+      `setExamStartTime for ${this.username} at ${this.examStartTime.toISOString()}`,
+    );
   }
 
   public getExamStartTime(): number | undefined {
@@ -288,7 +296,11 @@ export default class Environment {
   }
 
   public getRemainingExamTime(): number | undefined {
-    if (this.configuration.isExam && this.configuration.durationMinutes && this.examStartTime) {
+    if (
+      this.configuration.isExam &&
+      this.configuration.durationMinutes &&
+      this.examStartTime
+    ) {
       const now = new Date();
       const elapsed = (now.getTime() - this.examStartTime.getTime()) / 60000; // in minutes
       const remaining = this.configuration.durationMinutes - elapsed;
@@ -388,7 +400,7 @@ export default class Environment {
           if (environment.isReady) {
             activeEnvironmentsForGroup.push(environment);
           } else {
-            // if environment that is not ready was started in this session, continue, otherwise throw error 
+            // if environment that is not ready was started in this session, continue, otherwise throw error
             // to show user that deployment in group is already in progress
             if (environment.sessionId !== sessionId) {
               return Promise.reject(
@@ -397,7 +409,7 @@ export default class Environment {
                 ),
               );
             }
-          };
+          }
         }
       }
     }
@@ -410,7 +422,7 @@ export default class Environment {
         environment,
       );
 
-      // no environment for this group exists yet, start a new one      
+      // no environment for this group exists yet, start a new one
       await environment
         .start(env, sessionId, true)
         .then((endpoint) => {
@@ -533,7 +545,7 @@ export default class Environment {
       Environment.activeEnvironments.set(
         `${environment?.username}-${groupNumber}-${environmentId}`,
         environment,
-      )
+      );
 
       return await environment
         .stop()
@@ -587,6 +599,12 @@ export default class Environment {
     env.activeDesktops.forEach((_desktop: DesktopInstance, key: string) => {
       //console.debug("Deleting leftover desktop: " + key);
       env.activeDesktops.delete(key);
+    });
+
+    // Clean up collaboration documents for this environment
+    env.editableFiles.forEach((_path: string, alias: string) => {
+      const collabDocKey = `${alias}-${env.environmentId}-group${env.groupNumber}`;
+      this.activeCollabDocs.delete(collabDocKey);
     });
   }
 
@@ -648,7 +666,7 @@ export default class Environment {
         `Environment ${this.environmentId} already deployed for user ${this.username}, trying to reopen it...`,
       );
 
-      if (filtered[0].instance === '') {
+      if (filtered[0].instance === "") {
         // the environment found is not ready, instance is empty, remove environment and throw InstanceNotFoundErrorMessage
         console.log(
           `Environment ${this.environmentId} is not ready, starting cleanup...`,
@@ -756,7 +774,9 @@ export default class Environment {
               );
 
               // SAL - replace placeholder in params (TODO: migrate to separate function running this on all subTerminal.Types?)
-              subterminal.params = subterminal.params.map(str => str.replace(/\$\((GROUP_ID)\)/g, this.groupNumber.toString()));
+              subterminal.params = subterminal.params.map((str) =>
+                str.replace(/\$\((GROUP_ID)\)/g, this.groupNumber.toString()),
+              );
 
               await new Promise<void>((resolve, reject) => {
                 const sshConsole = new SSHConsole(
@@ -892,10 +912,13 @@ export default class Environment {
           case "WebApp":
             {
               // SAL - replace placeholder in url (TODO: migrate to separate function running this on all subTerminal.Types?)
-              const url = subterminal.url.replace(/(\d+)\$\((GROUP_ID)\)/g, (_, port, __) => {
-                // console.log(port);
-                return (Number(port) + this.groupNumber).toString();
-              });
+              const url = subterminal.url.replace(
+                /(\d+)\$\((GROUP_ID)\)/g,
+                (_, port, __) => {
+                  // console.log(port);
+                  return (Number(port) + this.groupNumber).toString();
+                },
+              );
               subterminal.url = url;
 
               // currently WebApps are instantly treated as ready
@@ -1205,7 +1228,8 @@ export default class Environment {
               testPassed = true;
             })
             .catch(() => {
-              testOutput += "FAILED: " + this.getErrorHint(test, stepIndex) + " ";
+              testOutput +=
+                "FAILED: " + this.getErrorHint(test, stepIndex) + " ";
             });
         }
 
@@ -1319,18 +1343,17 @@ export default class Environment {
       for (let i = 0; i < parseInt(stepIndex); i++) {
         const step = this.configuration.steps[i];
         const testResult = await this.test(i.toString(), terminalStates);
-        if (testResult.code === 201)
-          bonusPoints += step.bonusPoints ?? 0;
+        if (testResult.code === 201) bonusPoints += step.bonusPoints ?? 0;
       }
     }
-    
+
     await this.persister.SubmitUserEnvironment(
       this.username,
       this.groupNumber,
       this.environmentId,
       terminalStates,
       submittedFiles,
-      bonusPoints
+      bonusPoints,
     );
   }
 
@@ -1389,7 +1412,10 @@ export default class Environment {
     groupNumber: number,
   ): Promise<CollabDoc> {
     let initialContent = false;
-    if (this.activeCollabDocs.get(alias) === undefined) {
+    // Use a composite key that includes alias, environment, and group to ensure proper isolation
+    const collabDocKey = `${alias}-${environmentId}-group${groupNumber}`;
+
+    if (this.activeCollabDocs.get(collabDocKey) === undefined) {
       const env = Environment.getActiveEnvironment(environmentId, groupNumber);
       const resolvedPath = env?.editableFiles.get(alias);
 
@@ -1411,14 +1437,14 @@ export default class Environment {
       ytext.insert(0, content);
       initialContent = true;
       this.activeCollabDocs.set(
-        alias,
+        collabDocKey,
         fromUint8Array(Y.encodeStateAsUpdate(ydoc)),
       );
     }
 
     const newCollabDoc: CollabDoc = {
       alias,
-      content: this.activeCollabDocs.get(alias)!, // TODO: might be undefined?
+      content: this.activeCollabDocs.get(collabDocKey)!,
       initialContent: initialContent,
     };
 
