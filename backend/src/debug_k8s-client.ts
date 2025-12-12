@@ -3,15 +3,9 @@ import * as fs from 'fs';
 
 async function k8sClientTest() {
 
-<<<<<<< HEAD
   const tokenPath = '../dev-stack/k8s/cluster-config/token'; 
   const caPath = '../dev-stack/k8s/cluster-config/ca.crt';
   const apiUrl = 'https://127.0.0.1:7428';
-=======
-  const tokenPath = './src/cluster-config/token'; 
-  const caPath = './src/cluster-config/ca.crt';
-  const apiUrl = 'https://127.0.0.1:46597';
->>>>>>> 5f52a7e (constructor for k8s-client + debug for k8s-client)
 
   if (!fs.existsSync(tokenPath) || !fs.existsSync(caPath)) {
     console.error(`Fehler: Dateien nicht gefunden!`);
