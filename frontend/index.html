@@ -29,8 +29,14 @@
           var stored = localStorage.getItem("optionsStore");
           var darkMode = false;
           if (stored) {
-            var data = JSON.parse(stored);
-            darkMode = data.state && data.state.darkMode;
+            try {
+              var data = JSON.parse(stored);
+              // Use explicit boolean conversion for safety
+              darkMode = !!(data.state && data.state.darkMode);
+            } catch (parseError) {
+              // Invalid JSON in localStorage, fallback to light mode
+              darkMode = false;
+            }
           }
           // Use classList to preserve any other classes that might exist
           if (darkMode) {
