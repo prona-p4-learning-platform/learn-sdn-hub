@@ -13,7 +13,7 @@ fluxcd:
 # backend configuration
 backend:
   image:
-    repository: learn-sdn-hub-backend
+    repository: ghcr.io/prona-p4-learning-platform/learn-sdn-hub-backend:254-feature-k8s-docker-images
     tag: latest
     pullPolicy: IfNotPresent
   replicaCount: 1
@@ -32,7 +32,7 @@ backend:
 # frontend configuration
 frontend:
   image:
-    repository: learn-sdn-hub-frontend
+    repository: ghcr.io/prona-p4-learning-platform/learn-sdn-hub-frontend:254-feature-k8s-docker-images
     tag: latest
     pullPolicy: IfNotPresent
   replicaCount: 1
