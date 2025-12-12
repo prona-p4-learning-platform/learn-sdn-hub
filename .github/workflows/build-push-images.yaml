@@ -2,7 +2,7 @@ name: Build and Push Docker Frontend and Backend Image
 
 on:
   push:
-    branches: [ '254-feature/k8s/docker-images' ]
+    branches: [ 'feature/k8s' ]
     tags: [ 'v*.*.*']
   # workflow_dispatch:
   pull_request:
@@ -10,7 +10,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  BASE_BRANCH: '254-feature/k8s/docker-images'
+  BASE_BRANCH: 'feature/k8s'
   FRONTEND_IMAGE: 'prona-p4-learning-platform/learn-sdn-hub-frontend'
   BACKEND_IMAGE: 'prona-p4-learning-platform/learn-sdn-hub-backend'
 
