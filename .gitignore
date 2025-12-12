@@ -15,3 +15,6 @@ backend/start-backend.sh
 .terraform
 terraform.tfstate*
 .terraform.tfstate.lock.info
+
+# K8s
+dev-stack/k8s/cluster-config

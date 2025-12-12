@@ -9,6 +9,11 @@ terraform {
       source = "hashicorp/kubernetes"
       version = "2.38.0"
     }
+
+    local = {
+      source = "hashicorp/local"
+      version = "2.6.1"
+    }
   }
 }
 
