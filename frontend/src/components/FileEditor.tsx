@@ -229,11 +229,9 @@ export default class FileEditor extends Component<FileEditorProps> {
 
     monaco.languages.register({
       id: "markdown",
-      extensions: [
-          ".md",
-      ],
+      extensions: [".md"],
       aliases: ["markdown"],
-    })
+    });
     // additional file types? make them configurable?
 
     // install Monaco language client services
@@ -275,11 +273,12 @@ export default class FileEditor extends Component<FileEditorProps> {
         try {
           const payload = await APIRequest(
             `/environment/${this.props.environment}/file/${fileName}`,
-            contentValidator, {
+            contentValidator,
+            {
               query: {
                 groupNumber: this.props.groupNumber,
-              }
-            }
+              },
+            },
           );
 
           if (payload.success) {
@@ -420,12 +419,8 @@ export default class FileEditor extends Component<FileEditorProps> {
         //   }
         // );
 
-        // initialize document with content from backend if not already initialized
-        if (data.initialContent && doc.getText("monaco").length === 0)
-          Y.applyUpdate(doc, toUint8Array(data.content));
-
-        const type = doc.getText("monaco");
-
+        // Setup awareness and user presence BEFORE waiting for sync
+        // This ensures the user's color and name are set immediately
         const awareness = this.collaborationProvider.awareness;
         const username = this.username;
 
@@ -532,6 +527,51 @@ export default class FileEditor extends Component<FileEditorProps> {
           name: username,
           color: hexColor,
         });
+
+        // Wait for the provider to sync before initializing document content
+        // This prevents duplicating content if the yjs server already has the document
+        await new Promise<void>((resolve) => {
+          let resolved = false;
+
+          // Helper function to initialize document if needed
+          const initializeDocIfEmpty = () => {
+            if (doc.getText("monaco").length === 0 && data.initialContent) {
+              Y.applyUpdate(doc, toUint8Array(data.content));
+            }
+          };
+
+          // Declare timeout variable first so it can be referenced in syncHandler
+          // Set a timeout to prevent hanging if sync event doesn't fire
+          const timeout = setTimeout(() => {
+            if (!resolved) {
+              resolved = true;
+              console.log(
+                "Collaboration sync timeout - initializing document anyway",
+              );
+              initializeDocIfEmpty();
+              // Clean up the event listener even on timeout
+              this.collaborationProvider!.off("sync", syncHandler);
+              resolve();
+            }
+          }, 5000); // 5 second timeout
+
+          const syncHandler = (isSynced: boolean) => {
+            if (isSynced && !resolved) {
+              resolved = true;
+              clearTimeout(timeout);
+              // Only initialize document with content from backend if the document is empty after sync
+              // This handles the case where the backend was restarted but the yjs server still has the document
+              initializeDocIfEmpty();
+              // Clean up the event listener
+              this.collaborationProvider!.off("sync", syncHandler);
+              resolve();
+            }
+          };
+
+          this.collaborationProvider!.on("sync", syncHandler);
+        });
+
+        const type = doc.getText("monaco");
 
         if (this.editor != null) {
           if (this.editor.getModel()) {
@@ -758,7 +798,7 @@ export default class FileEditor extends Component<FileEditorProps> {
           body: { data: this.editor.getModel()?.getValue() ?? "" },
           query: {
             groupNumber: this.props.groupNumber,
-          }
+          },
         },
       );
 
@@ -795,11 +835,12 @@ export default class FileEditor extends Component<FileEditorProps> {
     try {
       const payload = await APIRequest(
         `/environment/${this.props.environment}/file/${this.state.currentFile}`,
-        contentValidator, {
+        contentValidator,
+        {
           query: {
             groupNumber: this.props.groupNumber,
-          }
-        }
+          },
+        },
       );
 
       if (payload.success) {
