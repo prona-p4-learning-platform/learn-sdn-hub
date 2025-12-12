@@ -18,17 +18,17 @@ spec:
       - name: mongodb
         image: mongo:6.0
         ports:
-        - containerPort: 27017
+        - containerPort: {{ .Values.mongodb.service.port }}
         env:
         - name: MONGO_INITDB_ROOT_USERNAME
           valueFrom:
             secretKeyRef:
-              name: mongodb-secret
+              name: {{ .Release.Name }}-mongodb-secret
               key: user
         - name: MONGO_INITDB_ROOT_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: mongodb-secret
+              name: {{ .Release.Name }}-mongodb-secret
               key: password
         volumeMounts:
         - name: mongo-pvc
@@ -40,4 +40,4 @@ spec:
       accessModes: ["ReadWriteOnce"]
       resources:
         requests:
-          storage: 5Gi
+          storage: {{ .Values.mongodb.ressources.requests.storage }}
