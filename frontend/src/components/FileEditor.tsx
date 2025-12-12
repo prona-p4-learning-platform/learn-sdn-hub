@@ -422,8 +422,26 @@ export default class FileEditor extends Component<FileEditorProps> {
         // Wait for the provider to sync before initializing document content
         // This prevents duplicating content if the yjs server already has the document
         await new Promise<void>((resolve) => {
+          let resolved = false;
+
+          // Set a timeout to prevent hanging if sync event doesn't fire
+          const timeout = setTimeout(() => {
+            if (!resolved) {
+              resolved = true;
+              console.log(
+                "Collaboration sync timeout - initializing document anyway",
+              );
+              if (doc.getText("monaco").length === 0 && data.initialContent) {
+                Y.applyUpdate(doc, toUint8Array(data.content));
+              }
+              resolve();
+            }
+          }, 5000); // 5 second timeout
+
           this.collaborationProvider!.on("sync", (isSynced: boolean) => {
-            if (isSynced) {
+            if (isSynced && !resolved) {
+              resolved = true;
+              clearTimeout(timeout);
               // Only initialize document with content from backend if the document is empty after sync
               // This handles the case where the backend was restarted but the yjs server still has the document
               if (doc.getText("monaco").length === 0 && data.initialContent) {
