@@ -27,17 +27,23 @@
       (function () {
         try {
           var stored = localStorage.getItem("optionsStore");
+          var darkMode = false;
           if (stored) {
             var data = JSON.parse(stored);
-            var darkMode = data.state && data.state.darkMode;
-            document.documentElement.className = darkMode
-              ? "dark-mode"
-              : "light-mode";
+            darkMode = data.state && data.state.darkMode;
+          }
+          // Use classList to preserve any other classes that might exist
+          if (darkMode) {
+            document.documentElement.classList.add("dark-mode");
+            document.documentElement.classList.remove("light-mode");
           } else {
-            document.documentElement.className = "light-mode";
+            document.documentElement.classList.add("light-mode");
+            document.documentElement.classList.remove("dark-mode");
           }
         } catch (e) {
-          document.documentElement.className = "light-mode";
+          // Fallback to light mode on error
+          document.documentElement.classList.add("light-mode");
+          document.documentElement.classList.remove("dark-mode");
         }
       })();
     </script>
