@@ -8,6 +8,56 @@
     <link rel="apple-touch-icon" href="/logo192.png" />
     <link rel="manifest" href="/manifest.json" />
     <title>learn-sdn-hub</title>
+    <style>
+      /* Prevent white flash on reload in dark mode */
+      html.light-mode {
+        background-color: #fff;
+        color-scheme: light;
+      }
+      html.dark-mode {
+        background-color: #121212;
+        color-scheme: dark;
+      }
+      html.dark-mode body {
+        background-color: #121212;
+      }
+    </style>
+    <script>
+      // Apply theme class immediately to prevent flash of wrong theme
+      (function () {
+        try {
+          // Check if localStorage is available
+          if (typeof localStorage === "undefined") {
+            document.documentElement.classList.add("light-mode");
+            return;
+          }
+          var stored = localStorage.getItem("optionsStore");
+          var darkMode = false;
+          if (stored) {
+            try {
+              var data = JSON.parse(stored);
+              // Use explicit boolean conversion for safety
+              darkMode = !!(data.state && data.state.darkMode);
+            } catch (parseError) {
+              // Invalid JSON in localStorage, fallback to light mode
+              darkMode = false;
+            }
+          }
+          // Use classList to preserve any other classes that might exist
+          if (darkMode) {
+            document.documentElement.classList.add("dark-mode");
+            document.documentElement.classList.remove("light-mode");
+          } else {
+            document.documentElement.classList.add("light-mode");
+            document.documentElement.classList.remove("dark-mode");
+          }
+        } catch (e) {
+          // Fallback to light mode on error
+          document.documentElement.classList.add("light-mode");
+          document.documentElement.classList.remove("dark-mode");
+        }
+      })();
+    </script>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
