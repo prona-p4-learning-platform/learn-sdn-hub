@@ -26,12 +26,20 @@ You must edit your local `/etc/hosts` and add some entries to access the compone
 ```
 127.0.0.1   rancher.local
 127.0.0.1   prona.local
+127.0.0.1   mongo.prona.local
 ```
 
 ## Rancher
 Default bootstrap password: `admin`
 
 To change rancher settings edit `dev-stack/k8s/components/helm/rancher-values.yaml`.
+
+## Mongo Express
+Default login:
+
+username: `admin`
+
+password: `password`
 
 ## Import local images to k3d for dev
 Build images in `/frontend` and `/backend` with:
