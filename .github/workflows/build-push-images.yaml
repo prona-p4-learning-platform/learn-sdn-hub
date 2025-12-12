@@ -15,7 +15,7 @@ env:
   BACKEND_IMAGE: 'prona-p4-learning-platform/learn-sdn-hub-backend'
 
 jobs:
-  # JOB 0: DETECT CHANGES
+  # PHASE 1: CHANGE DETECTION
   changes:
     runs-on: ubuntu-latest
     permissions:
@@ -38,9 +38,64 @@ jobs:
               - 'backend/**'
           base: ${{ env.BASE_BRANCH }}
 
-  # JOB 1: FRONTEND
-  frontend:
+  # PHASE 2: CODE QUALITY CHECKS (CI)
+  check-frontend:
     needs: changes
+    if: ${{ needs.changes.outputs.frontend == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Check Build
+        working-directory: ./frontend
+        run: npm run build
+
+  check-backend:
+    needs: changes
+    if: ${{ needs.changes.outputs.backend == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install Dependencies
+        working-directory: ./backend
+        run: npm ci
+
+      - name: Run Tests
+        working-directory: ./backend
+        run: npm test
+
+      - name: Run Lint
+        working-directory: ./backend
+        run: npm run lint
+
+      - name: Run Type Check
+        working-directory: ./backend
+        run: npm run type-check
+
+  # PHASE 3: DOCKER BUILD & PUSH (CD)
+  frontend:
+    needs: [changes, check-frontend]
     if: ${{ needs.changes.outputs.frontend == 'true' }}
     runs-on: ubuntu-latest
     permissions:
@@ -59,6 +114,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Log in to the Container registry
+        if: github.event_name != 'pull_request'
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
@@ -87,9 +143,8 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # JOB 2: BACKEND
   backend: 
-    needs: changes
+    needs: [changes, check-backend]
     if: ${{ needs.changes.outputs.backend == 'true' }}
     runs-on: ubuntu-latest
     permissions:
