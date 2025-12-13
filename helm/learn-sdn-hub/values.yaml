@@ -65,16 +65,9 @@ ingress:
 mongodb:
   enable: true
   storageClass: "standard" # or custom Class name
-  auth:
-    rootPassword: "password123"
-    username: "p4"
-    password: "password123"
-    database: "p4"
   credentials:
-    username: "p4"
-    password:
-      ref: "{{ .Release.Name }}-mongodb-secret"
-      key: "password"
+    username: "admin"
+    password: "password"
   service:
     port: 27017
   ressources:
