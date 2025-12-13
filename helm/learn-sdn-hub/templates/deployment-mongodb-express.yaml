@@ -13,6 +13,19 @@ spec:
       labels:
         app: {{ .Release.Name }}-mongo-express
     spec:
+      initContainers:
+        - name: wait-for-mongodb
+          image: mongo:6.0
+          command:
+            - sh
+            - -c
+            - |
+              echo "Waiting for MongoDB..."
+              until mongosh "mongodb://{{ .Release.Name }}-mongodb:27017/admin" \
+                --eval "db.adminCommand('ping')" >/dev/null 2>&1; do
+                sleep 3
+              done
+              echo "MongoDB is ready"
       containers:
         - name: mongo-express
           image: mongo-express:1.0.2
