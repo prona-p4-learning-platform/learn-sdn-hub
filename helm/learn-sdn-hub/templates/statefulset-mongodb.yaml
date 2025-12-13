@@ -19,6 +19,8 @@ spec:
         image: mongo:6.0
         ports:
         - containerPort: {{ .Values.mongodb.service.port }}
+        args:
+          - "--bind_ip_all"
         env:
         - name: MONGO_INITDB_ROOT_USERNAME
           valueFrom:
@@ -33,6 +35,14 @@ spec:
         volumeMounts:
         - name: mongo-pvc
           mountPath: /data/db
+        readinessProbe:
+          exec:
+            command:
+              - sh
+              - -c
+              - mongosh "mongodb://$MONGO_INITDB_ROOT_USERNAME:$MONGO_INITDB_ROOT_PASSWORD@127.0.0.1:27017/admin" --eval "db.adminCommand('ping')" >/dev/null 2>&1
+          initialDelaySeconds: 5
+          periodSeconds: 3
   volumeClaimTemplates:
   - metadata:
       name: mongo-pvc
