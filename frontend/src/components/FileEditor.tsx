@@ -39,6 +39,8 @@ import "monaco-editor/esm/vs/editor/standalone/browser/quickAccess/standaloneCom
 import "monaco-editor/esm/vs/editor/standalone/browser/quickInput/standaloneQuickInputService.js";
 import "monaco-editor/esm/vs/editor/standalone/browser/referenceSearch/standaloneReferenceSearch.js";
 import "monaco-editor/esm/vs/editor/standalone/browser/toggleHighContrast/toggleHighContrast.js";
+// monaco-editor languages
+import "monaco-editor/esm/vs/basic-languages/python/python.contribution";
 // monaco-editor api
 import * as monaco from "monaco-editor/esm/vs/editor/editor.api";
 // monaco-editor workers
