@@ -1,15 +1,12 @@
 dependencies:
 - name: ingress-nginx
   repository: https://kubernetes.github.io/ingress-nginx
-  version: 4.8.3
+  version: 4.14.0
 - name: cert-manager
   repository: https://charts.jetstack.io
-  version: v1.13.6
+  version: v1.19.0
 - name: flux2
   repository: https://fluxcd-community.github.io/helm-charts
-  version: 2.17.2
-- name: mongodb
-  repository: https://charts.bitnami.com/bitnami
-  version: 14.13.0
-digest: sha256:670e12f8f21753f46c4caffc025b79eded8c1de1c954ca30c978b37228bbf06c
-generated: "2025-12-12T10:14:45.629723261+01:00"
+  version: 2.13.0
+digest: sha256:db10e60bc61b9da5b0e116800cd70e0ac5196f03b8784dd75100cb85cb7cf747
+generated: "2025-12-13T01:41:25.883843+01:00"
