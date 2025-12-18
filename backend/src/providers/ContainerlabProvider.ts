@@ -215,9 +215,84 @@ export default class ContainerLabProvider implements InstanceProvider {
     });
   }
 
-  async createServer(): Promise<VMEndpoint> {
+  async createServer(
+    username: string,
+    groupNumber: number,
+    environment: string,
+    options: {
+      clabTopology: object | string;
+    }
+  ): Promise<VMEndpoint> {
 
-    return new Promise(() => {});
+    await this.getToken();
+    if(!this.clab_token) {
+      return Promise.reject(
+        new Error("ContainerLabProvider: Could not authenticate to ContainerLab API."),
+      );
+    }
+
+    if(!options.clabTopology) {
+      return Promise.reject(
+        new Error("ContainerLabProvider: No topology provided for ContainerLab instance creation."),
+      );
+    }
+    
+    const body : {"topologySourceUrl"?: string; "topologyContent"?: object} = {};
+
+    if (typeof options.clabTopology === "string") {
+      body["topologySourceUrl"] = options.clabTopology;
+    }
+    else {
+      body["topologyContent"] = options.clabTopology;
+    }
+
+    console.log(
+      "ContainerLabProvider: Creating server for user "
+       + username
+       + " in environment " 
+       + environment
+       +" with group number "
+       + groupNumber
+    )
+
+    let resp = await fetch(this.clab_apiUrl+"api/v1/labs",{
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + this.clab_token?.token,
+      },
+      body: JSON.stringify(body),
+    });
+
+    if(!resp.ok) {
+      return Promise.reject(
+        new Error("ContainerLabProvider: Could not create server instance. Status: " + resp.status + " " + resp.statusText),
+      );
+    }
+
+    try {
+      let respGetServer = await this.getServer();
+      return Promise.resolve(respGetServer);
+    }
+    catch(err) {
+      try {
+        await this.deleteServer();
+        return Promise.reject(
+          new Error("ContainerLabProvider: Could not get created server instance: " + err),
+        );
+      } 
+      catch (deleteErr) {
+        console.log(
+          "ContainerLabProvider: Could not delete server after failed getServer: " +
+            deleteErr,
+        );
+      }
+      
+      return Promise.reject(
+        new Error("ContainerLabProvider: Could not get created server instance: " + err),
+      );
+
+    }
   }
 
   async getServer(): Promise<VMEndpoint> {
