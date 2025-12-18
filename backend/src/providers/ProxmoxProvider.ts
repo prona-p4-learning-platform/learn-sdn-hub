@@ -1583,7 +1583,15 @@ export default class ProxmoxProvider implements InstanceProvider {
       if (connected) return;
 
       usedTime = Math.floor((Date.now() - startTime) / 1000);
-      await this.sleep(1000);
+      // use randomized sleep to avoid thundering herd problem due to single ssh jump host
+      // other option is to increase MaxStartups 10:30:60 (default only 10 unauth incoming conns) 
+      // and MaxSessions (default: 10) maybe also /proc/sys/net/core/somaxconn on ssh jump host
+      // otherwise in log on jumphost: "learn-sdn-hub-r1 ssh.socket Too many imcoming connections",
+      const sleepTime = 500 + Math.floor(Math.random() * 2500);
+      console.log(
+        `ProxmoxProvider: Waiting for SSH connection to ${ip}:${port}... (${usedTime}s elapsed, retrying in ${sleepTime}ms)`,
+      );
+      await this.sleep(sleepTime);
     }
 
     throw new Error("ProxmoxProvider: Timed out waiting for SSH connection.");
