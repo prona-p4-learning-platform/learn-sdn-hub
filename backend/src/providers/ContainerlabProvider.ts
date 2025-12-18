@@ -237,11 +237,11 @@ export default class ContainerLabProvider implements InstanceProvider {
               // Instance found
               return response.json().then(data => {
 
-                const upTime: string[] = data["0"].status.split(" ");
+                const upTime: string[] = (data?.["0"]?.status as string | undefined)?.split(" ") || [];
 
                 // Get Docker status uptime
                 let difTime = 0;
-                if (upTime.length == 3) {
+                if (upTime.length === 3) {
 
                   if (upTime[2] === "seconds") {
                     difTime = parseInt(upTime[1]) * 1000;
@@ -254,7 +254,7 @@ export default class ContainerLabProvider implements InstanceProvider {
                   } else {
                     return reject("ContainerLabProvider: Cannot parse uptime string.");
                   }
-                } else if (upTime.length == 4) {
+                } else if (upTime.length === 4) {
                   if (upTime[3] === "second") {
                     difTime = 1000;
                   } else if (upTime[3] === "minute") {
@@ -275,7 +275,7 @@ export default class ContainerLabProvider implements InstanceProvider {
                 return resolve({
                   instance: instance,
                   providerInstanceStatus: "Environment will be deleted at "+ deadline.toISOString(),
-                  IPAddress: data["0"]["ipv4_address"].split("/")[0],
+                  IPAddress: (data?.["0"]?.["ipv4_address"] as string | undefined)?.split("/")[0] || "",
                   SSHPort: providerInstance.sshPort,
                   LanguageServerPort: providerInstance.lsPort,
                 });
