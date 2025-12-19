@@ -10,7 +10,7 @@
 import {
   InstanceProvider,
   VMEndpoint,
-  //InstanceNotFoundErrorMessage,
+  InstanceNotFoundErrorMessage,
 } from "./Provider";
 //import { Client } from "ssh2";
 import { ToadScheduler, SimpleIntervalJob, AsyncTask } from "toad-scheduler";
@@ -38,8 +38,8 @@ export default class ContainerLabProvider implements InstanceProvider {
   private maxInstanceLifetimeMinutes: number;
 
   // SSH and LanguageServer Port config
-  //private sshPort: number;
-  //private lsPort: number;
+  private sshPort: number;
+  private lsPort: number;
 
   //private axiosInstance: AxiosInstance;
 
@@ -110,8 +110,8 @@ export default class ContainerLabProvider implements InstanceProvider {
     this.providerInstance = this;
 
     // better use env var to allow configuration of port numbers?
-    // this.sshPort = 22;
-    // this.lsPort = 3005;
+    this.sshPort = 22;
+    this.lsPort = 3005;
 
     const scheduler = new ToadScheduler();
 
@@ -134,10 +134,6 @@ export default class ContainerLabProvider implements InstanceProvider {
 
     scheduler.addSimpleIntervalJob(job);
 
-    if (this.clab_token && this.providerInstance) {
-      console.log("ContainerlabProvider: " + this.clab_username + " " + this.clab_password + " " +
-          this.clab_apiUrl + " " + this.maxInstanceLifetimeMinutes);
-    }
     this.getToken().catch((err) => {
       console.log(
         "ContainerLabProvider: Initial authentication to ContainerLab failed: " +
@@ -220,9 +216,87 @@ export default class ContainerLabProvider implements InstanceProvider {
     return new Promise(() => {});
   }
 
-  async getServer(): Promise<VMEndpoint> {
+  async getServer(instance: string): Promise<VMEndpoint> {
+    const providerInstance = this.providerInstance;
 
-    return new Promise(() => {});
+    return new Promise((resolve, reject) => {
+      providerInstance
+        .getToken()
+        .then(() => {
+          // Token received
+
+          fetch(providerInstance.clab_apiUrl + "api/v1/labs/" + instance, {
+            method: 'GET',
+            headers: {
+              'accept': 'application/json',
+              'Authorization': 'Bearer ' + providerInstance.clab_token?.token,
+            }
+          })
+          .then(response => {
+            if (response.ok) {
+              // Instance found
+              return response.json().then(data => {
+
+                const upTime: string[] = (data?.["0"]?.status as string | undefined)?.split(" ") || [];
+
+                // Get Docker status uptime
+                let difTime = 0;
+                if (upTime.length === 3) {
+
+                  if (upTime[2] === "seconds") {
+                    difTime = parseInt(upTime[1]) * 1000;
+                  } else if (upTime[2] === "minutes") {
+                    difTime = parseInt(upTime[1]) * 60 * 1000;
+                  } else if (upTime[2] === "hours") {
+                    difTime = parseInt(upTime[1]) * 60 * 60 * 1000;
+                  } else if (upTime[2] === "days") {
+                    difTime = parseInt(upTime[1]) * 24 * 60 * 60 * 1000;
+                  } else {
+                    return reject("ContainerLabProvider: Cannot parse uptime string.");
+                  }
+                } else if (upTime.length === 4) {
+                  if (upTime[3] === "second") {
+                    difTime = 1000;
+                  } else if (upTime[3] === "minute") {
+                    difTime = 60 * 1000;
+                  } else if (upTime[3] === "hour") {
+                    difTime = 60 * 60 * 1000;
+                  } else if (upTime[3] === "day") {
+                    difTime = 24 * 60 * 60 * 1000;
+                  } else {
+                    return reject("ContainerLabProvider: Cannot parse uptime string.");
+                  }
+                } else {
+                  return reject("ContainerLabProvider: Docker status string unexpected format.");
+                }
+                const deadline = new Date(Date.now() + providerInstance.maxInstanceLifetimeMinutes * 60 * 1000 - difTime);
+                console.log("ContainerLabProvider: Instance " + instance + " will be deleted at " + deadline.toISOString());
+
+                return resolve({
+                  instance: instance,
+                  providerInstanceStatus: "Environment will be deleted at "+ deadline.toISOString(),
+                  IPAddress: (data?.["0"]?.["ipv4_address"] as string | undefined)?.split("/")[0] || "",
+                  SSHPort: providerInstance.sshPort,
+                  LanguageServerPort: providerInstance.lsPort,
+                });
+
+              })
+
+
+            } else if (response.status === 404) {
+              // Instance not found
+              return reject(new Error(InstanceNotFoundErrorMessage));
+            }
+          })
+          .catch((err) => {
+            return reject("ContainerlabProvider: Failed to get server instance. " + err);
+          });
+        })
+        .catch((err) => {
+          // No token could be recieved
+          return reject(err);
+        });
+    });
   }
 
   async deleteServer(): Promise<void> {
