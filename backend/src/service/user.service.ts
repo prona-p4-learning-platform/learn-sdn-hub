@@ -158,6 +158,9 @@ export class UserService {
     const token = jwt.sign(
       userResponse,
       process.env.JWT_TOKENSECRET ?? "some-secret",
+      {
+        expiresIn: `${config.jwtSessionLifetimeHours}h`,
+      },
     );
 
     console.log(
@@ -171,7 +174,10 @@ export class UserService {
         " groupNumber: " +
         user.groupNumber +
         " role: " +
-        user.role,
+        user.role +
+        " expiresIn: " +
+        config.jwtSessionLifetimeHours +
+        "h",
     );
 
     return {
