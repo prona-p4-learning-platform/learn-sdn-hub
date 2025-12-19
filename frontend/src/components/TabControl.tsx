@@ -84,18 +84,27 @@ export default function TabControl(props: TabControlProps): JSX.Element {
         alignItems="center"
       >
         <Tabs value={value} onChange={handleChange} aria-label="tabs">
-          {props.tabNames.map((name, index) => (
-            <Tooltip 
-              key={name}
-              title={detachedTabs.has(index) ? `${name} is detached to a separate window` : ""}
-              placement="bottom"
-            >
+          {props.tabNames.map((name, index) => {
+            const isDetached = detachedTabs.has(index);
+            const tab = (
               <Tab 
                 label={name} 
-                disabled={detachedTabs.has(index)}
+                disabled={isDetached}
               />
-            </Tooltip>
-          ))}
+            );
+            
+            return isDetached ? (
+              <Tooltip 
+                key={name}
+                title={`${name} is detached to a separate window`}
+                placement="bottom"
+              >
+                <span>{tab}</span>
+              </Tooltip>
+            ) : (
+              <span key={name}>{tab}</span>
+            );
+          })}
         </Tabs>
         <Box sx={{ mx: "auto " }} />
         {props.enableDetach && (

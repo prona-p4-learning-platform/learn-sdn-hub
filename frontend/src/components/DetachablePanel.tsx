@@ -44,6 +44,9 @@ export default function DetachablePanel({
       // Copy essential styles from parent window to new window
       const parentStyleSheets = Array.from(document.styleSheets);
       // Limit to first 50 stylesheets to avoid performance issues
+      // This should be sufficient for most applications; if styling issues occur,
+      // consider implementing a smarter filtering approach based on stylesheet origin
+      // or specific CSS classes used by the detached content
       const stylesheetsToProcess = parentStyleSheets.slice(0, 50);
       
       stylesheetsToProcess.forEach((styleSheet) => {
@@ -90,7 +93,7 @@ export default function DetachablePanel({
 
     // Cleanup function
     return () => {
-      if (!isDetached && externalWindowRef.current && !externalWindowRef.current.closed) {
+      if (externalWindowRef.current && !externalWindowRef.current.closed) {
         externalWindowRef.current.close();
         externalWindowRef.current = null;
         containerDivRef.current = null;
@@ -99,6 +102,9 @@ export default function DetachablePanel({
   }, [isDetached, title, windowFeatures, onWindowClose]);
 
   // Check if window was closed externally (polling every 2 seconds)
+  // Note: Using polling instead of 'beforeunload' event because the event
+  // is already registered in the useEffect above and this polling serves as
+  // a fallback for edge cases where the event might not fire
   useEffect(() => {
     if (!isDetached || !externalWindowRef.current) return;
 

@@ -449,7 +449,7 @@ function Environment(): JSX.Element {
   return (
     <>
       <Grid container spacing={0}>
-        <Grid item xs={isAnyTabDetached ? 12 : 6}>
+        <Grid item xs={isAnyTabDetached ? 6 : 6}>
           <TabControl
             tabNames={["Assignment", "Terminals"]}
             handleRestart={handleRestartDialogOpen}
@@ -592,23 +592,21 @@ function Environment(): JSX.Element {
             </DetachablePanel>
           </TabControl>
         </Grid>
-        {!isAnyTabDetached && (
-          <Grid item xs={6}>
-            {state.files.length > 0 && environmentName ? (
-              <FileEditor
-                files={state.files}
-                filePaths={state.filePaths}
-                environment={environmentName}
-                rootPath={state.rootPath}
-                workspaceFolders={state.workspaceFolders}
-                useCollaboration={state.useCollaboration}
-                useLanguageClient={state.useLanguageClient}
-              />
-            ) : (
-              <Typography>Fetching files to initialize editor...</Typography>
-            )}
-          </Grid>
-        )}
+        <Grid item xs={6}>
+          {state.files.length > 0 && environmentName ? (
+            <FileEditor
+              files={state.files}
+              filePaths={state.filePaths}
+              environment={environmentName}
+              rootPath={state.rootPath}
+              workspaceFolders={state.workspaceFolders}
+              useCollaboration={state.useCollaboration}
+              useLanguageClient={state.useLanguageClient}
+            />
+          ) : (
+            <Typography>Fetching files to initialize editor...</Typography>
+          )}
+        </Grid>
       </Grid>
       <Dialog
         open={showRestartDialog}
