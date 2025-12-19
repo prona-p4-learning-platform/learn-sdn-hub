@@ -3,8 +3,8 @@ import { createServer } from "http";
 import express, { Router } from "express";
 import cors from "cors";
 import { errors } from "celebrate";
-import path from "path";
 import history from "connect-history-api-fallback";
+import path from "path";
 
 export default function (api: Router): void {
   let port = 3001;
