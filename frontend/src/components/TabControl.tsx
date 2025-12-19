@@ -31,11 +31,9 @@ function TabPanel(props: TabsProps) {
       aria-labelledby={`tab-${index}`}
       {...other}
     >
-      {value === index && (
-        <Box p={1}>
-          <Typography component="span">{children}</Typography>
-        </Box>
-      )}
+      <Box p={1}>
+        <Typography component="span">{children}</Typography>
+      </Box>
     </div>
   );
 }
@@ -84,27 +82,12 @@ export default function TabControl(props: TabControlProps): JSX.Element {
         alignItems="center"
       >
         <Tabs value={value} onChange={handleChange} aria-label="tabs">
-          {props.tabNames.map((name, index) => {
-            const isDetached = detachedTabs.has(index);
-            const tab = (
-              <Tab 
-                label={name} 
-                disabled={isDetached}
-              />
-            );
-            
-            return isDetached ? (
-              <Tooltip 
-                key={name}
-                title={`${name} is detached to a separate window`}
-                placement="bottom"
-              >
-                <span>{tab}</span>
-              </Tooltip>
-            ) : (
-              <span key={name}>{tab}</span>
-            );
-          })}
+          {props.tabNames.map((name, index) => (
+            <Tab 
+              key={name}
+              label={name}
+            />
+          ))}
         </Tabs>
         <Box sx={{ mx: "auto " }} />
         {props.enableDetach && value < props.tabNames.length && (
