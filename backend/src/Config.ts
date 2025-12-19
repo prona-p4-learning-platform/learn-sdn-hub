@@ -63,7 +63,7 @@ function parseJwtSessionLifetimeHours(): number {
     return defaultLifetimeHours;
   }
   
-  const parsed = Number.parseInt(envValue);
+  const parsed = Number.parseInt(envValue, 10);
   if (isNaN(parsed) || parsed <= 0) {
     console.warn(`Invalid JWT_SESSION_LIFETIME_HOURS value: ${envValue}. Using default: ${defaultLifetimeHours} hours`);
     return defaultLifetimeHours;

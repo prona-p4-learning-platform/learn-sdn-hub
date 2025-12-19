@@ -164,20 +164,7 @@ export class UserService {
     );
 
     console.log(
-      "Handled login for user: " +
-        user.username +
-        " token: " +
-        token.substring(0, 8) +
-        "..." +
-        " session:" +
-        sessionId +
-        " groupNumber: " +
-        user.groupNumber +
-        " role: " +
-        user.role +
-        " expiresIn: " +
-        config.jwtSessionLifetimeHours +
-        "h",
+      `Handled login for user: ${user.username} token: ${token.substring(0, 8)}... session:${sessionId} groupNumber: ${user.groupNumber} role: ${user.role} expiresIn: ${config.jwtSessionLifetimeHours}h`,
     );
 
     return {
