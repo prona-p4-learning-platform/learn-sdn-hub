@@ -150,12 +150,12 @@ export default class ContainerLabProvider implements InstanceProvider {
       );
       const now = Date.now();
 
-      console.log(
+      /*console.log(
         "Token expires at: " +
           new Date(tokenExpires).toISOString() +
           " now: " +
           new Date(now).toISOString(),
-      );
+      );*/
 
       // add 5 sec for the token to be valid for subsequent operations
       if (
@@ -219,6 +219,9 @@ export default class ContainerLabProvider implements InstanceProvider {
       clabTopology: object | string;
     }
   ): Promise<VMEndpoint> {
+    if(username || groupNumber || environment) {
+      // currently not used in ContainerLabProvider ignore eslint
+    }
 
     await this.getToken();
     if(!this.clab_token) {
@@ -226,38 +229,23 @@ export default class ContainerLabProvider implements InstanceProvider {
         new Error("ContainerLabProvider: Could not authenticate to ContainerLab API."),
       );
     }
-
-    if(!options.clabTopology) {
-      return Promise.reject(
-        new Error("ContainerLabProvider: No topology provided for ContainerLab instance creation."),
-      );
-    }
     
-    const body : {"topologySourceUrl"?: string; "topologyContent"?: object} = {};
+    const body: { topologySourceUrl?: string; topologyContent?: object } = {};
 
     if (typeof options.clabTopology === "string") {
-      body["topologySourceUrl"] = options.clabTopology;
+      body.topologySourceUrl = options.clabTopology;
     }
     else {
-      body["topologyContent"] = options.clabTopology;
+      body.topologyContent = options.clabTopology;
     }
 
-    console.log(
-      "ContainerLabProvider: Creating server for user "
-       + username
-       + " in environment " 
-       + environment
-       +" with group number "
-       + groupNumber
-    )
-
-    let resp = await fetch(this.clab_apiUrl+"api/v1/labs",{
+    const resp = await fetch(this.clab_apiUrl+"api/v1/labs",{
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer ' + this.clab_token?.token,
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify(body, null, 2),
     });
 
     if(!resp.ok) {
@@ -265,29 +253,23 @@ export default class ContainerLabProvider implements InstanceProvider {
         new Error("ContainerLabProvider: Could not create server instance. Status: " + resp.status + " " + resp.statusText),
       );
     }
-
+    
     try {
-      let respGetServer = await this.getServer();
+      const respGetServer = await this.getServer(environment);
       return Promise.resolve(respGetServer);
     }
     catch(err) {
       try {
         await this.deleteServer();
         return Promise.reject(
-          new Error("ContainerLabProvider: Could not get created server instance: " + err),
+          new Error("ContainerLabProvider: Could not get created server instance: " + (err instanceof Error ? err.message : String(err))),
         );
       } 
       catch (deleteErr) {
-        console.log(
-          "ContainerLabProvider: Could not delete server after failed getServer: " +
-            deleteErr,
+        return Promise.reject(
+          new Error("ContainerLabProvider: Could not get created server instance: " + (err instanceof Error ? err.message : String(err)) + " Also failed to delete the instance: " + (deleteErr instanceof Error ? deleteErr.message : String(deleteErr))),
         );
       }
-      
-      return Promise.reject(
-        new Error("ContainerLabProvider: Could not get created server instance: " + err),
-      );
-
     }
   }
 
