@@ -443,10 +443,13 @@ function Environment(): JSX.Element {
       });
   });
 
+  // Helper to determine if any tab is detached
+  const isAnyTabDetached = detachedTabIndex !== null;
+
   return (
     <>
       <Grid container spacing={0}>
-        <Grid item xs={detachedTabIndex !== null ? 12 : 6}>
+        <Grid item xs={isAnyTabDetached ? 12 : 6}>
           <TabControl
             tabNames={["Assignment", "Terminals"]}
             handleRestart={handleRestartDialogOpen}
@@ -589,7 +592,7 @@ function Environment(): JSX.Element {
             </DetachablePanel>
           </TabControl>
         </Grid>
-        {detachedTabIndex === null && (
+        {!isAnyTabDetached && (
           <Grid item xs={6}>
             {state.files.length > 0 && environmentName ? (
               <FileEditor

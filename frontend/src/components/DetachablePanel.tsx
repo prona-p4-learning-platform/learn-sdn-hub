@@ -41,9 +41,12 @@ export default function DetachablePanel({
 
       externalWindowRef.current = newWindow;
 
-      // Copy styles from parent window to new window
+      // Copy essential styles from parent window to new window
       const parentStyleSheets = Array.from(document.styleSheets);
-      parentStyleSheets.forEach((styleSheet) => {
+      // Limit to first 50 stylesheets to avoid performance issues
+      const stylesheetsToProcess = parentStyleSheets.slice(0, 50);
+      
+      stylesheetsToProcess.forEach((styleSheet) => {
         try {
           if (styleSheet.href) {
             const link = newWindow.document.createElement("link");
@@ -95,7 +98,7 @@ export default function DetachablePanel({
     };
   }, [isDetached, title, windowFeatures, onWindowClose]);
 
-  // Check if window was closed externally
+  // Check if window was closed externally (polling every 2 seconds)
   useEffect(() => {
     if (!isDetached || !externalWindowRef.current) return;
 
@@ -105,7 +108,7 @@ export default function DetachablePanel({
         containerDivRef.current = null;
         onWindowClose?.();
       }
-    }, 500);
+    }, 2000); // Poll every 2 seconds instead of 500ms
 
     return () => {
       clearInterval(checkWindowClosed);
