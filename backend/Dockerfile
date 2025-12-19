@@ -22,15 +22,7 @@ USER p4
 # build frontend and create static backend
 RUN npm install
 
-# copy example startup script and use it as the entrypoint when running the container
-USER root
-COPY ./start-learn-sdn-hub.sh /start-learn-sdn-hub.sh
-RUN sed -i 's/\r$//' start-learn-sdn-hub.sh && \
-      chmod +x start-learn-sdn-hub.sh
-
 # default port, can be overriden by using -p when running docker and as BACKEND_PORT using -p parameter of start-learn-sdn-hub.sh
 EXPOSE 3001/tcp
 
-USER p4
-
-ENTRYPOINT ["/start-learn-sdn-hub.sh"]
+CMD [ "npm", "run", "start:k8s" ]

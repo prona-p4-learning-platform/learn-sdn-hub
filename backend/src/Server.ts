@@ -3,7 +3,7 @@ import { createServer } from "http";
 import express, { Router } from "express";
 import cors from "cors";
 import { errors } from "celebrate";
-import history from "connect-history-api-fallback";
+//import history from "connect-history-api-fallback";
 import path from "path";
 
 export default function (api: Router): void {
@@ -17,11 +17,13 @@ export default function (api: Router): void {
   app.use(api);
   app.use(errors());
 
-  const frontendStaticDir = path.resolve(__dirname, "..", "static");
-  console.log("Serving static html from " + frontendStaticDir);
-
-  app.use(history());
-  app.use(express.static(frontendStaticDir));
+  if(false) {
+    //app.use(history());
+    const frontendStaticDir = path.resolve(__dirname, "..", "static");
+    console.log("Serving static html from " + frontendStaticDir);
+  
+    app.use(express.static(frontendStaticDir));
+  }
 
   if (process.env.BACKEND_HTTP_PORT !== undefined) {
     port = parseInt(process.env.BACKEND_HTTP_PORT);
