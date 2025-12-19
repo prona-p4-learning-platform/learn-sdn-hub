@@ -1,0 +1,104 @@
+# application layer exercise -> base topology
+
+name: kommprot-lab-application
+
+topology:
+  kinds:
+    linux:
+      image: wbitt/network-multitool:alpine-extra
+
+  nodes:
+
+    switch1:
+      kind: linux
+      image: alpine:latest
+      labels:
+        clab-node-ckind: bridge
+        bridge: switch
+      exec:
+        - apk add bridge-utils
+        - brctl addbr br0
+        - brctl addif br0 eth1
+        - brctl addif br0 eth2
+        - brctl addif br0 eth3
+        - ifconfig br0 up
+        #Only for routing purposes
+        #- echo 1 > /proc/sys/net/ipv4/ip_forward
+        #- echo 1 > /proc/sys/net/ipv6/conf/all/forwarding
+
+    learn-sdn-hub-mgmt1:
+      kind: linux
+      image: alpine:latest
+      #image: ubuntu:latest
+      group: hosts
+      exec:
+        #- ip addr add 192.168.188.200/24 dev eth1
+        - apk add openrc openssh
+        - ssh-keygen -A
+        - mkdir -p /run/openrc
+        - touch /run/openrc/softlevel
+        - rc-update add sshd
+        - rc-service sshd start
+        - adduser -D p4
+        - ash -c 'echo p4:p4 | chpasswd'
+
+    host1:
+      kind: linux
+      image: alpine:latest
+      group: hosts
+      exec:
+        #- ip addr add 192.168.188.100/24 dev eth1
+        - apk add dhcpcd
+        - apk add lftp
+        - apk add nano
+        - apk add iperf3
+        #- apk add openjdk11
+        - sed -i 's/#hostname/hostname/' /etc/dhcpcd.conf
+        #- ip route del default
+        #- ip route add default via 192.168.188.1
+        - dhcpcd eth1
+
+    host2:
+      kind: linux
+      group: hosts
+      exec:
+        #- ip addr add 192.168.188.101/24 dev eth1
+        - apk add dhcpcd
+        - apk add nano
+        #- apk add openjdk11
+        - sed -i 's/#hostname/hostname/' /etc/dhcpcd.conf
+        #- iperf3 -s #start iperf3 Server
+        #- apk add vsftpd
+        #- ip route del default
+        #- ip route add default via 192.168.188.1
+        - dhcpcd eth1
+
+    server1:
+      kind: linux
+      binds:
+        - server1/dnsmasq.conf:/etc/dnsmasq.conf
+      exec:
+        - ip addr add 192.168.188.1/24 dev eth1
+        - apk add dnsmasq
+        - dnsmasq
+
+    server2:
+      kind: linux
+      image: alpine:latest
+      #image: ubuntu:latest
+      group: hosts
+      exec:
+        - ip addr add 192.168.188.2/24 dev eth1
+        - apk add openrc openssh
+        - ssh-keygen -A
+        - mkdir -p /run/openrc
+        - touch /run/openrc/softlevel
+        - rc-update add sshd
+        - rc-service sshd start
+        - adduser -D p4
+        - ash -c 'echo p4:p4 | chpasswd'
+
+  links:
+    - endpoints: ["switch1:eth1", "host1:eth1"]
+    - endpoints: ["switch1:eth2", "host2:eth1"]
+    - endpoints: ["switch1:eth3", "server1:eth1"]

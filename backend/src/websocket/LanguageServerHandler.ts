@@ -110,11 +110,13 @@ export default function (
               console.log("SSH jumphost lsp connection close");
               sshJumpHostConnection.end();
               sshForwardServer.close();
+              wsFromBrowser.close();
             })
             .on("error", (err) => {
               console.log("SSH jumphost lsp connection error: " + err.message);
               sshJumpHostConnection.end();
               sshForwardServer.close();
+              wsFromBrowser.close();
             })
             .connect({
               host: jumpHost.ipaddress,
