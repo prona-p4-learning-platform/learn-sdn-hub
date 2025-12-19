@@ -271,7 +271,7 @@ export default class ContainerLabProvider implements InstanceProvider {
     }
     catch(err) {
       try {
-        await this.deleteServer();
+        await this.deleteServer(environment);
         return Promise.reject(
           new Error("ContainerLabProvider: Could not get created server instance: " + (err instanceof Error ? err.message : String(err))),
         );
