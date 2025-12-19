@@ -61,6 +61,7 @@ export default function BackendTimer({ environmentName, groupNumber, onTimerExpi
                 console.error("Failed to undeploy:", e);
               }
 
+
               popupShown = true;
               
               setDialogOpen(true);
@@ -113,7 +114,7 @@ export default function BackendTimer({ environmentName, groupNumber, onTimerExpi
       </Box>
       <Dialog
         open={dialogOpen}
-        onClose={() => setDialogOpen(false)}
+        onClose={() => window.location.href = "/assignments"}
         aria-describedby="alert-dialog-timer-expired-description"
       >
         <DialogContent>
@@ -122,7 +123,7 @@ export default function BackendTimer({ environmentName, groupNumber, onTimerExpi
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDialogOpen(false)}>Finish</Button>
+          <Button onClick={() => window.location.href = "/assignments"}>Finish</Button>
         </DialogActions>
       </Dialog>
     </>
