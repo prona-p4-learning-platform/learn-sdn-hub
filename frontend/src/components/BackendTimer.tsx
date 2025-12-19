@@ -119,7 +119,7 @@ export default function BackendTimer({ environmentName, groupNumber, onTimerExpi
       >
         <DialogContent>
           <DialogContentText id="alert-dialog-timer-expired-description">
-            Die Prüfungszeit ist abgelaufen. Ihre Arbeit wurde automatisch abgegeben.
+            Time is up, exam has been submitted
           </DialogContentText>
         </DialogContent>
         <DialogActions>
