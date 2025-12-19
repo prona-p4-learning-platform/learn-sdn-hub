@@ -107,7 +107,7 @@ export default function TabControl(props: TabControlProps): JSX.Element {
           })}
         </Tabs>
         <Box sx={{ mx: "auto " }} />
-        {props.enableDetach && (
+        {props.enableDetach && value < props.tabNames.length && (
           <Grid item>
             {!detachedTabs.has(value) ? (
               <Tooltip title={`Detach ${props.tabNames[value]} to new window`} placement="left">

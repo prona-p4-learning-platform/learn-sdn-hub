@@ -443,13 +443,10 @@ function Environment(): JSX.Element {
       });
   });
 
-  // Helper to determine if any tab is detached
-  const isAnyTabDetached = detachedTabIndex !== null;
-
   return (
     <>
       <Grid container spacing={0}>
-        <Grid item xs={isAnyTabDetached ? 6 : 6}>
+        <Grid item xs={6}>
           <TabControl
             tabNames={["Assignment", "Terminals"]}
             handleRestart={handleRestartDialogOpen}

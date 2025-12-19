@@ -110,6 +110,8 @@ export default function DetachablePanel({
 
     const checkWindowClosed = setInterval(() => {
       if (externalWindowRef.current?.closed) {
+        // Clear interval immediately to prevent duplicate callbacks
+        clearInterval(checkWindowClosed);
         externalWindowRef.current = null;
         containerDivRef.current = null;
         onWindowClose?.();
