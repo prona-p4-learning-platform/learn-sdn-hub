@@ -20,3 +20,6 @@ export OPENSTACK_MAX_INSTANCE_LIFETIME_MINUTES="120"
 # ssh instance credentials
 export SSH_USERNAME=p4
 export SSH_PASSWORD=p4
+
+# JWT session lifetime (optional, default: 2 hours)
+# export JWT_SESSION_LIFETIME_HOURS="2"

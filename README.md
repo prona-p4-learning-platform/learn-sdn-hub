@@ -239,6 +239,22 @@ VITE_REACT_APP_BACKEND_HTTP_PORT=16000
 
 Configuration of assignments, editable files, lab sheets, SSH consoles etc. needs to be done in backend/src/Configuration.ts. Assignment lab sheets can be stored in backend/src/assigments or retrieved from the deployed instance.
 
+### Session Lifetime Configuration
+
+The JWT session lifetime can be configured to limit how long a user's login session remains valid. By default, sessions expire after 2 hours.
+
+```sh
+export JWT_SESSION_LIFETIME_HOURS="2"
+```
+
+You can adjust this value to any positive integer representing the number of hours. For example, to set sessions to expire after 4 hours:
+
+```sh
+export JWT_SESSION_LIFETIME_HOURS="4"
+```
+
+If this environment variable is not set or contains an invalid value, the default of 2 hours will be used.
+
 ### Using MongoDB as authentication and persistence provider
 
 Connection to MongoDB can be configured using the following environment variable. The example shows
