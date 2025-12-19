@@ -10,6 +10,8 @@ import {
 } from "@mui/material";
 
 import RestartAltIcon from "@mui/icons-material/RestartAlt";
+import OpenInNewIcon from "@mui/icons-material/OpenInNew";
+import CloseFullscreenIcon from "@mui/icons-material/CloseFullscreen";
 
 interface TabsProps {
   index: number;
@@ -43,10 +45,13 @@ interface TabControlProps {
   children?: JSX.Element | JSX.Element[];
   handleRestart: () => void;
   environmentStatus: string;
+  enableDetach?: boolean;
+  onDetachChange?: (tabIndex: number, isDetached: boolean) => void;
 }
 
 export default function TabControl(props: TabControlProps): JSX.Element {
   const [value, setValue] = useState(0);
+  const [detachedTabs, setDetachedTabs] = useState<Set<number>>(new Set());
 
   const handleChange = (_event: ChangeEvent<unknown>, newValue: number) => {
     setValue(newValue);
@@ -54,6 +59,20 @@ export default function TabControl(props: TabControlProps): JSX.Element {
 
   const handleRestartConfirmation = () => {
     props.handleRestart();
+  };
+
+  const handleDetachTab = (tabIndex: number) => {
+    const newDetached = new Set(detachedTabs);
+    newDetached.add(tabIndex);
+    setDetachedTabs(newDetached);
+    props.onDetachChange?.(tabIndex, true);
+  };
+
+  const handleReattachTab = (tabIndex: number) => {
+    const newDetached = new Set(detachedTabs);
+    newDetached.delete(tabIndex);
+    setDetachedTabs(newDetached);
+    props.onDetachChange?.(tabIndex, false);
   };
 
   return (
@@ -65,11 +84,40 @@ export default function TabControl(props: TabControlProps): JSX.Element {
         alignItems="center"
       >
         <Tabs value={value} onChange={handleChange} aria-label="tabs">
-          {props.tabNames.map((name) => (
-            <Tab label={name} key={name} />
+          {props.tabNames.map((name, index) => (
+            <Tab 
+              label={name} 
+              key={name}
+              disabled={detachedTabs.has(index)}
+            />
           ))}
         </Tabs>
         <Box sx={{ mx: "auto " }} />
+        {props.enableDetach && (
+          <Grid item>
+            {!detachedTabs.has(value) ? (
+              <Tooltip title={`Detach ${props.tabNames[value]} to new window`} placement="left">
+                <IconButton 
+                  color="primary" 
+                  onClick={() => handleDetachTab(value)}
+                  size="small"
+                >
+                  <OpenInNewIcon />
+                </IconButton>
+              </Tooltip>
+            ) : (
+              <Tooltip title={`Reattach ${props.tabNames[value]} to main window`} placement="left">
+                <IconButton 
+                  color="primary" 
+                  onClick={() => handleReattachTab(value)}
+                  size="small"
+                >
+                  <CloseFullscreenIcon />
+                </IconButton>
+              </Tooltip>
+            )}
+          </Grid>
+        )}
         <Grid item>
           <Typography align="center" variant="body2">
             Status: {props.environmentStatus}
