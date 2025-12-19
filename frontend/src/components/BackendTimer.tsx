@@ -47,6 +47,20 @@ export default function BackendTimer({ environmentName, groupNumber, onTimerExpi
             if (payload.data.remainingMinutes == 0 && !popupShown) {
               console.log("Zeit um, wurde abgegeben");
               if (onTimerExpired) await onTimerExpired();
+              
+              try {
+                await APIRequest("/environment/delete", z.object({}), {
+                  method: "POST",
+                  query: {
+                    environment: environmentName,
+                    groupNumber: groupNumber,
+                  },
+                  timeout: 300000,
+                });
+              } catch (e) {
+                console.error("Failed to undeploy:", e);
+              }
+
               popupShown = true;
               
               setDialogOpen(true);
