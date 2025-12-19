@@ -167,46 +167,57 @@ export default class ContainerLabProvider implements InstanceProvider {
       else {
         // authenticate to ContainerLab and get a token
         const data_auth = {
-            "username": this.clab_username,
-            "password": this.clab_password,
+          username: this.clab_username,
+          password: this.clab_password,
         };
-        fetch(providerInstance.clab_apiUrl + "login",{
+        fetch(providerInstance.clab_apiUrl + "login", {
           signal: AbortSignal.timeout(10000), // 10 seconds timeout
-          method: 'POST',
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json'
+            "Content-Type": "application/json",
           },
-          body: JSON.stringify(data_auth)
+          body: JSON.stringify(data_auth),
         })
-        .then(response => {
-          if(response.ok) {
-            if(response.body) {
-              return response.json().then(data => {
-                if(!data.token) {
-                  return reject(
-                    new Error("ContainerLabProvider: Authentication failed: No token received"),
-                  );
-                }
-                const issued_at = Date.now()
-                const token = data.token as string;
-                
-                if(providerInstance.clab_token === undefined){
-                  providerInstance.clab_token = {} as Token;
-                }
+          .then((response) => {
+            if (response.ok) {
+              if (response.body) {
+                return response.json().then((data) => {
+                  if (!data.token) {
+                    return reject(
+                      new Error(
+                        "ContainerLabProvider: Authentication failed: No token received",
+                      ),
+                    );
+                  }
+                  const issued_at = Date.now();
+                  const token = data.token as string;
 
-                providerInstance.clab_token.token = token;
-                providerInstance.clab_token.issued_at = (issued_at - 10000).toString(); // workaround, set issued at to 10 sec in the past, because 10 sec timeout above
-                providerInstance.clab_token.expires_at = (issued_at + this.clab_token_duration).toString(); // token valid for configured duration
-                return resolve();
-              });
-            }}
-          return reject(
-            new Error("ContainerLabProvider: Authentication failed: No token received"),
-          );
-        })
-        .catch(function (err) {
-          return reject(new Error("ContainerLabProvider: Authentication failed: " + err));
-        });
+                  if (providerInstance.clab_token === undefined) {
+                    providerInstance.clab_token = {} as Token;
+                  }
+
+                  providerInstance.clab_token.token = token;
+                  providerInstance.clab_token.issued_at = (
+                    issued_at - 10000
+                  ).toString(); // workaround, set issued at to 10 sec in the past, because 10 sec timeout above
+                  providerInstance.clab_token.expires_at = (
+                    issued_at + this.clab_token_duration
+                  ).toString(); // token valid for configured duration
+                  return resolve();
+                });
+              }
+            }
+            return reject(
+              new Error(
+                "ContainerLabProvider: Authentication failed: No token received",
+              ),
+            );
+          })
+          .catch(function (err) {
+            return reject(
+              new Error("ContainerLabProvider: Authentication failed: " + err),
+            );
+          });
       }
     });
   }
@@ -299,13 +310,126 @@ export default class ContainerLabProvider implements InstanceProvider {
     });
   }
 
-  async deleteServer(): Promise<void> {
+  async deleteServer(labName: string): Promise<void> {
+      // For testing purposes
+      console.log(labName);
     return new Promise(() => {});
   }
 
   async pruneServerInstance(): Promise<void> {
+    // Clab API response types
+    type ClabInspectOutput = Record<string, ClabContainerInfo[]>;
 
-    return new Promise(() => {});
+    type ClabContainerInfo = {
+      name: string;
+      container_id: string;
+      image: string;
+      kind: string;
+      state: string;
+      status: string;
+      ipv4_address: string;
+      ipv6_address: string;
+      lab_name: string;
+      labPath: string;
+      absLabPath: string;
+      group: string;
+      owner: string;
+    };
+
+    // Authentication token
+    await this.getToken();
+    const token = this.clab_token?.token;
+    if (!token) {
+      throw new Error("ContainerLabProvider: Cannot prune instances: missing auth token!");
+    }
+
+    // Request a list of labs and containers
+    const response = await fetch(`${this.clab_apiUrl}/api/v1/labs`, {
+      method: "GET",
+      signal: AbortSignal.timeout(10_000),
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!response.ok) {
+      const body = await response.text().catch(() => "");
+      throw new Error(`ContainerLabProvider: Failed to list labs (${response.status}): ${body}`);
+    }
+
+    // Interpret response as clab output types
+    const labs = (await response.json()) as ClabInspectOutput;
+
+    // Maximum allowed age of instances and prefix of current application lab
+    const maxAgeMs = this.maxInstanceLifetimeMinutes * 60_000;
+    const labPrefix = process.env.CLAB_LAB_PREFIX ?? "";
+
+    // Helper method to parse the uptime
+    const parseUptimeMs = (status: string): number | undefined => {
+      if (!status) return undefined;
+      const s = status.trim();
+      if (!s.startsWith("Up ")) return undefined;
+
+      if (/Up About a minute/i.test(s)) return 60_000;
+      if (/Up Less than a second/i.test(s)) return 1000;
+
+      const m = s.match(
+        /^Up\s+(\d+)\s+(second|minute|hour|day|week|month|year)s?\b/i,
+      );
+      if (!m) return undefined;
+
+      const value = Number(m[1]);
+      if (!Number.isFinite(value)) return undefined;
+
+      switch (m[2].toLowerCase()) {
+        case "second":
+          return value * 1000;
+        case "minute":
+          return value * 60_000;
+        case "hour":
+          return value * 3_600_000;
+        case "day":
+          return value * 86_400_000;
+        case "week":
+          return value * 604_800_000;
+        case "month":
+          return value * 2_592_000_000;
+        case "year":
+          return value * 31_536_000_000;
+        default:
+          return undefined;
+      }
+    };
+
+    for (const [labName, containers] of Object.entries(labs)) {
+      if (!containers.length) continue;
+
+      // Skip labs that are not created by the current application
+      if (labPrefix && !labName.startsWith(labPrefix)) continue;
+
+      // Compute max runtime across running containers
+      let labAgeMs = 0;
+      for (const c of containers) {
+        if (c.state && c.state !== "running") continue;
+
+        const uptime = parseUptimeMs(c.status);
+        if (uptime !== undefined) labAgeMs = Math.max(labAgeMs, uptime);
+      }
+
+      // Check if uptimes could be parsed
+      if (labAgeMs === 0) continue;
+
+      if (labAgeMs > maxAgeMs) {
+        try {
+          // Delete lab if uptime too high
+          await this.deleteServer(labName);
+          console.log(`ContainerLabProvider: Pruned lab '${labName}' (age≈${Math.round(labAgeMs / 60_000)}m)`);
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          console.log(`ContainerLabProvider: Failed to prune lab '${labName}': ${msg}`);
+        }
+      }
+    }
+
+
   }
 
   waitForServerAddresses(): Promise<string> {
