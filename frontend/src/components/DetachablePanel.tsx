@@ -1,6 +1,9 @@
 import { ReactNode, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
+// Limit stylesheet copying to avoid performance issues with large DOMs
+const MAX_STYLESHEETS_TO_COPY = 50;
+
 interface DetachablePanelProps {
   children: ReactNode;
   title: string;
@@ -31,8 +34,11 @@ export default function DetachablePanel({
         // Set window title
         newWindow.document.title = title;
 
-        // Copy stylesheets from parent window (limit to first 50 for performance)
-        const stylesheets = Array.from(document.styleSheets).slice(0, 50);
+        // Copy stylesheets from parent window (limit for performance)
+        const stylesheets = Array.from(document.styleSheets).slice(
+          0,
+          MAX_STYLESHEETS_TO_COPY,
+        );
         stylesheets.forEach((stylesheet) => {
           try {
             if (stylesheet.href) {
