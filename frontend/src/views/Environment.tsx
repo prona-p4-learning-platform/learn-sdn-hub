@@ -26,6 +26,7 @@ import TabControl from "../components/TabControl";
 import TerminalTabs from "../components/TerminalTabs";
 import FileEditor from "../components/FileEditor";
 import BackendTimer from "../components/BackendTimer";
+import DetachablePanel from "../components/DetachablePanel";
 
 import { useOptionsStore } from "../stores/optionsStore";
 import { APIRequest, httpStatusValidator, getHttpError } from "../api/Request";
@@ -148,6 +149,7 @@ function Environment(): JSX.Element {
   const [activeStep, setActiveStep] = useState<number>(0);
   const [showRestartDialog, setShowRestartDialog] = useState(false);
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
+  const [detachedTabIndex, setDetachedTabIndex] = useState<number | null>(null);
 
   useEffect(() => {
     if (!isAdmin && urlGroupNumber !== undefined) {
@@ -397,6 +399,14 @@ function Environment(): JSX.Element {
       ?.state;
   }
 
+  function handleDetachChange(tabIndex: number, isDetached: boolean) {
+    if (isDetached) {
+      setDetachedTabIndex(tabIndex);
+    } else {
+      setDetachedTabIndex(null);
+    }
+  }
+
   useEffect(() => {
     // TODO: offload into router loader
     loadEnvironmentConfig();
@@ -513,134 +523,148 @@ function Environment(): JSX.Element {
             tabNames={["Assignment", "Terminals"]}
             handleRestart={handleRestartDialogOpen}
             environmentStatus={environmentStatus}
+            enableDetach={true}
+            onDetachChange={handleDetachChange}
             timerComponent={
               state.isExam ? (
                 <BackendTimer environmentName={environmentName ?? ""} groupNumber={groupNumber} />
               ) : undefined
           }
           >
-            <Grid
-              container
-              direction="row"
-              justifyContent="flex-start"
-              alignItems="center"
-              spacing={1}
+            <DetachablePanel
+              title="Assignment"
+              isDetached={detachedTabIndex === 0}
+              onWindowClose={() => handleDetachChange(0, false)}
             >
-              <Grid item xs={12}>
-                <ReactMarkdown className="myMarkdownContainer">
-                  {assignment}
-                </ReactMarkdown>
-              </Grid>
-              <Grid item xs={12}>
-                <Grid
-                  container
-                  direction="row"
-                  justifyContent="flex-start"
-                  alignItems="center"
-                  spacing={1}
-                >
-                  {state.stepLabels.length > 0 && (
+              <Grid
+                container
+                direction="row"
+                justifyContent="flex-start"
+                alignItems="center"
+                spacing={1}
+              >
+                <Grid item xs={12}>
+                  <ReactMarkdown className="myMarkdownContainer">
+                    {assignment}
+                  </ReactMarkdown>
+                </Grid>
+                <Grid item xs={12}>
+                  <Grid
+                    container
+                    direction="row"
+                    justifyContent="flex-start"
+                    alignItems="center"
+                    spacing={1}
+                  >
+                    {state.stepLabels.length > 0 && (
+                      <Grid item>
+                        <Stepper activeStep={activeStep}>
+                          {Array.isArray(state.stepLabels) &&
+                            state.stepLabels.length > 0 &&
+                            state.stepLabels.map((stepLabel, index) => (
+                              <Step key={index}>
+                                <StepButton
+                                  disabled={index !== activeStep}
+                                  key={index}
+                                  onClick={() => {
+                                    void checkStepTest();
+                                  }}
+                                >
+                                  {stepLabel}
+                                </StepButton>
+                              </Step>
+                            ))}
+                        </Stepper>
+                      </Grid>
+                    )}
                     <Grid item>
-                      <Stepper activeStep={activeStep}>
-                        {Array.isArray(state.stepLabels) &&
-                          state.stepLabels.length > 0 &&
-                          state.stepLabels.map((stepLabel, index) => (
-                            <Step key={index}>
-                              <StepButton
-                                disabled={index !== activeStep}
-                                key={index}
-                                onClick={() => {
-                                  void checkStepTest();
-                                }}
-                              >
-                                {stepLabel}
-                              </StepButton>
-                            </Step>
-                          ))}
-                      </Stepper>
+                      <Typography variant="body2">{instanceStatus}</Typography>
+                      <Button
+                        variant="contained"
+                        color="primary"
+                        onClick={handleSubmitDialogOpen}
+                      >
+                        Finish & Submit
+                      </Button>
                     </Grid>
-                  )}
-                  <Grid item>
-                    <Typography variant="body2">{instanceStatus}</Typography>
-                    <Button
-                      variant="contained"
-                      color="primary"
-                      onClick={handleSubmitDialogOpen}
-                    >
-                      Finish & Submit
-                    </Button>
                   </Grid>
                 </Grid>
               </Grid>
-            </Grid>
-            <Grid
-              container
-              direction="row"
-              justifyContent="flex-start"
-              alignItems="center"
-              spacing={1}
+            </DetachablePanel>
+            <DetachablePanel
+              title="Terminals"
+              isDetached={detachedTabIndex === 1}
+              onWindowClose={() => handleDetachChange(1, false)}
             >
-              <Grid item>
-                {(() => {
-                  if (environmentStatus === "running" && environmentName) {
-                    const terminalTabNames = new Array<string>();
-                    const terminals = state.terminals.map(
-                      (subterminals: TerminalType[]) =>
-                        subterminals.map((subterminal, index) => {
-                          terminalTabNames.push(subterminal.name);
+              <Grid
+                container
+                direction="row"
+                justifyContent="flex-start"
+                alignItems="center"
+                spacing={1}
+              >
+                <Grid item>
+                  {(() => {
+                    if (environmentStatus === "running" && environmentName) {
+                      const terminalTabNames = new Array<string>();
+                      const terminals = state.terminals.map(
+                        (subterminals: TerminalType[]) =>
+                          subterminals.map((subterminal, index) => {
+                            terminalTabNames.push(subterminal.name);
 
-                          if (subterminal.type === "Shell") {
-                            return (
-                              <Terminal
-                                key={subterminal.name}
-                                wsEndpoint={`/environment/${environmentName}/type/${subterminal.name}`}
-                                terminalState={getTerminalState(
-                                  `/environment/${environmentName}/type/${subterminal.name}`,
-                                )}
-                                onTerminalUnmount={storeTerminalState}
-                                role={isAdmin ? "admin" : undefined}
-                                groupNumber={groupNumber}
-                              />
-                            );
-                          }
+                            if (subterminal.type === "Shell") {
+                              return (
+                                <Terminal
+                                  key={subterminal.name}
+                                  wsEndpoint={`/environment/${environmentName}/type/${subterminal.name}`}
+                                  terminalState={getTerminalState(
+                                    `/environment/${environmentName}/type/${subterminal.name}`,
+                                  )}
+                                  onTerminalUnmount={storeTerminalState}
+                                  role={isAdmin ? "admin" : undefined}
+                                  groupNumber={groupNumber}
+                                />
+                              );
+                            }
 
-                          if (subterminal.type === "Desktop") {
-                            return (
-                              <GuacamoleClient
-                                key={subterminal.name}
-                                alias={subterminal.name}
-                                environment={environmentName}
-                                wsEndpoint={`/environment/${environmentName}/desktop/${subterminal.name}`}
-                              />
-                            );
-                          }
+                            if (subterminal.type === "Desktop") {
+                              return (
+                                <GuacamoleClient
+                                  key={subterminal.name}
+                                  alias={subterminal.name}
+                                  environment={environmentName}
+                                  wsEndpoint={`/environment/${environmentName}/desktop/${subterminal.name}`}
+                                />
+                              );
+                            }
 
-                          if (subterminal.type === "WebApp") {
-                            return (
-                              <WebFrame
-                                key={subterminal.name}
-                                url={subterminal.url}
-                              />
-                            );
-                          } else {
-                            return (
-                              <Typography key={index}>
-                                unknown terminal type
-                              </Typography>
-                            );
-                          }
-                        }),
-                    );
+                            if (subterminal.type === "WebApp") {
+                              return (
+                                <WebFrame
+                                  key={subterminal.name}
+                                  url={subterminal.url}
+                                />
+                              );
+                            } else {
+                              return (
+                                <Typography key={index}>
+                                  unknown terminal type
+                                </Typography>
+                              );
+                            }
+                          }),
+                      );
 
-                    return (
-                      <TerminalTabs tabNames={terminalTabNames}>
-                        {terminals}
-                      </TerminalTabs>
-                    );
-                  } else return null;
-                })()}
+                      return (
+                        <TerminalTabs tabNames={terminalTabNames}>
+                          {terminals}
+                        </TerminalTabs>
+                      );
+                    } else return null;
+                  })()}
+                </Grid>
               </Grid>
-            </Grid>
+            </DetachablePanel>
           </TabControl>
         </Grid>
         <Grid item xs={6}>
