@@ -46,11 +46,11 @@ interface TabControlProps {
   timerComponent?: JSX.Element;
   enableDetach?: boolean;
   onDetachChange?: (tabIndex: number, isDetached: boolean) => void;
+  detachedTabIndex?: number | null;
 }
 
 export default function TabControl(props: TabControlProps): JSX.Element {
   const [value, setValue] = useState(0);
-  const [detachedTabs, setDetachedTabs] = useState<Set<number>>(new Set());
 
   const handleChange = (_event: ChangeEvent<unknown>, newValue: number) => {
     setValue(newValue);
@@ -61,18 +61,12 @@ export default function TabControl(props: TabControlProps): JSX.Element {
   };
 
   const handleDetachTab = (tabIndex: number) => {
-    const newDetachedTabs = new Set(detachedTabs);
-    newDetachedTabs.add(tabIndex);
-    setDetachedTabs(newDetachedTabs);
     if (props.onDetachChange) {
       props.onDetachChange(tabIndex, true);
     }
   };
 
   const handleReattachTab = (tabIndex: number) => {
-    const newDetachedTabs = new Set(detachedTabs);
-    newDetachedTabs.delete(tabIndex);
-    setDetachedTabs(newDetachedTabs);
     if (props.onDetachChange) {
       props.onDetachChange(tabIndex, false);
     }
@@ -86,44 +80,50 @@ export default function TabControl(props: TabControlProps): JSX.Element {
         direction="row"
         alignItems="center"
       >
-        <Tabs value={value} onChange={handleChange} aria-label="tabs">
-          {props.tabNames.map((name) => (
-            <Tab label={name} key={name} />
-          ))}
-        </Tabs>
-        {props.enableDetach && (
-          <>
-            {props.tabNames.map((name, index) => (
-              <Grid item key={`detach-${index}`}>
-                {detachedTabs.has(index) ? (
-                  <Tooltip
-                    title={`Reattach ${name} to main window`}
-                    placement="bottom"
-                  >
-                    <IconButton
-                      color="primary"
-                      onClick={() => handleReattachTab(index)}
-                    >
-                      <CloseFullscreenIcon />
-                    </IconButton>
-                  </Tooltip>
-                ) : (
-                  <Tooltip
-                    title={`Detach ${name} to new window`}
-                    placement="bottom"
-                  >
-                    <IconButton
-                      color="primary"
-                      onClick={() => handleDetachTab(index)}
-                    >
-                      <OpenInNewIcon />
-                    </IconButton>
-                  </Tooltip>
-                )}
-              </Grid>
-            ))}
-          </>
-        )}
+        <Grid item>
+          <Box display="flex" alignItems="center" gap={0}>
+            <Tabs value={value} onChange={handleChange} aria-label="tabs">
+              {props.tabNames.map((name) => (
+                <Tab label={name} key={name} />
+              ))}
+            </Tabs>
+            {props.enableDetach && (
+              <>
+                {props.tabNames.map((name, index) => (
+                  <Box key={`detach-${index}`} display="inline-flex" alignItems="center" ml={0}>
+                    {props.detachedTabIndex === index ? (
+                      <Tooltip
+                        title={`Reattach ${name} to main window`}
+                        placement="bottom"
+                      >
+                        <IconButton
+                          color="primary"
+                          size="small"
+                          onClick={() => handleReattachTab(index)}
+                        >
+                          <CloseFullscreenIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    ) : (
+                      <Tooltip
+                        title={`Detach ${name} to new window`}
+                        placement="bottom"
+                      >
+                        <IconButton
+                          color="primary"
+                          size="small"
+                          onClick={() => handleDetachTab(index)}
+                        >
+                          <OpenInNewIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                  </Box>
+                ))}
+              </>
+            )}
+          </Box>
+        </Grid>
         <Box sx={{ mx: "auto " }} />
         <Grid item sx={{ flexGrow: 1, textAlign: "center" }}>
           {props.timerComponent && props.timerComponent}

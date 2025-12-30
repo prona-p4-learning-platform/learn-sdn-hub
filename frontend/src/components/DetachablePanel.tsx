@@ -63,7 +63,16 @@ export default function DetachablePanel({
         // Create container element for React portal
         const container = newWindow.document.createElement("div");
         container.id = "detached-panel-container";
+        container.style.width = "100%";
+        container.style.height = "100%";
+        container.style.overflow = "auto";
         newWindow.document.body.appendChild(container);
+        
+        // Set body styles to ensure full width
+        newWindow.document.body.style.margin = "0";
+        newWindow.document.body.style.padding = "0";
+        newWindow.document.body.style.width = "100%";
+        newWindow.document.body.style.height = "100vh";
 
         setExternalWindow(newWindow);
         setContainerElement(container);

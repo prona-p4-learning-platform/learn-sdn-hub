@@ -150,6 +150,7 @@ function Environment(): JSX.Element {
   const [showRestartDialog, setShowRestartDialog] = useState(false);
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
   const [detachedTabIndex, setDetachedTabIndex] = useState<number | null>(null);
+  const [detachedTabs, setDetachedTabs] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     if (!isAdmin && urlGroupNumber !== undefined) {
@@ -402,8 +403,14 @@ function Environment(): JSX.Element {
   function handleDetachChange(tabIndex: number, isDetached: boolean) {
     if (isDetached) {
       setDetachedTabIndex(tabIndex);
+      const newDetachedTabs = new Set(detachedTabs);
+      newDetachedTabs.add(tabIndex);
+      setDetachedTabs(newDetachedTabs);
     } else {
       setDetachedTabIndex(null);
+      const newDetachedTabs = new Set(detachedTabs);
+      newDetachedTabs.delete(tabIndex);
+      setDetachedTabs(newDetachedTabs);
     }
   }
 
@@ -518,13 +525,14 @@ function Environment(): JSX.Element {
   return (
     <>
       <Grid container spacing={0}>
-        <Grid item xs={6}>
+        <Grid item xs={detachedTabs.size === 2 ? 12 : 6}>
           <TabControl
             tabNames={["Assignment", "Terminals"]}
             handleRestart={handleRestartDialogOpen}
             environmentStatus={environmentStatus}
             enableDetach={true}
             onDetachChange={handleDetachChange}
+            detachedTabIndex={detachedTabIndex}
             timerComponent={
               state.isExam ? (
                 <BackendTimer environmentName={environmentName ?? ""} groupNumber={groupNumber} />
@@ -667,7 +675,7 @@ function Environment(): JSX.Element {
             </DetachablePanel>
           </TabControl>
         </Grid>
-        <Grid item xs={6}>
+        <Grid item xs={detachedTabs.size === 2 ? 12 : 6}>
           {state.files.length > 0 && environmentName ? (
             <FileEditor
               files={state.files}
