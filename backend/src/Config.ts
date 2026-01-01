@@ -34,7 +34,7 @@ const OidcProviderSchema = Joi.object({
 
 export interface Config {
   oidcProviders: OidcProvider[];
-  jwtSessionLifetimeHours: number;
+  jwtSessionLifetimeMinutes: number;
 }
 
 /**
@@ -48,25 +48,25 @@ function parseConfig(): Config {
   // Return whole config
   return {
     oidcProviders: parseOidcProviders(),
-    jwtSessionLifetimeHours: parseJwtSessionLifetimeHours(),
+    jwtSessionLifetimeMinutes: parseJwtSessionLifetimeMinutes(),
   };
 }
 
 /**
  * Parse JWT session lifetime from env variables
  */
-function parseJwtSessionLifetimeHours(): number {
-  const defaultLifetimeHours = 2;
-  const envValue = process.env.JWT_SESSION_LIFETIME_HOURS;
+function parseJwtSessionLifetimeMinutes(): number {
+  const defaultLifetimeMinutes = 120;
+  const envValue = process.env.JWT_SESSION_LIFETIME_MINUTES;
   
   if (!envValue) {
-    return defaultLifetimeHours;
+    return defaultLifetimeMinutes;
   }
   
   const parsed = Number.parseInt(envValue, 10);
   if (isNaN(parsed) || parsed <= 0) {
-    console.warn(`Invalid JWT_SESSION_LIFETIME_HOURS value: ${envValue}. Using default: ${defaultLifetimeHours} hours`);
-    return defaultLifetimeHours;
+    console.warn(`Invalid JWT_SESSION_LIFETIME_MINUTES value: ${envValue}. Using default: ${defaultLifetimeMinutes} minutes`);
+    return defaultLifetimeMinutes;
   }
   
   return parsed;

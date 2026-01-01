@@ -22,5 +22,5 @@ export MONGODB_URL="mongodb+srv://admin:password-here@cluster0.tdnvj.mongodb.net
 export SSH_USERNAME=p4
 export SSH_PASSWORD=p4
 
-# JWT session lifetime (optional, default: 2 hours)
-# export JWT_SESSION_LIFETIME_HOURS="2"
+# JWT session lifetime (optional, default: 120 minutes)
+# export JWT_SESSION_LIFETIME_MINUTES="120"
