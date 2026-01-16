@@ -23,8 +23,5 @@
   },
   "engines": {
     "node": ">=20.11.0"
-  },
-  "dependencies": {
-    "@kubernetes/client-node": "^1.4.0"
   }
 }
