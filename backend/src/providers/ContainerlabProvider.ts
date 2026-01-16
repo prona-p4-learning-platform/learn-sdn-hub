@@ -449,7 +449,7 @@ export default class ContainerLabProvider implements InstanceProvider {
     });
   }
 
-  async (url: string): Promise<object> {
+  async getTopology(url: string): Promise<object> {
     return new Promise((resolve, reject) => {
       fetch(url, {
         method: 'GET',
@@ -476,5 +476,9 @@ export default class ContainerLabProvider implements InstanceProvider {
     });
   }
 
-
+  changeTopologyName(topology: object, newName: string): object {
+    let topo = topology as {[key: string]: string | object};
+    topo["name"] = newName;
+    return topo;
+  }
 }
