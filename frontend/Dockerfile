@@ -15,11 +15,13 @@ ENV VITE_REACT_APP_WS_HOST=""
 
 WORKDIR /app
 
+COPY package.json .
+RUN npm install
+
 COPY . .
 
 # install dependencies and build
-RUN npm install && \
-      npm run build
+RUN npm run build
 
 # stage II: Runtime with nginx
 FROM nginx:${NGINX_VERSION} AS runtime
