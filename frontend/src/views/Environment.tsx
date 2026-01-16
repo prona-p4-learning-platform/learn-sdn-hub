@@ -326,8 +326,9 @@ function Environment(): JSX.Element {
     closeSnackbar(restartSnack);
   }
 
-  async function submitAssignment() {
+  async function submitAssignment(isAutosave: boolean = false) {
     // send state of assignment to backend and store/persist result of assignment (for user) there
+    
     const submitSnack = enqueueSnackbar("Submitting result...", {
       variant: "info",
       persist: true,
@@ -347,9 +348,15 @@ function Environment(): JSX.Element {
       );
 
       if (payload.success) {
-        enqueueSnackbar("Submission successful! " + payload.data.message, {
-          variant: "success",
-        });
+        if (isAutosave) {
+          enqueueSnackbar("Autosave successful!");
+        }
+        else {
+          enqueueSnackbar("Submission successful! " + payload.data.message, {
+            variant: "success",
+          });
+        }
+        
       } else throw payload.error;
     } catch (error) {
       let errorMessage = "Unknown error";
@@ -516,7 +523,7 @@ function Environment(): JSX.Element {
                 <BackendTimer
                   environmentName={environmentName ?? ""}
                   groupNumber={groupNumber}
-                  onTimerExpired={() => submitAssignment()}
+                  onSubmitState={(isAutosave) => submitAssignment(isAutosave)}
                 />
               ) : undefined
           }

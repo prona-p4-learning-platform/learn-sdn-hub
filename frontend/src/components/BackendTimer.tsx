@@ -6,7 +6,7 @@ import { z } from "zod";
 interface BackendTimerProps {
   environmentName: string;
   groupNumber?: number;
-  onTimerExpired?: () => Promise<void> | void;
+  onSubmitState?: (isAutosave: boolean) => Promise<void> | void;
 }
 
 const timerValidator = z.union([
@@ -22,6 +22,9 @@ const timerValidator = z.union([
 var popupShown = false;
 var fiveMinNotified = false;
 
+var passedTimeSinceLastAutosave = 0;
+var autosaveInterval = 10; // in Sekunden (5 Minuten)
+
 function formatTime(minutes: number): string {
   const mins = Math.floor(minutes);
   const secs = Math.floor((minutes - mins) * 60);
@@ -30,7 +33,7 @@ function formatTime(minutes: number): string {
   return `${minutesStr}:${secondsStr}`;
 }
 
-export default function BackendTimer({ environmentName, groupNumber, onTimerExpired }: BackendTimerProps) {
+export default function BackendTimer({ environmentName, groupNumber, onSubmitState }: BackendTimerProps) {
   const [value, setValue] = useState<string>("--:--");
   const [dialogOpen, setDialogOpen] = useState(false);
 
@@ -44,9 +47,12 @@ export default function BackendTimer({ environmentName, groupNumber, onTimerExpi
         );
         if (payload.success) {
           if (payload.data.hasTimer) {
+
+            passedTimeSinceLastAutosave += 1;
+
             if (payload.data.remainingMinutes == 0 && !popupShown) {
               console.log("Zeit um, wurde abgegeben");
-              if (onTimerExpired) await onTimerExpired();
+              if (onSubmitState) await onSubmitState(false);
               
               try {
                 await APIRequest("/environment/delete", z.object({}), {
@@ -75,6 +81,13 @@ export default function BackendTimer({ environmentName, groupNumber, onTimerExpi
                 console.warn('Could not dispatch timer-five-min-warning event', e);
               }
             }
+
+            // Prüfe ob Autosave intervall seit letztem Autosave vergangen sind
+            if (passedTimeSinceLastAutosave >= autosaveInterval) {
+              passedTimeSinceLastAutosave = 0;
+              if (onSubmitState) await onSubmitState(true);
+            }
+
             setValue(formatTime(payload.data.remainingMinutes));
           } else {
             setValue("--:--");
