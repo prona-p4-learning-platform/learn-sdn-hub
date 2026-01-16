@@ -132,6 +132,7 @@ export interface Persister {
     username: string,
     groupNumber: number,
     environment: string,
+    uniqueEnvironmentId: string,
     terminalStates: TerminalStateType[],
     submittedFiles: SubmissionFileType[],
     bonusPoints: number

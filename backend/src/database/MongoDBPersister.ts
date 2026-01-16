@@ -36,6 +36,7 @@ export interface SubmissionEntry {
   username: string;
   groupNumber: number;
   environment: string;
+  uniqueEnvironmentId: string;
   submissionCreated: Date;
   terminalStatus: TerminalStateType[];
   submittedFiles: SubmissionFileType[];
@@ -269,6 +270,7 @@ export default class MongoDBPersister implements Persister {
     username: string,
     groupNumber: number,
     environment: string,
+    uniqueEnvironmentId: string,
     terminalStates: TerminalStateType[],
     submittedFiles: SubmissionFileType[],
     bonusPoints: number
@@ -291,13 +293,14 @@ export default class MongoDBPersister implements Persister {
     // delete previous submissions of user and group, to ensure that there is
     // only one/most recent submission for the assignment
 
-    // delete all previous submissions of this environment for the current user
+    // delete all previous submissions of this environment instance for the current user
     const delUser = client
       .db()
       .collection<SubmissionEntry>("submissions")
       .deleteMany({
         username: username,
         environment: environment,
+        uniqueEnvironmentId: uniqueEnvironmentId,
       })
       .catch((err) => {
         throw new Error(
@@ -305,13 +308,14 @@ export default class MongoDBPersister implements Persister {
         );
       });
 
-    // delete all previous submissions of this environment for the current group
+    // delete all previous submissions of this environment instance for the current group
     const delGroup = client
       .db()
       .collection<SubmissionEntry>("submissions")
       .deleteMany({
         groupNumber: groupNumber,
         environment: environment,
+        uniqueEnvironmentId: uniqueEnvironmentId,
       })
       .catch((err) => {
         throw new Error(
@@ -330,6 +334,7 @@ export default class MongoDBPersister implements Persister {
         username: username,
         groupNumber: groupNumber,
         environment: environment,
+        uniqueEnvironmentId: uniqueEnvironmentId,
         submissionCreated: now,
         terminalStatus: terminalStates,
         submittedFiles: submittedFiles,

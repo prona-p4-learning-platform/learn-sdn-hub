@@ -197,6 +197,7 @@ export default class Environment {
   private filehandler!: FileHandler | undefined;
   private groupNumber: number;
   private sessionId: string;
+  private uniqueEnvironmentId: string;
   private testCounter: Map<string, number> = new Map<string, number>();
   private isReady: boolean;
   private examStartTime?: Date;
@@ -317,6 +318,7 @@ export default class Environment {
     this.groupNumber = groupNumber;
     this.sessionId = sessionId;
     this.environmentId = environmentId;
+    this.uniqueEnvironmentId = `${environmentId}-${Date.now()}`;
     this.isReady = false;
 
     //TODO go through all environments stored in db and check if instances are still running, if not remove environment in db
@@ -343,6 +345,10 @@ export default class Environment {
 
   public getDesktopByAlias(alias: string): DesktopInstance | undefined {
     return this.activeDesktops.get(alias);
+  }
+
+  public getUniqueEnvironmentId(): string {
+    return this.uniqueEnvironmentId;
   }
 
   static async createEnvironment(
@@ -1328,6 +1334,7 @@ export default class Environment {
       this.username,
       this.groupNumber,
       this.environmentId,
+      this.uniqueEnvironmentId,
       terminalStates,
       submittedFiles,
       bonusPoints
