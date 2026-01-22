@@ -63,67 +63,59 @@ export default class DockerProvider implements InstanceProvider {
   private dockerodeInstance: Dockerode;
 
   constructor() {
-    // check for docker protocol
-    const ENV_PROTOCOL = process.env.DOCKER_PROTOCOL;
-    if (isSSHProtocol(ENV_PROTOCOL)) this.protocol = ENV_PROTOCOL;
-    else {
+    this.loadConfiguration();
+    this.initializeClients();
+    this.setupScheduler();
+  }
+
+  /**
+   * Loads and validates all Docker-related configuration from environment variables.
+   */
+  private loadConfiguration(): void {
+    // Load protocol (optional, can be undefined)
+    const envProtocol = process.env.DOCKER_PROTOCOL;
+    if (isSSHProtocol(envProtocol)) {
+      this.protocol = envProtocol;
+    } else {
       throw new Error(
         "DockerProvider: Provided protocol type is invalid (DOCKER_PROTOCOL).",
       );
     }
 
-    // check for docker port
-    const ENV_PORT = process.env.DOCKER_PORT;
-    if (ENV_PORT) {
-      const parsedPort = parseInt(ENV_PORT);
+    // Load port (optional)
+    this.port = this.parseOptionalIntEnvVar(
+      "DOCKER_PORT",
+      "DockerProvider: Provided port could not be parsed (DOCKER_PORT).",
+    );
 
-      if (!isNaN(parsedPort)) this.port = parsedPort;
-      else {
-        throw new Error(
-          "DockerProvider: Provided port could not be parsed (DOCKER_PORT).",
-        );
-      }
-    }
+    // Load required image
+    this.image = this.getRequiredEnvVar(
+      "DOCKER_IMAGE",
+      "DockerProvider: No default docker image provided (DOCKER_IMAGE).",
+    );
 
-    // check for docker image
-    const ENV_IMAGE = process.env.DOCKER_IMAGE;
-    if (ENV_IMAGE) this.image = ENV_IMAGE;
-    else {
-      throw new Error(
-        "DockerProvider: No default docker image provided (DOCKER_IMAGE).",
-      );
-    }
+    // Load required command
+    this.cmd = this.getRequiredEnvVar(
+      "DOCKER_CMD",
+      "DockerProvider: No default docker command provided (DOCKER_CMD).",
+    );
 
-    // check for docker command
-    const ENV_CMD = process.env.DOCKER_CMD;
-    if (ENV_CMD) this.cmd = ENV_CMD;
-    else {
-      throw new Error(
-        "DockerProvider: No default docker command provided (DOCKER_CMD).",
-      );
-    }
+    // Load required instance lifetime
+    this.maxInstanceLifetimeMinutes = this.parseRequiredIntEnvVar(
+      "DOCKER_MAX_INSTANCE_LIFETIME_MINUTES",
+      "DockerProvider: Provided instance lifetime cannot be parsed (DOCKER_MAX_INSTANCE_LIFETIME_MINUTES).",
+      "DockerProvider: No instance lifetime provided (DOCKER_MAX_INSTANCE_LIFETIME_MINUTES).",
+    );
 
-    // check for max instance lifetime
-    const ENV_LIFETIME = process.env.DOCKER_MAX_INSTANCE_LIFETIME_MINUTES;
-    if (ENV_LIFETIME) {
-      const parsedLifetime = parseInt(ENV_LIFETIME);
-
-      if (!isNaN(parsedLifetime))
-        this.maxInstanceLifetimeMinutes = parsedLifetime;
-      else {
-        throw new Error(
-          "DockerProvider: Provided instance lifetime cannot be parsed (DOCKER_MAX_INSTANCE_LIFETIME_MINUTES).",
-        );
-      }
-    } else {
-      throw new Error(
-        "DockerProvider: No instance lifetime provided (DOCKER_MAX_INSTANCE_LIFETIME_MINUTES).",
-      );
-    }
-
+    // Load optional host and socket path
     this.host = process.env.DOCKER_HOST;
     this.socketPath = process.env.DOCKER_SOCKET_PATH;
+  }
 
+  /**
+   * Initializes Docker client and port configurations.
+   */
+  private initializeClients(): void {
     this.dockerodeInstance = new Dockerode({
       socketPath: this.socketPath,
       protocol: this.protocol,
@@ -136,7 +128,12 @@ export default class DockerProvider implements InstanceProvider {
     this.sshPort = 22;
     this.lsPort = 3005;
     this.remoteDesktopPort = 5900;
+  }
 
+  /**
+   * Sets up the scheduler for pruning old container instances.
+   */
+  private setupScheduler(): void {
     const scheduler = new ToadScheduler();
     const task = new AsyncTask(
       "DockerProvider Instance Pruning Task",
@@ -156,6 +153,56 @@ export default class DockerProvider implements InstanceProvider {
     );
 
     scheduler.addSimpleIntervalJob(job);
+  }
+
+  /**
+   * Gets a required environment variable and throws if not found.
+   */
+  private getRequiredEnvVar(envName: string, errorMessage: string): string {
+    const value = process.env[envName];
+    if (!value) {
+      throw new Error(errorMessage);
+    }
+    return value;
+  }
+
+  /**
+   * Parses an optional integer environment variable.
+   * Returns undefined if not provided.
+   */
+  private parseOptionalIntEnvVar(
+    envName: string,
+    errorMessage: string,
+  ): number | undefined {
+    const value = process.env[envName];
+    if (!value) {
+      return undefined;
+    }
+    const parsed = parseInt(value);
+    if (isNaN(parsed)) {
+      throw new Error(errorMessage);
+    }
+    return parsed;
+  }
+
+  /**
+   * Parses a required integer environment variable.
+   * Throws if not provided or cannot be parsed.
+   */
+  private parseRequiredIntEnvVar(
+    envName: string,
+    parseErrorMessage: string,
+    notFoundErrorMessage: string,
+  ): number {
+    const value = process.env[envName];
+    if (!value) {
+      throw new Error(notFoundErrorMessage);
+    }
+    const parsed = parseInt(value);
+    if (isNaN(parsed)) {
+      throw new Error(parseErrorMessage);
+    }
+    return parsed;
   }
 
   async createServer(
