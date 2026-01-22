@@ -47,20 +47,20 @@ export default class DockerProvider implements InstanceProvider {
   private host?: string;
   private port?: number;
   private socketPath?: string;
-  private image: string;
-  private cmd: string;
+  private image!: string;
+  private cmd!: string;
 
   // Docker Provider config
-  private maxInstanceLifetimeMinutes: number;
+  private maxInstanceLifetimeMinutes!: number;
   private containerStartTimeoutSeconds = 60;
   private containerSSHTimeoutSeconds = 60;
 
   // SSH and LanguageServer Port config
-  private sshPort: number;
-  private lsPort: number;
-  private remoteDesktopPort: number;
+  private sshPort!: number;
+  private lsPort!: number;
+  private remoteDesktopPort!: number;
 
-  private dockerodeInstance: Dockerode;
+  private dockerodeInstance!: Dockerode;
 
   constructor() {
     this.loadConfiguration();
