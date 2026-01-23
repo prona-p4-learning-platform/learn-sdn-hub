@@ -1,0 +1,2 @@
+#!/bin/bash
+killall -r "(.*)learn-sdn-hub(.*)" -i
