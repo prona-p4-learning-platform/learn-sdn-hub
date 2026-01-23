@@ -466,7 +466,7 @@ export default class ContainerLabProvider implements InstanceProvider {
                 const yamlObject = load(data) as object;
                 return resolve(yamlObject);
               } catch (err) {
-                return reject(`ContainerLabProvider: Failed to parse topology from ${url}: ${err}`);
+                return reject(`ContainerLabProvider: Failed to parse topology from ${url}: ${String(err)}`);
               }
             });
         }
