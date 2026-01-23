@@ -462,9 +462,12 @@ export default class ContainerLabProvider implements InstanceProvider {
 
           return response.text()
             .then((data: string) => {
-
-              const yamlObject = load(data) as object;
-              return resolve(yamlObject);
+              try {
+                const yamlObject = load(data) as object;
+                return resolve(yamlObject);
+              } catch (err) {
+                return reject(`ContainerLabProvider: Failed to parse topology from ${url}: ${err}`);
+              }
             });
         }
         return reject(`ContainerLabProvider: Failed to fetch topology from ${url} (${response.status})`);
