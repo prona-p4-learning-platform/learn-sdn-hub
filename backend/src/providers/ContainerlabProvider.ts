@@ -477,7 +477,7 @@ export default class ContainerLabProvider implements InstanceProvider {
   }
 
   changeTopologyName(topology: object, newName: string): object {
-    let topo = topology as {[key: string]: string | object};
+    const topo = topology as {[key: string]: string | object};
     topo["name"] = newName;
     return topo;
   }
