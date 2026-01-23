@@ -14,6 +14,7 @@ import {
 } from "./Provider";
 //import { Client } from "ssh2";
 import { ToadScheduler, SimpleIntervalJob, AsyncTask } from "toad-scheduler";
+import { load } from "js-yaml";
 //import Environment from "../Environment";
 
 const schedulerIntervalSeconds = 5 * 60;
@@ -503,5 +504,41 @@ export default class ContainerLabProvider implements InstanceProvider {
     return new Promise((resolve) => {
       setTimeout(resolve, ms);
     });
+  }
+
+  async getTopology(url: string): Promise<object> {
+    return new Promise((resolve, reject) => {
+      fetch(url, {
+        method: 'GET',
+        headers: {
+          'accept': 'application/yaml',
+        },
+      })
+      .then((response) => {
+        if (response.ok) {
+
+          return response.text()
+            .then((data: string) => {
+              try {
+                const yamlObject = load(data) as object;
+                return resolve(yamlObject);
+              } catch (err) {
+                return reject(`ContainerLabProvider: Failed to parse topology from ${url}: ${String(err)}`);
+              }
+            });
+        }
+        return reject(`ContainerLabProvider: Failed to fetch topology from ${url} (${response.status})`);
+      })
+      .catch((err) => {
+
+        return reject(`ContainerLabProvider: Failed to fetch topology from ${url}: ${err}`);
+      });
+    });
+  }
+
+  changeTopologyName(topology: object, newName: string): object {
+    const topo = topology as {[key: string]: string | object};
+    topo["name"] = newName;
+    return topo;
   }
 }
