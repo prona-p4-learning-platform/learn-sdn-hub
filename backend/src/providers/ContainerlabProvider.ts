@@ -461,7 +461,7 @@ export default class ContainerLabProvider implements InstanceProvider {
         if (response.ok) {
 
           return response.text()
-            .then((data) => {
+            .then((data: string) => {
 
               const yamlObject = load(data) as object;
               return resolve(yamlObject);
