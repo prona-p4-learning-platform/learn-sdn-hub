@@ -49,6 +49,7 @@
   },
   "dependencies": {
     "@node-rs/bcrypt": "^1.10.7",
+    "@types/js-yaml": "^4.0.9",
     "axios": "^1.7.9",
     "celebrate": "^15.0.3",
     "connect-history-api-fallback": "^2.0.0",
