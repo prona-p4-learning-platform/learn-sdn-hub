@@ -74,6 +74,8 @@ The startup script [start-learn-sdn-hub.sh](/examples/start-learn-sdn-hub.sh) fo
 
 ### Prerequisites
 
+The installation below assumes an Ubuntu 22.04 LTS (Jammy Jellyfish). 
+
 Both the host running the backend and frontend as well as the VM or host executing the p4 environment need node.js. To install it, you can use, e.g., [nvm](https://github.com/nvm-sh/nvm). Make sure to close and reopen the shell after installation to have nvm automatically available in your environment.
 
 ### Installation
