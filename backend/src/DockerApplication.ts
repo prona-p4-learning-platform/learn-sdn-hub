@@ -8,7 +8,7 @@ const MONGODB_URL = process.env.MONGODB_URL;
 
 if (MONGODB_URL) {
   const persister = new MongoDBPersister(MONGODB_URL);
-
+  persister.AddDefaultUser();
   console.log("Attempting to start Docker Application.");
 
   serverCreator(
