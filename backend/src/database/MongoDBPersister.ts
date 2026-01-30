@@ -73,14 +73,10 @@ export default class MongoDBPersister implements Persister {
     const coursesCollection = client.db().collection<CourseData>("courses");
 
     const userCount = await usersCollection.countDocuments();
-
+    // no need for default user
     if (userCount > 0) {
-      console.log(
-        "MongoDBPersister: Default user or real users already exist.",
-      );
       return;
     }
-    console.log("MongoDBPersister: Adding default user.");
 
     const userPasswordHash = await hash("user1", saltRounds);
     const adminPasswordHash = await hash("admin", saltRounds);
@@ -99,6 +95,7 @@ export default class MongoDBPersister implements Persister {
         username: "admin",
         passwordHash: adminPasswordHash, // admin
         groupNumber: 0,
+        role: "admin",
         environments: [],
         externalIds: []
       }
@@ -112,7 +109,7 @@ export default class MongoDBPersister implements Persister {
       { $set: { courses: courseIds } },
     );
 
-    console.log("MongoDBPersister: Successfully added default users.");
+    console.log("MongoDBPersister: Added default users: user1:user1 and admin:admin");
   }
   
 
