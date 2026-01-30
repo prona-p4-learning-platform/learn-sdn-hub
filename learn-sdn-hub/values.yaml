@@ -1,0 +1,33 @@
+frontend:
+  replicaCount: 2
+  image:
+    repository: ghcr.io/prona-p4-learning-platform/learn-sdn-hub-frontend
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 80
+  containerPort: 80
+  env: []
+  resources: {}
+
+backend:
+  replicaCount: 2
+  image:
+    repository: ghcr.io/prona-p4-learning-platform/learn-sdn-hub-backend
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8080
+  containerPort: 8080
+  env: []
+  resources: {}
+
+ingress:
+  enabled: true
+  host: learn-sdn-dev.example.com
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+  tls: []
+

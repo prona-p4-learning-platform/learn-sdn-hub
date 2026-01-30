@@ -3,7 +3,6 @@ import * as k8s from '@kubernetes/client-node';
 
 export default class K8sProvider implements InstanceProvider {
   private k8sApi: k8s.CoreV1Api;
-  private customObjectsApi: k8s.CustomObjectsApi;
 
   /**
    * Loads the Kubernetes configuration from the default location
@@ -13,7 +12,6 @@ export default class K8sProvider implements InstanceProvider {
     const kc = new k8s.KubeConfig();
     kc.loadFromDefault();
     this.k8sApi = kc.makeApiClient(k8s.CoreV1Api);
-    this.customObjectsApi = kc.makeApiClient(k8s.CustomObjectsApi);
   }
 
   async createServer(
@@ -146,99 +144,5 @@ export default class K8sProvider implements InstanceProvider {
       console.error(`K8sProvider: Error deleting pod ${instance}:`, err);
       throw err;
     }
-  }
-
-  async createVCluster(groupNumber: number): Promise<{ name: string; namespace: string }> {
-    const namespace = "kube-system"; // wo der HelmRelease liegt
-    const name = `vcluster-${String(groupNumber).padStart(2, "0")}`;
-
-    const GROUP = "helm.toolkit.fluxcd.io";
-    const VERSION = "v2";
-    const PLURAL = "helmreleases";
-
-    const helmReleaseBody = {
-      apiVersion: `${GROUP}/${VERSION}`,
-      kind: "HelmRelease",
-      metadata: {
-        name,
-        namespace,
-        labels: {
-          "app.kubernetes.io/managed-by": "learn-sdn-hub",
-          "learn-sdn-hub/group": String(groupNumber),
-        },
-      },
-      spec: {
-        interval: "10m",
-        releaseName: name,
-        chart: {
-          spec: {
-            chart: "vcluster",
-            version: "0.30.2",
-            url: "https://charts.loft.sh",
-          },
-        },
-        install: { createNamespace: true },
-        upgrade: { remediation: { remediateLastFailure: true } },
-        values: {},
-      },
-    };
-
-    try {
-      // 1) Create
-      await this.customObjectsApi.createNamespacedCustomObject({
-        group: GROUP,
-        version: VERSION,
-        namespace,
-        plural: PLURAL,
-        body: helmReleaseBody,
-      });
-    } catch (err: any) {
-      const statusCode = err?.statusCode ?? err?.body?.code;
-
-      // 2) Already exists -> Patch
-      if (statusCode === 409) {
-        await this.customObjectsApi.patchNamespacedCustomObject({
-          group: GROUP,
-          version: VERSION,
-          namespace,
-          plural: PLURAL,
-          name,
-          body: {
-            metadata: { labels: helmReleaseBody.metadata.labels },
-            spec: helmReleaseBody.spec,
-          },
-        });
-      } else {
-        console.error("K8sProvider: Error creating HelmRelease:", err);
-        throw err;
-      }
-    }
-
-    let attempts = 0;
-    while (attempts < 60) {
-      const res = await this.customObjectsApi.getNamespacedCustomObject({
-        group: GROUP,
-        version: VERSION,
-        namespace,
-        plural: PLURAL,
-        name,
-      });
-
-      const obj: any = res.body;
-      const conditions: any[] = obj?.status?.conditions ?? [];
-      const ready = conditions.find((c) => c.type === "Ready");
-
-      if (ready?.status === "True") {
-        return { name, namespace };
-      }
-
-      // Wenn Ready False ist, kannst du hier auch reason/message loggen:
-      // console.log("HelmRelease not ready yet:", ready?.reason, ready?.message);
-
-      await new Promise((resolve) => setTimeout(resolve, 5000));
-      attempts++;
-    }
-
-    throw new Error(`Timeout waiting for HelmRelease ${namespace}/${name} to become Ready`);
   }
 }
