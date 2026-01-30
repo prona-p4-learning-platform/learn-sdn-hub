@@ -1,5 +1,5 @@
 import api from "./Api";
-import serverCreator from "./Server";
+import { startServer } from "./Server";
 import MongoDBPersister from "./database/MongoDBPersister";
 import MongoDBAuthenticationProvider from "./authentication/MongoDBAuthenticationProvider";
 import FirecrackerProvider from "./providers/FirecrackerProvider";
@@ -11,13 +11,13 @@ if (MONGODB_URL) {
 
   console.log("Attempting to start Firecracker Application.");
 
-  serverCreator(
-    api(
-      persister,
-      [new MongoDBAuthenticationProvider(persister)],
-      new FirecrackerProvider(),
-    ),
+  const apiRouter = api(
+    persister,
+    [new MongoDBAuthenticationProvider(persister)],
+    new FirecrackerProvider(),
   );
+
+  startServer(apiRouter);
 
   if (process.env.BACKEND_ASSIGNMENT_TYPE === "mongodb") {
     console.log("Attempting to add missing assignments to persister.");

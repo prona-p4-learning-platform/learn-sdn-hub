@@ -1,5 +1,5 @@
 import api from "./Api"
-import serverCreator from "./Server"
+import { startServer } from "./Server"
 import MongoDBPersister from "./database/MongoDBPersister"
 import MongoDBAuthenticationProvider from "./authentication/MongoDBAuthenticationProvider"
 import K8sProvider from "./providers/K8sProvider"
@@ -11,13 +11,13 @@ if (MONGODB_URL) {
 
   console.log("Attempting to start Kubernetes Application.")
 
-  serverCreator(
-    api(
-      persister,
-      [new MongoDBAuthenticationProvider(persister)],
-      new K8sProvider(),
-    ),
-  )
+  const apiRouter = api(
+    persister,
+    [new MongoDBAuthenticationProvider(persister)],
+    new K8sProvider(),
+  );
+
+  startServer(apiRouter);
 
   if (process.env.BACKEND_ASSIGNMENT_TYPE === "mongodb") {
     console.log("Attempting to add missing assignments to persister.")
