@@ -1,5 +1,6 @@
 import { InstanceProvider, VMEndpoint } from "./Provider";
 import * as k8s from '@kubernetes/client-node';
+import { AxiosError } from "axios";
 
 export default class K8sProvider implements InstanceProvider {
   private k8sApi: k8s.CoreV1Api;
@@ -120,10 +121,12 @@ export default class K8sProvider implements InstanceProvider {
       } else {
         throw new Error(`K8sProvider: Pod ${instance} found but missing phase or IP.`);
       }
-    } catch (err: any) { 
-      if (err.statusCode === 404) {
-        throw new Error(`K8sProvider: Pod ${instance} not found.`);
-      }
+    } catch (err) {
+      if (err instanceof AxiosError) {
+        if (err.status === 404) {
+          throw new Error(`K8sProvider: Pod ${instance} not found.`);
+        }
+      } 
       console.error(`K8sProvider: Error getting pod ${instance}:`, err);
       throw err;
     }
@@ -136,10 +139,11 @@ export default class K8sProvider implements InstanceProvider {
         name: instance,
         namespace: namespace,
       });
-    } catch (err: any) {
-      
-      if (err.statusCode === 404) {
-        return;
+    } catch (err) {
+      if (err instanceof AxiosError) {
+        if (err.status === 404) {
+          return;
+        }
       }
       console.error(`K8sProvider: Error deleting pod ${instance}:`, err);
       throw err;
