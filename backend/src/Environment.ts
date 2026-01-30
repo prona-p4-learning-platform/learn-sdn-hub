@@ -90,9 +90,18 @@ interface AssignmentStepTestTerminalBufferSearch {
   gradualAssistance?: Array<GradualAssistanceType>;
 }
 
+interface AssignmentStepTestDialog {
+  type: "Dialog";
+  message: string;
+  successMessage: string;
+  errorHint?: string;
+  gradualAssistance?: Array<GradualAssistanceType>;
+}
+
 type AssignmentStepTestType =
   | AssignmentStepTestSSHCommand
-  | AssignmentStepTestTerminalBufferSearch;
+  | AssignmentStepTestTerminalBufferSearch
+  | AssignmentStepTestDialog;
 
 export type TerminalStateType = {
   endpoint: string;
@@ -1169,6 +1178,7 @@ export default class Environment {
   async test(
     stepIndex: string,
     terminalStates: TerminalStateType[],
+    dialogAnswer?: string,
   ): Promise<TestResult> {
     console.log("TESTING step " + stepIndex);
 
@@ -1213,6 +1223,30 @@ export default class Environment {
             .catch(() => {
               testOutput += "FAILED: " + this.getErrorHint(test, stepIndex) + " ";
             });
+
+        } else if (test.type === "Dialog") {
+          // If dialogAnswer is not provided, return special code to ask frontend to show dialog
+          if (dialogAnswer === undefined) {
+            return Promise.resolve({
+              code: 299, // Special code for "needs dialog input"
+              message: test.message,
+            });
+          }
+          
+          // Debug logging
+          console.log("Dialog test validation:");
+          console.log("  User answer:", dialogAnswer);
+          console.log("  Trimmed user answer:", dialogAnswer.trim());
+          
+          // Accept any non-empty answer
+          if (dialogAnswer.trim().length > 0) {
+            testOutput += "PASSED: " + test.successMessage + " ";
+            testPassed = true;
+          } else {
+            const errorMsg = test.errorHint || "Please provide a non-empty answer.";
+            testOutput += "FAILED: " + errorMsg + " ";
+            testPassed = false;
+          }
         }
 
         // if any of the terminalStates matched

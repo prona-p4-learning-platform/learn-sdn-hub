@@ -429,6 +429,7 @@ environments.set("Example1-Repeater", {
     },
   ],
   steps: [
+    
     {
       name: "1",
       label: "make h1 ping h3 work",
@@ -442,6 +443,21 @@ environments.set("Example1-Repeater", {
         },
       ],
     },
+    {
+      name: "2",
+      label: "Enter name",
+      tests: [
+        {
+          type: "Dialog",
+          message: "Enter your name",
+          successMessage: "Name entered",
+          errorHint: "Name not entered",
+
+        },
+      ]
+
+    },
+    
   ],
   submissionPrepareCommand:
     "tar zcvf /tmp/$user-$environment.tar.gz /home/p4/p4-boilerplate/Example1-Repeater/",
