@@ -53,3 +53,7 @@ To change cert-manager settings edit `dev-stack/k8s/components/helm/cert-manager
 - [fluxcd](https://fluxcd.control-plane.io/operator/install/)
 - [cert-manager](https://cert-manager.io/)
 - [rancher](https://www.rancher.com/)
+
+## MongoDB
+1) Apply the `mongo-replica-set.yaml` crd to create the DB.
+2) Access db port locally `kubectl port-forward service/prona4-db-svc 27017:27017 -n learn-sdn-hub`
