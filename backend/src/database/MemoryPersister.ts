@@ -21,11 +21,11 @@ import {
 const userEnvironments = new Map<string, Map<string, UserEnvironment>>();
 
 export default class MemoryPersister implements Persister {
-  GetUserAccount(username: string): Promise<UserAccount> {
+  GetUserAccount(username: string): Promise<UserEntry> {
     return new Promise((resolve, reject) => {
       try {
         const groupNumber = this.getUserMapping(username);
-        const account: UserAccount = {
+        const account: UserEntry = {
           _id: username,
           username,
           groupNumber,
@@ -40,7 +40,7 @@ export default class MemoryPersister implements Persister {
     });
   }
 
-  GetUserAccountByExternalId(_externalId: UserExternalId): Promise<UserAccount> {
+  GetUserAccountByExternalId(_externalId: UserExternalId): Promise<UserEntry> {
     throw new Error(
       "MemoryPersister: GetUserAccountByExternalId not implemented.",
     );
@@ -273,7 +273,7 @@ export default class MemoryPersister implements Persister {
     throw new Error("Method not implemented.");
   }
 
-  GetUserAssignments(_userAcc: UserAccount): Promise<AssignmentData[]> {
+  GetUserAssignments(_userAcc: UserEntry): Promise<AssignmentData[]> {
     throw new Error("Method not implemented.");
   }
 
