@@ -6,7 +6,6 @@ import {
   FileData,
   Persister,
   ResponseObject,
-  UserAccount,
   UserData,
   UserEntry,
   UserEnvironment,
@@ -83,7 +82,6 @@ export default class MongoDBPersister implements Persister {
 
     const insertResult = await usersCollection.insertMany([
       {
-        _id: "0",
         username: "user1",
         passwordHash: userPasswordHash, // user1
         groupNumber: 1,
@@ -91,7 +89,6 @@ export default class MongoDBPersister implements Persister {
         externalIds: []
       },
       {
-        _id: "1",
         username: "admin",
         passwordHash: adminPasswordHash, // admin
         groupNumber: 0,
@@ -223,7 +220,7 @@ export default class MongoDBPersister implements Persister {
   async ChangeUserPassword(
     username: string,
     password: string,
-  ): Promise<UserAccount> {
+  ): Promise<UserEntry> {
     const passwordHash = await hash(password, saltRounds);
     const client = await this.getClient();
     const result = await client

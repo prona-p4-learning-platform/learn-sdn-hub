@@ -4,7 +4,6 @@ import {
   FileData,
   Persister,
   ResponseObject,
-  UserAccount,
   UserData, UserEntry,
   UserEnvironment,
   UserExternalId,
