@@ -20,8 +20,8 @@ spec:
     spec:
       containers:
         - name: frontend
-        # image: learn-sdn-hub-frontend:latest ##### for local development
-          image: "{{ .Values.frontend.image.repository }}:{{ .Values.frontend.image.tag }}"
+          image: learn-sdn-hub-frontend:latest ##### for local development
+        # image: "{{ .Values.frontend.image.repository }}:{{ .Values.frontend.image.tag }}" ##### CHANGE FOR PRODUCTION
           imagePullPolicy: {{ .Values.frontend.image.pullPolicy }}
           ports:
             - containerPort: 80

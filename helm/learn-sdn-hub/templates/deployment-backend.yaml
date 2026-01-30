@@ -22,8 +22,8 @@ spec:
       automountServiceAccountToken: true
       containers:
       - name: backend
-        # image: learn-sdn-hub-backend:latest ##### for local development
-        image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}"
+        image: learn-sdn-hub-backend:latest ##### for local development
+        # image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}" ###### CHANGE FOR PRODUCTION
         imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
         ports:
           - containerPort: 80
