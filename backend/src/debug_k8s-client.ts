@@ -1,8 +1,8 @@
 import { K8sClient, K8sClientConfig } from './utils/k8s-client';
-import * as fs from 'fs';
+import { AxiosError } from 'axios';
+import * as fs from 'node:fs';
 
 async function k8sClientTest() {
-
   const tokenPath = './src/cluster-config/token'; 
   const caPath = './src/cluster-config/ca.crt';
   const apiUrl = 'https://127.0.0.1:46597';
@@ -13,7 +13,6 @@ async function k8sClientTest() {
   }
 
   const token = fs.readFileSync(tokenPath, 'utf8').trim();
-
   const caBuffer = fs.readFileSync(caPath);
   const caBase64 = caBuffer.toString('base64');
 
@@ -30,24 +29,36 @@ async function k8sClientTest() {
     console.log("Frage Namespaces ab...");
     
     const result = await client.coreV1Api.listNamespace();
+
+  const responseData = result as unknown as { 
+    body: { 
+      items: Array<{ metadata?: { name?: string } }> 
+    }, 
+    items?: Array<{ metadata?: { name?: string } }> 
+  };
     
-    // Fallback Check: Je nach Version ist es result.body.items oder result.items
-    const items = result.items || (result as any).body?.items;
+    const items = responseData.items || responseData.body?.items || [];
 
     console.log(`Verbindung steht.`);
     console.log(`Gefundene Namespaces: ${items.length}`);
     
-    items.forEach((ns: any) => {
-        console.log(`   - ${ns.metadata.name}`);
+    items.forEach((ns) => {
+        console.log(`   - ${ns.metadata?.name ?? 'unnamed'}`);
     });
 
-  } catch (error: any) {
-    console.error("\nVerbindung fehlgeschlagen!");
-    console.error("Fehler:", error.message);
-    
-    if (error.response) {
-       console.error("Status Code:", error.response.statusCode);
-       console.error("Details:", error.response.body);
+  } catch (error) {
+    if (error instanceof AxiosError) {
+      console.error("\nVerbindung fehlgeschlagen!");
+      console.error("Fehler:", error.message);
+
+      if (error.response) {
+        console.error("Status Code:", error.response.status);
+        console.error("Details:", JSON.stringify(error.response.data, null, 2));
+      }
+    } else if (error instanceof Error) {
+      console.error("\nEin Fehler ist aufgetreten:", error.message)
+    } else {
+      console.error("\nUnbekannter Fehler:", error);
     }
   }
 }
