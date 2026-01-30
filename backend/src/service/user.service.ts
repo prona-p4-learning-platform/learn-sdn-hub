@@ -1,5 +1,5 @@
 import jwt from "jsonwebtoken";
-import { Persister, UserAccount, UserExternalId } from "../database/Persister";
+import { Persister, UserEntry, UserExternalId } from "../database/Persister";
 import { randomUUID } from "crypto";
 import { jwtService } from "./jwt.service";
 import { AuthenticationProvider } from "../authentication/AuthenticationProvider";
@@ -68,7 +68,7 @@ export class UserService {
       throw new LoginError("Invalid Token");
     }
     // Test if an account with the same username exists
-    let user: UserAccount | undefined;
+    let user: UserEntry | undefined;
     try {
       user = await persister.GetUserAccount(username);
     } catch (error) {
@@ -131,7 +131,7 @@ export class UserService {
           username: result.username,
           groupNumber: result.groupNumber,
           role: result.role,
-        } as UserAccount);
+        } as UserEntry);
       } catch (error) {
         console.error(error);
       }
@@ -144,7 +144,7 @@ export class UserService {
    * @param user
    * @private
    */
-  private createUserLogin(user: UserAccount): UserLoginResponse {
+  private createUserLogin(user: UserEntry): UserLoginResponse {
     // Give token out
     const sessionId = randomUUID();
 
@@ -185,7 +185,7 @@ export class UserService {
     externalId: UserExternalId,
     groupId: number,
     persister: Persister,
-  ): Promise<UserAccount> {
+  ): Promise<UserEntry> {
     // Create
     try {
       await persister.CreateUserAccount({
@@ -203,7 +203,7 @@ export class UserService {
 
   private async addExternalIdToUser(username: string,
                                     externalId: UserExternalId,
-                                    persister: Persister,): Promise<UserAccount> {
+                                    persister: Persister,): Promise<UserEntry> {
     try {
       await persister.AddUserExternalId(username, externalId);
       return persister.GetUserAccountByExternalId(externalId);

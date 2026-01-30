@@ -3,7 +3,7 @@ import { EnvironmentDescription } from "../Environment";
 export interface AuthenticationResult {
   type: string;
   username: string;
-  userid: string;
+  userid?: string;
   groupNumber: number;
   role?: string;
 }

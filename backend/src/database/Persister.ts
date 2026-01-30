@@ -13,8 +13,10 @@ export interface UserEntry {
   passwordHash?: string;
   groupNumber: number;
   assignmentListFilter?: string;
-  environments: UserEnvironment[];
-  externalIds: UserExternalId[];
+  environments?: UserEnvironment[];
+  externalIds?: UserExternalId[];
+  role?: string;
+  courses?: string[];
 }
 
 export interface UserAccount {
@@ -24,8 +26,6 @@ export interface UserAccount {
   password?: string;
   passwordHash?: string;
   assignmentListFilter?: string;
-  role?: string;
-  courses?: string[];
 }
 
 export interface UserExternalId {
@@ -79,8 +79,8 @@ export type CourseUserAction = {
 };
 
 export interface Persister {
-  GetUserAccount: (username: string) => Promise<UserAccount>;
-  GetUserAccountByExternalId: (externalId: UserExternalId) => Promise<UserAccount>;
+  GetUserAccount: (username: string) => Promise<UserEntry>;
+  GetUserAccountByExternalId: (externalId: UserExternalId) => Promise<UserEntry>;
   CreateUserAccount: (userEntry: UserEntry) => Promise<ResponseObject>;
   AddUserExternalId: (username: string, externalId: UserExternalId) => Promise<void>;
   GetUserEnvironments: (username: string) => Promise<UserEnvironment[]>;
@@ -116,7 +116,7 @@ export interface Persister {
   ): Promise<ResponseObject>;
   CreateAssignments(): Promise<AssignmentData[]>;
   GetAllAssignments(): Promise<AssignmentData[] | string[]>;
-  GetUserAssignments(userAcc: UserAccount): Promise<AssignmentData[]>;
+  GetUserAssignments(userAcc: UserEntry): Promise<AssignmentData[]>;
   UpdateAssignementsForCourse(
     courseID: string,
     assignmentIDs: string[],

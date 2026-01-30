@@ -66,7 +66,57 @@ export default class MongoDBPersister implements Persister {
     return this.mongoClient;
   }
 
-  async GetUserAccount(username: string): Promise<UserAccount> {
+  async AddDefaultUser(): Promise<void> {
+    
+    const client = await this.getClient();
+    const usersCollection = client.db().collection<UserEntry>("users");
+    const coursesCollection = client.db().collection<CourseData>("courses");
+
+    const userCount = await usersCollection.countDocuments();
+
+    if (userCount > 0) {
+      console.log(
+        "MongoDBPersister: Default user or real users already exist.",
+      );
+      return;
+    }
+    console.log("MongoDBPersister: Adding default user.");
+
+    const userPasswordHash = await hash("user1", saltRounds);
+    const adminPasswordHash = await hash("admin", saltRounds);
+
+    const insertResult = await usersCollection.insertMany([
+      {
+        _id: "0",
+        username: "user1",
+        passwordHash: userPasswordHash, // user1
+        groupNumber: 1,
+        environments: [],
+        externalIds: []
+      },
+      {
+        _id: "1",
+        username: "admin",
+        passwordHash: adminPasswordHash, // admin
+        groupNumber: 0,
+        environments: [],
+        externalIds: []
+      }
+    ]);
+
+    const courses = await coursesCollection.find().toArray();
+    const courseIds = courses.map((c) => c._id);
+
+    await usersCollection.updateOne(
+      { _id: insertResult.insertedIds["0"] },
+      { $set: { courses: courseIds } },
+    );
+
+    console.log("MongoDBPersister: Successfully added default users.");
+  }
+  
+
+  async GetUserAccount(username: string): Promise<UserEntry> {
     const client = await this.getClient();
     const result = await client
       .db()
@@ -79,7 +129,7 @@ export default class MongoDBPersister implements Persister {
 
   async GetUserAccountByExternalId(
     externalId: UserExternalId,
-  ): Promise<UserAccount> {
+  ): Promise<UserEntry> {
     const client = await this.getClient();
     const result = await client.db().collection<UserEntry>("users").findOne({
       "externalIds.authProvider": externalId.authProvider,
@@ -574,7 +624,7 @@ export default class MongoDBPersister implements Persister {
       .then(() => undefined);
   }
 
-  async GetUserAssignments(userAcc: UserAccount): Promise<AssignmentData[]> {
+  async GetUserAssignments(userAcc: UserEntry): Promise<AssignmentData[]> {
     const client = await this.getClient();
     const courseObjIDs = userAcc.courses?.map((id) => new ObjectId(id));
 
