@@ -1,35 +1,51 @@
-import WSSetupFunction from "./websocket";
-import { createServer } from "http";
-import express, { Router } from "express";
+import http from "node:http";
+import express, { Express, Router } from "express";
 import cors from "cors";
 import { errors } from "celebrate";
-//import history from "connect-history-api-fallback";
-import path from "path";
+import WSSetupFunction from "./websocket";
 
-export default function (api: Router): void {
-  let port = 3001;
+// Centralized config with defaults
+const CONFIG = {
+  port: Number.parseInt(process.env.BACKEND_HTTP_PORT || "3001", 10),
+  isDev: process.env.NODE_ENV !== "production"
+}
+
+export function createApp(apiRouter: Router): Express {
   const app = express();
-  const server = createServer(app);
 
-  WSSetupFunction(server);
-
+  // Middleware setup
   app.use(cors());
-  app.use(api);
+  app.use(express.json());
+
+  // Mount API routes
+  app.use("/api", apiRouter);
+
+  // Error handling middleware
   app.use(errors());
 
-  if(false) {
-    //app.use(history());
-    const frontendStaticDir = path.resolve(__dirname, "..", "static");
-    console.log("Serving static html from " + frontendStaticDir);
-  
-    app.use(express.static(frontendStaticDir));
-  }
+  return app;
+}
 
-  if (process.env.BACKEND_HTTP_PORT !== undefined) {
-    port = parseInt(process.env.BACKEND_HTTP_PORT);
-  }
+export function startServer(apiRouter: Router): void {
+  const app = createApp(apiRouter);
+  const server = http.createServer(app);
 
-  server.listen(port, function () {
-    console.log(`HTTP Server listening on port ${port}`);
+  // Attach WebSocket server
+  WSSetupFunction(server);
+
+  server.listen(CONFIG.port, () => {
+    console.log(`HTTP Server listening on port ${CONFIG.port}`);
+    console.log(`WebSocket Server ready`);
   });
+
+  const shutdown = () => {
+    console.log("SIGTERM/SIGINT received. Shutting down gracefully...");
+    server.close(() => {
+      console.log("Server closed.");
+      process.exit(0);
+    });
+  };
+
+  process.on("SIGTERM", shutdown);
+  process.on("SIGINT", shutdown);
 }
