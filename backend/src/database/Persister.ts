@@ -19,15 +19,6 @@ export interface UserEntry {
   courses?: string[];
 }
 
-export interface UserAccount {
-  _id: string;
-  username: string;
-  groupNumber: number;
-  password?: string;
-  passwordHash?: string;
-  assignmentListFilter?: string;
-}
-
 export interface UserExternalId {
   externalId: string;
   authProvider: string;
