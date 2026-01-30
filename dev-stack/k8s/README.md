@@ -66,6 +66,7 @@ To change cert-manager settings edit `dev-stack/k8s/components/helm/cert-manager
 - [fluxcd](https://fluxcd.control-plane.io/operator/install/)
 - [cert-manager](https://cert-manager.io/)
 - [rancher](https://www.rancher.com/)
+- [mongodb operator](https://github.com/mongodb/mongodb-kubernetes/blob/master/public/samples/community/)
 
 ## MongoDB
 1) Apply the `mongo-replica-set.yaml` crd to create the DB.
