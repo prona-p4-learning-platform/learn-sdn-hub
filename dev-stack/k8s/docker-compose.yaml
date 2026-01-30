@@ -4,9 +4,10 @@ services:
     restart: always
     ports:
       - "27017:27017"
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: admin
-      MONGO_INITDB_ROOT_PASSWORD: secret
+    #environment:
+    #  MONGO_INITDB_ROOT_USERNAME: admin
+    #  MONGO_INITDB_ROOT_PASSWORD: secret
+    command: [ "--bind_ip_all", "--replSet", "dbrs" ]
     volumes:
       - mongo_data:/data/db
       - mongo_config:/data/configdb
