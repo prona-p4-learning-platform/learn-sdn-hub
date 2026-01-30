@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams, useSearchParams, useNavigate, useLocation } from "react-router";
 import createWebSocket from "../api/WebSocket";
 import {
@@ -7,12 +7,10 @@ import {
   DialogActions,
   DialogContent,
   DialogContentText,
-  DialogTitle,
   Grid,
   Step,
   StepButton,
   Stepper,
-  TextField,
   Typography,
 } from "@mui/material";
 import { useSnackbar } from "notistack";
