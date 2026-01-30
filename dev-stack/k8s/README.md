@@ -15,6 +15,11 @@ You must be in the directory to run the scrips.
 ./start.sh
 ```
 
+### Deploy
+```shell
+./deploy.sh
+```
+
 ### Stop
 ```shell
 ./stop.sh

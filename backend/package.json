@@ -15,6 +15,9 @@
     "start:docker-dev": "nodemon src/DockerApplication.ts",
     "start:firecracker": "ts-node --files src/FirecrackerApplication.ts",
     "start:proxmox": "ts-node --files src/ProxmoxApplication.ts",
+    "start:k8s": "ts-node src/KubernetesApplication.ts",
+    "dev:k8s": "nodemon src/KubernetesApplication.ts",
+    "start:k8sdebug": "ts-node --files src/debug_k8s-client.ts",
     "format": "prettier . --write --ignore-unknown",
     "format:check": "prettier . --check --ignore-unknown",
     "lint": "eslint . --cache",
@@ -47,6 +50,7 @@
     "typescript-eslint": "^8.18.1"
   },
   "dependencies": {
+    "@kubernetes/client-node": "^1.4.0",
     "@node-rs/bcrypt": "^1.10.7",
     "axios": "^1.7.9",
     "celebrate": "^15.0.3",

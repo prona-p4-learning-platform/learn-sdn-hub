@@ -44,3 +44,13 @@ terraform_apply() {
   terraform init
   terraform apply -auto-approve
 }
+
+create_mongo_db() {
+  echo "starting mongodb with express..."
+  docker compose up -d
+}
+
+delete_mongo_db() {
+  echo "deleting mongodb..."
+  docker compose down --volumes
+}
