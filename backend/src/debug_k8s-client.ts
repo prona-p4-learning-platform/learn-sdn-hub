@@ -63,4 +63,7 @@ async function k8sClientTest() {
   }
 }
 
-k8sClientTest();
+k8sClientTest().catch((err) => {
+  console.error(err);
+  process.exitCode = 1;
+});
