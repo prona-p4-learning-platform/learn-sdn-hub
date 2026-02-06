@@ -48,22 +48,6 @@ export default class ContainerLabProvider implements InstanceProvider {
   private providerInstance: ContainerLabProvider;
 
   // Minimal default topology (from user)
-  private readonly defaultTopology = {
-    name: "srl01",
-    topology: {
-      kinds: {
-        nokia_srlinux: {
-          type: "ixrd3",
-          image: "ghcr.io/nokia/srllinux",
-        },
-      },
-      nodes: {
-        srl1: { kind: "nokia_srlinux" },
-        srl2: { kind: "nokia_srlinux" },
-      },
-      links: [{ endpoints: ["srl1:e1-1", "srl2:e1-1"] }],
-    },
-  };
 
   constructor() {
 
@@ -170,23 +154,14 @@ export default class ContainerLabProvider implements InstanceProvider {
   async getToken(): Promise<void> {
     const providerInstance = this.providerInstance;
 
-<<<<<<< HEAD
     const now = Date.now();
     const tokenExpires = providerInstance.clab_token?.expires_at ?? 0;
-    console.log(
-      "Token expires at: " +
-        (tokenExpires ? new Date(tokenExpires).toISOString() : "none") +
-        " now: " +
-        new Date(now).toISOString(),
-    );
-=======
       /*console.log(
         "Token expires at: " +
           new Date(tokenExpires).toISOString() +
           " now: " +
           new Date(now).toISOString(),
       );*/
->>>>>>> 266-create-deploylab-function-create-lab
 
     // if token exists and still valid for at least 5s, return
     if (providerInstance.clab_token && now <= tokenExpires - 5000) {
@@ -265,6 +240,7 @@ export default class ContainerLabProvider implements InstanceProvider {
       body.topologyContent = this.changeTopologyName(body.topologyContent, environment + "-" + groupNumber.toString() + "-" + username);
     }
     delete body.topologySourceUrl;
+    body.topologyContent = this.addJumphostToTopology(body.topologyContent);
 
     const resp = await fetch(this.clab_apiUrl+"api/v1/labs",{
       method: 'POST',
@@ -359,10 +335,19 @@ export default class ContainerLabProvider implements InstanceProvider {
                 const deadline = new Date(Date.now() + providerInstance.maxInstanceLifetimeMinutes * 60 * 1000 - difTime);
                 console.log("ContainerLabProvider: Instance " + instance + " will be deleted at " + deadline.toISOString());
 
+                let jumphostIp: string | undefined = undefined;
+
+                for (const item of data) {
+                  if (item.name === "clab-" + instance + "-jumphost") {
+                    jumphostIp = (item.ipv4_address as string | undefined)?.split("/")[0];
+                    break;
+                  }
+                }
+
                 return resolve({
                   instance: instance,
                   providerInstanceStatus: "Environment will be deleted at "+ deadline.toISOString(),
-                  IPAddress: ((data as any)?.["0"]?.["ipv4_address"] as string | undefined)?.split("/")[0] || "",
+                  IPAddress: jumphostIp || "",
                   SSHPort: providerInstance.sshPort,
                   LanguageServerPort: providerInstance.lsPort,
                 });
@@ -701,6 +686,35 @@ export default class ContainerLabProvider implements InstanceProvider {
   changeTopologyName(topology: object, newName: string): object {
     const topo = topology as {[key: string]: string | object};
     topo["name"] = newName;
+    return topo;
+  }
+
+  addJumphostToTopology(topology: object): object {
+    const topo = topology as Record<string, unknown>;
+    if (!topo["topology"] || typeof topo["topology"] !== "object") {
+      topo["topology"] = {};
+    }
+    const topologyBlock = topo["topology"] as Record<string, unknown>;
+    if (!topologyBlock["nodes"] || typeof topologyBlock["nodes"] !== "object") {
+      topologyBlock["nodes"] = {};
+    }
+    const nodes = topologyBlock["nodes"] as Record<string, unknown>;
+    nodes["jumphost"] = {
+        "kind": "linux",
+        "image": "alpine:latest",
+        "group": "hosts",
+        "exec": [
+          "ip addr add 192.168.188.2/24 dev eth1",
+          "apk add openrc openssh",
+          "ssh-keygen -A",
+          "mkdir -p /run/openrc",
+          "touch /run/openrc/softlevel",
+          "rc-update add sshd",
+          "rc-service sshd start",
+          "adduser -D p4",
+          "ash -c 'echo p4:p4 | chpasswd'"
+        ]
+    };
     return topo;
   }
 }
