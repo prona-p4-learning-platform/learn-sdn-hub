@@ -429,7 +429,6 @@ environments.set("Example1-Repeater", {
     },
   ],
   steps: [
-    
     {
       name: "1",
       label: "make h1 ping h3 work",
@@ -443,21 +442,6 @@ environments.set("Example1-Repeater", {
         },
       ],
     },
-    {
-      name: "2",
-      label: "Enter name",
-      tests: [
-        {
-          type: "Dialog",
-          message: "Enter your name",
-          successMessage: "Name entered",
-          errorHint: "Name not entered",
-
-        },
-      ]
-
-    },
-    
   ],
   submissionPrepareCommand:
     "tar zcvf /tmp/$user-$environment.tar.gz /home/p4/p4-boilerplate/Example1-Repeater/",
@@ -470,9 +454,6 @@ environments.set("Example1-Repeater", {
   providerProxmoxTemplateTag: "learn-sdn-hub-template-acn-p4",
   useCollaboration: true,
   useLanguageClient: false,
-
-  isExam: true,
-  durationMinutes: 90,
 });
 
 environments.set("Example2-MinimalisticSwitch", {
@@ -1232,6 +1213,56 @@ environments.set("CC-Lab-2", {
   description: "CC-Test description",
   assignmentLabSheetLocation: "instance",
   assignmentLabSheet: "/home/p4/cc-container/labs/lab2/README.md",
+});
+
+environments.set("Example-Exam", {
+  terminals: [
+    [
+      {
+        type: "Shell",
+        name: "bash",
+        cwd: "/home/p4/",
+        executable: "bash",
+        params: [],
+        provideTty: true,
+      },
+    ],
+  ],
+  editableFiles: [],
+  stopCommands: [],
+  steps: [
+    {
+      name: "1",
+      label: "MatrNr Eingabe",
+      tests: [
+        {
+          type: "Dialog",
+          message: "MatrNr",
+          successMessage: "MatrNr entered",
+          errorHint: "MatrNr not entered",
+        },
+      ],
+    },
+    {
+      name: "2",
+      label: "Name Eingabe",
+      tests: [
+        {
+          type: "Dialog",
+          message: "Name",
+          successMessage: "Name entered",
+          errorHint: "Name not entered",
+        },
+      ],
+    },
+  ],
+  description: "Example Exam",
+  assignmentLabSheet: "none",
+  providerProxmoxTemplateTag: "learn-sdn-hub-template-acn-p4",
+  useCollaboration: true,
+  useLanguageClient: false,
+  isExam: true,
+  durationMinutes: 3
 });
 
 function getEnvironments(): Map<string, EnvironmentDescription> {
