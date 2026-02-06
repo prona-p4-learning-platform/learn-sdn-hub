@@ -83,8 +83,8 @@ spec:
                   number: 8081
             pathType: Prefix
             path: /
-      host: mongo.local
+      host: mongo-express.local
   tls:
     - hosts:
-      - mongo.local
-      secretName: mongo.local
+      - mongo-express.local
+      secretName: mongo-express.local
