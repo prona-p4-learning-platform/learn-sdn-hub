@@ -350,10 +350,19 @@ export default class ContainerLabProvider implements InstanceProvider {
                 const deadline = new Date(Date.now() + providerInstance.maxInstanceLifetimeMinutes * 60 * 1000 - difTime);
                 console.log("ContainerLabProvider: Instance " + instance + " will be deleted at " + deadline.toISOString());
 
+                let jumphostIp: string | undefined = undefined;
+
+                for (const item of data) {
+                  if (item.name === "clab-" + instance + "-jumphost") {
+                    jumphostIp = (item.ipv4_address as string | undefined)?.split("/")[0];
+                    break;
+                  }
+                }
+
                 return resolve({
                   instance: instance,
                   providerInstanceStatus: "Environment will be deleted at "+ deadline.toISOString(),
-                  IPAddress: (data?.["0"]?.["ipv4_address"] as string | undefined)?.split("/")[0] || "",
+                  IPAddress: jumphostIp || "",
                   SSHPort: providerInstance.sshPort,
                   LanguageServerPort: providerInstance.lsPort,
                 });
@@ -553,10 +562,14 @@ export default class ContainerLabProvider implements InstanceProvider {
 
   addJumphostToTopology(topology: object): object {
     const topo = topology as Record<string, unknown>;
-    if (!topo["nodes"] || typeof topo["nodes"] !== "object") {
-      topo["nodes"] = {};
+    if (!topo["topology"] || typeof topo["topology"] !== "object") {
+      topo["topology"] = {};
     }
-    const nodes = topo["nodes"] as Record<string, unknown>;
+    const topologyBlock = topo["topology"] as Record<string, unknown>;
+    if (!topologyBlock["nodes"] || typeof topologyBlock["nodes"] !== "object") {
+      topologyBlock["nodes"] = {};
+    }
+    const nodes = topologyBlock["nodes"] as Record<string, unknown>;
     nodes["jumphost"] = {
         "kind": "linux",
         "image": "alpine:latest",
