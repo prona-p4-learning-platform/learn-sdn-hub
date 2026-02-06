@@ -166,6 +166,7 @@ const DenyStartOfMissingInstanceErrorMessage =
 
 export default class Environment {
   private activeConsoles: Map<string, Console>;
+  private activeDockerConsoles: Map<string, DockerTerminal>;
   private activeDesktops: Map<string, DesktopInstance>;
   private editableFiles: Map<string, string>;
   private static activeCollabDocs = new Map<string, string>();
@@ -244,6 +245,7 @@ export default class Environment {
     persister: Persister,
   ) {
     this.activeConsoles = new Map();
+    this.activeDockerConsoles = new Map();
     this.activeDesktops = new Map();
     this.filehandler = undefined;
     this.editableFiles = new Map();
@@ -275,6 +277,14 @@ export default class Environment {
 
   public getConsoles(): Map<string, Console> {
     return this.activeConsoles;
+  }
+
+  public getDockerConsoleByAlias(alias: string): DockerTerminal | undefined {
+    return this.activeDockerConsoles.get(alias);
+  }
+
+  public getDockerConsoles(): Map<string, DockerTerminal> {
+    return this.activeDockerConsoles;
   }
 
   public getDesktopByAlias(alias: string): DesktopInstance | undefined {
@@ -483,6 +493,11 @@ export default class Environment {
       sshConsole.close(env.environmentId, env.groupNumber);
       env.activeConsoles.delete(key);
     });
+    env.activeDockerConsoles.forEach((dockerConsole: DockerTerminal, key: string) => {
+      //console.debug("Deleting leftover console: " + key);
+      dockerConsole.close(env.environmentId, env.groupNumber);
+      env.activeDockerConsoles.delete(key);
+    });
     await env.filehandler?.close();
     env.filehandler = undefined;
     env.activeDesktops.forEach((_desktop: DesktopInstance, key: string) => {
@@ -677,7 +692,7 @@ export default class Environment {
               });
             }
             break;
-case "DockerShell":
+          case "DockerShell":
             {
               console.log(
                 "Opening console: ",
@@ -691,7 +706,7 @@ case "DockerShell":
               );
 
               await new Promise<void>((resolve, reject) => {
-                const sshConsole = new DockerConsole(
+                const dockerConsole = new DockerConsole(
                   this.environmentId,
                   subterminal.name,
                   this.username,
@@ -702,20 +717,19 @@ case "DockerShell":
                   subterminal.executable,
                   subterminal.params,
                   subterminal.provideTty,
-                  endpoint.SSHJumpHost,
                 );
 
-                sshConsole.on("ready", () => {
-                  this.activeConsoles.set(subterminal.name, sshConsole);
+                dockerConsole.on("ready", () => {
+                  this.activeDockerConsoles.set(subterminal.name, dockerConsole);
                   resolve();
                 });
 
-                sshConsole.on("error", (err: Error) => {
+                dockerConsole.on("error", (err: Error) => {
                   reject(err);
                 });
 
-                sshConsole.on("close", () => {
-                  this.activeConsoles.delete(subterminal.name);
+                dockerConsole.on("close", () => {
+                  this.activeDockerConsoles.delete(subterminal.name);
                   reject(new Error("Unable to create environment"));
                 });
               });
@@ -864,6 +878,10 @@ case "DockerShell":
         handler.close(this.environmentId, this.groupNumber);
         this.activeConsoles.delete(identifier);
       }
+      for (const [identifier, handler] of this.activeDockerConsoles) {
+        handler.close(this.environmentId, this.groupNumber);
+        this.activeDockerConsoles.delete(identifier);
+      }
 
       await this.filehandler?.close();
       this.filehandler = undefined;
@@ -912,6 +930,38 @@ case "DockerShell":
             });
 
             sshConsole.on("closed", () => {
+              if (!stopCmdFinished) {
+                console.log("Stop command failed.");
+                reject(new Error("Stop command failed."));
+              } else resolve();
+            });
+          });
+        }
+        if (command.type === "DockerShell") {
+          await new Promise<void>((resolve, reject) => {
+            // session is not used as command is not run from a console,
+            // so it can be anything and also create a new SSH connection if needed
+            // (no need to reuse an existing connection)
+            const dockerConsole = new DockerConsole(
+              this.environmentId,
+              command.name,
+              this.username,
+              this.groupNumber,
+              undefined,
+              endpoint.IPAddress,
+              endpoint.SSHPort,
+              command.executable,
+              command.params,
+              command.provideTty,
+            );
+            let stopCmdFinished = false;
+
+            dockerConsole.on("finished", () => {
+              stopCmdFinished = true;
+              dockerConsole.emit("closed");
+            });
+
+            dockerConsole.on("closed", () => {
               if (!stopCmdFinished) {
                 console.log("Stop command failed.");
                 reject(new Error("Stop command failed."));
@@ -1007,6 +1057,48 @@ case "DockerShell":
           });
         });
       }
+      if (command.type === "DockerShell") {
+        let resolved = false;
+        await new Promise<void>((resolve, reject) => {
+          //console.log(
+          //  "Executing stop command: ",
+          //  JSON.stringify(command),
+          //  JSON.stringify(endpoint),
+          //);
+          const dockerConsole = new DockerConsole(
+            this.environmentId,
+            command.name,
+            this.username,
+            this.groupNumber,
+            sessionId,
+            endpoint.IPAddress,
+            endpoint.SSHPort,
+            command.executable,
+            command.params,
+            false,
+          );
+          dockerConsole.on("finished", (_code: string, _signal: string) => {
+            // console.log(
+            //   "OUTPUT: " +
+            //     sshConsole.stdout +
+            //     "(exit code: " +
+            //     code +
+            //     ", signal: " +
+            //     signal +
+            //     ")",
+            // );
+            resolved = true;
+            dockerConsole.emit("closed");
+          });
+          dockerConsole.on("closed", () => {
+            if (resolved) resolve();
+            else
+              reject(
+                new Error("Unable to run stop command: " + command.executable),
+              );
+          });
+        });
+      }
     }
 
     console.log("Stop commands finished...");
@@ -1023,6 +1115,17 @@ case "DockerShell":
           //);
           value.write(value.command + " " + value.args.join(" ") + "\n");
         });
+        const dockerTerminal = value.getDockerConsoles();
+        dockerTerminal.forEach((value: DockerTerminal) => {
+          //console.log("Found active console in " + value.cwd + "...");
+          // write command to console
+          value.write("cd " + value.cwd + "\n");
+          //console.log(
+          //  "Executing " + value.command + " " + value.args.join(" ") + "\n",
+          //);
+          value.write(value.command + " " + value.args.join(" ") + "\n");
+        });
+
       }
     });
   }
