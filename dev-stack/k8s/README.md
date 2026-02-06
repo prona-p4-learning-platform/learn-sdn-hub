@@ -31,7 +31,7 @@ You must edit your local `/etc/hosts` and add some entries to access the compone
 ```
 127.0.0.1   rancher.local
 127.0.0.1   prona.local
-127.0.0.1   mongo.prona.local
+127.0.0.1   mongo-express.local
 ```
 
 ## Rancher
@@ -66,3 +66,11 @@ To change cert-manager settings edit `dev-stack/k8s/components/helm/cert-manager
 - [fluxcd](https://fluxcd.control-plane.io/operator/install/)
 - [cert-manager](https://cert-manager.io/)
 - [rancher](https://www.rancher.com/)
+- [mongodb operator](https://github.com/mongodb/mongodb-kubernetes/blob/master/public/samples/community/)
+
+## MongoDB
+- To access mongo-express [https://mongo-express.local](https://mongo-express.local)
+
+- Access db port locally `kubectl port-forward service/prona4-db-svc 27017:27017 -n learn-sdn-hub`
+
+

@@ -44,14 +44,25 @@ terraform_apply() {
   cd components
   terraform init
   terraform apply -auto-approve
+  cd ..
+}
+
+wait_for_mongo_operator() {
+  until kubectl api-resources --api-group="mongodbcommunity.mongodb.com" 2>/dev/null | grep -q "MongoDBCommunity"; do
+    echo "MongoDB Operator not deployed yet. Retry in 10 sec."
+    sleep 10
+  done
+}
+
+wait_for_mongo_db() {
+  echo "waiting for mongo db to be running..."
+  kubectl wait --for=jsonpath='{.status.phase}'=Running mongodbcommunity/prona4-db -n learn-sdn-hub --timeout=300s
 }
 
 create_mongo_db() {
-  echo "starting mongodb with express..."
-  docker compose up -d
-}
-
-delete_mongo_db() {
-  echo "deleting mongodb..."
-  docker compose down --volumes
+  kubectl apply -f crds/mongo-replica-set.yaml
+  wait_for_mongo_db
+  echo "creating mongo express..."
+  kubectl apply -f crds/mongo-express.yaml
+  echo "done"
 }
