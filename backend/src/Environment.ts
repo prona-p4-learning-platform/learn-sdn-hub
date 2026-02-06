@@ -127,6 +127,11 @@ export interface SubmissionAdminOverviewEntry extends Submission {
   terminalEndpoints: string[];
   assignmentRef?: string;
   userRef?: string;
+  dialogAnswers?: Array<{
+    stepIndex: string;
+    question: string;
+    answer: string;
+  }>;
 }
 
 export interface SubmissionAdminEntryDetails {
