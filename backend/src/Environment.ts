@@ -3,6 +3,7 @@ import { fromUint8Array } from "js-base64";
 import querystring from "querystring";
 import * as Y from "yjs";
 
+import DockerConsole, { DockerTerminal} from "./consoles/DockerConsole";
 import SSHConsole, { Console, JumpHost } from "./consoles/SSHConsole";
 import FileHandler from "./filehandler/SSHFileHandler";
 import {
@@ -712,11 +713,9 @@ export default class Environment {
                   this.username,
                   this.groupNumber,
                   sessionId,
-                  endpoint.IPAddress,
-                  endpoint.SSHPort,
                   subterminal.executable,
-                  subterminal.params,
                   subterminal.provideTty,
+                  subterminal.containerName
                 );
 
                 dockerConsole.on("ready", () => {
@@ -948,11 +947,9 @@ export default class Environment {
               this.username,
               this.groupNumber,
               undefined,
-              endpoint.IPAddress,
-              endpoint.SSHPort,
               command.executable,
-              command.params,
               command.provideTty,
+              command.containerName
             );
             let stopCmdFinished = false;
 
@@ -1071,11 +1068,9 @@ export default class Environment {
             this.username,
             this.groupNumber,
             sessionId,
-            endpoint.IPAddress,
-            endpoint.SSHPort,
             command.executable,
-            command.params,
             false,
+            command.containerName
           );
           dockerConsole.on("finished", (_code: string, _signal: string) => {
             // console.log(

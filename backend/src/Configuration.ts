@@ -1141,6 +1141,44 @@ environments.set("CC-Lab-1", {
   assignmentLabSheet: "/home/p4/labs/lab1/README.md",
 });
 
+environments.set("Clab-DockerConsole-test", {
+  terminals: [
+    [
+      {
+        type: "DockerShell",
+        name: "host1",
+        containerName: "container1",
+        executable: "while [ true ]; do clear && sudo clab inspect &>/dev/null; if [ $? -eq 1 ]; then sudo clab deploy &>/dev/null; fi; docker exec -it clab-kommprot-lab-application-host1 bash; done",
+        params: [],
+        provideTty: true,
+      },
+    ],
+    
+  ],
+  editableFiles: [
+    {
+      absFilePath:
+        "/home/p4/kommprot-labs/kommprot-lab-application-layer/README.md",
+      alias: "README",
+    },
+  ],
+  stopCommands: [
+    {
+      type: "DockerShell",
+      name: "bash",
+      containerName: "container1",
+      executable: "sudo clab destroy",
+      params: [],
+      provideTty: false,
+    },
+    
+  ],
+  description: "KommProt-Ue1b application layer",
+  assignmentLabSheetLocation: "instance",
+  assignmentLabSheet: "/home/p4/kommprot-labs/kommprot-lab-application-layer/README.md",
+});
+
+
 export default environments;
 
 export function updateEnvironments(
