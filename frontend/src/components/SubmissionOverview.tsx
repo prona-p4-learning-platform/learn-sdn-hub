@@ -23,6 +23,7 @@ import {
 import { useSnackbar } from "notistack";
 import { z } from "zod";
 import { Terminal } from "xterm";
+import Editor from "@monaco-editor/react";
 
 import { Assignment } from "../typings/assignment/AssignmentType";
 
@@ -52,6 +53,15 @@ const submissionAdminOverviewEntrySchema = z.object({
   points: z.number().optional(),
   assignmentRef: z.string().optional(),
   userRef: z.string().optional(),
+  dialogAnswers: z
+    .array(
+      z.object({
+        stepIndex: z.union([z.string(), z.number()]).transform((val) => String(val)),
+        question: z.string(),
+        answer: z.string(),
+      }),
+    )
+    .optional(),
 });
 const submissionAdminOverviewEntryValidator = z.array(
   submissionAdminOverviewEntrySchema,
@@ -79,6 +89,8 @@ const SubmissionOverview = ({ assignments }: SubmissionProps): JSX.Element => {
   const [assignmentNameDialog, setAssignmentNameDialog] = useState<string>("");
   const [pointsDialog, setPointsDialog] = useState<number>(0);
   const [openDialog, setOpenDialog] = useState(false);
+  const [fileContents, setFileContents] = useState<Record<string, string>>({});
+  const [expandedFiles, setExpandedFiles] = useState<string[]>([]);
 
   const xTermContents = useRef<Record<string, string>>({});
 
@@ -422,6 +434,76 @@ const SubmissionOverview = ({ assignments }: SubmissionProps): JSX.Element => {
     element.click();
   };
 
+  const handleFileAccordionChange = (
+    fileName: string,
+    submissionID: string,
+  ) => {
+    const key = `${submissionID}_${fileName}`;
+    if (expandedFiles.includes(key)) {
+      setExpandedFiles(expandedFiles.filter((f) => f !== key));
+    } else {
+      setExpandedFiles([...expandedFiles, key]);
+      if (!fileContents[key]) {
+        fetchFileContent(fileName, submissionID, key);
+      }
+    }
+  };
+
+  const fetchFileContent = async (
+    fileName: string,
+    submissionID: string,
+    key: string,
+  ) => {
+    try {
+      const result = await APIRequestNV(
+        `/api/admin/submission/${encodeURIComponent(
+          submissionID,
+        )}/file/download/${encodeURIComponent(fileName)}`,
+        {
+          responseType: "text",
+        },
+      );
+      setFileContents((prev) => ({ ...prev, [key]: result }));
+    } catch (error) {
+      if (error instanceof Error) {
+        enqueueSnackbar(`Error loading file ${fileName}: ${error.message}`, {
+          variant: "error",
+        });
+      }
+    }
+  };
+
+  const getLanguageFromFileName = (fileName: string): string => {
+    const ext = fileName.split(".").pop()?.toLowerCase();
+    const languageMap: Record<string, string> = {
+      py: "python",
+      js: "javascript",
+      ts: "typescript",
+      tsx: "typescript",
+      jsx: "javascript",
+      json: "json",
+      yaml: "yaml",
+      yml: "yaml",
+      xml: "xml",
+      html: "html",
+      css: "css",
+      java: "java",
+      cpp: "cpp",
+      c: "c",
+      cs: "csharp",
+      rb: "ruby",
+      go: "go",
+      rs: "rust",
+      sh: "shell",
+      bash: "shell",
+      sql: "sql",
+      md: "markdown",
+      txt: "plaintext",
+      p4: "plaintext",
+    };
+    return languageMap[ext || ""] || "plaintext";
+  };
+
   return (
     <div>
       <div style={{ marginBottom: "10px" }}>
@@ -499,6 +581,10 @@ const SubmissionOverview = ({ assignments }: SubmissionProps): JSX.Element => {
                                 <Typography variant="body1">
                                   <strong>Username:</strong>
                                 </Typography>
+                                {/* Debug info */}
+                                <Typography variant="body1">
+                                  <strong>Dialogs:</strong>
+                                </Typography>
                                 <Typography variant="body1">
                                   <strong>Last Changed:</strong>
                                 </Typography>
@@ -506,6 +592,9 @@ const SubmissionOverview = ({ assignments }: SubmissionProps): JSX.Element => {
                               <Box flex="1">
                                 <Typography variant="body1">
                                   {submission.username}
+                                </Typography>
+                                <Typography variant="body1">
+                                  {submission.dialogAnswers?.length ?? 0}
                                 </Typography>
                                 <Typography variant="body1">
                                   {new Date(
@@ -531,6 +620,124 @@ const SubmissionOverview = ({ assignments }: SubmissionProps): JSX.Element => {
                                 Download Files
                               </Button>
                             </Box>
+                            {submission.dialogAnswers &&
+                              submission.dialogAnswers.length > 0 && (
+                                <Box mb={2}>
+                                  {submission.dialogAnswers.map(
+                                    (dialog, index) => {
+                                      const dialogKey = `${submission.submissionID}_dialog_${index}`;
+                                      const isExpanded =
+                                        expandedFiles.includes(dialogKey);
+
+                                      return (
+                                        <Accordion
+                                          key={dialogKey}
+                                          expanded={isExpanded}
+                                          onChange={() => {
+                                            setExpandedFiles((prev) =>
+                                              prev.includes(dialogKey)
+                                                ? prev.filter(
+                                                    (k) => k !== dialogKey,
+                                                  )
+                                                : [...prev, dialogKey],
+                                            );
+                                          }}
+                                        >
+                                          <AccordionSummary
+                                            expandIcon={<ExpandMoreIcon />}
+                                            aria-controls={`dialog-${dialogKey}-content`}
+                                            id={`dialog-${dialogKey}-header`}
+                                          >
+                                            <Typography variant="body2">
+                                              {dialog.question} (Dialog Step{" "}
+                                              {dialog.stepIndex})
+                                            </Typography>
+                                          </AccordionSummary>
+                                          <AccordionDetails>
+                                            <Box width="100%" height="200px">
+                                              <Editor
+                                                height="100%"
+                                                value={dialog.answer}
+                                                language="plaintext"
+                                                theme="vs-dark"
+                                                options={{
+                                                  readOnly: true,
+                                                  minimap: { enabled: false },
+                                                }}
+                                              />
+                                            </Box>
+                                          </AccordionDetails>
+                                        </Accordion>
+                                      );
+                                    },
+                                  )}
+                                </Box>
+                              )}
+                            {submission.fileNames.length > 0 && (
+                              <Box mb={2}>
+                                {submission.fileNames.map((fileName) => {
+                                  const fileKey = `${submission.submissionID}_${fileName}`;
+                                  const isExpanded = expandedFiles.includes(fileKey);
+                                  return (
+                                    <Accordion
+                                      key={fileKey}
+                                      expanded={isExpanded}
+                                      onChange={() =>
+                                        handleFileAccordionChange(
+                                          fileName,
+                                          submission.submissionID,
+                                        )
+                                      }
+                                    >
+                                      <AccordionSummary
+                                        expandIcon={<ExpandMoreIcon />}
+                                        aria-controls={`file-${fileKey}-content`}
+                                        id={`file-${fileKey}-header`}
+                                      >
+                                        <Box display="flex" width="100%" justifyContent="space-between" alignItems="center">
+                                          <Typography variant="body2">
+                                            {fileName}
+                                          </Typography>
+                                          <Button
+                                            size="small"
+                                            variant="outlined"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleDownloadFile(fileName, submission.submissionID);
+                                            }}
+                                            sx={{ ml: 1 }}
+                                          >
+                                            Download
+                                          </Button>
+                                        </Box>
+                                      </AccordionSummary>
+                                      <AccordionDetails>
+                                        <Box width="100%" height="400px">
+                                          {fileContents[fileKey] !== undefined ? (
+                                            <Editor
+                                              height="100%"
+                                              value={fileContents[fileKey]}
+                                              language={getLanguageFromFileName(
+                                                fileName,
+                                              )}
+                                              theme="vs-dark"
+                                              options={{
+                                                readOnly: true,
+                                                minimap: { enabled: false },
+                                              }}
+                                            />
+                                          ) : (
+                                            <Typography>
+                                              Loading file...
+                                            </Typography>
+                                          )}
+                                        </Box>
+                                      </AccordionDetails>
+                                    </Accordion>
+                                  );
+                                })}
+                              </Box>
+                            )}
                             {submission.terminalEndpoints
                               .sort((a, b) => a.localeCompare(b))
                               .map(

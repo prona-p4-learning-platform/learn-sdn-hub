@@ -843,6 +843,7 @@ export default class MongoDBPersister implements Persister {
               fileNames: { $addToSet: "$submittedFiles.fileName" },
               terminalEndpoints: { $addToSet: "$terminalStatus.endpoint" },
               points: { $first: { $ifNull: ["$points", null] } },
+              dialogAnswers: { $first: "$dialogAnswers" },
             },
           },
         ])
@@ -866,8 +867,16 @@ export default class MongoDBPersister implements Persister {
           ...(submission.points !== null && {
             points: submission.points as number,
           }),
+          ...(submission.dialogAnswers && {
+            dialogAnswers: submission.dialogAnswers,
+          }),
         }),
       );
+
+      console.log("MongoDBPersister.GetAllSubmissions: returning " + submissions.length + " submissions");
+      if (submissions.length > 0) {
+        console.log("Sample submission dialogAnswers: ", JSON.stringify(submissions[0].dialogAnswers, null, 2));
+      }
 
       return submissions;
     } catch (error) {
