@@ -47,8 +47,6 @@ export default class ContainerLabProvider implements InstanceProvider {
 
   private providerInstance: ContainerLabProvider;
 
-  // Minimal default topology (from user)
-
   constructor() {
 
     // check for ContainerLab username
