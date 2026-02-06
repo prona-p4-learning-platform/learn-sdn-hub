@@ -1250,11 +1250,26 @@ export default class Environment {
             testPassed = true;
             // store dialog answer temporarily; will be persisted on submit
             try {
-              this.dialogAnswers.push({
-                stepIndex: stepIndex,
-                question: test.message,
-                answer: dialogAnswer.trim(),
-              });
+              const existingIndex = this.dialogAnswers.findIndex(item => item.stepIndex === stepIndex);
+              
+              if (existingIndex !== -1) {
+                // Update existing answer
+                this.dialogAnswers[existingIndex] = {
+                  stepIndex: stepIndex,
+                  question: test.message,
+                  answer: dialogAnswer.trim(),
+                };
+                console.log(`Dialog answer updated for step ${stepIndex}.`);
+              } else {
+                // Add new answer
+                this.dialogAnswers.push({
+                  stepIndex: stepIndex,
+                  question: test.message,
+                  answer: dialogAnswer.trim(),
+                });
+                console.log(`Dialog answer added for step ${stepIndex}.`);
+              }
+
               console.log("Dialog answer stored in memory. Total stored:", this.dialogAnswers.length);
               console.log("Current dialogAnswers:", JSON.stringify(this.dialogAnswers, null, 2));
             } catch (e) {
