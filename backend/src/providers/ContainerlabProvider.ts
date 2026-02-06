@@ -258,6 +258,7 @@ export default class ContainerLabProvider implements InstanceProvider {
       body.topologyContent = this.changeTopologyName(body.topologyContent, environment + "-" + groupNumber.toString() + "-" + username);
     }
     delete body.topologySourceUrl;
+    body.topologyContent = this.addJumphostToTopology(body.topologyContent);
 
     const resp = await fetch(this.clab_apiUrl+"api/v1/labs",{
       method: 'POST',
@@ -547,6 +548,31 @@ export default class ContainerLabProvider implements InstanceProvider {
   changeTopologyName(topology: object, newName: string): object {
     const topo = topology as {[key: string]: string | object};
     topo["name"] = newName;
+    return topo;
+  }
+
+  addJumphostToTopology(topology: object): object {
+    const topo = topology as Record<string, unknown>;
+    if (!topo["nodes"] || typeof topo["nodes"] !== "object") {
+      topo["nodes"] = {};
+    }
+    const nodes = topo["nodes"] as Record<string, unknown>;
+    nodes["jumphost"] = {
+        "kind": "linux",
+        "image": "alpine:latest",
+        "group": "hosts",
+        "exec": [
+          "ip addr add 192.168.188.2/24 dev eth1",
+          "apk add openrc openssh",
+          "ssh-keygen -A",
+          "mkdir -p /run/openrc",
+          "touch /run/openrc/softlevel",
+          "rc-update add sshd",
+          "rc-service sshd start",
+          "adduser -D p4",
+          "ash -c 'echo p4:p4 | chpasswd'"
+        ]
+    };
     return topo;
   }
 }
