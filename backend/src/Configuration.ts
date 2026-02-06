@@ -1234,6 +1234,7 @@ environments.set("Example-Exam", {
     {
       name: "1",
       label: "MatrNr Eingabe",
+      bonusPoints: 5,
       tests: [
         {
           type: "Dialog",
@@ -1246,6 +1247,7 @@ environments.set("Example-Exam", {
     {
       name: "2",
       label: "Name Eingabe",
+      bonusPoints: 5,
       tests: [
         {
           type: "Dialog",
