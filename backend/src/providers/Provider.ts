@@ -8,6 +8,9 @@ export interface VMEndpoint {
   SSHJumpHost?: JumpHost;
   LanguageServerPort: number;
   RemoteDesktopPort?: number;
+
+  // Mapping of node name -> management address (e.g. "node1": "10.0.0.5:22")
+  managementAddresses?: Record<string, string>;
 }
 
 // evaluate possiblity to use multiple providers in the same backend, e.g.,
