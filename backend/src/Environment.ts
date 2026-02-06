@@ -210,6 +210,12 @@ export default class Environment {
   private testCounter: Map<string, number> = new Map<string, number>();
   private isReady: boolean;
   private examStartTime?: Date;
+  // temporary in-memory storage for dialog test answers; will be persisted on submit
+  private dialogAnswers: Array<{
+    stepIndex: string;
+    question: string;
+    answer: string;
+  }> = [];
 
   private getErrorHint(test: AssignmentStepTestType, stepIndex: string) {
     if (test.gradualAssistance === undefined) {
@@ -1242,11 +1248,26 @@ export default class Environment {
           if (dialogAnswer.trim().length > 0) {
             testOutput += "PASSED: " + test.successMessage + " ";
             testPassed = true;
+            // store dialog answer temporarily; will be persisted on submit
+            try {
+              this.dialogAnswers.push({
+                stepIndex: stepIndex,
+                question: test.message,
+                answer: dialogAnswer.trim(),
+              });
+              console.log("Dialog answer stored in memory. Total stored:", this.dialogAnswers.length);
+              console.log("Current dialogAnswers:", JSON.stringify(this.dialogAnswers, null, 2));
+            } catch (e) {
+              // keep test flow even if in-memory push fails for any reason
+              console.log("Warning: unable to store dialog answer in memory.", e);
+            }
           } else {
             const errorMsg = test.errorHint || "Please provide a non-empty answer.";
             testOutput += "FAILED: " + errorMsg + " ";
             testPassed = false;
           }
+
+          // Save result somwherer
         }
 
         // if any of the terminalStates matched
@@ -1364,6 +1385,13 @@ export default class Environment {
       }
     }
     
+    // Submit all dialog answers collected so far
+    const dialogAnswersToSubmit = this.dialogAnswers.length > 0 ? this.dialogAnswers : undefined;
+    
+    console.log("Before submission - dialogAnswers array length:", this.dialogAnswers.length);
+    console.log("Before submission - dialogAnswers content:", JSON.stringify(this.dialogAnswers, null, 2));
+    console.log("Submitting dialogAnswers:", JSON.stringify(dialogAnswersToSubmit, null, 2));
+
     await this.persister.SubmitUserEnvironment(
       this.username,
       this.groupNumber,
@@ -1371,8 +1399,12 @@ export default class Environment {
       this.uniqueEnvironmentId,
       terminalStates,
       submittedFiles,
-      bonusPoints
+      bonusPoints,
+      dialogAnswersToSubmit,
     );
+    
+    // Don't clear dialog answers - they remain for subsequent submissions
+    console.log("After submission - dialogAnswers remain in memory:", this.dialogAnswers.length);
   }
 
   public static async getUserSubmissions(

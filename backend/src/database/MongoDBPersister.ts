@@ -41,6 +41,7 @@ export interface SubmissionEntry {
   terminalStatus: TerminalStateType[];
   submittedFiles: SubmissionFileType[];
   points?: number;
+  dialogAnswers?: Array<{ stepIndex: string; question: string; answer: string }>;
 }
 
 export type MongoAssignment = Omit<NewAssignment, "_id" | "sheetId"> & {
@@ -273,7 +274,8 @@ export default class MongoDBPersister implements Persister {
     uniqueEnvironmentId: string,
     terminalStates: TerminalStateType[],
     submittedFiles: SubmissionFileType[],
-    bonusPoints: number
+    bonusPoints: number,
+    dialogAnswers?: Array<{ stepIndex: string; question: string; answer: string }>
   ): Promise<void> {
     console.log(
       "Storing assignment result for user: " +
@@ -283,6 +285,7 @@ export default class MongoDBPersister implements Persister {
         " terminalStates (endpoint,state): " +
         terminalStates.map((ts) => `(${ts.endpoint},${ts.state})`).join(","),
     );
+    console.log("MongoDBPersister - Received dialogAnswers:", JSON.stringify(dialogAnswers, null, 2));
 
     const now = new Date();
     const client = await this.getClient();
@@ -327,19 +330,23 @@ export default class MongoDBPersister implements Persister {
     await Promise.all([delUser, delGroup]);
 
     // add new submission after successful deletion
+    const submissionDoc = {
+      username: username,
+      groupNumber: groupNumber,
+      environment: environment,
+      uniqueEnvironmentId: uniqueEnvironmentId,
+      submissionCreated: now,
+      terminalStatus: terminalStates,
+      submittedFiles: submittedFiles,
+      points: bonusPoints,
+      dialogAnswers: dialogAnswers
+    };
+    console.log("MongoDBPersister - Inserting document with dialogAnswers:", JSON.stringify(submissionDoc.dialogAnswers, null, 2));
+    
     await client
       .db()
       .collection<SubmissionEntry>("submissions")
-      .insertOne({
-        username: username,
-        groupNumber: groupNumber,
-        environment: environment,
-        uniqueEnvironmentId: uniqueEnvironmentId,
-        submissionCreated: now,
-        terminalStatus: terminalStates,
-        submittedFiles: submittedFiles,
-        points: bonusPoints
-      })
+      .insertOne(submissionDoc)
       .catch((err) => {
         throw new Error("Failed to store submissions in mongodb.\n" + err);
       });

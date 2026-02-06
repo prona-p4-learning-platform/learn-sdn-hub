@@ -136,9 +136,11 @@ export default class MemoryPersister implements Persister {
     username: string,
     groupNumber: number,
     environment: string,
+    uniqueEnvironmentId: string,
     terminalStates: TerminalStateType[],
     submittedFiles: SubmissionFileType[],
-    bonusPoints: number
+    bonusPoints: number,
+    dialogAnswers?: Array<{ stepIndex: string; question: string; answer: string }>
   ): Promise<void> {
     return new Promise((resolve) => {
       console.log(
@@ -180,6 +182,14 @@ export default class MemoryPersister implements Persister {
         bonusPoints.toString(),
         "utf8"
       );
+
+      if (dialogAnswers && dialogAnswers.length > 0) {
+        fs.writeFileSync(
+          path.resolve(resultPath, "dialog_answers.json"),
+          JSON.stringify({ dialogAnswers: dialogAnswers }, null, 2),
+          "utf8"
+        );
+      }
 
       resolve();
     });
