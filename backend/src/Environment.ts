@@ -26,6 +26,15 @@ export interface Shell {
   provideTty: boolean;
 }
 
+export interface DockerShell {
+  type: "DockerShell";
+  name: string;
+  containerName: string;
+  executable: string;
+  params: Array<string>;
+  provideTty: boolean;
+}
+
 export interface WebApp {
   type: "WebApp";
   name: string;
@@ -58,7 +67,7 @@ export interface GuacamoleAuthResponse {
   availableDataSources: string[];
 }
 
-export type TerminalType = Shell | Desktop | WebApp;
+export type TerminalType = Shell | DockerShell | Desktop | WebApp;
 
 export interface AssignmentStep {
   name: string;
@@ -648,6 +657,50 @@ export default class Environment {
                   subterminal.executable,
                   subterminal.params,
                   subterminal.cwd,
+                  subterminal.provideTty,
+                  endpoint.SSHJumpHost,
+                );
+
+                sshConsole.on("ready", () => {
+                  this.activeConsoles.set(subterminal.name, sshConsole);
+                  resolve();
+                });
+
+                sshConsole.on("error", (err: Error) => {
+                  reject(err);
+                });
+
+                sshConsole.on("close", () => {
+                  this.activeConsoles.delete(subterminal.name);
+                  reject(new Error("Unable to create environment"));
+                });
+              });
+            }
+            break;
+case "DockerShell":
+            {
+              console.log(
+                "Opening console: ",
+                JSON.stringify(subterminal),
+                JSON.stringify(endpoint),
+              );
+
+              // SAL - replace placeholder in params (TODO: migrate to separate function running this on all subTerminal.Types?)
+              subterminal.params = subterminal.params.map((str) =>
+                str.replace(/\$\((GROUP_ID)\)/g, this.groupNumber.toString()),
+              );
+
+              await new Promise<void>((resolve, reject) => {
+                const sshConsole = new DockerConsole(
+                  this.environmentId,
+                  subterminal.name,
+                  this.username,
+                  this.groupNumber,
+                  sessionId,
+                  endpoint.IPAddress,
+                  endpoint.SSHPort,
+                  subterminal.executable,
+                  subterminal.params,
                   subterminal.provideTty,
                   endpoint.SSHJumpHost,
                 );
