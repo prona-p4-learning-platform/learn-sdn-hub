@@ -31,7 +31,7 @@ You must edit your local `/etc/hosts` and add some entries to access the compone
 ```
 127.0.0.1   rancher.local
 127.0.0.1   prona.local
-127.0.0.1   mongo.prona.local
+127.0.0.1   mongo-express.local
 ```
 
 ## Rancher
@@ -69,5 +69,8 @@ To change cert-manager settings edit `dev-stack/k8s/components/helm/cert-manager
 - [mongodb operator](https://github.com/mongodb/mongodb-kubernetes/blob/master/public/samples/community/)
 
 ## MongoDB
-1) Apply the `mongo-replica-set.yaml` crd to create the DB.
-2) Access db port locally `kubectl port-forward service/prona4-db-svc 27017:27017 -n learn-sdn-hub`
+- To access mongo-express [https://mongo-express.local](https://mongo-express.local)
+
+- Access db port locally `kubectl port-forward service/prona4-db-svc 27017:27017 -n learn-sdn-hub`
+
+

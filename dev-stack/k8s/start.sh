@@ -13,7 +13,12 @@ check_dependency terraform
 check_dependency kubectl
 echo "done"
 
-#create_mongo_db
-
+echo "starting cluster..."
 check_cluster_exists
 terraform_apply
+echo "done"
+
+echo "install MongoDB..."
+wait_for_mongo_operator
+create_mongo_db
+echo "done"
