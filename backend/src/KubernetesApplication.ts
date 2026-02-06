@@ -1,5 +1,5 @@
 import api from "./Api"
-import serverCreator from "./Server"
+import { startServer } from "./Server"
 import MongoDBPersister from "./database/MongoDBPersister"
 import MongoDBAuthenticationProvider from "./authentication/MongoDBAuthenticationProvider"
 import K8sProvider from "./providers/K8sProvider"
@@ -30,13 +30,16 @@ async function startApplication() {
     }
   }
 
-  serverCreator(
-    api(
-      persister,
-      [new MongoDBAuthenticationProvider(persister)],
-      new K8sProvider(),
-    ),
+  const apiRouter = api(
+    persister,
+    [new MongoDBAuthenticationProvider(persister)],
+    new K8sProvider(),
   )
+
+  startServer(apiRouter)
 }
 
-startApplication()
+startApplication().catch((err) => {
+  console.error(err);
+  process.exitCode = 1;
+});
