@@ -1141,6 +1141,164 @@ environments.set("CC-Lab-1", {
   assignmentLabSheet: "/home/p4/labs/lab1/README.md",
 });
 
+environments.set("Clab-Demo", {
+  terminals: [
+    [
+      {
+        type: "Shell",
+        name: "host1",
+        cwd: "/home/p4/kommprot-labs/kommprot-lab-transport-layer",
+        executable: "while [ true ]; do clear && sudo clab inspect &>/dev/null; if [ $? -eq 1 ]; then sudo clab deploy &>/dev/null; fi; docker exec -it clab-kommprot-lab-transport-host1 bash; done",
+        params: [],
+        provideTty: true,
+      },
+    ],
+    [
+      {
+        type: "Shell",
+        name: "host2",
+        cwd: "/home/p4/kommprot-labs/kommprot-lab-transport-layer",
+        executable: "while [ true ]; do clear && sudo clab inspect &>/dev/null; if [ $? -eq 1 ]; then sudo clab deploy &>/dev/null; fi; docker exec -it clab-kommprot-lab-transport-host2 bash; done",
+        params: [],
+        provideTty: true,
+      },
+    ],
+  ],
+  editableFiles: [
+    {
+      absFilePath:
+        "/home/p4/kommprot-labs/kommprot-lab-transport-layer/lab-notes.md",
+      alias: "lab-notes",
+    },
+    {
+      absFilePath:
+        "/home/p4/kommprot-labs/kommprot-lab-application-layer/README.md",
+      alias: "README",
+    },
+  ],
+  stopCommands: [
+    {
+      type: "Shell",
+      name: "bash",
+      cwd: "/home/p4/kommprot-labs/kommprot-lab-transport-layer",
+      executable: "sudo clab destroy",
+      params: [],
+      provideTty: false,
+    },
+    {
+      type: "Shell",
+      name: "bash2",
+      cwd: "/home/p4/kommprot-labs/kommprot-lab-transport-layer",
+      executable: "",
+      params: [],
+      provideTty: false,
+    },
+  ],
+  description: "KommProt-Ue1c transport layer",
+  assignmentLabSheetLocation: "instance",
+  assignmentLabSheet: "/home/p4/kommprot-labs/kommprot-lab-transport-layer/lab-notes.md",
+  providerClabTopology: {
+  "name": "kommprot-lab-application",
+  "topology": {
+    "kinds": {
+      "linux": {
+        "image": "wbitt/network-multitool:alpine-extra"
+      }
+    },
+    "nodes": {
+      "switch1": {
+        "kind": "linux",
+        "image": "alpine:latest",
+        "labels": {
+          "clab-node-ckind": "bridge",
+          "bridge": "switch"
+        },
+        "exec": [
+          "apk add bridge-utils",
+          "brctl addbr br0",
+          "brctl addif br0 eth1",
+          "brctl addif br0 eth2",
+          "brctl addif br0 eth3",
+          "ifconfig br0 up"
+        ]
+      },
+      "learn-sdn-hub-mgmt1": {
+        "kind": "linux",
+        "image": "alpine:latest",
+        "group": "hosts",
+        "exec": [
+          "ip addr add 192.168.188.200/24 dev eth1",
+          "apk add openrc openssh",
+          "ssh-keygen -A",
+          "mkdir -p /run/openrc",
+          "touch /run/openrc/softlevel",
+          "rc-update add sshd",
+          "rc-service sshd start",
+          "adduser -D p4",
+          "ash -c 'echo p4:p4 | chpasswd'"
+        ]
+      },
+      "host1": {
+        "kind": "linux",
+        "image": "alpine:latest",
+        "group": "hosts",
+        "exec": [
+          "ip addr add 192.168.1.10/24 dev eth1",
+          "apk add dhcpcd",
+          "apk add lftp",
+          "apk add nano",
+          "apk add iperf3",
+          "apk add openjdk11",
+          "sed -i '/# A sample configuration for dhcpcd\\./a\\denyinterfaces eth0' /etc/dhcpcd.conf",
+          "sed -i 's/#hostname/hostname/' /etc/dhcpcd.conf"
+        ]
+      },
+      "host2": {
+        "kind": "linux",
+        "group": "hosts",
+        "exec": [
+          "ip addr add 192.168.188.101/24 dev eth1",
+          "apk add dhcpcd",
+          "apk add nano",
+          "apk add openjdk11"
+        ]
+      },
+      "server1": {
+        "kind": "linux",
+        "binds": [
+          "server1/dnsmasq.conf:/etc/dnsmasq.conf"
+        ],
+        "exec": [
+          "ip addr add 192.168.188.1/24 dev eth1",
+          "apk add dnsmasq",
+          "dnsmasq"
+        ]
+      }
+    },
+    "links": [
+      {
+        "endpoints": [
+          "switch1:eth1",
+          "host1:eth1"
+        ]
+      },
+      {
+        "endpoints": [
+          "switch1:eth2",
+          "host2:eth1"
+        ]
+      },
+      {
+        "endpoints": [
+          "switch1:eth3",
+          "server1:eth1"
+        ]
+      }
+    ]
+  }
+}
+});
+
 export default environments;
 
 export function updateEnvironments(

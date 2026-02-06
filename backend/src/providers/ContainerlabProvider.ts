@@ -170,6 +170,7 @@ export default class ContainerLabProvider implements InstanceProvider {
   async getToken(): Promise<void> {
     const providerInstance = this.providerInstance;
 
+<<<<<<< HEAD
     const now = Date.now();
     const tokenExpires = providerInstance.clab_token?.expires_at ?? 0;
     console.log(
@@ -178,6 +179,14 @@ export default class ContainerLabProvider implements InstanceProvider {
         " now: " +
         new Date(now).toISOString(),
     );
+=======
+      /*console.log(
+        "Token expires at: " +
+          new Date(tokenExpires).toISOString() +
+          " now: " +
+          new Date(now).toISOString(),
+      );*/
+>>>>>>> 266-create-deploylab-function-create-lab
 
     // if token exists and still valid for at least 5s, return
     if (providerInstance.clab_token && now <= tokenExpires - 5000) {
@@ -225,77 +234,62 @@ export default class ContainerLabProvider implements InstanceProvider {
     username: string,
     groupNumber: number,
     environment: string,
-    options?: {
-      image?: string;
-      dockerCmd?: string;
-      dockerSupplementalPorts?: string[];
-      kernelImage?: string;
-      kernelBootARGs?: string;
-      rootDrive?: string;
-      proxmoxTemplateTag?: string;
-      mountKubeconfig?: boolean;
-      sshTunnelingPorts?: string[];
-    },
+    options: {
+      clabTopology: object | string;
+    }
   ): Promise<VMEndpoint> {
-    // Authenticate first
+    if(username || groupNumber || environment) {
+      // currently not used in ContainerLabProvider ignore eslint
+    }
+
     await this.getToken();
-    const token = this.clab_token?.token;
-    if (!token) throw new Error("ContainerLabProvider: missing auth token");
+    if(!this.clab_token) {
+      return Promise.reject(
+        new Error("ContainerLabProvider: Could not authenticate to ContainerLab API."),
+      );
+    }
+    
+    const body: { topologySourceUrl?: string; topologyContent?: object } = {};
 
-    // quiet TS warning about unused optional parameter
-    void options;
+    if (typeof options.clabTopology === "string") {
+      body.topologySourceUrl = options.clabTopology;
+    }
+    else {
+      body.topologyContent = options.clabTopology;
+    }
 
-     // Build a lab name that will be unique-ish and sanitize it for clab-api
-     const rawLabName = `${username}-${groupNumber}-${environment}-${Date.now()}`;
-     // clab API rejects many chars — allow only a-z0-9, dot, underscore and hyphen.
-     // replace runs of invalid chars with a single '-', trim edges, limit length.
-     const labName = rawLabName
-       .toLowerCase()
-       .replace(/[^a-z0-9._-]+/g, "-")
-       .replace(/^-+|-+$/g, "")
-       .slice(0, 63);
-     const createUrl = `${this.clab_apiUrl}api/v1/labs`;
-     console.log("ContainerLabProvider: creating lab at " + createUrl);
-
-    // Build payload - send topologyContent as JSON object (clab-api expects a map)
-    const payload: any = {
-      name: labName,
-      owner: username,
-      topologyContent: this.defaultTopology,
-    };
-
-    const res = await fetch(createUrl, {
-      method: "POST",
-      signal: AbortSignal.timeout(30_000),
+    const resp = await fetch(this.clab_apiUrl+"api/v1/labs",{
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + this.clab_token?.token,
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(body, null, 2),
     });
 
-    // DEBUG: log create response status/body for troubleshooting
-    const createText = await res.text().catch(() => "");
-    console.log("ContainerLabProvider: create response status=", res.status, "body=", createText);
-    let created: any = {};
-    try { created = JSON.parse(createText || "{}"); } catch { created = {}; }
-
-    if (!res.ok) {
-      throw new Error(`ContainerLabProvider: Failed to create lab (${res.status}): ${createText}`);
+    if(!resp.ok) {
+      return Promise.reject(
+        new Error("ContainerLabProvider: Could not create server instance. Status: " + resp.status + " " + resp.statusText),
+      );
     }
-    const createdName: string = created?.labName ?? created?.name ?? labName;
-    console.log("ContainerLabProvider: created lab: " + createdName);
-
-    // Wait for an address to appear (poll)
-    const ip = await this.waitForServerAddresses(createdName);
-
-    return {
-      instance: createdName,
-      providerInstanceStatus: "running",
-      IPAddress: ip,
-      SSHPort: this.sshPort,
-      LanguageServerPort: this.lsPort,
-    };
+    
+    try {
+      const respGetServer = await this.getServer(environment);
+      return Promise.resolve(respGetServer);
+    }
+    catch(err) {
+      try {
+        await this.deleteServer(environment);
+        return Promise.reject(
+          new Error("ContainerLabProvider: Could not get created server instance: " + (err instanceof Error ? err.message : String(err))),
+        );
+      } 
+      catch (deleteErr) {
+        return Promise.reject(
+          new Error("ContainerLabProvider: Could not get created server instance: " + (err instanceof Error ? err.message : String(err)) + " Also failed to delete the instance: " + (deleteErr instanceof Error ? deleteErr.message : String(deleteErr))),
+        );
+      }
+    }
   }
 
   async getServer(instance: string): Promise<VMEndpoint> {
@@ -665,7 +659,7 @@ export default class ContainerLabProvider implements InstanceProvider {
       setTimeout(resolve, ms);
     });
   }
-  
+
   async getTopology(url: string): Promise<object> {
     return new Promise((resolve, reject) => {
       fetch(url, {
