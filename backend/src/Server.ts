@@ -18,7 +18,7 @@ export function createApp(apiRouter: Router): Express {
   app.use(express.json());
 
   // Mount API routes
-  app.use("/api", apiRouter);
+  app.use(apiRouter);
 
   // Error handling middleware
   app.use(errors());
