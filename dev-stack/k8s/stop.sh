@@ -5,5 +5,4 @@ set -e
 
 source ./helpers.sh
 
-delete_mongo_db
 delete_cluster
