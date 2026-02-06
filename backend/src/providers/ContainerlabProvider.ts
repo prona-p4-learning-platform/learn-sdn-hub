@@ -238,9 +238,6 @@ export default class ContainerLabProvider implements InstanceProvider {
       clabTopology: object | string;
     }
   ): Promise<VMEndpoint> {
-    if(username || groupNumber || environment) {
-      // currently not used in ContainerLabProvider ignore eslint
-    }
 
     await this.getToken();
     if(!this.clab_token) {
@@ -253,10 +250,21 @@ export default class ContainerLabProvider implements InstanceProvider {
 
     if (typeof options.clabTopology === "string") {
       body.topologySourceUrl = options.clabTopology;
+      try {
+        const topoObj = await this.getTopology(options.clabTopology);
+        body.topologyContent = this.changeTopologyName(topoObj, environment + "-" + groupNumber.toString() + "-" + username);
+      }
+      catch(err) {
+        return Promise.reject(
+          new Error("ContainerLabProvider: Could not get topology: " + (err instanceof Error ? err.message : String(err))),
+        );
+      }
     }
     else {
       body.topologyContent = options.clabTopology;
+      body.topologyContent = this.changeTopologyName(body.topologyContent, environment + "-" + groupNumber.toString() + "-" + username);
     }
+    delete body.topologySourceUrl;
 
     const resp = await fetch(this.clab_apiUrl+"api/v1/labs",{
       method: 'POST',
@@ -274,12 +282,12 @@ export default class ContainerLabProvider implements InstanceProvider {
     }
     
     try {
-      const respGetServer = await this.getServer(environment);
+      const respGetServer = await this.getServer(environment + "-" + groupNumber.toString() + "-" + username);
       return Promise.resolve(respGetServer);
     }
     catch(err) {
       try {
-        await this.deleteServer(environment);
+        await this.deleteServer(environment + "-" + groupNumber.toString() + "-" + username);
         return Promise.reject(
           new Error("ContainerLabProvider: Could not get created server instance: " + (err instanceof Error ? err.message : String(err))),
         );
