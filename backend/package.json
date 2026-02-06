@@ -16,7 +16,7 @@
     "start:firecracker": "ts-node --files src/FirecrackerApplication.ts",
     "start:proxmox": "ts-node --files src/ProxmoxApplication.ts",
     "start:k8s": "ts-node src/KubernetesApplication.ts",
-    "dev:k8s": "BACKEND_ASSIGNMENT_TYPE='mongodb' MONGODB_URL='mongodb://admin:test123@localhost/learn-sdn-hub?authSource=admin&directConnection=true' nodemon src/KubernetesApplication.ts",
+    "dev:k8s": "BACKEND_ASSIGNMENT_TYPE='mongodb' MONGODB_URL='mongodb://admin:test123@localhost:27017/learn-sdn-hub?authSource=admin&directConnection=true' nodemon src/KubernetesApplication.ts",
     "start:k8sdebug": "ts-node --files src/debug_k8s-client.ts",
     "format": "prettier . --write --ignore-unknown",
     "format:check": "prettier . --check --ignore-unknown",
