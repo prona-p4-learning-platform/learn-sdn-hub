@@ -20,3 +20,4 @@ terraform.tfstate*
 # K8s
 dev-stack/k8s/cluster-config
 mongo-export/**
+helm/tmp.yaml

@@ -25,16 +25,17 @@ spec:
         image: learn-sdn-hub-backend:latest ##### for local development
         # image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}" ###### CHANGE FOR PRODUCTION
         imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
+        env:
+          - name: BACKEND_ASSIGNMENT_TYPE
+            value: mongodb
+          - name: MONGODB_URL
+            value: mongodb://admin:test123@prona4-db-svc:27017/learn-sdn-hub?replicaSet=prona4-db&authSource=admin
         ports:
-          - containerPort: 80
-        args:
-          {{- range $key, $value := .Values.backend.args }}
-          - "-{{ $key }}"
-          - {{ $value | quote }}
-          {{- end }}
+          - containerPort: {{ .Values.backend.service.containerPort | int }}
         resources:
           requests:
-            memory: "512Mi"
+            memory: "1Gi"
             cpu: "200m"
           limits:
-            memory: "512Mi"
+            memory: "2Gi"
+            cpu: "1"

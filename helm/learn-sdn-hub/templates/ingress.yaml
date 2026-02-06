@@ -3,36 +3,34 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: {{ .Release.Name }}-ingress
-  namespace: {{ .Release.Namespace }}
   annotations:
-    {{- if .Values.ingress.clusterIssuer }}
-    cert-manager.io/cluster-issuer: {{ .Values.ingress.clusterIssuer }}
-    {{- end }}
+    nginx.ingress.kubernetes.io/proxy-body-size: 128m
+    cert-manager.io/cluster-issuer: "selfsigned-issuer"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: "selfsigned-issuer"
+    cert-manager.io/private-key-size: "4096"
 spec:
-  ingressClassName: {{ .Values.ingress.className }}
-  {{- if .Values.ingress.tls }}
-  tls:
-    {{- range .Values.ingress.tls }}
-    - hosts:
-        {{- range .hosts }}
-        - {{ . | quote }}
-        {{- end }}
-      secretName: {{ .secretName }}
-    {{- end }}
-  {{- end }}
+  ingressClassName: nginx
   rules:
-    {{- range .Values.ingress.hosts }}
-    - host: {{ .host | quote }}
-      http:
+    - http:
         paths:
-          {{- range .paths }}
-          - path: {{ .path }}
-            pathType: {{ .pathType }}
-            backend:
+          - backend:
               service:
-                name: {{ $.Release.Name }}-{{ .service }}
+                name: {{ .Release.Name }}-frontend
                 port:
-                  number: 80
-          {{- end }}
-    {{- end }}
+                  number: {{ .Values.frontend.service.servicePort }}
+            pathType: Prefix
+            path: /
+          - backend:
+              service:
+                name: {{ .Release.Name }}-backend
+                port:
+                  number: {{ .Values.frontend.service.servicePort }}
+            pathType: Prefix
+            path: /api
+      host: {{ .Values.ingress.fqdn }}
+  tls:
+    - hosts:
+      - {{ .Values.ingress.fqdn | quote }}
+      secretName: {{ .Values.ingress.fqdn }}
 {{- end }}

@@ -24,7 +24,7 @@ spec:
         # image: "{{ .Values.frontend.image.repository }}:{{ .Values.frontend.image.tag }}" ##### CHANGE FOR PRODUCTION
           imagePullPolicy: {{ .Values.frontend.image.pullPolicy }}
           ports:
-            - containerPort: 80
+            - containerPort: {{ .Values.frontend.service.containerPort | int }}
           resources:
             requests:
               memory: "512Mi"
