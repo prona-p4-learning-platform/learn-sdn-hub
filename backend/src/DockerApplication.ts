@@ -6,9 +6,15 @@ import DockerProvider from "./providers/DockerProvider";
 
 const MONGODB_URL = process.env.MONGODB_URL;
 
-if (MONGODB_URL) {
+async function bootstrap() {
+  if (!MONGODB_URL) {
+    console.log("MongoDB URL not set. Aborting...");
+    process.exit(1);
+  }
+
   const persister = new MongoDBPersister(MONGODB_URL);
-  persister.AddDefaultUser();
+
+  await persister.AddDefaultUser();
   console.log("Attempting to start Docker Application.");
 
   const apiRouter = api(
@@ -22,20 +28,17 @@ if (MONGODB_URL) {
   if (process.env.BACKEND_ASSIGNMENT_TYPE === "mongodb") {
     console.log("Attempting to add missing assignments to persister.");
     try {
-      persister
-        .CreateAssignments()
-        .then(async () => {
-          console.log("Attempting to load environments from persister.");
-          await persister.LoadEnvironments();
-        })
-        .catch((error) => {
-          console.error("Error creating assignments:", error);
-        });
-    } catch (err) {
-      console.error(err);
+      await persister.CreateAssignments();
+
+      console.log("Attempting to load environments from persister.");
+      await persister.LoadEnvironments();
+    } catch (error) {
+      console.error("Error creating assignments or loading environments:", error);
     }
   }
-} else {
-  console.log("MongoDB URL not set. Aborting...");
-  process.exit(1);
 }
+
+bootstrap().catch((err) => {
+  console.error("Critical error during startup:", err);
+  process.exit(1);
+});
