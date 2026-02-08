@@ -12,7 +12,4 @@ k3d image import learn-sdn-hub-backend:latest -c learn-sdn-hub
 
 echo "Deploying helm chart..."
 helm upgrade --install learn-sdn-hub ../../helm/learn-sdn-hub \
-  -n learn-sdn-hub \
-  --create-namespace \
-  --set cert-manager.enabled=false \
-  --set ingress-nginx.enabled=false
+  -n learn-sdn-hub
