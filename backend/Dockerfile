@@ -11,6 +11,11 @@ LABEL de.hs-fulda.netlab.name="prona/learn-sdn-hub" \
 WORKDIR /app
 
 # copy necessary files to image
+COPY package.json .
+
+# build frontend and create static backend
+RUN npm install
+
 COPY . .
 
 # add a user 
@@ -19,8 +24,6 @@ RUN useradd -m -s /bin/bash p4 && \
 
 USER p4
 
-# build frontend and create static backend
-RUN npm install
 
 # default port, can be overriden by using -p when running docker and as BACKEND_PORT using -p parameter of start-learn-sdn-hub.sh
 EXPOSE 3001/tcp

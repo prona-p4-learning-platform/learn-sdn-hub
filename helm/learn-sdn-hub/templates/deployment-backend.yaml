@@ -30,6 +30,10 @@ spec:
             value: mongodb
           - name: MONGODB_URL
             value: mongodb://admin:test123@prona4-db-svc:27017/learn-sdn-hub?replicaSet=prona4-db&authSource=admin
+          - name: SSH_USERNAME
+            value: p4
+          - name: SSH_PASSWORD
+            value: p4
         ports:
           - containerPort: {{ .Values.backend.service.containerPort | int }}
         resources:
