@@ -1,4 +1,4 @@
-import { K8sClient, K8sClientConfig } from './utils/k8s-client';
+/*import { K8sClient, K8sClientConfig } from './utils/k8s-client';
 import { AxiosError } from 'axios';
 import * as fs from 'node:fs';
 
@@ -63,7 +63,16 @@ async function k8sClientTest() {
   }
 }
 
-k8sClientTest().catch((err) => {
+/*k8sClientTest().catch((err) => {
   console.error(err);
   process.exitCode = 1;
-});
+});*/
+
+import { K8sClient } from "./utils/k8s-client"
+
+async function test() {
+  const client = new K8sClient(await K8sClient.getVClusterConfig(0))
+  console.log((await client.coreV1Api.listNamespace()).items)
+}
+
+test()
