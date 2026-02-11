@@ -206,9 +206,9 @@ export class K8sClient {
    * Generates the HelmRelease object for a vcluster based on the group number.
    * @param groupNumber The group number (e.g., "02")
    */
-  private getVClusterHelmReleaseObject(groupNumber: string): VClusterHelmRelease {
-    const clusterName = `vcluster-${groupNumber}`;
-    const targetNamespace = `cluster-${groupNumber}`;
+  private getVClusterHelmReleaseObject(groupNumber: number): VClusterHelmRelease {
+    const clusterName = `vcluster-group-${groupNumber}`;
+    const targetNamespace = `vcluster-group-${groupNumber}`;
 
     return {
       apiVersion: `${this.fluxGroup}/${this.fluxVersion}`,
@@ -259,7 +259,7 @@ export class K8sClient {
    * Assumes the 'loft' HelmRepository already exists.
    * @param groupNumber The group number (e.g. "02")
    */
-  public async createVCluster(groupNumber: string): Promise<void> {
+  public async createVCluster(groupNumber: number): Promise<void> {
     // Generate HelmRelease object
     const helmReleaseBody = this.getVClusterHelmReleaseObject(groupNumber);
 
@@ -289,7 +289,9 @@ export class K8sClient {
    * Deletes a vcluster HelmRelease by name.
    * @param vClusterName The name of the vcluster to delete (e.g., "vcluster-02")
    */
-  public async deleteVCluster(vClusterName: string): Promise<void> {
+  public async deleteVCluster(groupId: number): Promise<void> {
+    const vClusterName = `vcluster-group-${groupId}`
+
     try {
       await this.customObjectsApi.deleteNamespacedCustomObject({
         group: this.fluxGroup,
