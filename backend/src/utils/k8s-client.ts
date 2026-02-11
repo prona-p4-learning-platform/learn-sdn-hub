@@ -11,6 +11,18 @@ export interface K8sClientConfig {
   clientKey?: string
 }
 
+interface createAssignmentProps {
+  username: string
+  assignmentName: string
+  options?: {
+    dockerCMD?: string
+  }
+}
+
+interface deleteAssignmentProps {
+  assignmentName: string
+}
+
 interface VClusterHelmRelease {
   apiVersion: string;
   kind: string;
@@ -90,7 +102,7 @@ export class K8sClient {
     this.kubeConfig = new k8s.KubeConfig();
 
     // Configure the cluster based on parameters
-    if(config.token) {
+    if (config.token) {
       this.kubeConfig.loadFromOptions({
         clusters: [
           {
@@ -115,7 +127,7 @@ export class K8sClient {
         ],
         currentContext: 'current-context',
       });
-    } else if(config.clientCert && config.clientKey && !config.token) {
+    } else if (config.clientCert && config.clientKey && !config.token) {
       this.kubeConfig.loadFromOptions({
         clusters: [
           {
@@ -172,11 +184,11 @@ export class K8sClient {
     };
   }
 
-  public static getConfig():K8sClientConfig {
-    if(process.env.KUBERNETES_SERVICE_HOST && process.env.KUBERNETES_SERVICE_PORT) {
+  public static getConfig(): K8sClientConfig {
+    if (process.env.KUBERNETES_SERVICE_HOST && process.env.KUBERNETES_SERVICE_PORT) {
       return this.getInClusterConfig()
     } else {
-      const tokenPath = '../dev-stack/k8s/cluster-config/token'; 
+      const tokenPath = '../dev-stack/k8s/cluster-config/token';
       const caPath = '../dev-stack/k8s/cluster-config/ca.crt';
       const apiUrl = 'https://127.0.0.1:7428';
       const token = fs.readFileSync(tokenPath, 'utf8').trim();
@@ -191,9 +203,9 @@ export class K8sClient {
     }
   }
 
-  public static async getVClusterConfig(groupId:number):Promise<K8sClientConfig> {
-    const {coreV1Api} = new K8sClient(this.getConfig())
-    const res = await coreV1Api.readNamespacedSecret({name: `vc-vcluster-group-${groupId}`, namespace: `vcluster-group-${groupId}`})
+  public static async getVClusterConfig(groupId: number): Promise<K8sClientConfig> {
+    const { coreV1Api } = new K8sClient(this.getConfig())
+    const res = await coreV1Api.readNamespacedSecret({ name: `vc-vcluster-group-${groupId}`, namespace: `vcluster-group-${groupId}` })
     const config = this.vClusterConficSchema.parse(res)
 
     return {
@@ -254,6 +266,58 @@ export class K8sClient {
     };
   }
 
+  private getAssignmentPodManifest(podName: string, username: string, dockerCmd?: string): k8s.V1Pod {
+    return {
+      metadata: {
+        name: podName,
+        labels: {
+          app: podName,
+          user: username,
+        },
+      },
+      spec: {
+        containers: [
+          {
+            name: 'main',
+            image: "cc-container:latest",
+            command: dockerCmd ? [dockerCmd] : undefined,
+            ports: [
+              { containerPort: 22 }
+            ],
+            securityContext: {
+              privileged: true,
+            },
+            imagePullPolicy: "Never"
+          },
+        ],
+      },
+    }
+  }
+
+  private getAssignmentServiceManifest(assignmentName: string): k8s.V1Service {
+    return {
+      apiVersion: 'v1',
+      kind: 'Service',
+      metadata: {
+        name: assignmentName,
+      },
+      spec: {
+        type: 'ClusterIP',
+        selector: {
+          app: assignmentName
+        },
+        ports: [
+          {
+            protocol: 'TCP',
+            port: 22,
+            targetPort: 22
+          }
+        ]
+      }
+    }
+
+  }
+
   /**
    * Creates a vcluster HelmRelease for the specified group.
    * Assumes the 'loft' HelmRepository already exists.
@@ -308,6 +372,50 @@ export class K8sClient {
         console.error(`Failed to delete vcluster HelmRelease ${vClusterName}:`, error);
         throw new error;
       }
+    }
+  }
+
+  public async createAssignment({ username, assignmentName, options }: createAssignmentProps) {
+    try {
+      console.log("Creating assignment")
+      const namespace = assignmentName
+
+      // create NS
+      await this.coreV1Api.createNamespace({
+        body: {
+          metadata: {
+            name: namespace
+          }
+        }
+      })
+
+      // Create Pod
+      await this.coreV1Api.createNamespacedPod({
+        namespace: namespace,
+        body: this.getAssignmentPodManifest(assignmentName, username, options?.dockerCMD),
+      });
+
+      // create Service
+      await this.coreV1Api.createNamespacedService({
+        namespace,
+        body: this.getAssignmentServiceManifest(assignmentName)
+      })
+    } catch(err) {
+      console.error(err)
+      throw new Error("Failed to create assignemnt")
+    }
+  }
+
+  public async deleteAssignment({assignmentName}:deleteAssignmentProps) {
+    try {
+      console.log("deleting assignment ...")
+      await this.coreV1Api.deleteNamespace({
+        name: assignmentName
+      })
+      console.log("Assignemnt deleted")
+    } catch(err) {
+      console.error("Failed to delete assignment", err)
+      throw new Error("Failed to delete assignment")
     }
   }
 }

@@ -131,7 +131,15 @@ export type SubmissionFileType = {
   fileContent: string;
 };
 
+export type EnvironmentType = "normal" | "k8s" | "k8s-vcluster";
+
+export type EnvironmentResponse = {
+  name: string
+  type: EnvironmentType
+}
+
 export interface EnvironmentDescription {
+  type: EnvironmentType;
   terminals: Array<Array<TerminalType>>;
   editableFiles: Array<AliasedFile>;
   stopCommands: Array<TerminalType>;
