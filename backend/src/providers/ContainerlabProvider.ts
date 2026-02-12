@@ -227,9 +227,18 @@ export default class ContainerLabProvider implements InstanceProvider {
     username: string,
     groupNumber: number,
     environment: string,
-    options: {
-      clabTopology: object | string;
-    }
+    options?: {
+      image?: string;
+      dockerCmd?: string;
+      dockerSupplementalPorts?: string[];
+      kernelImage?: string;
+      kernelBootARGs?: string;
+      rootDrive?: string;
+      proxmoxTemplateTag?: string;
+      mountKubeconfig?: boolean;
+      sshTunnelingPorts?: string[];
+      clabTopology?: object | string;
+    },
   ): Promise<VMEndpoint> {
 
     await this.getToken();
@@ -241,7 +250,12 @@ export default class ContainerLabProvider implements InstanceProvider {
     
     const body: { topologySourceUrl?: string; topologyContent?: object } = {};
 
-    if (typeof options.clabTopology === "string") {
+    if (typeof options?.clabTopology === "undefined") {
+      return Promise.reject(
+        new Error("ContainerLabProvider: No topology provided in options."),
+      );
+    }
+    else if (typeof options.clabTopology === "string") {
       body.topologySourceUrl = options.clabTopology;
       try {
         const topoObj = await this.getTopology(options.clabTopology);
