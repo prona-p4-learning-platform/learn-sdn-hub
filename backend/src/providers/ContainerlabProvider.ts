@@ -14,7 +14,6 @@ import {
 } from "./Provider";
 //import { Client } from "ssh2";
 import { ToadScheduler, SimpleIntervalJob, AsyncTask } from "toad-scheduler";
-import { execSync } from "child_process";
 import { load } from "js-yaml";
 //import Environment from "../Environment";
 
@@ -152,8 +151,10 @@ export default class ContainerLabProvider implements InstanceProvider {
   async getToken(): Promise<void> {
     const providerInstance = this.providerInstance;
 
-    const now = Date.now();
-    const tokenExpires = providerInstance.clab_token?.expires_at ?? 0;
+    return new Promise((resolve, reject) => {
+      const tokenExpires = providerInstance.clab_token?.expires_at ?? Date.now();
+      const now = Date.now();
+
       /*console.log(
         "Token expires at: " +
           new Date(tokenExpires).toISOString() +
@@ -161,46 +162,69 @@ export default class ContainerLabProvider implements InstanceProvider {
           new Date(now).toISOString(),
       );*/
 
-    // if token exists and still valid for at least 5s, return
-    if (providerInstance.clab_token && now <= tokenExpires - 5000) {
-      return;
-    }
+      // add 5 sec for the token to be valid for subsequent operations
+      if (
+        providerInstance.clab_token !== undefined &&
+        now <= tokenExpires + 5000
+      ) {
+        return resolve();
+      } 
+      else {
+        // authenticate to ContainerLab and get a token
+        const data_auth = {
+          username: this.clab_username,
+          password: this.clab_password,
+        };
+        fetch(providerInstance.clab_apiUrl + "login", {
+          signal: AbortSignal.timeout(10000), // 10 seconds timeout
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(data_auth),
+        })
+          .then((response) => {
+            if (response.ok) {
+              if (response.body) {
+                return response.json().then((data) => {
+                  if (!data.token) {
+                    return reject(
+                      new Error(
+                        "ContainerLabProvider: Authentication failed: No token received",
+                      ),
+                    );
+                  }
+                  const issued_at = Date.now();
+                  const token = data.token as string;
 
-    // authenticate to ContainerLab and get a token
-    const data_auth = {
-      username: this.clab_username,
-      password: this.clab_password,
-    };
+                  if (providerInstance.clab_token === undefined) {
+                    providerInstance.clab_token = {} as Token;
+                  }
 
-    const url = `${providerInstance.clab_apiUrl}login`;
-    try {
-      console.log(`ContainerLabProvider: authenticating to ${url}`);
-      const response = await fetch(url, {
-        signal: AbortSignal.timeout(10000),
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data_auth),
-      });
-
-      if (!response.ok) {
-        const body = await response.text().catch(() => "");
-        throw new Error(`status=${response.status} body=${body}`);
+                  providerInstance.clab_token.token = token;
+                  providerInstance.clab_token.issued_at = (
+                    issued_at - 10000
+                  ); // workaround, set issued at to 10 sec in the past, because 10 sec timeout above
+                  providerInstance.clab_token.expires_at = (
+                    issued_at + this.clab_token_duration
+                  ); // token valid for configured duration
+                  return resolve();
+                });
+              }
+            }
+            return reject(
+              new Error(
+                "ContainerLabProvider: Authentication failed: No token received",
+              ),
+            );
+          })
+          .catch(function (err) {
+            return reject(
+              new Error("ContainerLabProvider: Authentication failed: " + err),
+            );
+          });
       }
-
-      const data: any = await response.json();
-      if (!data?.token) throw new Error("no token in response");
-
-      const issued_at = Date.now();
-      if (!providerInstance.clab_token) providerInstance.clab_token = {} as Token;
-      providerInstance.clab_token.token = String(data.token);
-      providerInstance.clab_token.issued_at = issued_at - 10000; // small safety margin
-      providerInstance.clab_token.expires_at = issued_at + this.clab_token_duration;
-      console.log("ContainerLabProvider: authentication succeeded");
-      return;
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      throw new Error("ContainerLabProvider: Authentication failed: " + msg);
-    }
+    });
   }
 
   async createServer(
@@ -298,7 +322,7 @@ export default class ContainerLabProvider implements InstanceProvider {
               // Instance found
               return response.json().then(data => {
 
-                const upTime: string[] = ((data as any)?.["0"]?.status as string | undefined)?.split(" ") || [];
+                const upTime: string[] = (data?.["0"]?.status as string | undefined)?.split(" ") || [];
 
                 // Get Docker status uptime
                 let difTime = 0;
@@ -379,91 +403,27 @@ export default class ContainerLabProvider implements InstanceProvider {
 
     const delUrl = `${this.clab_apiUrl}api/v1/labs/${encodeURIComponent(instance)}`;
     console.log("ContainerLabProvider: deleting lab", delUrl);
-
+    const body = {
+      labName: instance,
+    }
     try {
-      const res = await fetch(delUrl, {
+      const response = await fetch(delUrl, {
         method: "DELETE",
         signal: AbortSignal.timeout(10_000),
         headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify(body),
       });
-
-      if (res.ok) {
-        console.log("ContainerLabProvider: delete succeeded for", instance);
-        return;
-      }
-
-      const body = await res.text().catch(() => "");
-      // If server complains about missing topology file, try local forced cleanup
-      if (res.status === 500 && body.includes("topology file") && body.includes("does not exist")) {
-        console.warn(
-          `ContainerLabProvider: server reported missing topology for ${instance}, attempting forced cleanup...`,
+      if (!response.ok) {
+        const respBody = await response.text().catch(() => "");
+        return Promise.reject(
+          new Error(`ContainerLabProvider: Failed to delete server instance (${response.status}): ${respBody}`),
         );
-
-        // fetch list of labs to obtain container ids and topology path
-        const listUrl = `${this.clab_apiUrl}api/v1/labs`;
-        const listRes = await fetch(listUrl, {
-          method: "GET",
-          signal: AbortSignal.timeout(10_000),
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (!listRes.ok) {
-          const listBody = await listRes.text().catch(() => "");
-          throw new Error(
-            `ContainerLabProvider: Failed to fetch labs for forced cleanup (${listRes.status}): ${listBody}`,
-          );
-        }
-
-        const labsJson: any = await listRes.json().catch(() => ({}));
-        const containers: any[] = labsJson?.[instance] ?? [];
-
-        // collect container ids and topology path (if present)
-        const ids = containers.map((c) => c?.container_id).filter(Boolean);
-        const absLabPath =
-          containers.find((c) => c?.absLabPath)?.absLabPath ||
-          containers.find((c) => c?.labPath)?.labPath ||
-          "";
-
-        if (ids.length) {
-          try {
-            console.log("ContainerLabProvider: removing containers locally:", ids.join(", "));
-            execSync(`docker rm -f ${ids.join(" ")}`, { stdio: "inherit" });
-          } catch (e: unknown) {
-            console.warn("ContainerLabProvider: docker rm failed (continuing):", (e as Error).message ?? e);
-          }
-        } else {
-          console.log("ContainerLabProvider: no container ids found for forced cleanup");
-        }
-
-        if (absLabPath) {
-          try {
-            console.log("ContainerLabProvider: removing topology file:", absLabPath);
-            execSync(`rm -f ${absLabPath}`, { stdio: "inherit" });
-          } catch (e: unknown) {
-            console.warn("ContainerLabProvider: removing topology file failed (continuing):", (e as Error).message ?? e);
-          }
-        }
-
-        // retry delete
-        const retryRes = await fetch(delUrl, {
-          method: "DELETE",
-          signal: AbortSignal.timeout(10_000),
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (!retryRes.ok) {
-          const retryBody = await retryRes.text().catch(() => "");
-          throw new Error(`ContainerLabProvider: Forced delete failed (${retryRes.status}): ${retryBody}`);
-        }
-
-        console.log("ContainerLabProvider: forced delete succeeded for", instance);
-        return;
       }
-
-      throw new Error(`ContainerLabProvider: Failed to delete lab (${res.status}): ${body}`);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      throw new Error("ContainerLabProvider: delete failed: " + msg);
+      return Promise.resolve();
+    } catch {
+      return Promise.reject(
+        new Error("ContainerLabProvider: Failed to delete server instance: No response from API."),
+      );
     }
   }
 
@@ -584,66 +544,6 @@ export default class ContainerLabProvider implements InstanceProvider {
 
 
   }
-
-  waitForServerAddresses(labNameOrId: string): Promise<string> {
-    const provider = this.providerInstance;
-    const maxWaitMs = 120_000; // 2 minutes
-    const pollInterval = 2000;
-
-    return new Promise(async (resolve, reject) => {
-      try {
-        await provider.getToken();
-      } catch (e) {
-        return reject(new Error("ContainerLabProvider: missing token for polling"));
-      }
-      const token = provider.clab_token?.token;
-      if (!token) return reject(new Error("ContainerLabProvider: missing auth token"));
-
-      const start = Date.now();
-
-      const check = async () => {
-        const statusUrl = `${provider.clab_apiUrl}api/v1/labs/${encodeURIComponent(labNameOrId)}`;
-        try {
-          const r = await fetch(statusUrl, {
-            method: "GET",
-            signal: AbortSignal.timeout(10_000),
-            headers: {
-              accept: "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-          });
-
-          if (r.ok) {
-            const data: any = await r.json().catch(() => ({}));
-            // Iterate values and find first ipv4_address
-            for (const val of Object.values(data || {})) {
-              const entry = Array.isArray(val) ? val[0] : val;
-              const ipv4 = entry?.ipv4_address;
-              if (typeof ipv4 === "string" && ipv4.length) {
-                return resolve(ipv4.split("/")[0]);
-              }
-            }
-          } else if (r.status === 404) {
-            return reject(new Error("ContainerLabProvider: lab not found"));
-          }
-        } catch (err) {
-          // ignore transient errors and retry until timeout
-        }
-
-        if (Date.now() - start > maxWaitMs) {
-          return reject(new Error("ContainerLabProvider: timeout waiting for IP addresses"));
-        }
-        setTimeout(check, pollInterval);
-      };
-
-      check();
-    });
-  }
-
-  //waitForServerSSH(ip: string, port: number, timeout: number): Promise<void> {
-  //
-  //  return new Promise<void>(async () => {});
-  //}
 
   sleep(ms: number): Promise<void> {
     return new Promise((resolve) => {
