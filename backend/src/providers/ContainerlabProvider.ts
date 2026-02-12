@@ -21,8 +21,8 @@ const schedulerIntervalSeconds = 5 * 60;
 
 interface Token {
   token: string;
-  issued_at: string;
-  expires_at: string;
+  issued_at: number; // ms since epoch
+  expires_at: number; // ms since epoch
 }
 
 export default class ContainerLabProvider implements InstanceProvider {
@@ -68,7 +68,10 @@ export default class ContainerLabProvider implements InstanceProvider {
 
     // check for ContainerLab auth url
     const ENV_URL = process.env.CLAB_APIURL;
-    if (ENV_URL) this.clab_apiUrl = ENV_URL;
+    if (ENV_URL) {
+      // normalize to always end with single slash
+      this.clab_apiUrl = ENV_URL.endsWith("/") ? ENV_URL : ENV_URL + "/";
+    }
     else {
       throw new Error(
         "ContainerLabProvider: No API Url provided (CONTAINERLAB_AUTHURL).",
@@ -110,12 +113,14 @@ export default class ContainerLabProvider implements InstanceProvider {
     }
     this.providerInstance = this;
 
+    // defaultTopology is used below as the payload for topologyContent
+
     // better use env var to allow configuration of port numbers?
     this.sshPort = 22;
     this.lsPort = 3005;
-
+    
     const scheduler = new ToadScheduler();
-
+    
     const task = new AsyncTask(
       "ContainerLabProvider Instance Pruning Task",
       () => {
@@ -145,10 +150,9 @@ export default class ContainerLabProvider implements InstanceProvider {
 
   async getToken(): Promise<void> {
     const providerInstance = this.providerInstance;
+
     return new Promise((resolve, reject) => {
-      const tokenExpires = Date.parse(
-        providerInstance.clab_token?.expires_at ?? Date(),
-      );
+      const tokenExpires = providerInstance.clab_token?.expires_at ?? Date.now();
       const now = Date.now();
 
       /*console.log(
@@ -200,10 +204,10 @@ export default class ContainerLabProvider implements InstanceProvider {
                   providerInstance.clab_token.token = token;
                   providerInstance.clab_token.issued_at = (
                     issued_at - 10000
-                  ).toString(); // workaround, set issued at to 10 sec in the past, because 10 sec timeout above
+                  ); // workaround, set issued at to 10 sec in the past, because 10 sec timeout above
                   providerInstance.clab_token.expires_at = (
                     issued_at + this.clab_token_duration
-                  ).toString(); // token valid for configured duration
+                  ); // token valid for configured duration
                   return resolve();
                 });
               }
@@ -317,13 +321,16 @@ export default class ContainerLabProvider implements InstanceProvider {
         .then(() => {
           // Token received
 
-          fetch(providerInstance.clab_apiUrl + "api/v1/labs/" + instance, {
-            method: 'GET',
-            headers: {
-              'accept': 'application/json',
-              'Authorization': 'Bearer ' + providerInstance.clab_token?.token,
-            }
-          })
+          // ensure consistent concatenation (clab_apiUrl already ends with '/')
+          const getUrl = `${providerInstance.clab_apiUrl}api/v1/labs/${instance}`;
+          console.log("ContainerLabProvider: fetching " + getUrl);
+          fetch(getUrl, {
+             method: 'GET',
+             headers: {
+               'accept': 'application/json',
+               'Authorization': 'Bearer ' + providerInstance.clab_token?.token,
+             }
+           })
           .then(response => {
             if (response.ok) {
               // Instance found
@@ -400,10 +407,38 @@ export default class ContainerLabProvider implements InstanceProvider {
     });
   }
 
-  async deleteServer(labName: string): Promise<void> {
-      // For testing purposes
-      console.log(labName);
-    return new Promise(() => {});
+  async deleteServer(instance: string): Promise<void> {
+    // ensure we're authenticated
+    await this.getToken();
+    const token = this.clab_token?.token;
+    if (!token) {
+      throw new Error("ContainerLabProvider: missing auth token for delete");
+    }
+
+    const delUrl = `${this.clab_apiUrl}api/v1/labs/${encodeURIComponent(instance)}`;
+    console.log("ContainerLabProvider: deleting lab", delUrl);
+    const body = {
+      labName: instance,
+    }
+    try {
+      const response = await fetch(delUrl, {
+        method: "DELETE",
+        signal: AbortSignal.timeout(10_000),
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify(body),
+      });
+      if (!response.ok) {
+        const respBody = await response.text().catch(() => "");
+        return Promise.reject(
+          new Error(`ContainerLabProvider: Failed to delete server instance (${response.status}): ${respBody}`),
+        );
+      }
+      return Promise.resolve();
+    } catch {
+      return Promise.reject(
+        new Error("ContainerLabProvider: Failed to delete server instance: No response from API."),
+      );
+    }
   }
 
   async pruneServerInstance(): Promise<void> {
@@ -434,7 +469,9 @@ export default class ContainerLabProvider implements InstanceProvider {
     }
 
     // Request a list of labs and containers
-    const response = await fetch(`${this.clab_apiUrl}/api/v1/labs`, {
+    const listUrl = `${this.clab_apiUrl}api/v1/labs`;
+    console.log("ContainerLabProvider: listing labs from " + listUrl);
+    const response = await fetch(listUrl, {
       method: "GET",
       signal: AbortSignal.timeout(10_000),
       headers: { Authorization: `Bearer ${token}` },
@@ -521,16 +558,6 @@ export default class ContainerLabProvider implements InstanceProvider {
 
 
   }
-
-  waitForServerAddresses(): Promise<string> {
-
-    return new Promise<string>(async () => {});
-  }
-
-  //waitForServerSSH(ip: string, port: number, timeout: number): Promise<void> {
-  //
-  //  return new Promise<void>(async () => {});
-  //}
 
   sleep(ms: number): Promise<void> {
     return new Promise((resolve) => {
