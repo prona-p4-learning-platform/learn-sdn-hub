@@ -136,7 +136,7 @@ export default class MemoryPersister implements Persister {
     username: string,
     groupNumber: number,
     environment: string,
-    uniqueEnvironmentId: string,
+    _uniqueEnvironmentId: string,
     terminalStates: TerminalStateType[],
     submittedFiles: SubmissionFileType[],
     bonusPoints: number,
