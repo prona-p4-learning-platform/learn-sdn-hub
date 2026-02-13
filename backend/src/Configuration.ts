@@ -109,6 +109,7 @@ environments.set("p4basic-with-guacamole", {
   submissionCleanupCommand: "rm /tmp/$user-$environment.tar.gz && rm /tmp/test",
   description: "p4basic description",
   assignmentLabSheet: "../assignments/p4basic.md",
+  providerClabTopology: "",
 });
 
 environments.set("l2_learning_switch", {
@@ -811,7 +812,7 @@ environments.set("KommProt-Uebung1b", {
         type: "Shell",
         name: "host1",
         cwd: "/home/p4/kommprot-labs/kommprot-lab-application-layer",
-        executable: "while [ true ]; do clear && sudo clab inspect &>/dev/null; if [ $? -eq 1 ]; then sudo clab deploy &>/dev/null; fi; docker exec -it clab-kommprot-lab-application-host1 bash; done",
+        executable: "clear && ash",
         params: [],
         provideTty: true,
       },
@@ -821,7 +822,7 @@ environments.set("KommProt-Uebung1b", {
         type: "Shell",
         name: "host2",
         cwd: "/home/p4/kommprot-labs/kommprot-lab-application-layer",
-        executable: "while [ true ]; do clear && sudo clab inspect &>/dev/null; if [ $? -eq 1 ]; then sudo clab deploy &>/dev/null; fi; docker exec -it clab-kommprot-lab-application-host2 bash; done",
+        executable: "clear && ash",
         params: [],
         provideTty: true,
       },
@@ -855,6 +856,7 @@ environments.set("KommProt-Uebung1b", {
   description: "KommProt-Ue1b application layer",
   assignmentLabSheetLocation: "instance",
   assignmentLabSheet: "/home/p4/kommprot-labs/kommprot-lab-application-layer/README.md",
+  providerClabTopology: "https://github.com/prona-p4-learning-platform/kommprot-labs/raw/refs/heads/master/kommprot-lab-application-layer/exercise-topology/kommprot-lab-application.clab.yml",
 });
 
 environments.set("KommProt-Uebung1c", {
