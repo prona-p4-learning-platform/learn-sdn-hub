@@ -107,6 +107,7 @@ export class K8sClient {
   public coreV1Api: k8s.CoreV1Api;
   public appsV1Api: k8s.AppsV1Api;
   public customObjectsApi: k8s.CustomObjectsApi;
+  public rbacV1Api: k8s.RbacAuthorizationV1Api;
 
   private readonly fluxGroup = 'helm.toolkit.fluxcd.io';
   private readonly fluxVersion = 'v2';
@@ -124,7 +125,7 @@ export class K8sClient {
       "config": z.string()
     })
   }).transform((data) => {
-    const decode = (data:string) => Buffer.from(data, 'base64').toString('utf-8')
+    const decode = (data: string) => Buffer.from(data, 'base64').toString('utf-8')
     return {
       ca: data.data["certificate-authority"],
       clientCert: data.data["client-certificate"],
@@ -198,6 +199,7 @@ export class K8sClient {
     this.coreV1Api = this.kubeConfig.makeApiClient(k8s.CoreV1Api);
     this.appsV1Api = this.kubeConfig.makeApiClient(k8s.AppsV1Api);
     this.customObjectsApi = this.kubeConfig.makeApiClient(k8s.CustomObjectsApi);
+    this.rbacV1Api = this.kubeConfig.makeApiClient(k8s.RbacAuthorizationV1Api)
   }
 
   /**
@@ -343,6 +345,7 @@ export class K8sClient {
         },
       },
       spec: {
+        serviceAccountName: "group-admin",
         containers: [
           {
             name: 'main',
@@ -359,6 +362,29 @@ export class K8sClient {
         ],
       },
     }
+  }
+
+  private getRoleBindingManifest(namespace:string) {
+    return {
+      apiVersion: "rbac.authorization.k8s.io/v1",
+      kind: "RoleBinding",
+      metadata: {
+        name: "group-admin-binding",
+        namespace: namespace
+      },
+      roleRef: {
+        apiGroup: "rbac.authorization.k8s.io",
+        kind: "ClusterRole",
+        name: "cluster-admin"
+      },
+      subjects: [
+        {
+          kind: "ServiceAccount",
+          name: "group-admin",
+          namespace: namespace
+        }
+      ]
+    };
   }
 
   private getAssignmentServiceManifest(assignmentName: string): k8s.V1Service {
@@ -459,6 +485,22 @@ export class K8sClient {
         }
       })
 
+      // create service account
+      await this.coreV1Api.createNamespacedServiceAccount({
+        namespace,
+        body: {
+          metadata: {
+            name: "group-admin"
+          }
+        }
+      })
+
+      // create RoleBinding
+      await this.rbacV1Api.createNamespacedRoleBinding({
+        namespace,
+        body: this.getRoleBindingManifest(namespace)
+      })
+
       // Create Pod
       await this.coreV1Api.createNamespacedPod({
         namespace: namespace,
@@ -470,42 +512,42 @@ export class K8sClient {
         namespace,
         body: this.getAssignmentServiceManifest(assignmentName)
       })
-    } catch(err) {
+    } catch (err) {
       console.error(err)
       throw new Error("Failed to create assignemnt")
     }
   }
 
-  public async deleteAssignment({assignmentName}:DeleteAssignmentProps) {
+  public async deleteAssignment({ assignmentName }: DeleteAssignmentProps) {
     try {
       console.log("deleting assignment ...")
       await this.coreV1Api.deleteNamespace({
         name: assignmentName
       })
       console.log("Assignemnt deleted")
-    } catch(err) {
+    } catch (err) {
       console.error("Failed to delete assignment", err)
       throw new Error("Failed to delete assignment")
     }
   }
 
-  public async getVClusterKubeconfigForUser({groupNumber, serviceUrl}:GetVClusterKubeconfigForUserProps):Promise<string> {
+  public async getVClusterKubeconfigForUser({ groupNumber, serviceUrl }: GetVClusterKubeconfigForUserProps): Promise<string> {
     try {
-      const {kubeConfig} = await this.getVClusterConfigFromSecret(groupNumber)
+      const { kubeConfig } = await this.getVClusterConfigFromSecret(groupNumber)
       return kubeConfig.replace("https://localhost:8443", serviceUrl)
-    } catch(err) {
+    } catch (err) {
       console.error(`Failed to create kubeconfig to use for User [Group: ${groupNumber}]`)
-      throw(err)
+      throw (err)
     }
   }
 
-  private async getVClusterConfigFromSecret(groupNumber:number):Promise<z.infer<typeof K8sClient.vClusterConficSchema>> {
+  private async getVClusterConfigFromSecret(groupNumber: number): Promise<z.infer<typeof K8sClient.vClusterConficSchema>> {
     try {
       const res = await this.coreV1Api.readNamespacedSecret({ name: `vc-vcluster-group-${groupNumber}`, namespace: `vcluster-group-${groupNumber}` })
       return K8sClient.vClusterConficSchema.parse(res)
-    } catch(err) {
+    } catch (err) {
       console.error(`Failed to get vCluster Config object from secret [Group: ${groupNumber}]`)
-      throw(err)
+      throw (err)
     }
   }
 }
