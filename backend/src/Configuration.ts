@@ -1149,7 +1149,7 @@ environments.set("Clab-DockerConsole-test", {
       {
         type: "DockerShell",
         name: "host1",
-        containerName: "container1",
+        containerName: "clab-Clab-DockerConsole-test-0-user1-host1",
         executable: "while [ true ]; do clear && sudo clab inspect &>/dev/null; if [ $? -eq 1 ]; then sudo clab deploy &>/dev/null; fi; docker exec -it clab-kommprot-lab-application-host1 bash; done",
         params: [],
         provideTty: true,
@@ -1178,6 +1178,7 @@ environments.set("Clab-DockerConsole-test", {
   description: "KommProt-Ue1b application layer",
   assignmentLabSheetLocation: "instance",
   assignmentLabSheet: "/home/p4/kommprot-labs/kommprot-lab-application-layer/README.md",
+  providerClabTopology: "https://github.com/prona-p4-learning-platform/kommprot-labs/raw/refs/heads/master/kommprot-lab-application-layer/exercise-topology/kommprot-lab-application.clab.yml",
 });
 
 
