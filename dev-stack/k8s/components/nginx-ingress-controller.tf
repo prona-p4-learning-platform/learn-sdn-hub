@@ -5,4 +5,5 @@ resource "helm_release" "nginx-ingress-controller" {
   version = "4.14.0"
   namespace = "nginx-controller"
   create_namespace = true
+  values = [file("${path.module}/helm/nginx-ingress-values.yaml")]
 }
