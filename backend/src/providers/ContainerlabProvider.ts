@@ -315,6 +315,23 @@ export default class ContainerLabProvider implements InstanceProvider {
   async getServer(instance: string): Promise<VMEndpoint> {
     const providerInstance = this.providerInstance;
 
+    // Local typed shape for container entries returned by the clab API
+    type ClabContainerInfo = {
+      name?: string;
+      container_id?: string;
+      image?: string;
+      kind?: string;
+      state?: string;
+      status?: string;
+      ipv4_address?: string;
+      ipv6_address?: string;
+      lab_name?: string;
+      labPath?: string;
+      absLabPath?: string;
+      group?: string;
+      owner?: string;
+    };
+
     return new Promise((resolve, reject) => {
       providerInstance
         .getToken()
@@ -336,7 +353,17 @@ export default class ContainerLabProvider implements InstanceProvider {
               // Instance found
               return response.json().then(data => {
 
-                const upTime: string[] = (data?.["0"]?.status as string | undefined)?.split(" ") || [];
+                // Build managementAddresses mapping from returned container entries
+                const managementAddresses: Record<string, string> = {};
+
+                // Typed assignment avoids `any` and unnecessary assertions
+                const containers: ClabContainerInfo[] = Object.values(data);
+
+                // pick first container for existing uptime/ip logic (keeps current behavior)
+                const firstContainer = containers[0];
+
+                // Get Docker status uptime (keep existing logic but using first container)
+                const upTime = (firstContainer?.status ?? "").split(" ");
 
                 // Get Docker status uptime
                 let difTime = 0;
@@ -372,22 +399,30 @@ export default class ContainerLabProvider implements InstanceProvider {
                 console.log("ContainerLabProvider: Instance " + instance + " will be deleted at " + deadline.toISOString());
 
                 let jumphostIp: string | undefined = undefined;
+                
+                // Collect management addresses from all containers (if available)
+                for (const c of containers) {
+                  const nodeName = c?.name ?? c?.container_id ?? "";
+                  const ipRaw = c?.ipv4_address ?? "";
+                  const ip = ipRaw.split("/")[0] || "";
+                  if (nodeName && ip) {
+                    managementAddresses[nodeName] = `${ip}:${providerInstance.sshPort}`;
 
-                for (const item of data) {
-                  if (item.name === "clab-" + instance + "-jumphost") {
-                    jumphostIp = (item.ipv4_address as string | undefined)?.split("/")[0];
-                    break;
+                    if (nodeName === "clab-" + instance + "-jumphost") {
+                      jumphostIp = ip;
+                      break;
+                    }
                   }
                 }
-
+                
                 return resolve({
                   instance: instance,
                   providerInstanceStatus: "Environment will be deleted at "+ deadline.toISOString(),
                   IPAddress: jumphostIp || "",
                   SSHPort: providerInstance.sshPort,
                   LanguageServerPort: providerInstance.lsPort,
+                  managementAddresses: Object.keys(managementAddresses).length ? managementAddresses : undefined,
                 });
-
               })
 
 
