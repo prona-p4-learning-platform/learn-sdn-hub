@@ -9,29 +9,38 @@ import { K8sClient } from "../utils/k8s-client";
 export default (): Router => {
   const router = Router()
   
-  router.post("/deploy", authenticationMiddleware, (req, res) => {
+  router.post("/deploy", authenticationMiddleware, async (req, res) => {
     const reqWithUser = req as RequestWithUser;
     
     const client = new K8sClient(K8sClient.getConfig())
-    client.createVCluster(reqWithUser.user.groupNumber)
+    await client.createVCluster(reqWithUser.user.groupNumber)
 
     res.status(200)
   })
 
-  router.delete("/undeploy", authenticationMiddleware, (req, res) => {
+  router.delete("/undeploy", authenticationMiddleware, async (req, res) => {
     const reqWithUser = req as RequestWithUser;
     
     const client = new K8sClient(K8sClient.getConfig())
-    client.deleteVCluster(reqWithUser.user.groupNumber)
+    await client.deleteVCluster(reqWithUser.user.groupNumber)
   
     res.status(200)
   })
 
-  router.get("/kube-config", authenticationMiddleware, (req, res) => {
+  router.get("/kube-config", authenticationMiddleware, async (req, res) => {
     const reqWithUser = req as RequestWithUser;
-    reqWithUser.user.groupNumber
+    const client = new K8sClient(K8sClient.getConfig())
+
+    const kubeConfigString = await client.getVClusterKubeconfigForUser(
+      {
+        groupNumber: reqWithUser.user.groupNumber,
+        serviceUrl: `https://vcluster-group-${reqWithUser.user.groupNumber}.prona.local`
+      }
+    )
   
-    res.status(200)
+    res.setHeader('Content-Disposition', 'attachment; filename="kubeconfig"');
+    res.setHeader('Content-Type', 'application/x-yaml');
+    res.status(200).send(kubeConfigString)
   })
   
   return router;

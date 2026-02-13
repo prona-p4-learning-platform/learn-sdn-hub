@@ -28,7 +28,8 @@ export default class K8sProvider implements InstanceProvider {
   ): Promise<VMEndpoint> {
     try {
       const assignmentName = "test"
-      const client = new K8sClient(await K8sClient.getVClusterConfig(groupNumber))
+      const parentClient = new K8sClient(K8sClient.getConfig())
+      const client = new K8sClient(await parentClient.getVClusterConfig(groupNumber))
 
       await client.createAssignment({ username, assignmentName, ...options })
 
@@ -52,7 +53,6 @@ export default class K8sProvider implements InstanceProvider {
   async getServer(instance: string): Promise<VMEndpoint> {
     // get group number
     const groupNumber = Number(instance.split("-")[1])
-    //const client = new K8sClient(await K8sClient.getVClusterConfig(groupNumber))
     const assignmentName = "test"
 
     return {
@@ -66,7 +66,8 @@ export default class K8sProvider implements InstanceProvider {
 
   async deleteServer(instance: string): Promise<void> {
     const groupNumber = Number(instance.split("-")[1])
-    const client = new K8sClient(await K8sClient.getVClusterConfig(groupNumber))
+    const parentClient = new K8sClient(K8sClient.getConfig())
+    const client = new K8sClient(await parentClient.getVClusterConfig(groupNumber))
     const assignmentName = "test"
 
     try {

@@ -11,7 +11,7 @@ export interface K8sClientConfig {
   clientKey?: string
 }
 
-interface createAssignmentProps {
+interface CreateAssignmentProps {
   username: string
   assignmentName: string
   options?: {
@@ -19,8 +19,13 @@ interface createAssignmentProps {
   }
 }
 
-interface deleteAssignmentProps {
+interface DeleteAssignmentProps {
   assignmentName: string
+}
+
+interface GetVClusterKubeconfigForUserProps {
+  groupNumber: number
+  serviceUrl: string
 }
 
 interface VClusterHelmRelease {
@@ -62,6 +67,37 @@ interface VClusterHelmRelease {
           enabled: boolean;
         };
       };
+      controlPlane: {
+        statefulSet: {
+          persistence: {
+            volumeClaim: {
+              retentionPolicy: "Delete" | "Retain"
+              storageClass?: string
+              size?: string
+            }
+          }
+        }
+        backingStore: {
+          etcd: {
+            deploy: {
+              statefulSet: {
+                persistence: {
+                  volumeClaim: {
+                    retentionPolicy: "Delete" | "Retain"
+                    storageClass?: string
+                    size?: string
+                  }
+                }
+              }
+            }
+          }
+        }
+        ingress: {
+          enabled: boolean
+          host: string
+          spec?: object
+        }
+      };
     };
   };
 }
@@ -84,13 +120,16 @@ export class K8sClient {
     data: z.object({
       "certificate-authority": z.string(),
       "client-certificate": z.string(),
-      "client-key": z.string()
+      "client-key": z.string(),
+      "config": z.string()
     })
   }).transform((data) => {
+    const decode = (data:string) => Buffer.from(data, 'base64').toString('utf-8')
     return {
       ca: data.data["certificate-authority"],
       clientCert: data.data["client-certificate"],
-      clientKey: data.data["client-key"]
+      clientKey: data.data["client-key"],
+      kubeConfig: decode(data.data["config"])
     }
   })
 
@@ -203,13 +242,11 @@ export class K8sClient {
     }
   }
 
-  public static async getVClusterConfig(groupId: number): Promise<K8sClientConfig> {
-    const { coreV1Api } = new K8sClient(this.getConfig())
-    const res = await coreV1Api.readNamespacedSecret({ name: `vc-vcluster-group-${groupId}`, namespace: `vcluster-group-${groupId}` })
-    const config = this.vClusterConficSchema.parse(res)
+  public async getVClusterConfig(groupNumber: number): Promise<K8sClientConfig> {
+    const config = await this.getVClusterConfigFromSecret(groupNumber)
 
     return {
-      apiUrl: `https://vcluster-group-${groupId}.vcluster-group-${groupId}`,
+      apiUrl: `https://vcluster-group-${groupNumber}.vcluster-group-${groupNumber}`,
       ...config
     }
   }
@@ -235,7 +272,7 @@ export class K8sClient {
         chart: {
           spec: {
             chart: 'vcluster',
-            version: '0.30.3',
+            version: '0.30.4',
             sourceRef: {
               kind: 'HelmRepository',
               name: 'loft',
@@ -261,6 +298,36 @@ export class K8sClient {
               enabled: false,
             },
           },
+          controlPlane: {
+            statefulSet: {
+              persistence: {
+                volumeClaim: {
+                  retentionPolicy: "Delete",
+                  size: "5Gi"
+                }
+              }
+            },
+            backingStore: {
+              etcd: {
+                deploy: {
+                  statefulSet: {
+                    persistence: {
+                      volumeClaim: {
+                        retentionPolicy: "Delete"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            ingress: {
+              enabled: true,
+              host: `vcluster-group-${groupNumber}.prona.local`,
+              spec: {
+                ingressClassName: "nginx"
+              }
+            }
+          }
         },
       },
     };
@@ -353,8 +420,8 @@ export class K8sClient {
    * Deletes a vcluster HelmRelease by name.
    * @param vClusterName The name of the vcluster to delete (e.g., "vcluster-02")
    */
-  public async deleteVCluster(groupId: number): Promise<void> {
-    const vClusterName = `vcluster-group-${groupId}`
+  public async deleteVCluster(groupNumber: number): Promise<void> {
+    const vClusterName = `vcluster-group-${groupNumber}`
 
     try {
       await this.customObjectsApi.deleteNamespacedCustomObject({
@@ -363,6 +430,9 @@ export class K8sClient {
         namespace: this.fluxNamespace,
         plural: this.fluxPlural,
         name: vClusterName,
+      });
+      await this.coreV1Api.deleteNamespace({
+        name: vClusterName
       });
       console.log(`Successfully deleted vcluster HelmRelease: ${vClusterName}`);
     } catch (error: any) {
@@ -375,7 +445,7 @@ export class K8sClient {
     }
   }
 
-  public async createAssignment({ username, assignmentName, options }: createAssignmentProps) {
+  public async createAssignment({ username, assignmentName, options }: CreateAssignmentProps) {
     try {
       console.log("Creating assignment")
       const namespace = assignmentName
@@ -406,7 +476,7 @@ export class K8sClient {
     }
   }
 
-  public async deleteAssignment({assignmentName}:deleteAssignmentProps) {
+  public async deleteAssignment({assignmentName}:DeleteAssignmentProps) {
     try {
       console.log("deleting assignment ...")
       await this.coreV1Api.deleteNamespace({
@@ -416,6 +486,26 @@ export class K8sClient {
     } catch(err) {
       console.error("Failed to delete assignment", err)
       throw new Error("Failed to delete assignment")
+    }
+  }
+
+  public async getVClusterKubeconfigForUser({groupNumber, serviceUrl}:GetVClusterKubeconfigForUserProps):Promise<string> {
+    try {
+      const {kubeConfig} = await this.getVClusterConfigFromSecret(groupNumber)
+      return kubeConfig.replace("https://localhost:8443", serviceUrl)
+    } catch(err) {
+      console.error(`Failed to create kubeconfig to use for User [Group: ${groupNumber}]`)
+      throw(err)
+    }
+  }
+
+  private async getVClusterConfigFromSecret(groupNumber:number):Promise<z.infer<typeof K8sClient.vClusterConficSchema>> {
+    try {
+      const res = await this.coreV1Api.readNamespacedSecret({ name: `vc-vcluster-group-${groupNumber}`, namespace: `vcluster-group-${groupNumber}` })
+      return K8sClient.vClusterConficSchema.parse(res)
+    } catch(err) {
+      console.error(`Failed to get vCluster Config object from secret [Group: ${groupNumber}]`)
+      throw(err)
     }
   }
 }
