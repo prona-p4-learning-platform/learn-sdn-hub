@@ -141,6 +141,7 @@ export interface EnvironmentDescription {
   providerKernelBootARGs?: string;
   providerRootDrive?: string;
   providerProxmoxTemplateTag?: string;
+  providerClabTopology?: object | string;
   rootPath?: string;
   workspaceFolders?: string[];
   useCollaboration?: boolean;
@@ -150,6 +151,7 @@ export interface EnvironmentDescription {
 
   //SAL
   sshTunnelingPorts? : string[];
+
 }
 
 const DenyStartOfMissingInstanceErrorMessage =
@@ -571,6 +573,7 @@ export default class Environment {
             mountKubeconfig: this.configuration.mountKubeconfig,
             //SAL
             sshTunnelingPorts: this.configuration.sshTunnelingPorts,
+            clabTopology: this.configuration.providerClabTopology,
           },
         );
       } else throw new Error(DenyStartOfMissingInstanceErrorMessage);

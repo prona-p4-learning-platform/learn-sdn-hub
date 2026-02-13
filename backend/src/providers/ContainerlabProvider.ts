@@ -21,8 +21,8 @@ const schedulerIntervalSeconds = 5 * 60;
 
 interface Token {
   token: string;
-  issued_at: string;
-  expires_at: string;
+  issued_at: number; // ms since epoch
+  expires_at: number; // ms since epoch
 }
 
 export default class ContainerLabProvider implements InstanceProvider {
@@ -68,7 +68,10 @@ export default class ContainerLabProvider implements InstanceProvider {
 
     // check for ContainerLab auth url
     const ENV_URL = process.env.CLAB_APIURL;
-    if (ENV_URL) this.clab_apiUrl = ENV_URL;
+    if (ENV_URL) {
+      // normalize to always end with single slash
+      this.clab_apiUrl = ENV_URL.endsWith("/") ? ENV_URL : ENV_URL + "/";
+    }
     else {
       throw new Error(
         "ContainerLabProvider: No API Url provided (CONTAINERLAB_AUTHURL).",
@@ -110,12 +113,14 @@ export default class ContainerLabProvider implements InstanceProvider {
     }
     this.providerInstance = this;
 
+    // defaultTopology is used below as the payload for topologyContent
+
     // better use env var to allow configuration of port numbers?
     this.sshPort = 22;
     this.lsPort = 3005;
-
+    
     const scheduler = new ToadScheduler();
-
+    
     const task = new AsyncTask(
       "ContainerLabProvider Instance Pruning Task",
       () => {
@@ -145,18 +150,17 @@ export default class ContainerLabProvider implements InstanceProvider {
 
   async getToken(): Promise<void> {
     const providerInstance = this.providerInstance;
+
     return new Promise((resolve, reject) => {
-      const tokenExpires = Date.parse(
-        providerInstance.clab_token?.expires_at ?? Date(),
-      );
+      const tokenExpires = providerInstance.clab_token?.expires_at ?? Date.now();
       const now = Date.now();
 
-      console.log(
+      /*console.log(
         "Token expires at: " +
           new Date(tokenExpires).toISOString() +
           " now: " +
           new Date(now).toISOString(),
-      );
+      );*/
 
       // add 5 sec for the token to be valid for subsequent operations
       if (
@@ -200,10 +204,10 @@ export default class ContainerLabProvider implements InstanceProvider {
                   providerInstance.clab_token.token = token;
                   providerInstance.clab_token.issued_at = (
                     issued_at - 10000
-                  ).toString(); // workaround, set issued at to 10 sec in the past, because 10 sec timeout above
+                  ); // workaround, set issued at to 10 sec in the past, because 10 sec timeout above
                   providerInstance.clab_token.expires_at = (
                     issued_at + this.clab_token_duration
-                  ).toString(); // token valid for configured duration
+                  ); // token valid for configured duration
                   return resolve();
                 });
               }
@@ -223,9 +227,89 @@ export default class ContainerLabProvider implements InstanceProvider {
     });
   }
 
-  async createServer(): Promise<VMEndpoint> {
+  async createServer(
+    username: string,
+    groupNumber: number,
+    environment: string,
+    options?: {
+      image?: string;
+      dockerCmd?: string;
+      dockerSupplementalPorts?: string[];
+      kernelImage?: string;
+      kernelBootARGs?: string;
+      rootDrive?: string;
+      proxmoxTemplateTag?: string;
+      mountKubeconfig?: boolean;
+      sshTunnelingPorts?: string[];
+      clabTopology?: object | string;
+    },
+  ): Promise<VMEndpoint> {
 
-    return new Promise(() => {});
+    await this.getToken();
+    if(!this.clab_token) {
+      return Promise.reject(
+        new Error("ContainerLabProvider: Could not authenticate to ContainerLab API."),
+      );
+    }
+    
+    const body: { topologySourceUrl?: string; topologyContent?: object } = {};
+
+    if (typeof options?.clabTopology === "undefined") {
+      return Promise.reject(
+        new Error("ContainerLabProvider: No topology provided in options."),
+      );
+    }
+    else if (typeof options.clabTopology === "string") {
+      body.topologySourceUrl = options.clabTopology;
+      try {
+        const topoObj = await this.getTopology(options.clabTopology);
+        body.topologyContent = this.changeTopologyName(topoObj, environment + "-" + groupNumber.toString() + "-" + username);
+      }
+      catch(err) {
+        return Promise.reject(
+          new Error("ContainerLabProvider: Could not get topology: " + (err instanceof Error ? err.message : String(err))),
+        );
+      }
+    }
+    else {
+      body.topologyContent = options.clabTopology;
+      body.topologyContent = this.changeTopologyName(body.topologyContent, environment + "-" + groupNumber.toString() + "-" + username);
+    }
+    delete body.topologySourceUrl;
+    body.topologyContent = this.addJumphostToTopology(body.topologyContent);
+
+    const resp = await fetch(this.clab_apiUrl+"api/v1/labs",{
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + this.clab_token?.token,
+      },
+      body: JSON.stringify(body, null, 2),
+    });
+
+    if(!resp.ok) {
+      return Promise.reject(
+        new Error("ContainerLabProvider: Could not create server instance. Status: " + resp.status + " " + resp.statusText),
+      );
+    }
+    
+    try {
+      const respGetServer = await this.getServer(environment + "-" + groupNumber.toString() + "-" + username);
+      return Promise.resolve(respGetServer);
+    }
+    catch(err) {
+      try {
+        await this.deleteServer(environment + "-" + groupNumber.toString() + "-" + username);
+        return Promise.reject(
+          new Error("ContainerLabProvider: Could not get created server instance: " + (err instanceof Error ? err.message : String(err))),
+        );
+      } 
+      catch (deleteErr) {
+        return Promise.reject(
+          new Error("ContainerLabProvider: Could not get created server instance: " + (err instanceof Error ? err.message : String(err)) + " Also failed to delete the instance: " + (deleteErr instanceof Error ? deleteErr.message : String(deleteErr))),
+        );
+      }
+    }
   }
 
   async getServer(instance: string): Promise<VMEndpoint> {
@@ -254,13 +338,16 @@ export default class ContainerLabProvider implements InstanceProvider {
         .then(() => {
           // Token received
 
-          fetch(providerInstance.clab_apiUrl + "api/v1/labs/" + instance, {
-            method: 'GET',
-            headers: {
-              'accept': 'application/json',
-              'Authorization': 'Bearer ' + providerInstance.clab_token?.token,
-            }
-          })
+          // ensure consistent concatenation (clab_apiUrl already ends with '/')
+          const getUrl = `${providerInstance.clab_apiUrl}api/v1/labs/${instance}`;
+          console.log("ContainerLabProvider: fetching " + getUrl);
+          fetch(getUrl, {
+             method: 'GET',
+             headers: {
+               'accept': 'application/json',
+               'Authorization': 'Bearer ' + providerInstance.clab_token?.token,
+             }
+           })
           .then(response => {
             if (response.ok) {
               // Instance found
@@ -311,6 +398,8 @@ export default class ContainerLabProvider implements InstanceProvider {
                 const deadline = new Date(Date.now() + providerInstance.maxInstanceLifetimeMinutes * 60 * 1000 - difTime);
                 console.log("ContainerLabProvider: Instance " + instance + " will be deleted at " + deadline.toISOString());
 
+                let jumphostIp: string | undefined = undefined;
+                
                 // Collect management addresses from all containers (if available)
                 for (const c of containers) {
                   const nodeName = c?.name ?? c?.container_id ?? "";
@@ -318,16 +407,18 @@ export default class ContainerLabProvider implements InstanceProvider {
                   const ip = ipRaw.split("/")[0] || "";
                   if (nodeName && ip) {
                     managementAddresses[nodeName] = `${ip}:${providerInstance.sshPort}`;
+
+                    if (nodeName === "clab-" + instance + "-jumphost") {
+                      jumphostIp = ip;
+                      break;
+                    }
                   }
                 }
-
-                // Choose a representative IPAddress (fallback to first container IP if present)
-                const representativeIP = (firstContainer?.ipv4_address ?? "").split("/")[0] || "";
                 
                 return resolve({
                   instance: instance,
                   providerInstanceStatus: "Environment will be deleted at "+ deadline.toISOString(),
-                  IPAddress: representativeIP,
+                  IPAddress: jumphostIp || "",
                   SSHPort: providerInstance.sshPort,
                   LanguageServerPort: providerInstance.lsPort,
                   managementAddresses: Object.keys(managementAddresses).length ? managementAddresses : undefined,
@@ -351,10 +442,38 @@ export default class ContainerLabProvider implements InstanceProvider {
     });
   }
 
-  async deleteServer(labName: string): Promise<void> {
-      // For testing purposes
-      console.log(labName);
-    return new Promise(() => {});
+  async deleteServer(instance: string): Promise<void> {
+    // ensure we're authenticated
+    await this.getToken();
+    const token = this.clab_token?.token;
+    if (!token) {
+      throw new Error("ContainerLabProvider: missing auth token for delete");
+    }
+
+    const delUrl = `${this.clab_apiUrl}api/v1/labs/${encodeURIComponent(instance)}`;
+    console.log("ContainerLabProvider: deleting lab", delUrl);
+    const body = {
+      labName: instance,
+    }
+    try {
+      const response = await fetch(delUrl, {
+        method: "DELETE",
+        signal: AbortSignal.timeout(10_000),
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify(body),
+      });
+      if (!response.ok) {
+        const respBody = await response.text().catch(() => "");
+        return Promise.reject(
+          new Error(`ContainerLabProvider: Failed to delete server instance (${response.status}): ${respBody}`),
+        );
+      }
+      return Promise.resolve();
+    } catch {
+      return Promise.reject(
+        new Error("ContainerLabProvider: Failed to delete server instance: No response from API."),
+      );
+    }
   }
 
   async pruneServerInstance(): Promise<void> {
@@ -385,7 +504,9 @@ export default class ContainerLabProvider implements InstanceProvider {
     }
 
     // Request a list of labs and containers
-    const response = await fetch(`${this.clab_apiUrl}/api/v1/labs`, {
+    const listUrl = `${this.clab_apiUrl}api/v1/labs`;
+    console.log("ContainerLabProvider: listing labs from " + listUrl);
+    const response = await fetch(listUrl, {
       method: "GET",
       signal: AbortSignal.timeout(10_000),
       headers: { Authorization: `Bearer ${token}` },
@@ -473,16 +594,6 @@ export default class ContainerLabProvider implements InstanceProvider {
 
   }
 
-  waitForServerAddresses(): Promise<string> {
-
-    return new Promise<string>(async () => {});
-  }
-
-  //waitForServerSSH(ip: string, port: number, timeout: number): Promise<void> {
-  //
-  //  return new Promise<void>(async () => {});
-  //}
-
   sleep(ms: number): Promise<void> {
     return new Promise((resolve) => {
       setTimeout(resolve, ms);
@@ -522,6 +633,35 @@ export default class ContainerLabProvider implements InstanceProvider {
   changeTopologyName(topology: object, newName: string): object {
     const topo = topology as {[key: string]: string | object};
     topo["name"] = newName;
+    return topo;
+  }
+
+  addJumphostToTopology(topology: object): object {
+    const topo = topology as Record<string, unknown>;
+    if (!topo["topology"] || typeof topo["topology"] !== "object") {
+      topo["topology"] = {};
+    }
+    const topologyBlock = topo["topology"] as Record<string, unknown>;
+    if (!topologyBlock["nodes"] || typeof topologyBlock["nodes"] !== "object") {
+      topologyBlock["nodes"] = {};
+    }
+    const nodes = topologyBlock["nodes"] as Record<string, unknown>;
+    nodes["jumphost"] = {
+        "kind": "linux",
+        "image": "alpine:latest",
+        "group": "hosts",
+        "exec": [
+          "ip addr add 192.168.188.2/24 dev eth1",
+          "apk add openrc openssh",
+          "ssh-keygen -A",
+          "mkdir -p /run/openrc",
+          "touch /run/openrc/softlevel",
+          "rc-update add sshd",
+          "rc-service sshd start",
+          "adduser -D p4",
+          "ash -c 'echo p4:p4 | chpasswd'"
+        ]
+    };
     return topo;
   }
 }
