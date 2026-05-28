@@ -114,6 +114,15 @@ export class K8sClient {
   private readonly fluxNamespace = 'flux-system';
   private readonly fluxPlural = 'helmreleases';
 
+  private static hasStatusCode(error: unknown, statusCode: number): boolean {
+    return (
+      typeof error === 'object' &&
+      error !== null &&
+      'response' in error &&
+      (error as { response?: { statusCode?: number } }).response?.statusCode === statusCode
+    );
+  }
+
   private static vClusterConficSchema = z.object({
     metadata: z.object({
       name: z.string()
@@ -433,12 +442,7 @@ export class K8sClient {
       console.log(`Successfully created vcluster HelmRelease for group ${groupNumber}`);
     } catch (error: unknown) {
       // Handle case where it might already exist or other errors
-      if (
-        typeof error === 'object' &&
-        error !== null &&
-        'response' in error &&
-        (error as { response?: { statusCode?: number } }).response?.statusCode === 409
-      ) {
+      if (K8sClient.hasStatusCode(error, 409)) {
         console.warn(`vcluster HelmRelease for group ${groupNumber} already exists.`);
       } else {
         console.error(`Failed to create vcluster HelmRelease for group ${groupNumber}:`, error);
@@ -467,12 +471,7 @@ export class K8sClient {
       });
       console.log(`Successfully deleted vcluster HelmRelease: ${vClusterName}`);
     } catch (error: unknown) {
-      if (
-        typeof error === 'object' &&
-        error !== null &&
-        'response' in error &&
-        (error as { response?: { statusCode?: number } }).response?.statusCode === 404
-      ) {
+      if (K8sClient.hasStatusCode(error, 404)) {
         console.warn(`vcluster HelmRelease ${vClusterName} not found.`);
       } else {
         console.error(`Failed to delete vcluster HelmRelease ${vClusterName}:`, error);
