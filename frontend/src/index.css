@@ -45,6 +45,12 @@ code {
   height: inherit;
 }
 
+.markdown {
+  overflow-x: auto;
+  height: inherit;
+  flex-grow: 1;
+}
+
 .myTerminal {
   flex: 1;
   height: inherit;

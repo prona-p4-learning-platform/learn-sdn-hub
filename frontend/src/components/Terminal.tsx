@@ -12,6 +12,8 @@ interface TerminalProps {
   wsEndpoint: string;
   terminalState: string | undefined;
   onTerminalUnmount: (wsEndpoint: string, serializedState: string) => void;
+  role?: string;
+  groupNumber?: number;
 }
 
 function sendResize(websocket: WebSocket, fitAddon: FitAddon): void {
@@ -28,7 +30,7 @@ function sendResize(websocket: WebSocket, fitAddon: FitAddon): void {
 
 export default function XTerminal(props: TerminalProps): JSX.Element {
   const { token } = useAuthStore();
-  const { terminalState, wsEndpoint, onTerminalUnmount } = props;
+  const { terminalState, wsEndpoint, onTerminalUnmount, role, groupNumber } = props;
   const serAddon = useMemo(() => {
     return new SerializeAddon();
   }, []);
@@ -56,7 +58,13 @@ export default function XTerminal(props: TerminalProps): JSX.Element {
         return;
       }
 
-      websocket.send(`auth ${token}`);
+      if (role === "admin" && groupNumber !== undefined) {
+        websocket.send(`auth ${token} ${groupNumber}`);
+      } else {
+        websocket.send(`auth ${token}`);
+      }
+      //websocket.send(`auth ${token}`);
+
       socketOpen = true;
 
       // if the terminal is still available -> attach websocket

@@ -183,19 +183,19 @@ export default class SSHFileHandler {
     while (Date.now() - startTime < retryTimeoutMs) {
       try {
         this.hasErrored = false;
-        console.log(`Verbindung zu ${ipaddress}:${port} wird versucht...`);
+        console.log("SSHFileHandler: Trying to connect to ${ipaddress}:${port}...");
         await this.connect(environmentId, username, groupNumber, sessionId, ipaddress, port, jumpHost);
-        console.log("Verbindung erfolgreich!");
+        console.log("SSHFileHandler: Connection established");
         return;
       } catch (error) {
-        console.error(`Verbindung fehlgeschlagen`);
+        console.error("SSHFileHandler: Connection failed");
         console.log(error);
-        console.log(`Neuer Versuch in ${retryDelayMs / 1000} Sekunden...`);
+        console.log("SSHFileHandler: Next connection attempt in ${retryDelayMs / 1000} secs...");
         await this.sleep(retryDelayMs);
       }
     }
 
-    throw new Error(`Verbindung zu ${ipaddress}:${port} konnte nicht hergestellt werden (Timeout).`);
+    throw new Error("SSHFileHandler: Connection to ${ipaddress}:${port} could not be established (Timeout).");
   }
   
   private async connect(

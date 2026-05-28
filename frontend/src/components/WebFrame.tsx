@@ -30,7 +30,7 @@ export default class WebFrame extends Component<WebFrameProps> {
         width="100%"
         height="100%"
         className="myTerminalTabPanel" 
-        title="Blablabla"
+        title="defaultTitle"
         // allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
         allowFullScreen
         style={{ border: "0" }}
