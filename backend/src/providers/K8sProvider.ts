@@ -50,18 +50,18 @@ export default class K8sProvider implements InstanceProvider {
   }
 
 
-  async getServer(instance: string): Promise<VMEndpoint> {
+  getServer(instance: string): Promise<VMEndpoint> {
     // get group number
     const groupNumber = Number(instance.split("-")[1])
     const assignmentName = "test"
 
-    return {
+    return Promise.resolve({
         instance,
         providerInstanceStatus: 'Running',
         IPAddress: `${assignmentName}-x-${assignmentName}-x-vcluster-group-${groupNumber}.vcluster-group-${groupNumber}`,
         SSHPort: 22,
         LanguageServerPort: 3000,
-      };
+      });
   }
 
   async deleteServer(instance: string): Promise<void> {

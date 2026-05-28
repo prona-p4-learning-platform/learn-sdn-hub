@@ -431,9 +431,14 @@ export class K8sClient {
         body: helmReleaseBody,
       });
       console.log(`Successfully created vcluster HelmRelease for group ${groupNumber}`);
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Handle case where it might already exist or other errors
-      if (error.response?.statusCode === 409) {
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'response' in error &&
+        (error as { response?: { statusCode?: number } }).response?.statusCode === 409
+      ) {
         console.warn(`vcluster HelmRelease for group ${groupNumber} already exists.`);
       } else {
         console.error(`Failed to create vcluster HelmRelease for group ${groupNumber}:`, error);
@@ -461,17 +466,22 @@ export class K8sClient {
         name: vClusterName
       });
       console.log(`Successfully deleted vcluster HelmRelease: ${vClusterName}`);
-    } catch (error: any) {
-      if (error.response?.statusCode === 404) {
+    } catch (error: unknown) {
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'response' in error &&
+        (error as { response?: { statusCode?: number } }).response?.statusCode === 404
+      ) {
         console.warn(`vcluster HelmRelease ${vClusterName} not found.`);
       } else {
         console.error(`Failed to delete vcluster HelmRelease ${vClusterName}:`, error);
-        throw new error;
+        throw error;
       }
     }
   }
 
-  public async createAssignment({ username, assignmentName, options }: CreateAssignmentProps) {
+  public async createAssignment({ username, assignmentName, options }: CreateAssignmentProps): Promise<void> {
     try {
       console.log("Creating assignment")
       const namespace = assignmentName
@@ -518,7 +528,7 @@ export class K8sClient {
     }
   }
 
-  public async deleteAssignment({ assignmentName }: DeleteAssignmentProps) {
+  public async deleteAssignment({ assignmentName }: DeleteAssignmentProps): Promise<void> {
     try {
       console.log("deleting assignment ...")
       await this.coreV1Api.deleteNamespace({
