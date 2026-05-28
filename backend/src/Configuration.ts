@@ -1199,31 +1199,18 @@ environments.set("CC-Lab-1", {
   assignmentLabSheet: "/home/p4/labs/lab1/README.md",
 });
 
-<<<<<<< HEAD
 environments.set("vCluster-test", {
   type: "k8s-vcluster",
   //providerImage: "cc-container",
   //providerDockerCmd: "",
   providerProxmoxTemplateTag: "learn-sdn-hub-develop-cc-template",
-=======
-environments.set("CC-Lab-2", {
-  //providerImage: "cc-container",
-  //providerDockerCmd: "",
-  providerProxmoxTemplateTag: "learn-sdn-hub-develop-cc-template",
-  mountKubeconfig: true,
->>>>>>> origin/develop
   terminals: [
     [
       {
         type: "Shell",
         name: "host1",
-<<<<<<< HEAD
         cwd: "/home/p4/labs/lab1",
         executable: "",
-=======
-        cwd: "/home/p4/cc-container/labs/lab2",
-        executable: "export TERM=\"xterm-256color\" && pushd /home/p4/cc-container && /home/p4/cc-container/update-image.sh && popd",
->>>>>>> origin/develop
         params: [],
         provideTty: true,
       },
@@ -1231,10 +1218,36 @@ environments.set("CC-Lab-2", {
   ],
   editableFiles: [
     {
-<<<<<<< HEAD
       absFilePath: "/home/p4/labs/lab1/nginx.yaml",
       alias: "nginx.yaml",
-=======
+    },
+  ],
+  stopCommands: [],
+  description: "CC-Test description",
+  assignmentLabSheetLocation: "instance",
+  assignmentLabSheet: "/home/p4/labs/lab1/README.md",
+});
+
+environments.set("CC-Lab-2", {
+  type: "normal",
+  //providerImage: "cc-container",
+  //providerDockerCmd: "",
+  providerProxmoxTemplateTag: "learn-sdn-hub-develop-cc-template",
+  mountKubeconfig: true,
+  terminals: [
+    [
+      {
+        type: "Shell",
+        name: "host1",
+        cwd: "/home/p4/cc-container/labs/lab2",
+        executable: "export TERM=\"xterm-256color\" && pushd /home/p4/cc-container && /home/p4/cc-container/update-image.sh && popd",
+        params: [],
+        provideTty: true,
+      },
+    ],
+  ],
+  editableFiles: [
+    {
       absFilePath: "/home/p4/cc-container/labs/lab2/grafana-values.yaml",
       alias: "grafana-values.yaml",
     },
@@ -1245,17 +1258,12 @@ environments.set("CC-Lab-2", {
     {
       absFilePath: "/home/p4/cc-container/labs/lab2/README.md",
       alias: "README.md",
->>>>>>> origin/develop
     },
   ],
   stopCommands: [],
   description: "CC-Test description",
   assignmentLabSheetLocation: "instance",
-<<<<<<< HEAD
-  assignmentLabSheet: "/home/p4/labs/lab1/README.md",
-=======
   assignmentLabSheet: "/home/p4/cc-container/labs/lab2/README.md",
->>>>>>> origin/develop
 });
 
 function getEnvironments(): Map<string, EnvironmentDescription> {

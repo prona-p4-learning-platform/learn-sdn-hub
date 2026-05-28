@@ -13,13 +13,11 @@ export interface UserEntry {
   passwordHash?: string;
   groupNumber: number;
   assignmentListFilter?: string;
-<<<<<<< HEAD
   environments?: UserEnvironment[];
   externalIds?: UserExternalId[];
-=======
-  environments: UserEnvironment[];
-  externalIds: UserExternalId[];
   examStartTime?: Date;
+  role?: string;
+  courses?: string[];
 }
 
 export interface UserAccount {
@@ -29,7 +27,6 @@ export interface UserAccount {
   password?: string;
   passwordHash?: string;
   assignmentListFilter?: string;
->>>>>>> origin/develop
   role?: string;
   courses?: string[];
   examStartTime?: Date;
@@ -111,15 +108,8 @@ export type CourseUserAction = {
 };
 
 export interface Persister {
-<<<<<<< HEAD
   GetUserAccount: (username: string) => Promise<UserEntry>;
   GetUserAccountByExternalId: (externalId: UserExternalId) => Promise<UserEntry>;
-=======
-  GetUserAccount: (username: string) => Promise<UserAccount>;
-  GetUserAccountByExternalId: (
-    externalId: UserExternalId,
-  ) => Promise<UserAccount>;
->>>>>>> origin/develop
   CreateUserAccount: (userEntry: UserEntry) => Promise<ResponseObject>;
   AddUserExternalId: (
     username: string,
@@ -164,12 +154,8 @@ export interface Persister {
   UpdateAssignment(update: AssignmentUpdate): Promise<void>;
   DeleteAssignment(assignment: AssignmentDelete): Promise<void>;
   GetAllAssignments(): Promise<AssignmentData[] | string[]>;
-<<<<<<< HEAD
-  GetUserAssignments(userAcc: UserEntry): Promise<AssignmentData[]>;
-=======
   GetLabSheetContent(sheetId: string): Promise<LabSheet | null>;
-  GetUserAssignments(userAcc: UserAccount): Promise<AssignmentData[]>;
->>>>>>> origin/develop
+  GetUserAssignments(userAcc: UserEntry): Promise<AssignmentData[]>;
   UpdateAssignementsForCourse(
     courseID: string,
     assignmentIDs: string[],

@@ -131,13 +131,13 @@ export type SubmissionFileType = {
   fileContent: string;
 };
 
-<<<<<<< HEAD
 export type EnvironmentType = "normal" | "k8s" | "k8s-vcluster";
 
 export type EnvironmentResponse = {
   name: string
   type: EnvironmentType
-=======
+}
+
 export type CollabDoc = {
   alias: string;
   content: string | undefined;
@@ -149,7 +149,6 @@ export interface DeployedEnvironment {
   isReady: boolean;
   isReadyInUserSession: boolean;
   isReadyInGroup: boolean;
->>>>>>> origin/develop
 }
 
 export interface EnvironmentDescription {

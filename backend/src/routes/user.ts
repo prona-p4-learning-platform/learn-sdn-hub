@@ -57,7 +57,6 @@ export default (
     getAssignments()
       .then((map) => {
         // return list splitted by kubernetes assignments and other assignments
-<<<<<<< HEAD
         const assignments: EnvironmentResponse[] = [];
 
         map.forEach((value, key) => {
@@ -68,24 +67,6 @@ export default (
         });
 
         res.status(200).json(assignments);
-=======
-        const assignmentsSplitted: string[][] = [[], []];
-        const assignmentTypes: Record<string, boolean> = {};
-
-        map.forEach((value, key) => {
-          if (!value.mountKubeconfig) {
-            assignmentsSplitted[0].push(key);
-          } else {
-            assignmentsSplitted[1].push(key);
-          }
-
-          if(value.isExam !== undefined) {
-            assignmentTypes[key] = value.isExam;
-          }
-        });
-
-        res.status(200).json({ assignments: assignmentsSplitted, types: assignmentTypes });
->>>>>>> origin/develop
       })
       .catch((err) => {
         let message = "Unknown error";

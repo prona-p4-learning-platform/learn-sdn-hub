@@ -459,7 +459,7 @@ export default class MongoDBPersister implements Persister {
 
     return users.map(user => ({
       ...user,
-      environmentIPs: user.environments.map(env => env.ipAddress),
+      environmentIPs: (user.environments ?? []).map(env => env.ipAddress),
     }));
   }
 
