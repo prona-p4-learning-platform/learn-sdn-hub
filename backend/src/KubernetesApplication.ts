@@ -4,7 +4,7 @@ import MongoDBPersister from "./database/MongoDBPersister"
 import MongoDBAuthenticationProvider from "./authentication/MongoDBAuthenticationProvider"
 import K8sProvider from "./providers/K8sProvider"
 
-const MONGODB_URL = process.env.MONGODB_URL
+let MONGODB_URL = process.env.MONGODB_URL
 const MONGODB_HOST = process.env.MONGODB_HOST
 const MONGODB_PORT = process.env.MONGODB_PORT
 const MONGODB_USERNAME = process.env.MONGODB_USERNAME
