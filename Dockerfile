@@ -21,6 +21,7 @@ COPY package-lock.json .
 
 # build frontend and create static backend
 RUN npm clean-install
+RUN npm install --workspace frontend --include=optional
 RUN cd frontend && npm run build && npm run create-static-backend
 
 # copy example startup script and use it as the entrypoint when running the container
