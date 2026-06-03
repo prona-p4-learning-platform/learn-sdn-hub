@@ -21,7 +21,7 @@ COPY package-lock.json .
 
 # build frontend and create static backend
 RUN npm clean-install
-RUN rm -rf node_modules/rollup node_modules/@rollup && npm install --workspace frontend --include=optional --no-save rollup
+RUN rm -rf node_modules/rollup node_modules/@rollup && npm install --workspace frontend --include=optional rollup
 RUN cd frontend && npm run build && npm run create-static-backend
 
 # copy example startup script and use it as the entrypoint when running the container
