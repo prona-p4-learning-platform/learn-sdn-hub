@@ -2,11 +2,13 @@ import { ClientSession, MongoClient, ObjectId, PullOperator } from "mongodb";
 import { hash } from "@node-rs/bcrypt";
 import {
   AssignmentData,
+  AssignmentDelete,
+  AssignmentUpdate,
   CourseData,
   FileData,
+  LabSheet,
   Persister,
   ResponseObject,
-  UserAccount,
   UserData,
   UserEntry,
   UserEnvironment,
@@ -19,7 +21,7 @@ import {
   SubmissionFileType,
   TerminalStateType,
 } from "../Environment";
-import environments, { updateEnvironments } from "../Configuration";
+import environments, { updateEnvironments, updateEnvironment } from "../Configuration";
 
 const saltRounds = 10;
 
@@ -37,6 +39,25 @@ export interface SubmissionEntry {
   terminalStatus: TerminalStateType[];
   submittedFiles: SubmissionFileType[];
   points?: number;
+}
+
+export type MongoAssignment = Omit<NewAssignment, "_id" | "sheetId"> & {
+  _id: ObjectId;
+  sheetId?: ObjectId;
+};
+
+interface NewAssignment {
+  _id: ObjectId;
+  name: string;
+  assignmentLabSheet?: string | undefined;
+  labSheetName?: string | undefined;
+  maxBonusPoints?: number | undefined;
+}
+
+interface MongoLabSheet {
+  _id: ObjectId;
+  name: string;
+  content: string;
 }
 
 interface SubmissionAdminEntry extends SubmissionEntry {
@@ -66,7 +87,52 @@ export default class MongoDBPersister implements Persister {
     return this.mongoClient;
   }
 
-  async GetUserAccount(username: string): Promise<UserAccount> {
+  async AddDefaultUser(): Promise<void> {
+    
+    const client = await this.getClient();
+    const usersCollection = client.db().collection<UserEntry>("users");
+    const coursesCollection = client.db().collection<CourseData>("courses");
+
+    const userCount = await usersCollection.countDocuments();
+    // no need for default user
+    if (userCount > 0) {
+      return;
+    }
+
+    const userPasswordHash = await hash("user1", saltRounds);
+    const adminPasswordHash = await hash("admin", saltRounds);
+
+    const insertResult = await usersCollection.insertMany([
+      {
+        username: "user1",
+        passwordHash: userPasswordHash, // user1
+        groupNumber: 1,
+        environments: [],
+        externalIds: []
+      },
+      {
+        username: "admin",
+        passwordHash: adminPasswordHash, // admin
+        groupNumber: 0,
+        role: "admin",
+        environments: [],
+        externalIds: []
+      }
+    ]);
+
+    const courses = await coursesCollection.find().toArray();
+    const courseIds = courses.map((c) => c._id);
+
+    await usersCollection.updateOne(
+      { _id: insertResult.insertedIds["0"] },
+      { $set: { courses: courseIds } },
+    );
+
+    console.log("MongoDBPersister: Added default users: user1:user1 and admin:admin");
+  }
+  
+
+  async GetUserAccount(username: string): Promise<UserEntry> {
     const client = await this.getClient();
     const result = await client
       .db()
@@ -79,7 +145,7 @@ export default class MongoDBPersister implements Persister {
 
   async GetUserAccountByExternalId(
     externalId: UserExternalId,
-  ): Promise<UserAccount> {
+  ): Promise<UserEntry> {
     const client = await this.getClient();
     const result = await client.db().collection<UserEntry>("users").findOne({
       "externalIds.authProvider": externalId.authProvider,
@@ -176,7 +242,7 @@ export default class MongoDBPersister implements Persister {
   async ChangeUserPassword(
     username: string,
     password: string,
-  ): Promise<UserAccount> {
+  ): Promise<UserEntry> {
     const passwordHash = await hash(password, saltRounds);
     const client = await this.getClient();
     const result = await client
@@ -210,6 +276,8 @@ export default class MongoDBPersister implements Persister {
     environment: string,
     description: string,
     instance: string,
+    ipAddress: string,
+    port: number | undefined,
   ): Promise<void> {
     const client = await this.getClient();
     await client
@@ -217,7 +285,7 @@ export default class MongoDBPersister implements Persister {
       .collection<UserEntry>("users")
       .findOneAndUpdate(
         { username, "environments.environment": { $ne: environment } },
-        { $push: { environments: { environment, description, instance } } },
+        { $push: { environments: { environment, description, instance, ipAddress, port } } },
         {
           projection: { environments: 1 },
         },
@@ -247,6 +315,7 @@ export default class MongoDBPersister implements Persister {
     environment: string,
     terminalStates: TerminalStateType[],
     submittedFiles: SubmissionFileType[],
+    bonusPoints: number
   ): Promise<void> {
     console.log(
       "Storing assignment result for user: " +
@@ -308,6 +377,7 @@ export default class MongoDBPersister implements Persister {
         submissionCreated: now,
         terminalStatus: terminalStates,
         submittedFiles: submittedFiles,
+        points: bonusPoints
       })
       .catch((err) => {
         throw new Error("Failed to store submissions in mongodb.\n" + err);
@@ -365,6 +435,32 @@ export default class MongoDBPersister implements Persister {
         },
       )
       .toArray();
+  }
+
+  async GetActiveEnvironments(): Promise<UserEntry[]> {
+    const client = await this.getClient();
+    const users = await client
+      .db()
+      .collection<UserEntry>("users")
+      .find(
+        {
+          environments: { $exists: true, $ne: [] },
+        },
+        {
+          projection: {
+            _id: 1,
+            username: 1,
+            groupNumber: 1,
+            environments: 1,
+          },
+        },
+      )
+      .toArray();
+
+    return users.map(user => ({
+      ...user,
+      environmentIPs: (user.environments ?? []).map(env => env.ipAddress),
+    }));
   }
 
   async GetAllCourses(): Promise<CourseData[]> {
@@ -542,13 +638,167 @@ export default class MongoDBPersister implements Persister {
     return insertedAssignments;
   }
 
+  async CreateAssignment(assignment: NewAssignment): Promise<AssignmentData> {
+    const client = await this.getClient();
+    const sheetsCollection = client
+      .db()
+      .collection("assignmentLabSheets");
+    const assignmentsCollection = client.db().collection("assignments");
+
+    await assignmentsCollection.createIndex({ name: 1 }, { unique: true });
+
+    const existing = await assignmentsCollection.findOne({ name: assignment.name });
+    if (existing) {
+      throw new Error(`Assignment with name "${assignment.name}" already exists`);
+    }
+
+    let sheetId: ObjectId | undefined;
+    if (assignment.assignmentLabSheet) {
+      const sheetResult = await sheetsCollection.insertOne({
+        name: assignment.labSheetName,
+        content: assignment.assignmentLabSheet,
+      });
+      sheetId = sheetResult.insertedId;
+    }
+
+    const assignmentToInsert = {
+      name: assignment.name,
+      assignmentLabSheetLocation: "database",
+      ...(assignment.maxBonusPoints !== undefined && { maxBonusPoints: assignment.maxBonusPoints }),
+      ...(assignment.assignmentLabSheet !== undefined && { assignmentLabSheet: assignment.assignmentLabSheet }),
+      ...(sheetId && { sheetId }),
+    };
+
+    const result = await assignmentsCollection.insertOne(assignmentToInsert);
+
+    const insertedAssignment = await assignmentsCollection.findOne<MongoAssignment>({
+      _id: result.insertedId,
+    });
+
+    if (!insertedAssignment) {
+      throw new Error("Failed to create assignment");
+    }
+
+    return {
+      _id: insertedAssignment._id.toString(),
+      name: insertedAssignment.name,
+      maxBonusPoints: insertedAssignment.maxBonusPoints ?? undefined,
+      assignmentLabSheet: insertedAssignment.assignmentLabSheet ?? undefined,
+    };
+  }
+
+  async DeleteAssignment(assignment: AssignmentDelete): Promise<void> {
+    const client = await this.getClient();
+
+    const { _id, _sheetId } = assignment;
+
+    if (!_id) {
+      throw new Error("DeleteAssignment called without _id");
+    }
+
+    const assignmentId = new ObjectId(_id);
+    const labSheetId = _sheetId ? new ObjectId(_sheetId) : null;
+    const assignmentResult = await client
+      .db()
+      .collection("assignments")
+      .deleteOne({ _id: assignmentId });
+
+    if (assignmentResult.deletedCount === 0) {
+      throw new Error(`Assignment with id ${_id} not found`);
+    }
+
+    if (labSheetId) {
+      const sheetResult = await client
+        .db()
+        .collection("assignmentLabSheets")
+        .deleteOne({ _id: labSheetId });
+
+      if (sheetResult.deletedCount === 0) {
+        console.warn(`LabSheet with id ${_sheetId} not found`);
+      }
+    }
+  }
+
+  async UpdateAssignment(update: AssignmentUpdate): Promise<void> {
+    const client = await this.getClient();
+
+    const { _id, _sheetId, description, maxBonusPoints, name, labSheetContent, labSheetName } = update;
+    const assignmentId = new ObjectId(_id);
+    const labSheetId = new ObjectId(_sheetId);
+
+    console.log("UpdateAssignment", update);
+
+    await client
+      .db()
+      .collection("assignments")
+      .updateOne(
+        { _id: assignmentId },
+        { $set: { description: description, maxBonusPoints: maxBonusPoints, name: name }},
+      )
+      .then(() => undefined)
+
+    await client
+      .db()
+      .collection("assignmentLabSheets")
+      .updateOne(
+        { _id: labSheetId },
+        { $set: { content: labSheetContent, name: labSheetName }},
+      )
+  }
+
   async GetAllAssignments(): Promise<AssignmentData[]> {
     const client = await this.getClient();
-    return client
+    const assignments = await client
       .db()
       .collection<AssignmentData>("assignments")
-      .find({}, { projection: { _id: 1, name: 1, maxBonusPoints: 1 } })
-      .toArray();
+      .find(
+        {},
+        {
+          projection: {
+            _id: 1,
+            name: 1,
+            steps: 1,
+            maxBonusPoints: 1,
+            assignmentLabSheet: 1,
+            sheetId: 1,
+            assignmentLabSheetLocation: 1,
+          },
+        }
+      )
+      .toArray()
+      .then((assignments) => {
+        assignments.forEach(a => updateEnvironment(a));
+        return assignments;
+      });
+
+    return assignments.map(a => ({
+      _id: a._id,
+      name: a.name,
+      maxBonusPoints: a.maxBonusPoints ?? undefined,
+      assignmentLabSheet: a.assignmentLabSheet ?? undefined,
+      sheetId: a.sheetId ?? undefined,
+      assignmentLabSheetLocation: (a.assignmentLabSheetLocation as "backend" | "instance" | "database") ?? undefined,
+    }));
+  }
+
+  async GetLabSheetContent(sheetId: string): Promise<LabSheet | null> {
+    const client = await this.getClient();
+
+    const doc = await client
+      .db()
+      .collection<MongoLabSheet>("assignmentLabSheets")
+      .findOne(
+        { _id: new ObjectId(sheetId) },
+        { projection: { _id: 1, name: 1, content: 1 } }
+      );
+
+    if (!doc) return null;
+
+    return {
+      _sheetId: doc._id.toString(),
+      labSheetName: doc.name,
+      labSheetContent: doc.content,
+    };
   }
 
   async UpdateAssignementsForCourse(
@@ -568,7 +818,7 @@ export default class MongoDBPersister implements Persister {
       .then(() => undefined);
   }
 
-  async GetUserAssignments(userAcc: UserAccount): Promise<AssignmentData[]> {
+  async GetUserAssignments(userAcc: UserEntry): Promise<AssignmentData[]> {
     const client = await this.getClient();
     const courseObjIDs = userAcc.courses?.map((id) => new ObjectId(id));
 
@@ -588,7 +838,11 @@ export default class MongoDBPersister implements Persister {
         { $unwind: "$assignments" },
         { $replaceRoot: { newRoot: "$assignments" } },
       ])
-      .toArray();
+      .toArray()
+      .then(assignments => {
+        assignments.forEach(a => updateEnvironment(a));
+        return assignments;
+      });
   }
 
   async GetAllSubmissions(): Promise<SubmissionAdminOverviewEntry[]> {

@@ -1,0 +1,6 @@
+apiVersion: v2
+name: learn-sdn-hub
+description: A Helm chart for Learn SDN Hub with dependencies
+type: application
+version: 0.1.0
+appVersion: "1.0.0"

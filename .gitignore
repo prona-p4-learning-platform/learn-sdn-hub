@@ -1,11 +1,41 @@
-node_modules
+# ide and dev tools
 .vscode
+.DS_Store
 .prettierignore
-dist
+
+# config/deployment artifacts
 backend/src/assignments/results
 issues
 scripts
+*scripts.tar.gz
 tools
+
 frontend-old
 frontend/start-frontend.sh
 backend/start-backend.sh
+
+# node
+dist
+node_modules
+
+# terrafrom
+.terraform
+terraform.tfstate*
+.terraform.tfstate.lock.info
+
+# K8s
+dev-stack/k8s/cluster-config
+mongo-export/**
+helm/tmp.yaml
+
+# Devenv
+.devenv*
+devenv.local.nix
+devenv.local.yaml
+devenv.lock
+
+# direnv
+.direnv
+
+# pre-commit
+.pre-commit-config.yaml

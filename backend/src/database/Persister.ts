@@ -1,4 +1,5 @@
 import {
+  AssignmentStep,
   Submission,
   SubmissionAdminOverviewEntry,
   SubmissionFileType,
@@ -12,8 +13,11 @@ export interface UserEntry {
   passwordHash?: string;
   groupNumber: number;
   assignmentListFilter?: string;
-  environments: UserEnvironment[];
-  externalIds: UserExternalId[];
+  environments?: UserEnvironment[];
+  externalIds?: UserExternalId[];
+  examStartTime?: Date;
+  role?: string;
+  courses?: string[];
 }
 
 export interface UserAccount {
@@ -25,6 +29,7 @@ export interface UserAccount {
   assignmentListFilter?: string;
   role?: string;
   courses?: string[];
+  examStartTime?: Date;
 }
 
 export interface UserExternalId {
@@ -36,6 +41,27 @@ export interface UserEnvironment {
   environment: string;
   description: string;
   instance: string;
+  ipAddress: string;
+  port: number | undefined;
+}
+
+export interface AssignmentUpdate extends LabSheet {
+  _id: string;
+  name?: string;
+  maxBonusPoints?: number;
+  assignmentLabSheet?: string;
+  description?: string;
+}
+
+export interface LabSheet {
+  _sheetId?: string;
+  labSheetName?: string;
+  labSheetContent?: string;
+}
+
+export interface AssignmentDelete {
+  _id: string;
+  _sheetId?: string;
 }
 
 export interface UserData {
@@ -62,7 +88,12 @@ export interface ResponseObject {
 export interface AssignmentData {
   _id: string;
   name: string;
+  steps?: Array<AssignmentStep>;
   maxBonusPoints?: number;
+  assignmentLabSheet?: string;
+  labSheetName?: string;
+  sheetId?: string;
+  assignmentLabSheetLocation?: "backend" | "instance" | "database";
 }
 
 export interface FileData {
@@ -77,16 +108,21 @@ export type CourseUserAction = {
 };
 
 export interface Persister {
-  GetUserAccount: (username: string) => Promise<UserAccount>;
-  GetUserAccountByExternalId: (externalId: UserExternalId) => Promise<UserAccount>;
+  GetUserAccount: (username: string) => Promise<UserEntry>;
+  GetUserAccountByExternalId: (externalId: UserExternalId) => Promise<UserEntry>;
   CreateUserAccount: (userEntry: UserEntry) => Promise<ResponseObject>;
-  AddUserExternalId: (username: string, externalId: UserExternalId) => Promise<void>;
+  AddUserExternalId: (
+    username: string,
+    externalId: UserExternalId,
+  ) => Promise<void>;
   GetUserEnvironments: (username: string) => Promise<UserEnvironment[]>;
   AddUserEnvironment: (
     username: string,
     environment: string,
     description: string,
     instance: string,
+    ipAddress: string,
+    port: number | undefined,
   ) => Promise<void>;
   RemoveUserEnvironment: (
     username: string,
@@ -98,6 +134,7 @@ export interface Persister {
     environment: string,
     terminalStates: TerminalStateType[],
     submittedFiles: SubmissionFileType[],
+    bonusPoints: number
   ) => Promise<void>;
   GetUserSubmissions: (
     username: string,
@@ -105,6 +142,7 @@ export interface Persister {
   ) => Promise<Submission[]>;
   GetAllUsers: () => Promise<UserData[]>;
   GetAllCourses: () => Promise<CourseData[]>;
+  GetActiveEnvironments: () => Promise<UserEntry[]>;
   GetAllSubmissions: () => Promise<SubmissionAdminOverviewEntry[]>;
   AddCourse: (courseName: string) => Promise<ResponseObject>;
   UpdateCourseForUsers(
@@ -112,8 +150,12 @@ export interface Persister {
     courseID: string,
   ): Promise<ResponseObject>;
   CreateAssignments(): Promise<AssignmentData[]>;
+  CreateAssignment(assignment: { name: string; maxBonusPoints?: number; assignmentLabSheet?: string, labSheetName?: string }): Promise<AssignmentData>;
+  UpdateAssignment(update: AssignmentUpdate): Promise<void>;
+  DeleteAssignment(assignment: AssignmentDelete): Promise<void>;
   GetAllAssignments(): Promise<AssignmentData[] | string[]>;
-  GetUserAssignments(userAcc: UserAccount): Promise<AssignmentData[]>;
+  GetLabSheetContent(sheetId: string): Promise<LabSheet | null>;
+  GetUserAssignments(userAcc: UserEntry): Promise<AssignmentData[]>;
   UpdateAssignementsForCourse(
     courseID: string,
     assignmentIDs: string[],

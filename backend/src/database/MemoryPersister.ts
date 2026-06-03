@@ -2,9 +2,9 @@ import {
   AssignmentData,
   CourseData,
   FileData,
+  LabSheet,
   Persister,
   ResponseObject,
-  UserAccount,
   UserData, UserEntry,
   UserEnvironment,
   UserExternalId,
@@ -21,11 +21,11 @@ import {
 const userEnvironments = new Map<string, Map<string, UserEnvironment>>();
 
 export default class MemoryPersister implements Persister {
-  GetUserAccount(username: string): Promise<UserAccount> {
+  GetUserAccount(username: string): Promise<UserEntry> {
     return new Promise((resolve, reject) => {
       try {
         const groupNumber = this.getUserMapping(username);
-        const account: UserAccount = {
+        const account: UserEntry = {
           _id: username,
           username,
           groupNumber,
@@ -40,7 +40,7 @@ export default class MemoryPersister implements Persister {
     });
   }
 
-  GetUserAccountByExternalId(_externalId: UserExternalId): Promise<UserAccount> {
+  GetUserAccountByExternalId(_externalId: UserExternalId): Promise<UserEntry> {
     throw new Error(
       "MemoryPersister: GetUserAccountByExternalId not implemented.",
     );
@@ -115,6 +115,8 @@ export default class MemoryPersister implements Persister {
         environment,
         description,
         instance,
+        ipAddress: "",
+        port: undefined,
       });
 
       resolve();
@@ -135,6 +137,7 @@ export default class MemoryPersister implements Persister {
     environment: string,
     terminalStates: TerminalStateType[],
     submittedFiles: SubmissionFileType[],
+    bonusPoints: number
   ): Promise<void> {
     return new Promise((resolve) => {
       console.log(
@@ -170,6 +173,12 @@ export default class MemoryPersister implements Persister {
           "binary",
         );
       }
+
+      fs.writeFileSync(
+        path.resolve(resultPath, "bonusPoints.txt"),
+        bonusPoints.toString(),
+        "utf8"
+      );
 
       resolve();
     });
@@ -208,9 +217,14 @@ export default class MemoryPersister implements Persister {
               assignmentName = submissionDir.substring(username.length + 1);
             }
 
+            let bonusPoints = Number.parseInt(fs.readFileSync(path.resolve(submissionDir, "bonusPoints.txt"), {encoding: "utf8"}));
+            if (isNaN(bonusPoints))
+              bonusPoints = 0;
+
             const submission = {
               assignmentName: assignmentName,
               lastChanged: lastMTime,
+              points: bonusPoints
             };
 
             submissions.push(submission);
@@ -229,6 +243,26 @@ export default class MemoryPersister implements Persister {
 
   GetAllCourses(): Promise<CourseData[]> {
     // TODO: implement
+    throw new Error("Method not implemented.");
+  }
+
+  GetActiveEnvironments(): Promise<UserEntry[]> {
+    throw new Error("Method not implemented.");
+  }
+
+  CreateAssignment(): Promise<AssignmentData> {
+    throw new Error("Method not implemented.");
+  }
+
+  UpdateAssignment(): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
+
+  DeleteAssignment(): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
+
+  GetLabSheetContent(): Promise<LabSheet | null> {
     throw new Error("Method not implemented.");
   }
 
@@ -261,7 +295,7 @@ export default class MemoryPersister implements Persister {
     throw new Error("Method not implemented.");
   }
 
-  GetUserAssignments(_userAcc: UserAccount): Promise<AssignmentData[]> {
+  GetUserAssignments(_userAcc: UserEntry): Promise<AssignmentData[]> {
     throw new Error("Method not implemented.");
   }
 

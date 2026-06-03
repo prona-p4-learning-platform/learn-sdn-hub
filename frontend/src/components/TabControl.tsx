@@ -43,6 +43,7 @@ interface TabControlProps {
   children?: JSX.Element | JSX.Element[];
   handleRestart: () => void;
   environmentStatus: string;
+  timerComponent?: JSX.Element;
 }
 
 export default function TabControl(props: TabControlProps): JSX.Element {
@@ -69,6 +70,10 @@ export default function TabControl(props: TabControlProps): JSX.Element {
             <Tab label={name} key={name} />
           ))}
         </Tabs>
+        <Box sx={{ mx: "auto " }} />
+        <Grid item sx={{ flexGrow: 1, textAlign: "center" }}>
+          {props.timerComponent && props.timerComponent}
+        </Grid>
         <Box sx={{ mx: "auto " }} />
         <Grid item>
           <Typography align="center" variant="body2">

@@ -1,15 +1,28 @@
-import { RequestHandler, Router, json } from "express";
+import express, { RequestHandler, Router, json } from "express";
 import authenticationMiddleware, {
   RequestWithUser,
 } from "../authentication/AuthenticationMiddleware";
 import adminRoleMiddleware from "../admin/AdminRoleMiddleware";
-import { CourseUserAction, FileData, Persister } from "../database/Persister";
+import { CourseUserAction, FileData, Persister, AssignmentUpdate } from "../database/Persister";
 import bodyParser from "body-parser";
 import environments from "../Configuration";
 import {
   SubmissionAdminOverviewEntry,
   TerminalStateType,
 } from "../Environment";
+import { broadcastSheetUpdate } from "../websocket/SheetHandler";
+
+export interface CreateAssignmentBody {
+  name: string;
+  maxBonusPoints?: number;
+  assignmentLabSheet?: string;
+  labSheetName?: string;
+}
+
+export interface DeleteAssignmentBody {
+  _id: string;
+  _sheetId: string;
+}
 
 export default (persister: Persister): Router => {
   const router = Router();
@@ -100,6 +113,83 @@ export default (persister: Persister): Router => {
     },
   );
 
+  router.post(
+    "/assignments/createNew",
+    authenticationMiddleware,
+    adminRoleMiddleware,
+    json(),
+    (_req: express.Request<object, object, CreateAssignmentBody>, res, next) => {
+      (async () => {
+        console.log('request', _req.body)
+        try {
+          const { name, maxBonusPoints, assignmentLabSheet, labSheetName } = _req.body;
+          if (!name) {
+            return res.status(400).json({ error: true, message: "Missing name" });
+          }
+          const assignment = {
+            name: name,
+            maxBonusPoints: maxBonusPoints ?? undefined,
+            assignmentLabSheet,
+            labSheetName,
+          };
+          const response = await persister.CreateAssignment(assignment);
+          return res.status(200).json(response);
+        } catch (err) {
+          console.log(err);
+          if (err instanceof Error) {
+            if (err.message.includes("already exists")) {
+              return res.status(409).json({
+                error: true,
+                message: err.message,
+              });
+            }
+            if (err.message === "Method not implemented.") {
+              return res.status(501).json({ error: true, message: "Function not yet supported" });
+            }
+            return res.status(500).json({ error: true, message: err.message });
+          }
+          return res.status(500).json({ error: true, message: "An unknown error occurred" });
+        }
+      })().catch(next);
+    },
+  );
+
+  router.post(
+    "/assignments/delete",
+    authenticationMiddleware,
+    adminRoleMiddleware,
+    json(),
+    (req, res) => {
+      (async () => {
+        try {
+          const body = req.body as DeleteAssignmentBody;
+          const { _id, _sheetId } = body;
+          if (!_id) {
+            return res.status(400).json({ error: true, message: "Missing Assignment ID" });
+          }
+          const assignment = { _id: _id, _sheetId: _sheetId };
+          await persister.DeleteAssignment(assignment);
+          return res.status(200).json({ success: true });
+        } catch (err) {
+          console.error(err);
+          if (err instanceof Error) {
+            if (err.message.includes("already exists")) {
+              return res.status(409).json({ error: true, message: err.message });
+            }
+            if (err.message === "Method not implemented.") {
+              return res.status(501).json({ error: true, message: "Function not yet supported" });
+            }
+            return res.status(500).json({ error: true, message: err.message });
+          }
+          return res.status(500).json({ error: true, message: "An unknown error occurred" });
+        }
+      })().catch((err) => {
+        console.error("Unhandled error in IIFE:", err);
+        res.status(500).json({ error: true, message: "Unhandled error" });
+      });
+    }
+  );
+
   router.get(
     "/courses",
     authenticationMiddleware,
@@ -122,6 +212,52 @@ export default (persister: Persister): Router => {
       })().catch(next);
     },
   );
+
+  router.get(
+    "/activeEnvironments",
+    authenticationMiddleware,
+    adminRoleMiddleware,
+    (_req, res, next) => {
+      (async () => {
+        try {
+          const courseData = await persister.GetActiveEnvironments();
+          return res.status(200).json(courseData);
+        } catch (err) {
+          if (err instanceof Error) {
+            return res.status(500).json({ error: true, message: err.message });
+          } else {
+            return res.status(500).json({
+              error: true,
+              message: "An unknown error occurred",
+            });
+          }
+        }
+      })().catch(next);
+    },
+  );
+
+  router.get(
+    "/assignment/labSheet/:sheetId",
+    authenticationMiddleware,
+    adminRoleMiddleware,
+    (_req, res, next) => {
+      (async () => {
+        try {
+          const labSheetData = await persister.GetLabSheetContent(_req.params.sheetId,);
+          return res.status(200).json(labSheetData);
+        } catch (err) {
+          if (err instanceof Error) {
+            return res.status(500).json({ error: true, message: err.message });
+          } else {
+            return res.status(500).json({
+              error: true,
+              message: "An unknown error occurred",
+            });
+          }
+        }
+      })().catch(next);
+    }
+  )
 
   router.post(
     "/course/create",
@@ -188,6 +324,44 @@ export default (persister: Persister): Router => {
         }
       });
     },
+  );
+
+  router.post(
+    "/assignment/:assignmentId/update",
+    authenticationMiddleware,
+    adminRoleMiddleware,
+    json(),
+    (req, res) => {
+      (async () => {
+        const reqWithUser = req as RequestWithUser;
+        const body = reqWithUser.body as Partial<AssignmentUpdate>;
+        const update: AssignmentUpdate = {
+          _id: reqWithUser.params.assignmentId,
+          _sheetId: reqWithUser.params.sheetId,
+          ...body,
+        };
+        await persister.UpdateAssignment(update);
+        const environment: string =
+          typeof body.name === "string" ? body.name : "default";
+        const labSheetContent: string =
+          typeof body.labSheetContent === "string"
+            ? body.labSheetContent
+            : typeof update.labSheetContent === "string"
+              ? update.labSheetContent
+              : "";
+        broadcastSheetUpdate(environment, labSheetContent);
+        return res.status(200).json({ success: true });
+      })().catch((err: unknown) => {
+        console.error("Error updating assignment", err);
+        if (err instanceof Error) {
+          return res.status(500).json({ error: true, message: err.message });
+        } else {
+          return res
+            .status(500)
+            .json({ error: true, message: "Unknown error" });
+        }
+      });
+    }
   );
 
   router.post(

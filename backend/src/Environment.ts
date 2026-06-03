@@ -64,6 +64,12 @@ export interface AssignmentStep {
   name: string;
   label: string;
   tests: Array<AssignmentStepTestType>;
+  bonusPoints?: number;
+}
+
+interface GradualAssistanceType {
+  failedCounter: number;
+  hint: string;
 }
 
 interface AssignmentStepTestSSHCommand {
@@ -72,6 +78,7 @@ interface AssignmentStepTestSSHCommand {
   stdOutMatch: string;
   successMessage: string;
   errorHint: string;
+  gradualAssistance?: Array<GradualAssistanceType>;
 }
 
 interface AssignmentStepTestTerminalBufferSearch {
@@ -80,6 +87,7 @@ interface AssignmentStepTestTerminalBufferSearch {
   match: string;
   successMessage: string;
   errorHint: string;
+  gradualAssistance?: Array<GradualAssistanceType>;
 }
 
 type AssignmentStepTestType =
@@ -123,7 +131,28 @@ export type SubmissionFileType = {
   fileContent: string;
 };
 
+export type EnvironmentType = "normal" | "k8s" | "k8s-vcluster";
+
+export type EnvironmentResponse = {
+  name: string
+  type: EnvironmentType
+}
+
+export type CollabDoc = {
+  alias: string;
+  content: string | undefined;
+  initialContent: boolean;
+};
+export interface DeployedEnvironment {
+  assignmentName: string;
+  instance: string;
+  isReady: boolean;
+  isReadyInUserSession: boolean;
+  isReadyInGroup: boolean;
+}
+
 export interface EnvironmentDescription {
+  type: EnvironmentType;
   terminals: Array<Array<TerminalType>>;
   editableFiles: Array<AliasedFile>;
   stopCommands: Array<TerminalType>;
@@ -133,7 +162,7 @@ export interface EnvironmentDescription {
   submissionCleanupCommand?: string;
   description: string;
   assignmentLabSheet: string;
-  assignmentLabSheetLocation?: "backend" | "instance";
+  assignmentLabSheetLocation?: "backend" | "instance" | "database";
   providerImage?: string;
   providerDockerCmd?: string;
   providerDockerSupplementalPorts?: string[];
@@ -147,9 +176,15 @@ export interface EnvironmentDescription {
   useLanguageClient?: boolean;
   maxBonusPoints?: number;
   mountKubeconfig?: boolean;
+  markdownFiles?: Array<string>;
+  sheetId?: string;
 
   //SAL
-  sshTunnelingPorts? : string[];
+  sshTunnelingPorts?: string[];
+
+  // Exam
+  isExam?: boolean;
+  durationMinutes?: number;
 }
 
 const DenyStartOfMissingInstanceErrorMessage =
@@ -170,6 +205,27 @@ export default class Environment {
   private filehandler!: FileHandler | undefined;
   private groupNumber: number;
   private sessionId: string;
+  private testCounter: Map<string, number> = new Map<string, number>();
+  private isReady: boolean;
+  private examStartTime?: Date;
+
+  private getErrorHint(test: AssignmentStepTestType, stepIndex: string) {
+    if (test.gradualAssistance === undefined) {
+      return test.errorHint;
+    }
+
+    const attempts = (this.testCounter.get(stepIndex) ?? 0) + 1;
+    this.testCounter.set(stepIndex, attempts);
+
+    const assistances = test.gradualAssistance
+      .filter((a) => a.failedCounter <= attempts)
+      .sort((a, b) => b.failedCounter - a.failedCounter);
+    if (assistances.length === 0) {
+      return test.errorHint;
+    }
+
+    return assistances[0].hint;
+  }
 
   public static getActiveEnvironment(
     environmentId: string,
@@ -184,14 +240,16 @@ export default class Environment {
         if (
           value.environmentId === environmentId &&
           value.groupNumber === groupNumber &&
-          value.sessionId === sessionId
+          value.sessionId === sessionId &&
+          value.isReady
         ) {
           activeEnvironment.push(value);
         }
       } else {
         if (
           value.environmentId === environmentId &&
-          value.groupNumber === groupNumber
+          value.groupNumber === groupNumber &&
+          value.isReady
         ) {
           activeEnvironment.push(value);
         }
@@ -200,29 +258,63 @@ export default class Environment {
     return activeEnvironment[0];
   }
 
-  public static getDeployedUserSessionEnvironmentList(
+  public static getDeployedEnvironmentList(
     username: string,
     sessionId: string,
-  ): Array<string> {
-    const deployedEnvironmentsForUserSession: Array<string> =
-      new Array<string>();
+    groupNumber: number,
+  ): Array<DeployedEnvironment> {
+    const deployedEnvironments: Array<DeployedEnvironment> =
+      new Array<DeployedEnvironment>();
 
     for (const [, value] of Environment.activeEnvironments) {
-      if (value.username === username && value.sessionId === sessionId)
-        deployedEnvironmentsForUserSession.push(value.environmentId);
-    }
-    return deployedEnvironmentsForUserSession;
-  }
-
-  public static getDeployedGroupEnvironmentList(groupNumber: number): string[] {
-    const deployedEnvironmentsForGroup: string[] = [];
-
-    for (const [, value] of Environment.activeEnvironments) {
-      if (value.groupNumber === groupNumber) {
-        deployedEnvironmentsForGroup.push(value.environmentId);
+      if (value.username === username || value.groupNumber === groupNumber) {
+        const isReadyInUserSession =
+          value.username === username &&
+          value.sessionId === sessionId &&
+          value.isReady;
+        const isReadyInGroup =
+          value.groupNumber === groupNumber && value.isReady;
+        const deployedEnvironment: DeployedEnvironment = {
+          assignmentName: value.environmentId,
+          instance: value.instanceId ?? "",
+          isReady: value.isReady,
+          isReadyInUserSession: isReadyInUserSession,
+          isReadyInGroup: isReadyInGroup,
+          // possibly add IPAddress, SSHPort, LanguageServerPort etc. here later for advanced use cases beyond
+          // learn-sdn-hub web interface usage
+        };
+        deployedEnvironments.push(deployedEnvironment);
       }
     }
-    return deployedEnvironmentsForGroup;
+    return deployedEnvironments;
+  }
+
+  public setExamStartTime(): void {
+    this.examStartTime = new Date();
+    console.log(
+      `setExamStartTime for ${this.username} at ${this.examStartTime.toISOString()}`,
+    );
+  }
+
+  public getExamStartTime(): number | undefined {
+    if (this.examStartTime) {
+      return this.examStartTime.getTime();
+    }
+    return undefined;
+  }
+
+  public getRemainingExamTime(): number | undefined {
+    if (
+      this.configuration.isExam &&
+      this.configuration.durationMinutes &&
+      this.examStartTime
+    ) {
+      const now = new Date();
+      const elapsed = (now.getTime() - this.examStartTime.getTime()) / 60000; // in minutes
+      const remaining = this.configuration.durationMinutes - elapsed;
+      return remaining > 0 ? remaining : 0;
+    }
+    return undefined;
   }
 
   private constructor(
@@ -245,6 +337,7 @@ export default class Environment {
     this.groupNumber = groupNumber;
     this.sessionId = sessionId;
     this.environmentId = environmentId;
+    this.isReady = false;
 
     //TODO go through all environments stored in db and check if instances are still running, if not remove environment in db
 
@@ -312,16 +405,37 @@ export default class Environment {
             ),
           );
         } else {
-          activeEnvironmentsForGroup.push(environment);
+          if (environment.isReady) {
+            activeEnvironmentsForGroup.push(environment);
+          } else {
+            // if environment that is not ready was started in this session, continue, otherwise throw error
+            // to show user that deployment in group is already in progress
+            if (environment.sessionId !== sessionId) {
+              return Promise.reject(
+                new Error(
+                  "You or your group already started to deploy the environment. Please reload assignment list.",
+                ),
+              );
+            }
+          }
         }
       }
     }
 
     if (activeEnvironmentsForGroup.length === 0) {
+      // create a stub in activeEnvironments to prevent other group members to start additional instances, will have isReady == false until started
+      console.log("Storing stub for environment to prevent multiple starts.");
+      Environment.activeEnvironments.set(
+        `${username}-${groupNumber}-${sessionId}-${environmentId}`,
+        environment,
+      );
+
+      // no environment for this group exists yet, start a new one
       await environment
         .start(env, sessionId, true)
         .then((endpoint) => {
           environment.instanceId = endpoint.instance;
+          environment.isReady = true;
           Environment.activeEnvironments.set(
             `${username}-${groupNumber}-${sessionId}-${environmentId}`,
             environment,
@@ -341,6 +455,8 @@ export default class Environment {
     } else {
       // the group already runs an environment, add this user to it and reuse instance
       let groupEnvironmentInstance;
+      let groupEnvironmentIPAddress;
+      let groupEnvironmentPort;
       const userEnvironmentsOfOtherGroupUser = await persister
         .GetUserEnvironments(activeEnvironmentsForGroup[0].username)
         .catch((err) => {
@@ -360,6 +476,8 @@ export default class Environment {
           activeEnvironmentsForGroup[0].environmentId
         ) {
           groupEnvironmentInstance = userEnvironmentOfOtherGroupUser.instance;
+          groupEnvironmentIPAddress = userEnvironmentOfOtherGroupUser.ipAddress;
+          groupEnvironmentPort = userEnvironmentOfOtherGroupUser.port;
         }
       }
 
@@ -369,6 +487,8 @@ export default class Environment {
           activeEnvironmentsForGroup[0].environmentId,
           activeEnvironmentsForGroup[0].configuration.description,
           groupEnvironmentInstance ?? "",
+          groupEnvironmentIPAddress ?? "",
+          groupEnvironmentPort ?? 0,
         )
         .catch((err) => {
           return Promise.reject(
@@ -400,6 +520,7 @@ export default class Environment {
         .start(env, sessionId, false)
         .then((endpoint) => {
           environment.instanceId = endpoint.instance;
+          environment.isReady = true;
           Environment.activeEnvironments.set(
             `${username}-${groupNumber}-${sessionId}-${environmentId}`,
             environment,
@@ -426,6 +547,13 @@ export default class Environment {
 
     if (environment) {
       const groupNumber = environment.groupNumber;
+
+      // mark environment as not ready to prevent new connections and show its state in assignment list
+      environment.isReady = false;
+      Environment.activeEnvironments.set(
+        `${environment?.username}-${groupNumber}-${environmentId}`,
+        environment,
+      );
 
       return await environment
         .stop()
@@ -479,6 +607,12 @@ export default class Environment {
     env.activeDesktops.forEach((_desktop: DesktopInstance, key: string) => {
       //console.debug("Deleting leftover desktop: " + key);
       env.activeDesktops.delete(key);
+    });
+
+    // Clean up collaboration documents for this environment
+    env.editableFiles.forEach((_path: string, alias: string) => {
+      const collabDocKey = `${alias}-${env.environmentId}-group${env.groupNumber}`;
+      this.activeCollabDocs.delete(collabDocKey);
     });
   }
 
@@ -540,6 +674,18 @@ export default class Environment {
         `Environment ${this.environmentId} already deployed for user ${this.username}, trying to reopen it...`,
       );
 
+      if (filtered[0].instance === "") {
+        // the environment found is not ready, instance is empty, remove environment and throw InstanceNotFoundErrorMessage
+        console.log(
+          `Environment ${this.environmentId} is not ready, starting cleanup...`,
+        );
+        await this.persister.RemoveUserEnvironment(
+          this.username,
+          filtered[0].environment,
+        );
+        throw new Error(InstanceNotFoundErrorMessage);
+      }
+
       return await this.environmentProvider
         .getServer(filtered[0].instance)
         .catch(async (error: Error) => {
@@ -593,10 +739,12 @@ export default class Environment {
       this.environmentId,
       this.configuration.description,
       endpoint.instance,
+      endpoint.IPAddress,
+      endpoint.RemoteDesktopPort,
     );
 
     console.log(
-      `Added new environment: ${this.environmentId} for user: ${this.username} using endpoint: ${JSON.stringify(endpoint)}`,
+      `Added new environment: ${this.environmentId} for user: ${this.username} using endpoint: ${JSON.stringify(endpoint)} with IP ${endpoint.IPAddress}:${endpoint.RemoteDesktopPort}`,
     );
 
     //SAL
@@ -633,8 +781,10 @@ export default class Environment {
                 JSON.stringify(endpoint),
               );
 
-              // SAL - replace placeholder in params (ToDo: In Function auslagern, was es für alle subTerminal.Types macht?)
-              subterminal.params = subterminal.params.map(str => str.replace(/\$\((GROUP_ID)\)/g, this.groupNumber.toString()));
+              // SAL - replace placeholder in params (TODO: migrate to separate function running this on all subTerminal.Types?)
+              subterminal.params = subterminal.params.map((str) =>
+                str.replace(/\$\((GROUP_ID)\)/g, this.groupNumber.toString()),
+              );
 
               await new Promise<void>((resolve, reject) => {
                 const sshConsole = new SSHConsole(
@@ -769,11 +919,14 @@ export default class Environment {
             break;
           case "WebApp":
             {
-              // SAL - replace placeholder in url (ToDo: In Function auslagern, was es für alle subTerminal.Types macht?)
-              const url = subterminal.url.replace(/(\d+)\$\((GROUP_ID)\)/g, (_, port, __) => {
-                // console.log(port);
-                return (Number(port) + this.groupNumber).toString();
-              });
+              // SAL - replace placeholder in url (TODO: migrate to separate function running this on all subTerminal.Types?)
+              const url = subterminal.url.replace(
+                /(\d+)\$\((GROUP_ID)\)/g,
+                (_, port, __) => {
+                  // console.log(port);
+                  return (Number(port) + this.groupNumber).toString();
+                },
+              );
               subterminal.url = url;
 
               // currently WebApps are instantly treated as ready
@@ -1072,8 +1225,9 @@ export default class Environment {
                 }
               }
             }
+
             if (testPassed !== true)
-              testOutput += "FAILED: " + test.errorHint + " ";
+              testOutput += "FAILED: " + this.getErrorHint(test, stepIndex);
           }
         } else if (test.type === "SSHCommand") {
           await this.runSSHCommand(test.command, test.stdOutMatch)
@@ -1082,14 +1236,17 @@ export default class Environment {
               testPassed = true;
             })
             .catch(() => {
-              testOutput += "FAILED: " + test.errorHint + " ";
+              testOutput +=
+                "FAILED: " + this.getErrorHint(test, stepIndex) + " ";
             });
         }
+
         // if any of the terminalStates matched
         if (testPassed === true && someTestsFailed !== true)
           someTestsFailed = false;
         else someTestsFailed = true;
       }
+
       if (someTestsFailed !== undefined && someTestsFailed === false)
         return Promise.resolve({
           code: 201,
@@ -1189,12 +1346,22 @@ export default class Environment {
       }
     }
 
+    let bonusPoints = 0;
+    if (this.configuration.steps !== undefined) {
+      for (let i = 0; i < parseInt(stepIndex); i++) {
+        const step = this.configuration.steps[i];
+        const testResult = await this.test(i.toString(), terminalStates);
+        if (testResult.code === 201) bonusPoints += step.bonusPoints ?? 0;
+      }
+    }
+
     await this.persister.SubmitUserEnvironment(
       this.username,
       this.groupNumber,
       this.environmentId,
       terminalStates,
       submittedFiles,
+      bonusPoints,
     );
   }
 
@@ -1251,8 +1418,12 @@ export default class Environment {
     alias: string,
     environmentId: string,
     groupNumber: number,
-  ): Promise<string> {
-    if (this.activeCollabDocs.get(alias) === undefined) {
+  ): Promise<CollabDoc> {
+    let initialContent = false;
+    // Use a composite key that includes alias, environment, and group to ensure proper isolation
+    const collabDocKey = `${alias}-${environmentId}-group${groupNumber}`;
+
+    if (this.activeCollabDocs.get(collabDocKey) === undefined) {
       const env = Environment.getActiveEnvironment(environmentId, groupNumber);
       const resolvedPath = env?.editableFiles.get(alias);
 
@@ -1272,13 +1443,33 @@ export default class Environment {
       const ytext = ydoc.getText("monaco");
 
       ytext.insert(0, content);
+      initialContent = true;
       this.activeCollabDocs.set(
-        alias,
+        collabDocKey,
         fromUint8Array(Y.encodeStateAsUpdate(ydoc)),
       );
     }
 
-    return this.activeCollabDocs.get(alias)!; // TODO: might be undefined?
+    // Safely get the content from the map
+    const collabDocContent = this.activeCollabDocs.get(collabDocKey);
+    if (collabDocContent === undefined) {
+      // This should never happen since we just set the value above
+      // If it does, it indicates a serious concurrency issue
+      console.error(
+        `CRITICAL: Collaboration document not found after initialization. Key: ${collabDocKey}, Map size: ${this.activeCollabDocs.size}`,
+      );
+      throw new Error(
+        `Collaboration document not found after initialization for key: ${collabDocKey}`,
+      );
+    }
+
+    const newCollabDoc: CollabDoc = {
+      alias,
+      content: collabDocContent,
+      initialContent: initialContent,
+    };
+
+    return newCollabDoc;
   }
 
   async getProviderInstanceStatus(): Promise<string> {

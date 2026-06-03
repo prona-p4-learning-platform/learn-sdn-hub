@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-backend
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: backend
+spec:
+  replicas: {{ .Values.backend.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: backend
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/component: backend
+    spec:
+      serviceAccountName: {{ .Release.Name }}
+      automountServiceAccountToken: true
+      containers:
+      - name: backend
+        image: learn-sdn-hub-backend:latest ##### for local development
+        # image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}" ###### CHANGE FOR PRODUCTION
+        imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
+        env:
+          - name: BACKEND_ASSIGNMENT_TYPE
+            value: mongodb
+          - name: MONGODB_URL
+            value: mongodb://admin:test123@prona4-db-svc:27017/learn-sdn-hub?replicaSet=prona4-db&authSource=admin
+          - name: SSH_USERNAME
+            value: p4
+          - name: SSH_PASSWORD
+            value: p4
+        ports:
+          - containerPort: {{ .Values.backend.service.containerPort | int }}
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "200m"
+          limits:
+            memory: "2Gi"
+            cpu: "1"

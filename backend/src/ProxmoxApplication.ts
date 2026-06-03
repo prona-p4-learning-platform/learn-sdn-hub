@@ -1,5 +1,5 @@
 import api from "./Api";
-import serverCreator from "./Server";
+import { startServer } from "./Server"; 
 import MongoDBPersister from "./database/MongoDBPersister";
 import MongoDBAuthenticationProvider from "./authentication/MongoDBAuthenticationProvider";
 import ProxmoxProvider from "./providers/ProxmoxProvider";
@@ -11,13 +11,14 @@ if (MONGODB_URL) {
 
   console.log("Attempting to start Proxmox Application.");
 
-  serverCreator(
-    api(
-      persister,
-      [new MongoDBAuthenticationProvider(persister)],
-      new ProxmoxProvider(),
-    ),
+  const apiRouter = api(
+    persister,
+    [new MongoDBAuthenticationProvider(persister)],
+    new ProxmoxProvider(),
   );
+
+  startServer(apiRouter);
+
 } else {
   console.log("MongoDB URL not set. Aborting...");
   process.exit(1);

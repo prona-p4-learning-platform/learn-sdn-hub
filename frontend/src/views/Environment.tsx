@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { useParams } from "react-router";
+import { useParams, useSearchParams, useNavigate, useLocation } from "react-router";
+import createWebSocket from "../api/WebSocket";
 import {
   Button,
   Dialog,
@@ -24,9 +25,11 @@ import WebFrame from "../components/WebFrame";
 import TabControl from "../components/TabControl";
 import TerminalTabs from "../components/TerminalTabs";
 import FileEditor from "../components/FileEditor";
+import BackendTimer from "../components/BackendTimer";
 
 import { useOptionsStore } from "../stores/optionsStore";
 import { APIRequest, httpStatusValidator, getHttpError } from "../api/Request";
+import { useAuthStore } from "../stores/authStore.ts";
 
 const environmentConfigurationValidator = z.object({
   files: z.array(z.string()),
@@ -60,6 +63,7 @@ const environmentConfigurationValidator = z.object({
   workspaceFolders: z.array(z.string()).default([]),
   useCollaboration: z.boolean().default(false),
   useLanguageClient: z.boolean().default(false),
+  isExam: z.boolean().default(false),
 });
 
 const environmentAssignmentValidator = z.object({
@@ -104,15 +108,28 @@ type EnvironmentState = {
   workspaceFolders: string[];
   useCollaboration: boolean;
   useLanguageClient: boolean;
+  isExam: boolean;
 };
 
 function Environment(): JSX.Element {
   const { environmentName } = useParams();
+  //const { environment } = useParams<{ environment: string }>();
+  //const environmentName2 = environment ?? "";
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const isAdmin = useAuthStore((state) => state.isAdmin());
+  const ownGroupNumber = useAuthStore((state) => state.groupNumber);
+  const param = searchParams.get("groupNumber");
+  const urlGroupNumber = param !== null ? Number(param) : undefined;
+  const groupNumber = isAdmin
+    ? urlGroupNumber ?? ownGroupNumber
+    : ownGroupNumber;
   const { enqueueSnackbar, closeSnackbar } = useSnackbar();
   const { darkMode } = useOptionsStore();
   const [prevDarkMode, setPrevDarkMode] = useState<boolean>(darkMode);
   const [graphs, setGraphs] = useState<string[]>([]);
-  const [assignment, setAssignment] = useState<string>("");
+  const [assignment, setAssignment] = useState<string>(""); // TODO Das ist der Content des LabSheet
   const [instanceStatus, setInstanceStatus] = useState<string>("");
   const [environmentStatus, setEnvironmentStatus] = useState<string>("running");
   const [state, setState] = useState<EnvironmentState>({
@@ -125,12 +142,18 @@ function Environment(): JSX.Element {
     workspaceFolders: [],
     useCollaboration: false,
     useLanguageClient: false,
+    isExam: false,
   });
   const [terminalState, setTerminalState] = useState<TerminalStateType[]>([]);
   const [activeStep, setActiveStep] = useState<number>(0);
-  const [stepsCompleted, setStepsCompleted] = useState<boolean>(false);
   const [showRestartDialog, setShowRestartDialog] = useState(false);
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
+
+  useEffect(() => {
+    if (!isAdmin && urlGroupNumber !== undefined) {
+      void navigate(location.pathname, { replace: true });
+    }
+  }, [isAdmin, urlGroupNumber, navigate, location.pathname]);
 
   const loadEnvironmentConfig = useCallback(() => {
     APIRequest(
@@ -139,10 +162,6 @@ function Environment(): JSX.Element {
     )
       .then((payload) => {
         if (payload.success) {
-          // check for completion
-          if (payload.data.stepLabels.length < 1) {
-            setStepsCompleted(true);
-          }
           setState(payload.data);
         } else throw payload.error;
       })
@@ -169,9 +188,15 @@ function Environment(): JSX.Element {
   }, [environmentName]);
 
   const loadProviderInstanceStatus = useCallback(() => {
+    const query: Record<string, unknown> = {};
+    if (groupNumber !== undefined) {
+      query.groupNumber = groupNumber;
+    }
     APIRequest(
       `/environment/${environmentName}/provider-instance-status`,
-      httpStatusValidator,
+      httpStatusValidator, {
+        query
+      }
     )
       .then((payload) => {
         if (payload.success) {
@@ -182,7 +207,7 @@ function Environment(): JSX.Element {
         console.log("DEBUG: loadProviderInstanceStatus failed");
         console.log(reason);
       });
-  }, [environmentName]);
+  }, [environmentName, groupNumber]);
 
   function handleRestartDialogOpen() {
     setShowRestartDialog(true);
@@ -209,11 +234,6 @@ function Environment(): JSX.Element {
     void submitAssignment();
     setShowSubmitDialog(false);
   }
-
-  useEffect(() => {
-    // if the last step is reached, steps are completed and finish / submission of assignment can be enabled
-    setStepsCompleted(activeStep === state.stepLabels.length);
-  }, [activeStep, state]);
 
   async function checkStepTest() {
     // should send terminalState (maybe even editorState) if needed to backend and wait for result of test
@@ -265,6 +285,10 @@ function Environment(): JSX.Element {
   }
 
   async function restartEnvironment() {
+    const query: Record<string, unknown> = {};
+    if (groupNumber !== undefined) {
+      query.groupNumber = groupNumber;
+    }
     const restartSnack = enqueueSnackbar("Restarting environment...", {
       variant: "info",
       persist: true,
@@ -277,6 +301,7 @@ function Environment(): JSX.Element {
         httpStatusValidator,
         {
           method: "POST",
+          query,
         },
       );
 
@@ -379,6 +404,53 @@ function Environment(): JSX.Element {
     loadProviderInstanceStatus();
   }, [loadEnvironmentConfig, loadAssignment, loadProviderInstanceStatus]);
 
+  // Websocket Connection to update LabSheet Content in real time
+  useEffect(() => {
+    const websocket = createWebSocket(`/environment/${environmentName}/labsheet`);
+    const unmounted = false;
+    websocket.onopen = () => {
+      websocket.send(
+        `auth ${useAuthStore.getState().token}`,
+      );
+      if (unmounted) {
+        websocket.close();
+        return;
+      }
+
+      websocket.onmessage = (event: MessageEvent) => {
+        try {
+          if (typeof event.data !== "string") {
+            console.warn("WS message is not a string", event.data);
+            return;
+          }
+
+          const parsed = JSON.parse(event.data) as unknown;
+
+          if (
+            typeof parsed === "object" &&
+            parsed !== null &&
+            "type" in parsed &&
+            (parsed.type === "sheet-update" ? "content" in parsed : true)
+          ) {
+            const msg = parsed as { type: string; content?: string };
+
+            if (msg.type === "sheet-update" && typeof msg.content === "string") {
+              setAssignment(msg.content);
+              enqueueSnackbar("Lab Sheet updated by admin!", { variant: "info" });
+            }
+          }
+        } catch (error) {
+          console.error("Error parsing WS message:", error);
+        }
+      };
+
+      websocket.onerror = (event) => {
+        console.error("[WS error]", event);
+      };
+    };
+    return () => websocket.close();
+  }, [enqueueSnackbar, environmentName, groupNumber]);
+
   useEffect(() => {
     // initialize mermaid with every color mode change
     mermaid.initialize({
@@ -441,6 +513,11 @@ function Environment(): JSX.Element {
             tabNames={["Assignment", "Terminals"]}
             handleRestart={handleRestartDialogOpen}
             environmentStatus={environmentStatus}
+            timerComponent={
+              state.isExam ? (
+                <BackendTimer environmentName={environmentName ?? ""} groupNumber={groupNumber} />
+              ) : undefined
+          }
           >
             <Grid
               container
@@ -489,7 +566,6 @@ function Environment(): JSX.Element {
                       variant="contained"
                       color="primary"
                       onClick={handleSubmitDialogOpen}
-                      disabled={!stepsCompleted}
                     >
                       Finish & Submit
                     </Button>
@@ -522,6 +598,8 @@ function Environment(): JSX.Element {
                                   `/environment/${environmentName}/type/${subterminal.name}`,
                                 )}
                                 onTerminalUnmount={storeTerminalState}
+                                role={isAdmin ? "admin" : undefined}
+                                groupNumber={groupNumber}
                               />
                             );
                           }
@@ -575,6 +653,7 @@ function Environment(): JSX.Element {
               workspaceFolders={state.workspaceFolders}
               useCollaboration={state.useCollaboration}
               useLanguageClient={state.useLanguageClient}
+              groupNumber={groupNumber}
             />
           ) : (
             <Typography>Fetching files to initialize editor...</Typography>

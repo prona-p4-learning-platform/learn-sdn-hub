@@ -5,7 +5,7 @@ export default function (
   ws: WebSocket,
   environment: string,
   groupNumber: number,
-  sessionId: string,
+  sessionId: string | undefined,
   type: string,
 ): void {
   const envInstance = Environment.getActiveEnvironment(

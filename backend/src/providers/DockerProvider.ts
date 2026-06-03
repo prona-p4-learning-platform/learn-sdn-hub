@@ -229,9 +229,11 @@ export default class DockerProvider implements InstanceProvider {
       ExposedPorts: exposedPorts,
       HostConfig: {
         PortBindings: portBindings,
-        Privileged: true,
+        //Privileged: true,
+        Privileged: false,
         AutoRemove: true,
         Binds: hostConfigBinds,
+        CapAdd: ["NET_ADMIN"]
       },
       Env: envs,
     };

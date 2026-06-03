@@ -39,6 +39,8 @@ import "monaco-editor/esm/vs/editor/standalone/browser/quickAccess/standaloneCom
 import "monaco-editor/esm/vs/editor/standalone/browser/quickInput/standaloneQuickInputService.js";
 import "monaco-editor/esm/vs/editor/standalone/browser/referenceSearch/standaloneReferenceSearch.js";
 import "monaco-editor/esm/vs/editor/standalone/browser/toggleHighContrast/toggleHighContrast.js";
+// monaco-editor languages
+import "monaco-editor/esm/vs/basic-languages/python/python.contribution";
 // monaco-editor api
 import * as monaco from "monaco-editor/esm/vs/editor/editor.api";
 // monaco-editor workers
@@ -87,6 +89,11 @@ const contentValidator = z.object({
   content: z.string(),
   location: z.string().optional(),
 });
+const collabDocValidator = z.object({
+  alias: z.string().min(1),
+  content: z.string(),
+  initialContent: z.boolean(),
+});
 
 interface Disposable {
   dispose: () => void;
@@ -122,6 +129,7 @@ interface FileEditorProps {
   workspaceFolders: string[];
   useCollaboration: boolean;
   useLanguageClient: boolean;
+  groupNumber: number | undefined;
 }
 
 class KeepAliveAwareWebSocketMessageReader extends WebSocketMessageReader {
@@ -220,6 +228,12 @@ export default class FileEditor extends Component<FileEditorProps> {
       aliases: ["JSON", "json"],
       mimetypes: ["application/json"],
     });
+
+    monaco.languages.register({
+      id: "markdown",
+      extensions: [".md"],
+      aliases: ["markdown"],
+    });
     // additional file types? make them configurable?
 
     // install Monaco language client services
@@ -262,6 +276,11 @@ export default class FileEditor extends Component<FileEditorProps> {
           const payload = await APIRequest(
             `/environment/${this.props.environment}/file/${fileName}`,
             contentValidator,
+            {
+              query: {
+                groupNumber: this.props.groupNumber,
+              },
+            },
           );
 
           if (payload.success) {
@@ -368,15 +387,11 @@ export default class FileEditor extends Component<FileEditorProps> {
     try {
       const payload = await APIRequest(
         `/environment/${this.props.environment}/collabdoc/${fileName}`,
-        contentValidator,
+        collabDocValidator,
       );
 
       if (payload.success) {
         const { data } = payload;
-
-        Y.applyUpdate(doc, toUint8Array(data.content));
-
-        // Check for double document, if environment was not undeployed
 
         // Websocket provider
         this.collaborationProvider = new WebsocketProvider(
@@ -406,8 +421,8 @@ export default class FileEditor extends Component<FileEditorProps> {
         //   }
         // );
 
-        const type = doc.getText("monaco");
-
+        // Setup awareness and user presence BEFORE waiting for sync
+        // This ensures the user's color and name are set immediately
         const awareness = this.collaborationProvider.awareness;
         const username = this.username;
 
@@ -514,6 +529,51 @@ export default class FileEditor extends Component<FileEditorProps> {
           name: username,
           color: hexColor,
         });
+
+        // Wait for the provider to sync before initializing document content
+        // This prevents duplicating content if the yjs server already has the document
+        await new Promise<void>((resolve) => {
+          let resolved = false;
+
+          // Helper function to initialize document if needed
+          const initializeDocIfEmpty = () => {
+            if (doc.getText("monaco").length === 0 && data.initialContent) {
+              Y.applyUpdate(doc, toUint8Array(data.content));
+            }
+          };
+
+          // Declare timeout variable first so it can be referenced in syncHandler
+          // Set a timeout to prevent hanging if sync event doesn't fire
+          const timeout = setTimeout(() => {
+            if (!resolved) {
+              resolved = true;
+              console.log(
+                "Collaboration sync timeout - initializing document anyway",
+              );
+              initializeDocIfEmpty();
+              // Clean up the event listener even on timeout
+              this.collaborationProvider!.off("sync", syncHandler);
+              resolve();
+            }
+          }, 5000); // 5 second timeout
+
+          const syncHandler = (isSynced: boolean) => {
+            if (isSynced && !resolved) {
+              resolved = true;
+              clearTimeout(timeout);
+              // Only initialize document with content from backend if the document is empty after sync
+              // This handles the case where the backend was restarted but the yjs server still has the document
+              initializeDocIfEmpty();
+              // Clean up the event listener
+              this.collaborationProvider!.off("sync", syncHandler);
+              resolve();
+            }
+          };
+
+          this.collaborationProvider!.on("sync", syncHandler);
+        });
+
+        const type = doc.getText("monaco");
 
         if (this.editor != null) {
           if (this.editor.getModel()) {
@@ -738,6 +798,9 @@ export default class FileEditor extends Component<FileEditorProps> {
         {
           method: "POST",
           body: { data: this.editor.getModel()?.getValue() ?? "" },
+          query: {
+            groupNumber: this.props.groupNumber,
+          },
         },
       );
 
@@ -775,6 +838,11 @@ export default class FileEditor extends Component<FileEditorProps> {
       const payload = await APIRequest(
         `/environment/${this.props.environment}/file/${this.state.currentFile}`,
         contentValidator,
+        {
+          query: {
+            groupNumber: this.props.groupNumber,
+          },
+        },
       );
 
       if (payload.success) {
