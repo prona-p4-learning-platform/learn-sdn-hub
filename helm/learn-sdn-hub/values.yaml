@@ -1,0 +1,55 @@
+# global settings
+nameOverride: ""
+fullnameOverride: ""
+
+ingress-nginx:
+  enabled: true
+cert-manager:
+  enabled: true
+  installCRDs: true
+fluxcd:
+  enabled: false
+
+# backend configuration
+backend:
+  image:
+    repository: ghcr.io/prona-p4-learning-platform/learn-sdn-hub-backend
+    tag: 254-feature-k8s-docker-images
+    pullPolicy: IfNotPresent
+  replicaCount: 1
+  service:
+    servicePort: 80
+    containerPort: 3001
+
+# frontend configuration
+frontend:
+  image:
+    repository: ghcr.io/prona-p4-learning-platform/learn-sdn-hub-frontend
+    tag: 254-feature-k8s-docker-images
+    pullPolicy: IfNotPresent
+  replicaCount: 1
+  service:
+    servicePort: 80
+    containerPort: 80
+
+# ingress configuration
+ingress:
+  enabled: true
+  fqdn: prona.local
+  className: nginx
+  clusterIssuer: selfsigned
+
+# mongodb + mongo-express configuration
+mongodb:
+  enable: true
+  storageClass: "standard" # or custom Class name
+  credentials:
+    username: "admin"
+    password: "password"
+  service:
+    port: 27017
+  ressources:
+    requests:
+      storage: 5Gi
+mongoExpress:
+  enabled: true

@@ -6,6 +6,7 @@ import { EnvironmentDescription } from "./Environment";
 const environments = new Map<string, EnvironmentDescription>();
 
 environments.set("p4basic-with-guacamole", {
+  type: "normal",
   terminals: [
     [
       {
@@ -113,6 +114,7 @@ environments.set("p4basic-with-guacamole", {
 });
 
 environments.set("l2_learning_switch", {
+  type: "normal",
   terminals: [
     [
       {
@@ -170,6 +172,7 @@ environments.set("l2_learning_switch", {
 });
 
 environments.set("p4calc", {
+  type: "normal",
   terminals: [
     [
       {
@@ -198,6 +201,7 @@ environments.set("p4calc", {
 });
 
 environments.set("python-test", {
+  type: "normal",
   terminals: [
     [
       {
@@ -248,6 +252,7 @@ environments.set("python-test", {
 });
 
 environments.set("Example0-SDN-Intro", {
+  type: "normal",
   terminals: [
     [
       {
@@ -308,6 +313,7 @@ environments.set("Example0-SDN-Intro", {
 });
 
 environments.set("Beispiel0-SDN-Einfuehrung", {
+  type: "normal",
   terminals: [
     [
       {
@@ -367,6 +373,7 @@ environments.set("Beispiel0-SDN-Einfuehrung", {
 });
 
 environments.set("Example1-Repeater", {
+  type: "normal",
   terminals: [
     [
       {
@@ -460,6 +467,7 @@ environments.set("Example1-Repeater", {
 });
 
 environments.set("Example2-MinimalisticSwitch", {
+  type: "normal",
   terminals: [
     [
       {
@@ -536,6 +544,7 @@ environments.set("Example2-MinimalisticSwitch", {
 });
 
 environments.set("Example3-LearningSwitch", {
+  type: "normal",
   terminals: [
     [
       {
@@ -605,6 +614,7 @@ environments.set("Example3-LearningSwitch", {
 });
 
 environments.set("Example-p4env", {
+  type: "normal",
   terminals: [
     [
       {
@@ -660,6 +670,7 @@ environments.set("Example-p4env", {
 });
 
 environments.set("Example5-IPv4Routing", {
+  type: "normal",
   terminals: [
     [
       {
@@ -731,6 +742,7 @@ environments.set("Example5-IPv4Routing", {
 });
 
 environments.set("Example6-MPLSSwitching", {
+  type: "normal",
   terminals: [
     [
       {
@@ -815,6 +827,7 @@ environments.set("Example6-MPLSSwitching", {
 
 //sudo clab inspect &>/dev/null; if [ $? -eq 1 ]; then sudo clab deploy &>/dev/null; fi; docker exec -it clab-kommprot-lab-transport-host1 bash;
 environments.set("KommProt-Uebung1b", {
+  type: "normal",
   terminals: [
     [
       {
@@ -898,6 +911,7 @@ environments.set("KommProt-Uebung1b", {
 });
 
 environments.set("KommProt-Uebung1c", {
+  type: "normal",
   terminals: [
     [
       {
@@ -956,6 +970,7 @@ environments.set("KommProt-Uebung1c", {
 });
 
 environments.set("KommProt-Uebung3-SDN", {
+  type: "normal",
   terminals: [
     [
       {
@@ -1016,6 +1031,7 @@ environments.set("KommProt-Uebung3-SDN", {
 });
 
 environments.set("Test-Uebung3-SDN", {
+  type: "normal",
   terminals: [
     [
       {
@@ -1077,6 +1093,7 @@ environments.set("Test-Uebung3-SDN", {
 
 // SAL
 environments.set("Containerlab-Test-SAL", {
+  type: "normal",
   providerProxmoxTemplateTag: "learn-sdn-hub-template-apel",
   // providerProxmoxTemplateTag: "learn-sdn-hub-develop-template",
   sshTunnelingPorts: ["50080$(GROUP_ID)"],
@@ -1153,6 +1170,7 @@ environments.set("Containerlab-Test-SAL", {
 });
 
 environments.set("CC-Lab-1", {
+  type: "k8s",
   //providerImage: "cc-container",
   //providerDockerCmd: "",
   providerProxmoxTemplateTag: "learn-sdn-hub-develop-cc-template",
@@ -1181,7 +1199,37 @@ environments.set("CC-Lab-1", {
   assignmentLabSheet: "/home/p4/labs/lab1/README.md",
 });
 
+environments.set("vCluster-test", {
+  type: "k8s-vcluster",
+  //providerImage: "cc-container",
+  //providerDockerCmd: "",
+  providerProxmoxTemplateTag: "learn-sdn-hub-develop-cc-template",
+  terminals: [
+    [
+      {
+        type: "Shell",
+        name: "host1",
+        cwd: "/home/p4/labs/lab1",
+        executable: "",
+        params: [],
+        provideTty: true,
+      },
+    ],
+  ],
+  editableFiles: [
+    {
+      absFilePath: "/home/p4/labs/lab1/nginx.yaml",
+      alias: "nginx.yaml",
+    },
+  ],
+  stopCommands: [],
+  description: "CC-Test description",
+  assignmentLabSheetLocation: "instance",
+  assignmentLabSheet: "/home/p4/labs/lab1/README.md",
+});
+
 environments.set("CC-Lab-2", {
+  type: "normal",
   //providerImage: "cc-container",
   //providerDockerCmd: "",
   providerProxmoxTemplateTag: "learn-sdn-hub-develop-cc-template",

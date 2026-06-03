@@ -9,7 +9,6 @@ import {
   LabSheet,
   Persister,
   ResponseObject,
-  UserAccount,
   UserData,
   UserEntry,
   UserEnvironment,
@@ -88,7 +87,52 @@ export default class MongoDBPersister implements Persister {
     return this.mongoClient;
   }
 
-  async GetUserAccount(username: string): Promise<UserAccount> {
+  async AddDefaultUser(): Promise<void> {
+    
+    const client = await this.getClient();
+    const usersCollection = client.db().collection<UserEntry>("users");
+    const coursesCollection = client.db().collection<CourseData>("courses");
+
+    const userCount = await usersCollection.countDocuments();
+    // no need for default user
+    if (userCount > 0) {
+      return;
+    }
+
+    const userPasswordHash = await hash("user1", saltRounds);
+    const adminPasswordHash = await hash("admin", saltRounds);
+
+    const insertResult = await usersCollection.insertMany([
+      {
+        username: "user1",
+        passwordHash: userPasswordHash, // user1
+        groupNumber: 1,
+        environments: [],
+        externalIds: []
+      },
+      {
+        username: "admin",
+        passwordHash: adminPasswordHash, // admin
+        groupNumber: 0,
+        role: "admin",
+        environments: [],
+        externalIds: []
+      }
+    ]);
+
+    const courses = await coursesCollection.find().toArray();
+    const courseIds = courses.map((c) => c._id);
+
+    await usersCollection.updateOne(
+      { _id: insertResult.insertedIds["0"] },
+      { $set: { courses: courseIds } },
+    );
+
+    console.log("MongoDBPersister: Added default users: user1:user1 and admin:admin");
+  }
+  
+
+  async GetUserAccount(username: string): Promise<UserEntry> {
     const client = await this.getClient();
     const result = await client
       .db()
@@ -101,7 +145,7 @@ export default class MongoDBPersister implements Persister {
 
   async GetUserAccountByExternalId(
     externalId: UserExternalId,
-  ): Promise<UserAccount> {
+  ): Promise<UserEntry> {
     const client = await this.getClient();
     const result = await client.db().collection<UserEntry>("users").findOne({
       "externalIds.authProvider": externalId.authProvider,
@@ -198,7 +242,7 @@ export default class MongoDBPersister implements Persister {
   async ChangeUserPassword(
     username: string,
     password: string,
-  ): Promise<UserAccount> {
+  ): Promise<UserEntry> {
     const passwordHash = await hash(password, saltRounds);
     const client = await this.getClient();
     const result = await client
@@ -415,7 +459,7 @@ export default class MongoDBPersister implements Persister {
 
     return users.map(user => ({
       ...user,
-      environmentIPs: user.environments.map(env => env.ipAddress),
+      environmentIPs: (user.environments ?? []).map(env => env.ipAddress),
     }));
   }
 
@@ -774,7 +818,7 @@ export default class MongoDBPersister implements Persister {
       .then(() => undefined);
   }
 
-  async GetUserAssignments(userAcc: UserAccount): Promise<AssignmentData[]> {
+  async GetUserAssignments(userAcc: UserEntry): Promise<AssignmentData[]> {
     const client = await this.getClient();
     const courseObjIDs = userAcc.courses?.map((id) => new ObjectId(id));
 

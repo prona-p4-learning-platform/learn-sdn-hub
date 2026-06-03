@@ -7,6 +7,7 @@ import authenticationMiddleware, {
 } from "../authentication/AuthenticationMiddleware";
 import { Persister } from "../database/Persister";
 import { LoginError, userService } from "../service/user.service";
+import { EnvironmentResponse } from "../Environment";
 
 const authValidator = celebrate({
   [Segments.BODY]: Joi.object({
@@ -56,22 +57,16 @@ export default (
     getAssignments()
       .then((map) => {
         // return list splitted by kubernetes assignments and other assignments
-        const assignmentsSplitted: string[][] = [[], []];
-        const assignmentTypes: Record<string, boolean> = {};
+        const assignments: EnvironmentResponse[] = [];
 
         map.forEach((value, key) => {
-          if (!value.mountKubeconfig) {
-            assignmentsSplitted[0].push(key);
-          } else {
-            assignmentsSplitted[1].push(key);
-          }
-
-          if(value.isExam !== undefined) {
-            assignmentTypes[key] = value.isExam;
-          }
+          assignments.push({
+            name: key,
+            type: value.type
+          })
         });
 
-        res.status(200).json({ assignments: assignmentsSplitted, types: assignmentTypes });
+        res.status(200).json(assignments);
       })
       .catch((err) => {
         let message = "Unknown error";

@@ -13,9 +13,11 @@ export interface UserEntry {
   passwordHash?: string;
   groupNumber: number;
   assignmentListFilter?: string;
-  environments: UserEnvironment[];
-  externalIds: UserExternalId[];
+  environments?: UserEnvironment[];
+  externalIds?: UserExternalId[];
   examStartTime?: Date;
+  role?: string;
+  courses?: string[];
 }
 
 export interface UserAccount {
@@ -106,10 +108,8 @@ export type CourseUserAction = {
 };
 
 export interface Persister {
-  GetUserAccount: (username: string) => Promise<UserAccount>;
-  GetUserAccountByExternalId: (
-    externalId: UserExternalId,
-  ) => Promise<UserAccount>;
+  GetUserAccount: (username: string) => Promise<UserEntry>;
+  GetUserAccountByExternalId: (externalId: UserExternalId) => Promise<UserEntry>;
   CreateUserAccount: (userEntry: UserEntry) => Promise<ResponseObject>;
   AddUserExternalId: (
     username: string,
@@ -155,7 +155,7 @@ export interface Persister {
   DeleteAssignment(assignment: AssignmentDelete): Promise<void>;
   GetAllAssignments(): Promise<AssignmentData[] | string[]>;
   GetLabSheetContent(sheetId: string): Promise<LabSheet | null>;
-  GetUserAssignments(userAcc: UserAccount): Promise<AssignmentData[]>;
+  GetUserAssignments(userAcc: UserEntry): Promise<AssignmentData[]>;
   UpdateAssignementsForCourse(
     courseID: string,
     assignmentIDs: string[],
