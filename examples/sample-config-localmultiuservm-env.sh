@@ -14,3 +14,6 @@ export VBOX_SSH_PORTS="3022,22"
 export SSH_USERNAME=p4
 export SSH_PASSWORD=p4
 
+# JWT session lifetime (optional, default: 120 minutes)
+# export JWT_SESSION_LIFETIME_MINUTES="120"
+

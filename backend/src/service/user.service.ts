@@ -158,20 +158,13 @@ export class UserService {
     const token = jwt.sign(
       userResponse,
       process.env.JWT_TOKENSECRET ?? "some-secret",
+      {
+        expiresIn: `${config.jwtSessionLifetimeMinutes}m`,
+      },
     );
 
     console.log(
-      "Handled login for user: " +
-        user.username +
-        " token: " +
-        token.substring(0, 8) +
-        "..." +
-        " session:" +
-        sessionId +
-        " groupNumber: " +
-        user.groupNumber +
-        " role: " +
-        user.role,
+      `Handled login for user: ${user.username} token: ${token.substring(0, 8)}... session:${sessionId} groupNumber: ${user.groupNumber} role: ${user.role} expiresIn: ${config.jwtSessionLifetimeMinutes}m`,
     );
 
     return {
