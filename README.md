@@ -328,8 +328,8 @@ K8S_CERT_AUTH_DATA="LS0tLS1CRUd..."
 KUBECTL_STORE_PATH="/tmp" 
 ```
 
-#### Kubernetes Doku
-[Hier](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/) ist geht es zu der Kubernetes Rest Api Doku
+#### Kubernetes Backend and Container Images
+Documentation regarding the setup of learn-sdn-hub in Kubernetes as well as using tenant-aware k8s (vcluster) to run assignments in Kubernetes is provided in the README in the [dev-stack](https://github.com/prona-p4-learning-platform/learn-sdn-hub/tree/master/dev-stack/k8s) folder.
 
 ### OIDC example
 An example to use OIDC is provided in the examples folder of this repo [oidc-extension](/examples/oidc-extension).
