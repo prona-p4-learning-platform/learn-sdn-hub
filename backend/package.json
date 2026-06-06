@@ -58,7 +58,7 @@
     "cors": "^2.8.5",
     "dockerode": "^4.0.9",
     "dotenv": "^16.4.7",
-    "express": "^4.21.2",
+    "express": "^4.22.2",
     "js-base64": "^3.7.7",
     "jsonwebtoken": "^9.0.2",
     "jwks-rsa": "^3.1.0",
