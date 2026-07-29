@@ -1,8 +1,8 @@
 import { useLayoutEffect, useMemo } from "react";
-import { AttachAddon } from "xterm-addon-attach";
-import { FitAddon } from "xterm-addon-fit";
-import { SerializeAddon } from "xterm-addon-serialize";
-import type { Terminal } from "xterm";
+import { AttachAddon } from "@xterm/addon-attach";
+import { FitAddon } from "@xterm/addon-fit";
+import { SerializeAddon } from "@xterm/addon-serialize";
+import type { Terminal } from "@xterm/xterm";
 
 import XTerm from "./XTerm";
 import createWebSocket from "../api/WebSocket";

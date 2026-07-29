@@ -1,7 +1,7 @@
-import { Terminal, ITerminalAddon, ITerminalOptions } from "xterm";
+import { Terminal, ITerminalAddon, ITerminalOptions } from "@xterm/xterm";
 import { createRef, useLayoutEffect } from "react";
 
-import "xterm/css/xterm.css";
+import "@xterm/xterm/css/xterm.css";
 
 interface XTermProps {
   /**

@@ -63,36 +63,30 @@ const ActiveEnvironmentsOverview = ({ activeUsers, reloadActiveUsers }: ActiveEn
     });
     const { enqueueSnackbar, closeSnackbar } = useSnackbar();
     const defaultValidator = z.object({});
-    const deployedUserEnvsValidator = z.array(z.string());
-    const deployedGroupEnvsValidator = z.array(z.string());
+    const deployedEnvironmentValidator = z.array(
+      z.object({
+        assignmentName: z.string(),
+        instance: z.string(),
+        isReady: z.boolean(),
+        isReadyInUserSession: z.boolean(),
+        isReadyInGroup: z.boolean(),
+      }),
+    );
 
   const updateDeployedEnvironments = useCallback(() => {
     APIRequest(
-      "/environment/deployed-user-environments",
-      deployedUserEnvsValidator,
+      "/environment/deployed-environments",
+      deployedEnvironmentValidator,
     )
       .then((payload) => {
         if (payload.success) {
-          console.log('Deletion successful.');
+          console.log("Fetched deployed environments.");
         } else throw payload.error;
       })
       .catch(() => {
-        console.log("Fetching deployed user environments failed...");
+        console.log("Fetching deployed environments failed...");
       });
-
-    APIRequest(
-      "/environment/deployed-group-environments",
-      deployedGroupEnvsValidator,
-    )
-      .then((payload) => {
-        if (payload.success) {
-          console.log('Deletion successful');
-        } else throw payload.error;
-      })
-      .catch(() => {
-        console.log("Fetching deployed group environments failed...");
-      });
-  }, [deployedGroupEnvsValidator, deployedUserEnvsValidator]);
+  }, [deployedEnvironmentValidator]);
 
   const deleteEnvironment = useCallback(
     async (assignment: string, groupNumber: number) => {

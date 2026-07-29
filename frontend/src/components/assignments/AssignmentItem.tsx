@@ -1,4 +1,4 @@
-import { Box, Button, Checkbox, createTheme, LinearProgress, ListItem, ListItemSecondaryAction, ListItemText, Tooltip, Typography } from "@mui/material"
+import { Box, Button, Checkbox, CircularProgress, createTheme, LinearProgress, ListItem, ListItemSecondaryAction, ListItemText, Tooltip, Typography } from "@mui/material"
 import CloudUploadIcon from "@mui/icons-material/CloudUpload"
 import CloudOffIcon from "@mui/icons-material/CloudOff"
 import PlayCircleFilledWhiteIcon from "@mui/icons-material/PlayCircleFilledWhite"
@@ -47,12 +47,17 @@ const AssignmentItem = ({name, data, onDeploy, onUndeploy, onResubmit}:Props) =>
   return (
     <ListItem divider>
       <ListItemText primary={name} />
+      {data.progressAssignment === name && (
+        <Box sx={{ display: "inline-flex", alignItems: "center", ml: 2 }}>
+          <CircularProgress size={16} />
+        </Box>
+      )}
       <ListItemSecondaryAction>
         <Button
           variant="contained"
           color="primary"
           startIcon={<CloudUploadIcon />}
-          disabled={!canDeploy || isSubmitted}
+          disabled={!canDeploy || isSubmitted || data.preparing}
           onClick={() => onDeploy(name)}
           sx={{ margin: theme.spacing(1) }}
         >
@@ -62,7 +67,7 @@ const AssignmentItem = ({name, data, onDeploy, onUndeploy, onResubmit}:Props) =>
           variant="contained"
           color="secondary"
           startIcon={<PlayCircleFilledWhiteIcon />}
-          disabled={!isActiveDeployment}
+          disabled={!isActiveDeployment || data.preparing}
           onClick={() => navigate(`/environment/${name}`)}
           sx={{ margin: theme.spacing(1) }}
         >
@@ -72,7 +77,7 @@ const AssignmentItem = ({name, data, onDeploy, onUndeploy, onResubmit}:Props) =>
           variant="contained"
           color="primary"
           startIcon={<CloudOffIcon />}
-          disabled={!isActiveDeployment}
+          disabled={!isActiveDeployment || data.preparing}
           onClick={() => onUndeploy(name)}
           sx={{ margin: theme.spacing(1) }}
         >

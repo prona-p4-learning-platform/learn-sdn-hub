@@ -10,8 +10,15 @@ const assignmentsValidator = z.array(
   })
 )
 const pointsValidator = z.record(z.number())
-const deployedUserEnvsValidator = z.array(z.string())
-const deployedGroupEnvsValidator = z.array(z.string())
+const deployedEnvironmentValidator = z.array(
+  z.object({
+    assignmentName: z.string(),
+    instance: z.string(),
+    isReady: z.boolean(),
+    isReadyInUserSession: z.boolean(),
+    isReadyInGroup: z.boolean(),
+  })
+)
 const submissionsValidator = z.array(
   z.object({
     assignmentName: z.string().min(1),
@@ -29,6 +36,8 @@ export interface Assignment {
 export interface AssignmentContextData {
   deployedUser: string[]
   deployedGroup: string[]
+  preparing: boolean
+  progressAssignment: string
   submissions: { assignmentName: string; lastChanged: Date; points?: number }[]
   pointLimits: Record<string, number | undefined>
 }
@@ -58,18 +67,10 @@ export function useAssignmentsData() {
 export function useEnvironmentStatus() {
   const refetchInterval = 2000
 
-  const deployedUserQuery = useQuery({
-    queryKey: ["deployedUserEnvs"],
+  const deployedEnvironmentsQuery = useQuery({
+    queryKey: ["deployedEnvironments"],
     queryFn: async () => {
-      const res = await APIRequest("/environment/deployed-user-environments", deployedUserEnvsValidator)
-      return res.success ? res.data : []
-    },
-    refetchInterval
-  })
-  const deployedGroupQuery = useQuery({
-    queryKey: ["deployedGroupEnvs"],
-    queryFn: async () => {
-      const res = await APIRequest("/environment/deployed-group-environments", deployedGroupEnvsValidator)
+      const res = await APIRequest("/environment/deployed-environments", deployedEnvironmentValidator)
       return res.success ? res.data : []
     },
     refetchInterval
@@ -83,14 +84,26 @@ export function useEnvironmentStatus() {
     refetchInterval
   })
 
+  const deployedEnvironments = deployedEnvironmentsQuery.data || []
+  const deployedUser = [...new Set(
+    deployedEnvironments.filter((env) => env.isReadyInUserSession).map((env) => env.assignmentName)
+  )]
+  const deployedGroup = [...new Set(
+    deployedEnvironments.filter((env) => env.isReadyInGroup).map((env) => env.assignmentName)
+  )]
+  // an environment for this user or their group is still being prepared (deployed but not yet
+  // ready) - block further deploy/undeploy actions app-wide until it settles, preventing
+  // concurrent start/stop of multiple assignments (see #277, #281)
+  const preparing = deployedEnvironments.some((env) => !env.isReady)
+
   return {
-    deployedUser: deployedUserQuery.data || [],
-    deployedGroup: deployedGroupQuery.data || [],
+    deployedUser,
+    deployedGroup,
+    preparing,
     submissions: submissionsQuery.data || [],
-    isLoading: deployedUserQuery.isLoading || submissionsQuery.isLoading,
+    isLoading: deployedEnvironmentsQuery.isLoading || submissionsQuery.isLoading,
     refetchAll: () => {
-      void deployedUserQuery.refetch()
-      void deployedGroupQuery.refetch()
+      void deployedEnvironmentsQuery.refetch()
     }
   }
 }
