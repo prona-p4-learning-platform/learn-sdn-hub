@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo } from "react";
-import { FitAddon } from "xterm-addon-fit";
-import { Terminal } from "xterm";
+import { FitAddon } from "@xterm/addon-fit";
+import { Terminal } from "@xterm/xterm";
 import XTerm from "./XTerm";
 import TerminalObserver from "../utilities/TerminalObserver";
 
