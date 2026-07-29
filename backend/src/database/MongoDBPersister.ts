@@ -594,7 +594,7 @@ export default class MongoDBPersister implements Persister {
 
     // Transform the MongoDB documents into a Map<string, EnvironmentDescription>
     environmentDocs.forEach((doc) => {
-      environmentMap.set(doc.name, doc as EnvironmentDescription);
+      environmentMap.set(doc.name, doc);
     });
 
     // Update the global environments map
@@ -896,7 +896,7 @@ export default class MongoDBPersister implements Persister {
           fileNames: submission.fileNames,
           terminalEndpoints: submission.terminalEndpoints,
           ...(submission.points !== null && {
-            points: submission.points as number,
+            points: submission.points,
           }),
         }),
       );

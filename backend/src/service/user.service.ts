@@ -44,7 +44,7 @@ export class UserService {
     const userExternalId = {
       externalId: payload.sub,
       authProvider: idpId,
-    } as UserExternalId;
+    };
 
     try {
       // Check if user with the correctly external ID is available
@@ -131,7 +131,7 @@ export class UserService {
           username: result.username,
           groupNumber: result.groupNumber,
           role: result.role,
-        } as UserEntry);
+        });
       } catch (error) {
         console.error(error);
       }
@@ -177,7 +177,7 @@ export class UserService {
     return {
       token: token,
       ...userResponse,
-    } as UserLoginResponse;
+    };
   }
 
   private async createUserAccount(
