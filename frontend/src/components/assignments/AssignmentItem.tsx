@@ -14,7 +14,7 @@ type Props = {
 }
 
 
-const AssignmentItem = ({name, data, onDeploy, onUndeploy, onResubmit}:Props) => {
+const AssignmentItem = ({name, data, onDeploy, onUndeploy, onResubmit}:Props): JSX.Element => {
   const theme = createTheme()
   const navigate = useNavigate()
 
@@ -27,7 +27,7 @@ const AssignmentItem = ({name, data, onDeploy, onUndeploy, onResubmit}:Props) =>
 
   const getSubmissionTooltip = () => {
     if(submission) {
-      return `Finished. Last successful submission: ${submission.lastChanged}`
+      return `Finished. Last successful submission: ${submission.lastChanged.toLocaleString(undefined, { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit" })}`
     }
   }
 
@@ -68,7 +68,7 @@ const AssignmentItem = ({name, data, onDeploy, onUndeploy, onResubmit}:Props) =>
           color="secondary"
           startIcon={<PlayCircleFilledWhiteIcon />}
           disabled={!isActiveDeployment || data.preparing}
-          onClick={() => navigate(`/environment/${name}`)}
+          onClick={() => void navigate(`/environment/${name}`)}
           sx={{ margin: theme.spacing(1) }}
         >
           Start Assignment
@@ -98,7 +98,7 @@ const AssignmentItem = ({name, data, onDeploy, onUndeploy, onResubmit}:Props) =>
               <Box sx={{ width: "100px" }}>
                 <LinearProgress
                   variant="determinate"
-                  value={submission?.points && data.pointLimits[name] ? (submission.points / data.pointLimits[name]!) * 100 : 0}
+                  value={submission?.points && data.pointLimits[name] ? (submission.points / data.pointLimits[name]) * 100 : 0}
                   color={isSubmitted ? "primary" : "warning"}
                 />
               </Box>

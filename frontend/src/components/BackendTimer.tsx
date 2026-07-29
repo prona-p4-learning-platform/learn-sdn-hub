@@ -18,7 +18,7 @@ const timerValidator = z.union([
   }),
 ]);
 
-var popupShown = false;
+let popupShown = false;
 
 function formatTime(minutes: number): string {
   const mins = Math.floor(minutes);
@@ -28,7 +28,7 @@ function formatTime(minutes: number): string {
   return `${minutesStr}:${secondsStr}`;
 }
 
-export default function BackendTimer({ environmentName, groupNumber }: BackendTimerProps) {
+export default function BackendTimer({ environmentName, groupNumber }: BackendTimerProps): JSX.Element {
   const [value, setValue] = useState<string>("--:--");
 
   useEffect(() => {
@@ -41,7 +41,7 @@ export default function BackendTimer({ environmentName, groupNumber }: BackendTi
         );
         if (payload.success) {
           if (payload.data.hasTimer) {
-            if (payload.data.remainingMinutes == 0 && !popupShown) {
+            if (payload.data.remainingMinutes === 0 && !popupShown) {
               console.log("Zeit um, wurde abgegeben");
               popupShown = true;
               alert("Die Prüfungszeit ist abgelaufen. Ihre Arbeit wurde automatisch abgegeben.");
@@ -60,8 +60,10 @@ export default function BackendTimer({ environmentName, groupNumber }: BackendTi
     };
 
     // initial fetch + alle 1 Sekunde aktualisieren
-    fetchTimer();
-    const intervalId = setInterval(fetchTimer, 1000);
+    void fetchTimer();
+    const intervalId = setInterval(() => {
+      void fetchTimer();
+    }, 1000);
     return () => clearInterval(intervalId);
   }, [environmentName, groupNumber]);
 

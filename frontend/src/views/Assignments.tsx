@@ -24,16 +24,6 @@ export interface SubmissionType {
   points?: number;
 }
 
-const EnvironmentSchema = z.enum(["normal", "k8s", "k8s-vcluster"]);
-export type AssignmentsResponse = z.infer<typeof assignmentsValidator>;
-
-const assignmentsValidator = z.array(
-  z.object({
-    name: z.string(),
-    type: EnvironmentSchema
-  })
-);
-
 const defaultValidator = z.object({});
 
 function Assignments(): JSX.Element {
@@ -177,7 +167,7 @@ function Assignments(): JSX.Element {
   }
 
   function handleConfirmationUndeployDialogConfirm() {
-    deleteEnvironment(undeployDialog.assignment)
+    void deleteEnvironment(undeployDialog.assignment)
     setUndeployDialog({assignment: "", open: false})
   }
 

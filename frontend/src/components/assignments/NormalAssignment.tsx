@@ -12,7 +12,7 @@ export type GroupProps = {
   }
 }
 
-const NormalAssignment = ({assignments, contextData, actions}:GroupProps) => {
+const NormalAssignment = ({assignments, contextData, actions}:GroupProps): JSX.Element | null => {
 
   if(assignments.length === 0) {
     return null

@@ -42,7 +42,10 @@ export interface AssignmentContextData {
   pointLimits: Record<string, number | undefined>
 }
 
-export function useAssignmentsData() {
+export function useAssignmentsData(): {
+  assignments: Assignment[];
+  points: Record<string, number>;
+} {
   const assignmentsQuery = useQuery({
     queryKey: ["assignments"],
     queryFn: async () => {
@@ -64,7 +67,14 @@ export function useAssignmentsData() {
   return { assignments: assignmentsQuery.data || [], points: pointsQuery.data || {} }
 }
 
-export function useEnvironmentStatus() {
+export function useEnvironmentStatus(): {
+  deployedUser: string[];
+  deployedGroup: string[];
+  preparing: boolean;
+  submissions: AssignmentContextData["submissions"];
+  isLoading: boolean;
+  refetchAll: () => void;
+} {
   const refetchInterval = 2000
 
   const deployedEnvironmentsQuery = useQuery({
