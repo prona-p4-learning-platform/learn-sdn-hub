@@ -1,4 +1,4 @@
-import { Box, Button, Checkbox, createTheme, LinearProgress, ListItem, ListItemSecondaryAction, ListItemText, Tooltip, Typography } from "@mui/material"
+import { Box, Button, Checkbox, CircularProgress, createTheme, LinearProgress, ListItem, ListItemSecondaryAction, ListItemText, Tooltip, Typography } from "@mui/material"
 import CloudUploadIcon from "@mui/icons-material/CloudUpload"
 import CloudOffIcon from "@mui/icons-material/CloudOff"
 import PlayCircleFilledWhiteIcon from "@mui/icons-material/PlayCircleFilledWhite"
@@ -14,7 +14,7 @@ type Props = {
 }
 
 
-const AssignmentItem = ({name, data, onDeploy, onUndeploy, onResubmit}:Props) => {
+const AssignmentItem = ({name, data, onDeploy, onUndeploy, onResubmit}:Props): JSX.Element => {
   const theme = createTheme()
   const navigate = useNavigate()
 
@@ -27,7 +27,7 @@ const AssignmentItem = ({name, data, onDeploy, onUndeploy, onResubmit}:Props) =>
 
   const getSubmissionTooltip = () => {
     if(submission) {
-      return `Finished. Last successful submission: ${submission.lastChanged}`
+      return `Finished. Last successful submission: ${submission.lastChanged.toLocaleString(undefined, { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit" })}`
     }
   }
 
@@ -47,12 +47,17 @@ const AssignmentItem = ({name, data, onDeploy, onUndeploy, onResubmit}:Props) =>
   return (
     <ListItem divider>
       <ListItemText primary={name} />
+      {data.progressAssignment === name && (
+        <Box sx={{ display: "inline-flex", alignItems: "center", ml: 2 }}>
+          <CircularProgress size={16} />
+        </Box>
+      )}
       <ListItemSecondaryAction>
         <Button
           variant="contained"
           color="primary"
           startIcon={<CloudUploadIcon />}
-          disabled={!canDeploy || isSubmitted}
+          disabled={!canDeploy || isSubmitted || data.preparing}
           onClick={() => onDeploy(name)}
           sx={{ margin: theme.spacing(1) }}
         >
@@ -62,8 +67,8 @@ const AssignmentItem = ({name, data, onDeploy, onUndeploy, onResubmit}:Props) =>
           variant="contained"
           color="secondary"
           startIcon={<PlayCircleFilledWhiteIcon />}
-          disabled={!isActiveDeployment}
-          onClick={() => navigate(`/environment/${name}`)}
+          disabled={!isActiveDeployment || data.preparing}
+          onClick={() => void navigate(`/environment/${name}`)}
           sx={{ margin: theme.spacing(1) }}
         >
           Start Assignment
@@ -72,7 +77,7 @@ const AssignmentItem = ({name, data, onDeploy, onUndeploy, onResubmit}:Props) =>
           variant="contained"
           color="primary"
           startIcon={<CloudOffIcon />}
-          disabled={!isActiveDeployment}
+          disabled={!isActiveDeployment || data.preparing}
           onClick={() => onUndeploy(name)}
           sx={{ margin: theme.spacing(1) }}
         >
@@ -93,7 +98,7 @@ const AssignmentItem = ({name, data, onDeploy, onUndeploy, onResubmit}:Props) =>
               <Box sx={{ width: "100px" }}>
                 <LinearProgress
                   variant="determinate"
-                  value={submission?.points && data.pointLimits[name] ? (submission.points / data.pointLimits[name]!) * 100 : 0}
+                  value={submission?.points && data.pointLimits[name] ? (submission.points / data.pointLimits[name]) * 100 : 0}
                   color={isSubmitted ? "primary" : "warning"}
                 />
               </Box>

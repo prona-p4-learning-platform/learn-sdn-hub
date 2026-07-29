@@ -9,7 +9,7 @@ import { FetchError } from "ofetch"
 
 const defaultValidator = z.object({})
 
-const VClusterAssignments = ({ assignments, contextData, actions }: GroupProps) => {
+const VClusterAssignments = ({ assignments, contextData, actions }: GroupProps): JSX.Element | null => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
 
   const deploy = useCallback(async () => {
@@ -150,19 +150,19 @@ const VClusterAssignments = ({ assignments, contextData, actions }: GroupProps) 
           </Button>
           <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={() => setAnchorEl(null)}>
             <MenuItem onClick={() => {
-              deploy()
+              void deploy()
               setAnchorEl(null)
             }}>
               Setup
             </MenuItem>
             <MenuItem onClick={() => {
-              undeploy()
+              void undeploy()
               setAnchorEl(null)
             }}>
               Undeploy
             </MenuItem>
             <MenuItem onClick={() => {
-              downloadKubeconfig()
+              void downloadKubeconfig()
               setAnchorEl(null)
             }}>
               Download kubeconfig

@@ -1,7 +1,7 @@
 import jsonwebtoken, { Jwt, JwtHeader, JwtPayload } from "jsonwebtoken";
 import axios from "axios";
 import { OidcMetadata } from "oidc-client-ts";
-import JwksRsa, { JwksClient, SigningKey } from "jwks-rsa";
+import { JwksClient, SigningKey } from "jwks-rsa";
 import { config } from "../Config";
 
 export class JwtService {
@@ -67,7 +67,7 @@ export class JwtService {
     // Get jwksClient from jwks uri for gathering the signing key later
     const jwksClient: JwksClient = new JwksClient({
       jwksUri: jwksUri,
-    } as JwksRsa.Options);
+    });
 
     // Workaround: Remap callback function to async promise for better use later on, because getSigningKey method propagates the result to a callback function
     return new Promise((resolve, reject) => {

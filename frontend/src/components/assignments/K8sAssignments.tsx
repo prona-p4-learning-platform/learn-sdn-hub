@@ -9,7 +9,7 @@ import { z } from "zod"
 
 const defaultValidator = z.object({})
 
-const K8sAssignments = ({assignments, contextData, actions}:GroupProps) => {
+const K8sAssignments = ({assignments, contextData, actions}:GroupProps): JSX.Element | null => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
 
   const setup = useCallback(
@@ -155,19 +155,19 @@ const K8sAssignments = ({assignments, contextData, actions}:GroupProps) => {
           </Button>
           <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={() => setAnchorEl(null)}>
             <MenuItem onClick={() => {
-              setup()
+              void setup()
               setAnchorEl(null)
             }}>
               Setup
             </MenuItem>
             <MenuItem onClick={() => {
-             undeploy()
+              void undeploy()
               setAnchorEl(null)
             }}>
               Undeploy
             </MenuItem>
             <MenuItem onClick={() => {
-              downloadKubeconfig()
+              void downloadKubeconfig()
               setAnchorEl(null)
             }}>
               Download <code>.kubeconfig</code>

@@ -171,7 +171,7 @@ export default class FileEditor extends Component<FileEditorProps> {
   constructor(props: FileEditorProps) {
     super(props);
     this.state = {
-      fileState: {} as FileState,
+      fileState: {},
       currentFile: props.files[0],
       currentFileChanged: false,
       currentFileLSPLanguage: "",
