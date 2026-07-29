@@ -22,7 +22,7 @@ import {
 } from "@mui/icons-material";
 import { useSnackbar } from "notistack";
 import { z } from "zod";
-import { Terminal } from "xterm";
+import { Terminal } from "@xterm/xterm";
 
 import { Assignment } from "../typings/assignment/AssignmentType";
 

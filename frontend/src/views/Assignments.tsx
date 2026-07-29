@@ -42,11 +42,13 @@ function Assignments(): JSX.Element {
   const {assignments, points} = useAssignmentsData()
   const [undeployDialog, setUndeployDialog] = useState<{ open: boolean; assignment: string }>({ open: false, assignment: "" })
   const [resubmitDialog, setResubmitDialog] = useState<{ open: boolean; assignment: string }>({ open: false, assignment: "" })
+  const [progressAssignment, setProgressAssignment] = useState<string>("")
 
 
 
   const createEnvironment = useCallback(
     async (assignment: string) => {
+      setProgressAssignment(assignment);
       const creatingSnack = enqueueSnackbar("Creating virtual environment...", {
         variant: "info",
         persist: true,
@@ -80,6 +82,7 @@ function Assignments(): JSX.Element {
         }
       }
 
+      setProgressAssignment("");
       closeSnackbar(creatingSnack);
     },
     [enqueueSnackbar, closeSnackbar],
@@ -87,6 +90,7 @@ function Assignments(): JSX.Element {
 
   const deleteEnvironment = useCallback(
     async (assignment: string) => {
+      setProgressAssignment(assignment);
       const deletingSnack = enqueueSnackbar("Deleting virtual environment...", {
         variant: "info",
         persist: true,
@@ -125,6 +129,7 @@ function Assignments(): JSX.Element {
         }
       }
 
+      setProgressAssignment("");
       closeSnackbar(deletingSnack);
     },
     [enqueueSnackbar, closeSnackbar],
@@ -133,6 +138,8 @@ function Assignments(): JSX.Element {
   const contextData = {
     deployedUser: status.deployedUser,
     deployedGroup: status.deployedGroup,
+    preparing: status.preparing,
+    progressAssignment,
     submissions: status.submissions,
     pointLimits: points
   }
@@ -189,6 +196,12 @@ function Assignments(): JSX.Element {
           You or your group members are working on{" "}
           {status.deployedGroup[0]}. You can join and open a connection by
           clicking deploy.
+        </Typography>
+      )}
+      {status.preparing && (
+        <Typography style={{ marginTop: "0.5rem" }} color="warning.main">
+          Deployment actions are temporarily disabled while an environment is
+          being prepared for you or one of your group members.
         </Typography>
       )}
       <List component="nav" aria-label="assignment list" style={{ width: 940 }}>
