@@ -45,3 +45,37 @@ test("calls next() if a proper token was passed", () => {
     user: { iat: expect.any(Number), username: "testuser", id: "testid" },
   });
 });
+
+test("returns 401 if an expired token was passed", () => {
+  const nexthandler = jest.fn();
+
+  if (!mockRequest.headers) mockRequest.headers = {};
+
+  // Create a token that expired 1 hour ago
+  mockRequest.headers.authorization = jwt.sign(
+    {
+      username: "testuser",
+      id: "testid",
+    },
+    process.env.JWT_TOKENSECRET ?? "some-secret",
+    {
+      expiresIn: "-1h",
+    },
+  );
+  
+  // Reset the mock
+  (mockResponse.status as jest.Mock).mockClear();
+  (mockResponse.json as jest.Mock).mockClear();
+  
+  AuthenticationMiddleware(
+    mockRequest as Request,
+    mockResponse as Response,
+    nexthandler,
+  );
+  expect(nexthandler).not.toHaveBeenCalled();
+  expect(mockResponse.status).toHaveBeenCalledWith(401);
+  expect(mockResponse.json).toHaveBeenCalledWith({
+    error: true,
+    message: "Invalid token.",
+  });
+});
