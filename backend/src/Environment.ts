@@ -1,9 +1,12 @@
 import crypto from "node:crypto";
+import { EventEmitter } from "node:events";
 import { fromUint8Array } from "js-base64";
 import querystring from "querystring";
 import * as Y from "yjs";
 
 import SSHConsole, { Console, JumpHost } from "./consoles/SSHConsole";
+import DockerConsole from "./consoles/DockerConsole";
+import ClabApiClient from "./providers/ClabApiClient";
 import FileHandler from "./filehandler/SSHFileHandler";
 import {
   InstanceProvider,
@@ -58,7 +61,13 @@ export interface GuacamoleAuthResponse {
   availableDataSources: string[];
 }
 
-export type TerminalType = Shell | Desktop | WebApp;
+export interface DockerShell {
+  type: "DockerShell";
+  name: string;
+  containerName: string;
+}
+
+export type TerminalType = Shell | Desktop | WebApp | DockerShell;
 
 export interface AssignmentStep {
   name: string;
@@ -182,9 +191,118 @@ export interface EnvironmentDescription {
   //SAL
   sshTunnelingPorts?: string[];
 
+  // ContainerLab: topology URL (or inline object) deployed as the lab
+  topologyUrl?: string;
+
   // Exam
   isExam?: boolean;
   durationMinutes?: number;
+}
+
+// ContainerLab client shared by all DockerShell consoles, built lazily from
+// the provider-independent CLAB_* env vars so Environment does not depend on
+// the provider instance.
+let clabApiClientSingleton: ClabApiClient | undefined;
+
+export function getClabApiClient(): ClabApiClient {
+  if (clabApiClientSingleton) return clabApiClientSingleton;
+
+  const apiUrl = process.env.CLAB_APIURL;
+  if (!apiUrl)
+    throw new Error("Environment: No CLab API URL provided (CLAB_APIURL).");
+  const username = process.env.CLAB_USERNAME;
+  if (!username)
+    throw new Error("Environment: No CLab username provided (CLAB_USERNAME).");
+  const password = process.env.CLAB_PASSWORD;
+  if (!password)
+    throw new Error("Environment: No CLab password provided (CLAB_PASSWORD).");
+
+  const tlsInsecure =
+    process.env.CLAB_API_TLS_INSECURE === "true" ||
+    process.env.CLAB_API_TLS_INSECURE === "1";
+
+  let tokenDurationMs = 60 * 60 * 1000; // default token duration 60 minutes
+  const envTokenDuration = process.env.CLAB_TOKEN_DURATION_IN_MINUTES;
+  if (envTokenDuration) {
+    const parsed = parseInt(envTokenDuration);
+    if (isNaN(parsed))
+      throw new Error(
+        "Environment: Provided token duration cannot be parsed (CLAB_TOKEN_DURATION_IN_MINUTES).",
+      );
+    tokenDurationMs = parsed * 60 * 1000;
+  }
+
+  clabApiClientSingleton = new ClabApiClient({
+    apiUrl,
+    username,
+    password,
+    tlsInsecure,
+    tokenDurationMs,
+  });
+  return clabApiClientSingleton;
+}
+
+export function resetClabApiClient(): void {
+  clabApiClientSingleton = undefined;
+}
+
+const DEFAULT_CONSOLE_COLUMNS = 80;
+const DEFAULT_CONSOLE_ROWS = 24;
+
+export function createConsoleForSubterminal(
+  subterminal: TerminalType,
+  endpoint: VMEndpoint,
+  client: ClabApiClient | undefined,
+  environmentId: string,
+  username: string,
+  groupNumber: number,
+  sessionId: string | undefined,
+  labName: string,
+): Console & EventEmitter {
+  switch (subterminal.type) {
+    case "Shell":
+      {
+        const params = subterminal.params.map((str) =>
+          str.replace(/\$\((GROUP_ID)\)/g, groupNumber.toString()),
+        );
+        return new SSHConsole(
+          environmentId,
+          subterminal.name,
+          username,
+          groupNumber,
+          sessionId,
+          endpoint.IPAddress,
+          endpoint.SSHPort,
+          subterminal.executable,
+          params,
+          subterminal.cwd,
+          subterminal.provideTty,
+          endpoint.SSHJumpHost,
+        );
+      }
+    case "DockerShell":
+      if (!client)
+        throw new Error(
+          "DockerShell consoles require a ClabApiClient (getClabApiClient).",
+        );
+      return new DockerConsole(
+        environmentId,
+        subterminal.name,
+        username,
+        groupNumber,
+        sessionId,
+        client,
+        labName,
+        subterminal.containerName,
+        endpoint.managementAddresses ?? {},
+        DEFAULT_CONSOLE_COLUMNS,
+        DEFAULT_CONSOLE_ROWS,
+      );
+    default:
+      throw new Error(
+        `Unsupported console subterminal type: ${(subterminal as { type: string }).type}`,
+      );
+  }
 }
 
 const DenyStartOfMissingInstanceErrorMessage =
@@ -717,6 +835,7 @@ export default class Environment {
             mountKubeconfig: this.configuration.mountKubeconfig,
             //SAL
             sshTunnelingPorts: this.configuration.sshTunnelingPorts,
+            clabTopology: this.configuration.topologyUrl,
           },
         );
       } else throw new Error(DenyStartOfMissingInstanceErrorMessage);
@@ -781,25 +900,16 @@ export default class Environment {
                 JSON.stringify(endpoint),
               );
 
-              // SAL - replace placeholder in params (TODO: migrate to separate function running this on all subTerminal.Types?)
-              subterminal.params = subterminal.params.map((str) =>
-                str.replace(/\$\((GROUP_ID)\)/g, this.groupNumber.toString()),
-              );
-
               await new Promise<void>((resolve, reject) => {
-                const sshConsole = new SSHConsole(
+                const sshConsole = createConsoleForSubterminal(
+                  subterminal,
+                  endpoint,
+                  undefined,
                   this.environmentId,
-                  subterminal.name,
                   this.username,
                   this.groupNumber,
                   sessionId,
-                  endpoint.IPAddress,
-                  endpoint.SSHPort,
-                  subterminal.executable,
-                  subterminal.params,
-                  subterminal.cwd,
-                  subterminal.provideTty,
-                  endpoint.SSHJumpHost,
+                  endpoint.instance,
                 );
 
                 sshConsole.on("ready", () => {
@@ -812,6 +922,42 @@ export default class Environment {
                 });
 
                 sshConsole.on("close", () => {
+                  this.activeConsoles.delete(subterminal.name);
+                  reject(new Error("Unable to create environment"));
+                });
+              });
+            }
+            break;
+          case "DockerShell":
+            {
+              console.log(
+                "Opening console: ",
+                JSON.stringify(subterminal),
+                JSON.stringify(endpoint),
+              );
+
+              await new Promise<void>((resolve, reject) => {
+                const dockerConsole = createConsoleForSubterminal(
+                  subterminal,
+                  endpoint,
+                  getClabApiClient(),
+                  this.environmentId,
+                  this.username,
+                  this.groupNumber,
+                  sessionId,
+                  endpoint.instance,
+                );
+
+                dockerConsole.on("ready", () => {
+                  this.activeConsoles.set(subterminal.name, dockerConsole);
+                  resolve();
+                });
+
+                dockerConsole.on("error", (err: Error) => {
+                  reject(err);
+                });
+
+                dockerConsole.on("close", () => {
                   this.activeConsoles.delete(subterminal.name);
                   reject(new Error("Unable to create environment"));
                 });
