@@ -36,9 +36,11 @@ The `containerlab` branch implements a working `ContainerlabProvider` against a
 - Deployment: clab-api-server deploys labs on a remote host; `learn-sdn-hub`
   authenticates with username/password to `/login` and uses Bearer tokens
   (implemented on the branch in `ContainerlabProvider.getToken`).
-- `endpoint.IPAddress` returned by `getServer` is the clab host's management
-  address of a representative container; `managementAddresses` maps container
-  names to `<ip>:22`.
+- `endpoint.IPAddress` semantics: with the unmerged `266`/`268` work applied,
+  `getServer` returns the **jumphost container's** management IP (the SSH
+  entry point for legacy `Shell` terminals), while `managementAddresses`
+  maps node names to container IPs. `DockerShell` terminals do not use
+  `IPAddress` at all — they resolve nodes through clab-api-server.
 - Terminal transport decision: bridge to clab-api-server's
   **terminal-sessions API** (`shell` protocol = server-side PTY-backed
   `docker exec -it <container>`), not SSH→`docker exec` from the backend.
@@ -92,13 +94,24 @@ Environment wiring:
 
 ### 3. Deploy staging & provider completion (#323)
 
+Prior art: remote branches `origin/266-create-deploylab-function-create-lab`
+and `origin/268-create-delete-lab-function` contain unmerged WIP
+implementations of exactly this: `createServer` (POST `/api/v1/labs` with
+`topologyContent`, lab rename via `changeTopologyName`, `getServer` with
+jumphost IP fix, delete-on-failure cleanup), `addJumphostToTopology`, and a
+real `deleteServer` (`DELETE /api/v1/labs/{labName}`). Stage 2 builds on
+that work (cherry-pick the meaningful commits, or re-implement following
+its shape), extended with file staging:
+
 - Environment config gains optional `topologyUrl`; `Environment.start` passes
-  it into `createServer` options. Without it, clab environments remain
+  it into `createServer` options (266 already extended the options with
+  `clabTopology: string | object`). Without it, clab environments remain
   attach-only (`getServer`).
 - `ContainerlabProvider.createServer(username, groupNumber, environmentId,
-  options)`:
-  1. `getTopology(topologyUrl)` → parse → `changeTopologyName` to the
-     per-group unique lab name (honoring `CLAB_LAB_PREFIX`).
+  options)` (adopting the 266/268 shape):
+  1. `getTopology(topologyUrl)` → parse → `changeTopologyName` to
+     `<environmentId>-<groupNumber>-<username>` (honoring `CLAB_LAB_PREFIX`
+     if set), plus `addJumphostToTopology`.
   2. Collect every **relative bind source** in the topology; fetch each from
      `<dirname(topologyUrl)>/<relativePath>`. Generalized beyond dnsmasq.
      Absolute host paths and named volumes are skipped. Any missing URL
@@ -106,13 +119,18 @@ Environment wiring:
   3. Stage into the clab-api-server workspace: `POST /api/v1/labs/workspace/
      directory {path: "<labName>"}` (idempotent), then `PUT /api/v1/labs/
      workspace/file?path=<labName>/<relPath>` for the rewritten topology YAML
-     and each fetched file.
+     and each fetched file. Exact lab-dir layout on the host is verified at
+     integration time via `GET /api/v1/labs/topology/files` (`yamlFileName`).
   4. `POST /api/v1/labs/{labName}/deploy?path=<labName>/<lab>.clab.yml`;
      poll `GET /api/v1/labs/{labName}` until containers run (bounded
-     timeout); resolve `getServer(labName)`.
-- `deleteServer(labName)`: `DELETE /api/v1/labs/{labName}` (destroy, keep
-  workspace files). Wired into the existing `Environment.stop` provider path.
-- `getServer` unchanged (incl. `managementAddresses` for name resolution).
+     timeout); resolve `getServer(labName)`. On failure after deploy,
+     delete the lab (matching 266's cleanup-on-failure).
+- `deleteServer(labName)`: as implemented on 268 — `DELETE /api/v1/labs/
+  {labName}` (destroy, keep workspace files). Wired into the existing
+  `Environment.stop` provider path.
+- `getServer`: kept, with the 268 fix — `IPAddress` becomes the jumphost
+  container's IP; `managementAddresses` retained for `DockerShell` name
+  resolution.
 - Error handling: token expiry mid-flow → one re-auth and retry; deploy
   timeout → error surfaced, no persister entry until endpoint resolves.
 
@@ -126,14 +144,18 @@ Stage 1 — rebase:
   everywhere except containerlab work files.
 - Fix branch-local debt while rebasing: remove `eslint-disable` pile and
   debug logs in `ContainerlabProvider.ts`, drop `providerInstance = this`,
-  verify `ContainerLabApplication.ts` wiring against current `Server.ts`/
-  `Api.ts`.
+  typed `Token` timestamps and normalized `CLAB_APIURL` trailing slash (as
+  done on 266/268), verify `ContainerLabApplication.ts` wiring against
+  current `Server.ts`/`Api.ts`.
 - PR → `develop`. The extra merged PRs (#336 topology-from-URL, #344
   mgmt-addresses, #319/#320 prune/get-lab) ride along as part of the provider.
 
 Stage 2 — features:
 
-- Branch `containerlab-console-deploy` off Stage 1; implement sections 1–3.
+- Branch `containerlab-console-deploy` off Stage 1; implement sections 1–3,
+  absorbing the meaningful commits from `origin/266-…`/`origin/268-…`
+  (deployLab, addJumphostToTopology, deleteServer, getServer jumphost fix)
+  and extending them with #323 file staging.
 - PR → `develop`.
 
 Finish: `develop` → `master` after acceptance testing.
