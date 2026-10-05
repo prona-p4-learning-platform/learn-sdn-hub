@@ -39,3 +39,6 @@ devenv.lock
 
 # pre-commit
 .pre-commit-config.yaml
+
+# isolated worktrees (superpowers sdd)
+.worktrees/
