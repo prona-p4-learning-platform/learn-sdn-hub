@@ -11,11 +11,16 @@ describe("collectReferencedBindSources", () => {
           server1: {
             kind: "linux",
             image: "foo",
-            binds: ["server1/dnsmasq.conf:/etc/dnsmasq.conf", "configs/hosts:/etc/hosts"],
+            binds: ["server1/dnsmasq.conf:/etc/dnsmasq.conf"],
           },
           server2: {
             kind: "linux",
             image: "bar",
+            binds: ["configs/hosts:/etc/hosts"],
+          },
+          server3: {
+            kind: "linux",
+            image: "baz",
           },
         },
       },
