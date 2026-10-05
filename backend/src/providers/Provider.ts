@@ -33,6 +33,8 @@ export interface InstanceProvider {
       mountKubeconfig?: boolean;
       //SAL
       sshTunnelingPorts?: string[];
+      // ContainerLab: URL or inline topology object to deploy
+      clabTopology?: string | object;
     },
   ): Promise<VMEndpoint>;
   getServer(instance: string): Promise<VMEndpoint>;

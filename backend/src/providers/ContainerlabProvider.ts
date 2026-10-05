@@ -5,7 +5,13 @@ import {
 } from "./Provider";
 //import { Client } from "ssh2";
 import { ToadScheduler, SimpleIntervalJob, AsyncTask } from "toad-scheduler";
-import { load } from "js-yaml";
+import { load, dump } from "js-yaml";
+import ClabApiClient from "./ClabApiClient";
+import type { ClabContainerInfo } from "./ClabApiClient";
+import {
+  collectReferencedBindSources,
+  resolveFileUrl,
+} from "./TopologyFiles";
 //import Environment from "../Environment";
 
 const schedulerIntervalSeconds = 5 * 60;
@@ -22,6 +28,15 @@ export default class ContainerLabProvider implements InstanceProvider {
   private clab_password: string;
   private clab_apiUrl: string;
 
+  // lab name prefix applied to every deployed lab (default: "")
+  private labPrefix: string;
+
+  // whether the clab API client should accept self-signed TLS certificates
+  private tlsInsecure: boolean;
+
+  // REST client for the clab API (injectable for tests)
+  private client: ClabApiClient;
+
   // the authentication token from keystone
   private clab_token?: Token;
   private clab_token_duration: number;
@@ -35,7 +50,7 @@ export default class ContainerLabProvider implements InstanceProvider {
 
   //private axiosInstance: AxiosInstance;
 
-  constructor() {
+  constructor(client?: ClabApiClient) {
 
     // check for ContainerLab username
     const ENV_USERNAME = process.env.CLAB_USERNAME;
@@ -98,9 +113,26 @@ export default class ContainerLabProvider implements InstanceProvider {
     else {
       this.clab_token_duration = 60*60*1000; // default token duration 60 minutes
     }
+    // check for the optional lab name prefix
+    this.labPrefix = process.env.CLAB_LAB_PREFIX ?? "";
+
+    // check whether the clab API should accept self-signed certificates
+    const ENV_TLS_INSECURE = process.env.CLAB_API_TLS_INSECURE;
+    this.tlsInsecure = ENV_TLS_INSECURE === "true" || ENV_TLS_INSECURE === "1";
+
     // better use env var to allow configuration of port numbers?
     this.sshPort = 22;
     this.lsPort = 3005;
+
+    this.client =
+      client ??
+      new ClabApiClient({
+        apiUrl: this.clab_apiUrl,
+        username: this.clab_username,
+        password: this.clab_password,
+        tlsInsecure: this.tlsInsecure,
+        tokenDurationMs: this.clab_token_duration,
+      });
 
     const scheduler = new ToadScheduler();
 
@@ -186,59 +218,124 @@ export default class ContainerLabProvider implements InstanceProvider {
     this.clab_token.expires_at = issued_at + this.clab_token_duration; // token valid for configured duration
   }
 
-  async createServer(): Promise<VMEndpoint> {
+  async createServer(
+    username: string,
+    groupNumber: number,
+    environment: string,
+    options?: {
+      clabTopology?: string | object;
+    },
+  ): Promise<VMEndpoint> {
+    // Global-Constraints naming formula: <prefix><environment>-<group>-<user>
+    const labName = `${this.labPrefix}${environment}-${groupNumber}-${username}`;
 
-    return new Promise(() => {});
-  }
-
-  async getServer(instance: string): Promise<VMEndpoint> {
-
-    // Local typed shape for container entries returned by the clab API
-    type ClabContainerInfo = {
-      name?: string;
-      container_id?: string;
-      image?: string;
-      kind?: string;
-      state?: string;
-      status?: string;
-      ipv4_address?: string;
-      ipv6_address?: string;
-      lab_name?: string;
-      labPath?: string;
-      absLabPath?: string;
-      group?: string;
-      owner?: string;
-    };
-
-    await this.getToken();
-
-    const response = await fetch(this.clab_apiUrl + "api/v1/labs/" + instance, {
-      method: "GET",
-      headers: {
-        accept: "application/json",
-        Authorization: "Bearer " + this.clab_token?.token,
-      },
-    });
-
-    if (response.status === 404) {
-      // Instance not found
-      throw new Error(InstanceNotFoundErrorMessage);
-    }
-
-    if (!response.ok) {
+    const clabTopology = options?.clabTopology;
+    if (clabTopology === undefined) {
       throw new Error(
-        "ContainerLabProvider: Failed to get server instance. Status: " +
-          response.status,
+        "ContainerLabProvider: No clabTopology option provided.",
       );
     }
 
-    // Instance found
-    const data = (await response.json()) as Record<string, ClabContainerInfo>;
+    try {
+      // resolve the topology (URL fetch or inline object)
+      let topology: object;
+      let topologyUrl: string | undefined;
+      if (typeof clabTopology === "string") {
+        topologyUrl = clabTopology;
+        topology = await this.getTopology(clabTopology);
+      } else {
+        topology = clabTopology;
+      }
+
+      topology = this.changeTopologyName(topology, labName);
+
+      // stage files referenced by bind mounts (only possible for URL sources)
+      const stagedFiles: Array<{ path: string; content: string }> = [];
+      if (topologyUrl !== undefined) {
+        for (const entry of collectReferencedBindSources(topology)) {
+          const fileUrl = resolveFileUrl(topologyUrl, entry);
+          let response: Response;
+          try {
+            response = await fetch(fileUrl);
+          } catch (err) {
+            throw new Error(
+              `ContainerLabProvider: Failed to fetch referenced file ${fileUrl}: ${
+                err instanceof Error ? err.message : String(err)
+              }`,
+            );
+          }
+          if (!response.ok) {
+            throw new Error(
+              `ContainerLabProvider: Failed to fetch referenced file ${fileUrl} (${response.status})`,
+            );
+          }
+          stagedFiles.push({ path: entry, content: await response.text() });
+        }
+      }
+
+      // create the workspace and stage topology and referenced files
+      const topologyPath = `${labName}/${labName}.clab.yml`;
+      await this.client.createWorkspaceDirectory(labName);
+      await this.client.putWorkspaceFile(topologyPath, dump(topology));
+      for (const file of stagedFiles) {
+        await this.client.putWorkspaceFile(`${labName}/${file.path}`, file.content);
+      }
+
+      // deploy and poll until all containers report running state
+      await this.client.deployLabByPath(labName, topologyPath);
+
+      let running = false;
+      for (let attempt = 0; attempt < 10; attempt++) {
+        const containers = await this.client.getLab(labName);
+        if (
+          containers.length > 0 &&
+          containers.every((container) => container.state === "running")
+        ) {
+          running = true;
+          break;
+        }
+        await this.sleep(2000);
+      }
+      if (!running) {
+        throw new Error(
+          `ContainerLabProvider: Lab ${labName} did not reach running state within the polling timeout.`,
+        );
+      }
+
+      return await this.getServer(labName);
+    } catch (err) {
+      // do not leave a deployed or half-deployed lab behind
+      try {
+        await this.client.deleteLab(labName);
+      } catch (cleanupErr) {
+        console.log(
+          "ContainerLabProvider: Failed to clean up lab " +
+            labName +
+            " after failed deploy: " +
+            (cleanupErr instanceof Error ? cleanupErr.message : String(cleanupErr)),
+        );
+      }
+      throw err;
+    }
+  }
+
+  async getServer(instance: string): Promise<VMEndpoint> {
+    let containers: ClabContainerInfo[];
+    try {
+      containers = await this.client.getLab(instance);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      if (message.includes("status 404")) {
+        // Instance not found
+        throw new Error(InstanceNotFoundErrorMessage);
+      }
+      throw new Error(
+        "ContainerLabProvider: Failed to get server instance. " + message,
+      );
+    }
 
     // Build managementAddresses mapping from returned container entries
     const managementAddresses: Record<string, string> = {};
-
-    const containers: ClabContainerInfo[] = Object.values(data);
 
     // pick first container for existing uptime/ip logic (keeps current behavior)
     const firstContainer = containers[0];
@@ -297,9 +394,15 @@ export default class ContainerLabProvider implements InstanceProvider {
       }
     }
 
-    // Choose a representative IPAddress (fallback to first container IP if present)
+    // Prefer the management IP of the jumphost container, fall back to the
+    // first container (previous behavior).
+    const jumphostName = "clab-" + instance + "-jumphost";
+    const jumphost = containers.find(
+      (container) => container.name === jumphostName,
+    );
+    const jumphostIp = (jumphost?.ipv4_address ?? "").split("/")[0] || "";
     const representativeIP =
-      (firstContainer?.ipv4_address ?? "").split("/")[0] || "";
+      jumphostIp || (firstContainer?.ipv4_address ?? "").split("/")[0] || "";
 
     return {
       instance: instance,
@@ -314,8 +417,9 @@ export default class ContainerLabProvider implements InstanceProvider {
     };
   }
 
-  async deleteServer(_labName: string): Promise<void> {
-    return new Promise(() => {});
+  async deleteServer(labName: string): Promise<void> {
+    // destroy the lab; workspace files are kept
+    await this.client.deleteLab(labName);
   }
 
   async pruneServerInstance(): Promise<void> {
