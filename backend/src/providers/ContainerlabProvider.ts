@@ -346,7 +346,7 @@ export default class ContainerLabProvider implements InstanceProvider {
     }
 
     // Request a list of labs and containers
-    const response = await fetch(`${this.clab_apiUrl}/api/v1/labs`, {
+    const response = await fetch(`${this.clab_apiUrl}api/v1/labs`, {
       method: "GET",
       signal: AbortSignal.timeout(10_000),
       headers: { Authorization: `Bearer ${token}` },
