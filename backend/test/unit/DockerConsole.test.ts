@@ -84,7 +84,13 @@ describe("DockerConsole", () => {
     await promise;
     mock.fakeWs.emit(
       "message",
-      Buffer.from(JSON.stringify({ type: "output", data: "motd" })),
+      Buffer.from(
+        JSON.stringify({
+          type: "output",
+          data: Buffer.from("motd").toString("base64"),
+          encoding: "base64",
+        }),
+      ),
     );
 
     const dataEvents: Array<string> = [];
@@ -93,10 +99,33 @@ describe("DockerConsole", () => {
 
     mock.fakeWs.emit(
       "message",
-      Buffer.from(JSON.stringify({ type: "output", data: "hello" })),
+      Buffer.from(
+        JSON.stringify({
+          type: "output",
+          data: Buffer.from("hello").toString("base64"),
+          encoding: "base64",
+        }),
+      ),
     );
     expect(dataEvents).toEqual(["hello"]);
     expect(console.consumeInitialConsoleBuffer()).toBe("");
+  });
+
+  it("passes through raw output frames without blind base64 decoding", async () => {
+    const mock = new MockClabApiClient();
+    const { promise, resolve } = Promise.withResolvers<void>();
+    const console = createConsole(mock, "srl1");
+    console.once("ready", resolve);
+    await promise;
+
+    const dataEvents: Array<string> = [];
+    console.on("data", (data: string) => dataEvents.push(data));
+    console.consumeInitialConsoleBuffer();
+    mock.fakeWs.emit(
+      "message",
+      Buffer.from(JSON.stringify({ type: "output", data: "raw-motd" })),
+    );
+    expect(dataEvents).toEqual(["raw-motd"]);
   });
 
   it("write and resize send correct JSON frames", async () => {
