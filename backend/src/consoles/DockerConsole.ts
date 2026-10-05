@@ -100,7 +100,7 @@ export default class DockerConsole extends EventEmitter implements Console {
   }
 
   private handleMessage(message: string): void {
-    let frame: { type?: string; data?: string };
+    let frame: { type?: string; data?: string; encoding?: string; exitCode?: number; error?: string };
     try {
       frame = JSON.parse(message) as typeof frame;
     } catch {
@@ -111,13 +111,23 @@ export default class DockerConsole extends EventEmitter implements Console {
         if (frame.data === undefined) {
           return;
         }
-        if (this.initialConsoleBufferConsumed) {
+        if (frame.encoding === "base64") {
+          const decoded = Buffer.from(frame.data, "base64").toString();
+          if (this.initialConsoleBufferConsumed) {
+            this.emit("data", decoded);
+          } else {
+            this.initialConsoleBuffer.push(decoded);
+          }
+        } else if (this.initialConsoleBufferConsumed) {
           this.emit("data", frame.data);
         } else {
           this.initialConsoleBuffer.push(frame.data);
         }
         break;
       case "exit":
+        console.debug(
+          `DockerConsole: terminal session exited (exitCode: ${frame.exitCode ?? "unknown"}, error: ${frame.error ?? "none"})`,
+        );
         this.emitCloseOnce();
         break;
       default:
