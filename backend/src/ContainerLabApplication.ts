@@ -1,5 +1,5 @@
 import api from "./Api";
-import serverCreator from "./Server";
+import { startServer } from "./Server";
 import MongoDBPersister from "./database/MongoDBPersister";
 import MongoDBAuthenticationProvider from "./authentication/MongoDBAuthenticationProvider";
 import ContainerLabProvider from "./providers/ContainerlabProvider";
@@ -11,13 +11,13 @@ if (MONGODB_URL) {
 
   console.log("Attempting to start ContainerLab Application.");
 
-  serverCreator(
-    api(
-      persister,
-      [new MongoDBAuthenticationProvider(persister)],
-      new ContainerLabProvider(),
-    ),
+  const apiRouter = api(
+    persister,
+    [new MongoDBAuthenticationProvider(persister)],
+    new ContainerLabProvider(),
   );
+
+  startServer(apiRouter);
 } else {
   console.log("MongoDB URL not set. Aborting...");
   process.exit(1);

@@ -1,12 +1,3 @@
-/* eslint-disable @typescript-eslint/prefer-promise-reject-errors */
-/* eslint-disable no-async-promise-executor */
-/* eslint-disable @typescript-eslint/no-misused-promises */
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-// TODO: fix eslint instead of disabling rules
-// currently in developement, as the ContainerLab provider is not actively used in our envs
-
 import {
   InstanceProvider,
   VMEndpoint,
@@ -21,8 +12,8 @@ const schedulerIntervalSeconds = 5 * 60;
 
 interface Token {
   token: string;
-  issued_at: string;
-  expires_at: string;
+  issued_at: number; // ms since epoch
+  expires_at: number; // ms since epoch
 }
 
 export default class ContainerLabProvider implements InstanceProvider {
@@ -43,8 +34,6 @@ export default class ContainerLabProvider implements InstanceProvider {
   private lsPort: number;
 
   //private axiosInstance: AxiosInstance;
-
-  private providerInstance: ContainerLabProvider;
 
   constructor() {
 
@@ -68,7 +57,8 @@ export default class ContainerLabProvider implements InstanceProvider {
 
     // check for ContainerLab auth url
     const ENV_URL = process.env.CLAB_APIURL;
-    if (ENV_URL) this.clab_apiUrl = ENV_URL;
+    if (ENV_URL)
+      this.clab_apiUrl = ENV_URL.endsWith("/") ? ENV_URL : ENV_URL + "/";
     else {
       throw new Error(
         "ContainerLabProvider: No API Url provided (CONTAINERLAB_AUTHURL).",
@@ -108,8 +98,6 @@ export default class ContainerLabProvider implements InstanceProvider {
     else {
       this.clab_token_duration = 60*60*1000; // default token duration 60 minutes
     }
-    this.providerInstance = this;
-
     // better use env var to allow configuration of port numbers?
     this.sshPort = 22;
     this.lsPort = 3005;
@@ -135,92 +123,67 @@ export default class ContainerLabProvider implements InstanceProvider {
 
     scheduler.addSimpleIntervalJob(job);
 
-    this.getToken().catch((err) => {
+    this.getToken().catch((err: unknown) => {
       console.log(
         "ContainerLabProvider: Initial authentication to ContainerLab failed: " +
-          err.message,
+          (err instanceof Error ? err.message : String(err)),
       );
     });
   }
 
   async getToken(): Promise<void> {
-    const providerInstance = this.providerInstance;
-    return new Promise((resolve, reject) => {
-      const tokenExpires = Date.parse(
-        providerInstance.clab_token?.expires_at ?? Date(),
-      );
-      const now = Date.now();
+    const tokenExpires = this.clab_token?.expires_at ?? Date.now();
+    const now = Date.now();
 
-      console.log(
-        "Token expires at: " +
-          new Date(tokenExpires).toISOString() +
-          " now: " +
-          new Date(now).toISOString(),
-      );
+    console.log(
+      "Token expires at: " +
+        new Date(tokenExpires).toISOString() +
+        " now: " +
+        new Date(now).toISOString(),
+    );
 
-      // add 5 sec for the token to be valid for subsequent operations
-      if (
-        providerInstance.clab_token !== undefined &&
-        now <= tokenExpires + 5000
-      ) {
-        return resolve();
-      } 
-      else {
-        // authenticate to ContainerLab and get a token
-        const data_auth = {
-          username: this.clab_username,
-          password: this.clab_password,
-        };
-        fetch(providerInstance.clab_apiUrl + "login", {
-          signal: AbortSignal.timeout(10000), // 10 seconds timeout
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(data_auth),
-        })
-          .then((response) => {
-            if (response.ok) {
-              if (response.body) {
-                return response.json().then((data) => {
-                  if (!data.token) {
-                    return reject(
-                      new Error(
-                        "ContainerLabProvider: Authentication failed: No token received",
-                      ),
-                    );
-                  }
-                  const issued_at = Date.now();
-                  const token = data.token as string;
+    // add 5 sec for the token to be valid for subsequent operations
+    if (this.clab_token !== undefined && now <= tokenExpires + 5000) {
+      return;
+    }
 
-                  if (providerInstance.clab_token === undefined) {
-                    providerInstance.clab_token = {} as Token;
-                  }
-
-                  providerInstance.clab_token.token = token;
-                  providerInstance.clab_token.issued_at = (
-                    issued_at - 10000
-                  ).toString(); // workaround, set issued at to 10 sec in the past, because 10 sec timeout above
-                  providerInstance.clab_token.expires_at = (
-                    issued_at + this.clab_token_duration
-                  ).toString(); // token valid for configured duration
-                  return resolve();
-                });
-              }
-            }
-            return reject(
-              new Error(
-                "ContainerLabProvider: Authentication failed: No token received",
-              ),
-            );
-          })
-          .catch(function (err) {
-            return reject(
-              new Error("ContainerLabProvider: Authentication failed: " + err),
-            );
-          });
-      }
+    // authenticate to ContainerLab and get a token
+    const data_auth = {
+      username: this.clab_username,
+      password: this.clab_password,
+    };
+    const response = await fetch(this.clab_apiUrl + "login", {
+      signal: AbortSignal.timeout(10000), // 10 seconds timeout
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data_auth),
     });
+
+    if (!response.ok || !response.body) {
+      throw new Error(
+        "ContainerLabProvider: Authentication failed: No token received",
+      );
+    }
+
+    const data = (await response.json()) as { token?: string };
+
+    if (!data.token) {
+      throw new Error(
+        "ContainerLabProvider: Authentication failed: No token received",
+      );
+    }
+
+    const issued_at = Date.now();
+
+    if (this.clab_token === undefined) {
+      this.clab_token = {} as Token;
+    }
+
+    this.clab_token.token = data.token;
+    this.clab_token.issued_at = issued_at - 10000; // workaround, set issued at to 10 sec in the past, because 10 sec timeout above
+    this.clab_token.expires_at = issued_at + this.clab_token_duration; // token valid for configured duration
   }
 
   async createServer(): Promise<VMEndpoint> {
@@ -229,7 +192,6 @@ export default class ContainerLabProvider implements InstanceProvider {
   }
 
   async getServer(instance: string): Promise<VMEndpoint> {
-    const providerInstance = this.providerInstance;
 
     // Local typed shape for container entries returned by the clab API
     type ClabContainerInfo = {
@@ -248,112 +210,111 @@ export default class ContainerLabProvider implements InstanceProvider {
       owner?: string;
     };
 
-    return new Promise((resolve, reject) => {
-      providerInstance
-        .getToken()
-        .then(() => {
-          // Token received
+    await this.getToken();
 
-          fetch(providerInstance.clab_apiUrl + "api/v1/labs/" + instance, {
-            method: 'GET',
-            headers: {
-              'accept': 'application/json',
-              'Authorization': 'Bearer ' + providerInstance.clab_token?.token,
-            }
-          })
-          .then(response => {
-            if (response.ok) {
-              // Instance found
-              return response.json().then(data => {
-
-                // Build managementAddresses mapping from returned container entries
-                const managementAddresses: Record<string, string> = {};
-
-                // Typed assignment avoids `any` and unnecessary assertions
-                const containers: ClabContainerInfo[] = Object.values(data);
-
-                // pick first container for existing uptime/ip logic (keeps current behavior)
-                const firstContainer = containers[0];
-
-                // Get Docker status uptime (keep existing logic but using first container)
-                const upTime = (firstContainer?.status ?? "").split(" ");
-
-                // Get Docker status uptime
-                let difTime = 0;
-                if (upTime.length === 3) {
-
-                  if (upTime[2] === "seconds") {
-                    difTime = parseInt(upTime[1]) * 1000;
-                  } else if (upTime[2] === "minutes") {
-                    difTime = parseInt(upTime[1]) * 60 * 1000;
-                  } else if (upTime[2] === "hours") {
-                    difTime = parseInt(upTime[1]) * 60 * 60 * 1000;
-                  } else if (upTime[2] === "days") {
-                    difTime = parseInt(upTime[1]) * 24 * 60 * 60 * 1000;
-                  } else {
-                    return reject("ContainerLabProvider: Cannot parse uptime string.");
-                  }
-                } else if (upTime.length === 4) {
-                  if (upTime[3] === "second") {
-                    difTime = 1000;
-                  } else if (upTime[3] === "minute") {
-                    difTime = 60 * 1000;
-                  } else if (upTime[3] === "hour") {
-                    difTime = 60 * 60 * 1000;
-                  } else if (upTime[3] === "day") {
-                    difTime = 24 * 60 * 60 * 1000;
-                  } else {
-                    return reject("ContainerLabProvider: Cannot parse uptime string.");
-                  }
-                } else {
-                  return reject("ContainerLabProvider: Docker status string unexpected format.");
-                }
-                const deadline = new Date(Date.now() + providerInstance.maxInstanceLifetimeMinutes * 60 * 1000 - difTime);
-                console.log("ContainerLabProvider: Instance " + instance + " will be deleted at " + deadline.toISOString());
-
-                // Collect management addresses from all containers (if available)
-                for (const c of containers) {
-                  const nodeName = c?.name ?? c?.container_id ?? "";
-                  const ipRaw = c?.ipv4_address ?? "";
-                  const ip = ipRaw.split("/")[0] || "";
-                  if (nodeName && ip) {
-                    managementAddresses[nodeName] = `${ip}:${providerInstance.sshPort}`;
-                  }
-                }
-
-                // Choose a representative IPAddress (fallback to first container IP if present)
-                const representativeIP = (firstContainer?.ipv4_address ?? "").split("/")[0] || "";
-                
-                return resolve({
-                  instance: instance,
-                  providerInstanceStatus: "Environment will be deleted at "+ deadline.toISOString(),
-                  IPAddress: representativeIP,
-                  SSHPort: providerInstance.sshPort,
-                  LanguageServerPort: providerInstance.lsPort,
-                  managementAddresses: Object.keys(managementAddresses).length ? managementAddresses : undefined,
-                });
-              })
-
-
-            } else if (response.status === 404) {
-              // Instance not found
-              return reject(new Error(InstanceNotFoundErrorMessage));
-            }
-          })
-          .catch((err) => {
-            return reject("ContainerlabProvider: Failed to get server instance. " + err);
-          });
-        })
-        .catch((err) => {
-          // No token could be recieved
-          return reject(err);
-        });
+    const response = await fetch(this.clab_apiUrl + "api/v1/labs/" + instance, {
+      method: "GET",
+      headers: {
+        accept: "application/json",
+        Authorization: "Bearer " + this.clab_token?.token,
+      },
     });
+
+    if (response.status === 404) {
+      // Instance not found
+      throw new Error(InstanceNotFoundErrorMessage);
+    }
+
+    if (!response.ok) {
+      throw new Error(
+        "ContainerLabProvider: Failed to get server instance. Status: " +
+          response.status,
+      );
+    }
+
+    // Instance found
+    const data = (await response.json()) as Record<string, ClabContainerInfo>;
+
+    // Build managementAddresses mapping from returned container entries
+    const managementAddresses: Record<string, string> = {};
+
+    const containers: ClabContainerInfo[] = Object.values(data);
+
+    // pick first container for existing uptime/ip logic (keeps current behavior)
+    const firstContainer = containers[0];
+
+    // Parse uptime from Docker status string (of the first container)
+    const upTime = (firstContainer?.status ?? "").split(" ");
+
+    let difTime = 0;
+    if (upTime.length === 3) {
+      if (upTime[2] === "seconds") {
+        difTime = parseInt(upTime[1]) * 1000;
+      } else if (upTime[2] === "minutes") {
+        difTime = parseInt(upTime[1]) * 60 * 1000;
+      } else if (upTime[2] === "hours") {
+        difTime = parseInt(upTime[1]) * 60 * 60 * 1000;
+      } else if (upTime[2] === "days") {
+        difTime = parseInt(upTime[1]) * 24 * 60 * 60 * 1000;
+      } else {
+        throw new Error("ContainerLabProvider: Cannot parse uptime string.");
+      }
+    } else if (upTime.length === 4) {
+      if (upTime[3] === "second") {
+        difTime = 1000;
+      } else if (upTime[3] === "minute") {
+        difTime = 60 * 1000;
+      } else if (upTime[3] === "hour") {
+        difTime = 60 * 60 * 1000;
+      } else if (upTime[3] === "day") {
+        difTime = 24 * 60 * 60 * 1000;
+      } else {
+        throw new Error("ContainerLabProvider: Cannot parse uptime string.");
+      }
+    } else {
+      throw new Error(
+        "ContainerLabProvider: Docker status string unexpected format.",
+      );
+    }
+
+    const deadline = new Date(
+      Date.now() + this.maxInstanceLifetimeMinutes * 60 * 1000 - difTime,
+    );
+    console.log(
+      "ContainerLabProvider: Instance " +
+        instance +
+        " will be deleted at " +
+        deadline.toISOString(),
+    );
+
+    // Collect management addresses from all containers (if available)
+    for (const c of containers) {
+      const nodeName = c?.name ?? c?.container_id ?? "";
+      const ipRaw = c?.ipv4_address ?? "";
+      const ip = ipRaw.split("/")[0] || "";
+      if (nodeName && ip) {
+        managementAddresses[nodeName] = `${ip}:${this.sshPort}`;
+      }
+    }
+
+    // Choose a representative IPAddress (fallback to first container IP if present)
+    const representativeIP =
+      (firstContainer?.ipv4_address ?? "").split("/")[0] || "";
+
+    return {
+      instance: instance,
+      providerInstanceStatus:
+        "Environment will be deleted at " + deadline.toISOString(),
+      IPAddress: representativeIP,
+      SSHPort: this.sshPort,
+      LanguageServerPort: this.lsPort,
+      managementAddresses: Object.keys(managementAddresses).length
+        ? managementAddresses
+        : undefined,
+    };
   }
 
-  async deleteServer(labName: string): Promise<void> {
-      // For testing purposes
-      console.log(labName);
+  async deleteServer(_labName: string): Promise<void> {
     return new Promise(() => {});
   }
 
@@ -474,8 +435,7 @@ export default class ContainerLabProvider implements InstanceProvider {
   }
 
   waitForServerAddresses(): Promise<string> {
-
-    return new Promise<string>(async () => {});
+    return new Promise<string>(() => {});
   }
 
   //waitForServerSSH(ip: string, port: number, timeout: number): Promise<void> {
@@ -484,39 +444,45 @@ export default class ContainerLabProvider implements InstanceProvider {
   //}
 
   sleep(ms: number): Promise<void> {
-    return new Promise((resolve) => {
+    return new Promise<void>((resolve) => {
       setTimeout(resolve, ms);
     });
   }
 
   async getTopology(url: string): Promise<object> {
-    return new Promise((resolve, reject) => {
-      fetch(url, {
-        method: 'GET',
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        method: "GET",
         headers: {
-          'accept': 'application/yaml',
+          accept: "application/yaml",
         },
-      })
-      .then((response) => {
-        if (response.ok) {
-
-          return response.text()
-            .then((data: string) => {
-              try {
-                const yamlObject = load(data) as object;
-                return resolve(yamlObject);
-              } catch (err) {
-                return reject(`ContainerLabProvider: Failed to parse topology from ${url}: ${String(err)}`);
-              }
-            });
-        }
-        return reject(`ContainerLabProvider: Failed to fetch topology from ${url} (${response.status})`);
-      })
-      .catch((err) => {
-
-        return reject(`ContainerLabProvider: Failed to fetch topology from ${url}: ${err}`);
       });
-    });
+    } catch (err) {
+      throw new Error(
+        `ContainerLabProvider: Failed to fetch topology from ${url}: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      );
+    }
+
+    if (!response.ok) {
+      throw new Error(
+        `ContainerLabProvider: Failed to fetch topology from ${url} (${response.status})`,
+      );
+    }
+
+    const data = await response.text();
+
+    try {
+      return load(data) as object;
+    } catch (err) {
+      throw new Error(
+        `ContainerLabProvider: Failed to parse topology from ${url}: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      );
+    }
   }
 
   changeTopologyName(topology: object, newName: string): object {
