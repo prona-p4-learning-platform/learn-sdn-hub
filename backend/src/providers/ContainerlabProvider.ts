@@ -23,6 +23,18 @@ const schedulerIntervalSeconds = 5 * 60;
 const pollIntervalMs = 2000;
 const pollMaxAttempts = 60;
 
+// SSH proxy hosts that are not dialable from the backend host (the clab API
+// server may report its own bind address, e.g. 0.0.0.0); they are substituted
+// with the hostname of the configured clab API URL.
+const nonDialableSshHosts: Record<string, true> = {
+  "0.0.0.0": true,
+  "::": true,
+  "::1": true,
+  "127.0.0.1": true,
+  localhost: true,
+  "": true,
+};
+
 export default class ContainerLabProvider implements InstanceProvider {
   // ContainerLab config
   private clab_username: string;
@@ -382,6 +394,16 @@ export default class ContainerLabProvider implements InstanceProvider {
           instance,
           jumphostContainerName,
         );
+        if (nonDialableSshHosts[access.host]) {
+          const apiUrlHost = new URL(this.client.apiUrl).hostname;
+          console.log(
+            "ContainerLabProvider: SSH proxy host " +
+              access.host +
+              " is not dialable from the backend; substituting the clab API host " +
+              apiUrlHost,
+          );
+          access.host = apiUrlHost;
+        }
         ipAddress = access.host;
         sshPort = access.port;
       } catch (err) {

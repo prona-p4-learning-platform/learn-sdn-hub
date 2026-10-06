@@ -33,6 +33,8 @@ const dnsmasqConf = "interface=eth0\ndhcp-range=10.10.10.100,10.10.10.200\n";
 type FetchArgs = [input: RequestInfo | URL, init?: RequestInit];
 
 interface MockClient {
+  // mirrors the real client's public apiUrl getter
+  apiUrl: string;
   getLab: jest.Mock;
   listLabs: jest.Mock;
   getToken: jest.Mock;
@@ -62,6 +64,7 @@ function emptyOkResponse(): Response {
 
 function makeClient(): MockClient {
   return {
+    apiUrl: "https://clab.example:8090/",
     getLab: jest.fn(),
     listLabs: jest.fn(),
     // constructor fire-and-forget initial auth awaits a promise
@@ -416,6 +419,68 @@ describe("ContainerLabProvider createServer/deleteServer/getServer", () => {
       server1: "10.10.10.2:22",
       "clab-clab-lab-7-alice-jumphost": "10.10.10.5:22",
     });
+  });
+
+  test("substitutes non-dialable ssh proxy host with the API host", async () => {
+    client.getLab.mockResolvedValue([
+      {
+        name: "server1",
+        state: "running",
+        status: "Up 5 seconds",
+        ipv4_address: "10.10.10.2/24",
+      },
+      {
+        name: `clab-${labName}-jumphost`,
+        state: "running",
+        status: "Up 5 seconds",
+        ipv4_address: "10.10.10.5/24",
+      },
+    ] as ClabContainerInfo[]);
+    client.createNodeSshAccess.mockResolvedValue({
+      host: "0.0.0.0",
+      port: 2224,
+      username: "p4",
+    });
+    client.apiUrl = "https://192.168.78.53:8090/";
+    const logMock = jest.spyOn(console, "log");
+
+    const endpoint = await provider.getServer(labName);
+
+    expect(endpoint.IPAddress).toBe("192.168.78.53");
+    expect(endpoint.SSHPort).toBe(2224);
+    // the substitution is logged with both addresses
+    const logged = (logMock.mock.calls as unknown as string[][])
+      .map((call) => call.join(" "))
+      .join("\n");
+    expect(logged).toContain("0.0.0.0");
+    expect(logged).toContain("192.168.78.53");
+  });
+
+  test("passes routable ssh proxy host through unchanged", async () => {
+    client.getLab.mockResolvedValue([
+      {
+        name: "server1",
+        state: "running",
+        status: "Up 5 seconds",
+        ipv4_address: "10.10.10.2/24",
+      },
+      {
+        name: `clab-${labName}-jumphost`,
+        state: "running",
+        status: "Up 5 seconds",
+        ipv4_address: "10.10.10.5/24",
+      },
+    ] as ClabContainerInfo[]);
+    client.createNodeSshAccess.mockResolvedValue({
+      host: "192.168.78.99",
+      port: 2225,
+      username: "p4",
+    });
+
+    const endpoint = await provider.getServer(labName);
+
+    expect(endpoint.IPAddress).toBe("192.168.78.99");
+    expect(endpoint.SSHPort).toBe(2225);
   });
 
   test("getServer falls back to jumphost mgmt IP when ssh access fails", async () => {
