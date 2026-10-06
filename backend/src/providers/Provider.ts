@@ -8,6 +8,9 @@ export interface VMEndpoint {
   SSHJumpHost?: JumpHost;
   LanguageServerPort: number;
   RemoteDesktopPort?: number;
+
+  // Mapping of node name -> management address (e.g. "node1": "10.0.0.5:22")
+  managementAddresses?: Record<string, string>;
 }
 
 // evaluate possiblity to use multiple providers in the same backend, e.g.,
@@ -30,6 +33,8 @@ export interface InstanceProvider {
       mountKubeconfig?: boolean;
       //SAL
       sshTunnelingPorts?: string[];
+      // ContainerLab: URL or inline topology object to deploy
+      clabTopology?: string | object;
     },
   ): Promise<VMEndpoint>;
   getServer(instance: string): Promise<VMEndpoint>;

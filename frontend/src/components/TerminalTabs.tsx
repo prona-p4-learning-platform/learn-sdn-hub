@@ -8,7 +8,7 @@ interface TabsProps {
   index: number;
   value: number;
   fullscreen: boolean;
-  children?: JSX.Element[];
+  children?: JSX.Element;
 }
 
 function TabPanel(props: TabsProps) {
@@ -26,13 +26,9 @@ function TabPanel(props: TabsProps) {
       {...other}
     >
       <div className="myTerminalContainer">
-        {value === index &&
-          Array.isArray(children) &&
-          children.map((child, id) => (
-            <div key={id} className="myTerminal">
-              {child}
-            </div>
-          ))}
+        {value === index && children !== undefined && (
+          <div className="myTerminal">{children}</div>
+        )}
       </div>
     </div>
   );
@@ -40,7 +36,7 @@ function TabPanel(props: TabsProps) {
 
 interface TabControlProps {
   tabNames: string[];
-  children?: JSX.Element[][];
+  children?: JSX.Element[];
 }
 
 export default function TerminalTabs(props: TabControlProps): JSX.Element {

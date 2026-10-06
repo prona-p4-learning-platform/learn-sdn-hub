@@ -54,6 +54,11 @@ const environmentConfigurationValidator = z.object({
           type: z.literal("Desktop"),
           name: z.string(), // TODO: backend sends far more elements but types in frontend do not match?
         }),
+        z.object({
+          type: z.literal("DockerShell"),
+          name: z.string(),
+          containerName: z.string(),
+        }),
       ]),
     ),
   ),
@@ -96,7 +101,13 @@ export interface Desktop {
   //websocketUrl: string;
 }
 
-export type TerminalType = Shell | Desktop | WebApp;
+export interface DockerShell {
+  type: "DockerShell";
+  name: string;
+  containerName: string;
+}
+
+export type TerminalType = Shell | Desktop | WebApp | DockerShell;
 
 type EnvironmentState = {
   terminals: TerminalType[][];
@@ -604,6 +615,21 @@ function Environment(): JSX.Element {
                             );
                           }
 
+                          if (subterminal.type === "DockerShell") {
+                            return (
+                              <Terminal
+                                key={subterminal.name}
+                                wsEndpoint={`/environment/${environmentName}/type/${subterminal.name}`}
+                                terminalState={getTerminalState(
+                                  `/environment/${environmentName}/type/${subterminal.name}`,
+                                )}
+                                onTerminalUnmount={storeTerminalState}
+                                role={isAdmin ? "admin" : undefined}
+                                groupNumber={groupNumber}
+                              />
+                            );
+                          }
+
                           if (subterminal.type === "Desktop") {
                             return (
                               <GuacamoleClient
@@ -634,7 +660,7 @@ function Environment(): JSX.Element {
 
                     return (
                       <TerminalTabs tabNames={terminalTabNames}>
-                        {terminals}
+                        {terminals.flat()}
                       </TerminalTabs>
                     );
                   } else return null;
