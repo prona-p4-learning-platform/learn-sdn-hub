@@ -57,7 +57,7 @@ export default class ContainerLabProvider implements InstanceProvider {
     if (ENV_USERNAME) this.clab_username = ENV_USERNAME;
     else {
       throw new Error(
-        "ContainerLabProvider: No username provided (CONTAINERLAB_USERNAME).",
+        "ContainerLabProvider: No username provided (CLAB_USERNAME).",
       );
     }
 
@@ -66,7 +66,7 @@ export default class ContainerLabProvider implements InstanceProvider {
     if (ENV_PASSWORD) this.clab_password = ENV_PASSWORD;
     else {
       throw new Error(
-        "ContainerLabProvider: No password provided (CONTAINERLAB_PASSWORD).",
+        "ContainerLabProvider: No password provided (CLAB_PASSWORD).",
       );
     }
 
@@ -76,7 +76,7 @@ export default class ContainerLabProvider implements InstanceProvider {
       this.clab_apiUrl = ENV_URL.endsWith("/") ? ENV_URL : ENV_URL + "/";
     else {
       throw new Error(
-        "ContainerLabProvider: No API Url provided (CONTAINERLAB_AUTHURL).",
+        "ContainerLabProvider: No API Url provided (CLAB_AUTHURL).",
       );
     }
 
@@ -94,7 +94,7 @@ export default class ContainerLabProvider implements InstanceProvider {
       }
     } else {
       throw new Error(
-        "DockerProvider: No instance lifetime provided (CONTAINERLAB_MAX_INSTANCE_LIFETIME_MINUTES).",
+        "DockerProvider: No instance lifetime provided (CLAB_MAX_INSTANCE_LIFETIME_MINUTES).",
       );
     }
 
