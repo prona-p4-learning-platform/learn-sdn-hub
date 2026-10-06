@@ -15,6 +15,8 @@ interface RecordedWsCall {
 }
 
 const mockWsCalls: RecordedWsCall[] = [];
+const mockAgentOptions: unknown[] = [];
+const mockUndiciCalls: unknown[][] = [];
 
 jest.mock("ws", () => {
   class MockWebSocket {
@@ -23,6 +25,27 @@ jest.mock("ws", () => {
     }
   }
   return MockWebSocket;
+});
+
+// undici is mocked wholesale; its fetch records the received args and
+// delegates to global fetch so the existing fetch-spy assertions keep working.
+jest.mock("undici", () => {
+  class MockAgent {
+    constructor(options: unknown) {
+      mockAgentOptions.push(options);
+    }
+  }
+  return {
+    Agent: MockAgent,
+    fetch: (...args: unknown[]) => {
+      mockUndiciCalls.push(args);
+      return (
+        global.fetch as unknown as (
+          ...innerArgs: unknown[]
+        ) => Promise<Response>
+      )(...args);
+    },
+  };
 });
 
 function jsonResponse(status: number, body: unknown): Response {
@@ -48,6 +71,8 @@ describe("ClabApiClient", () => {
 
   beforeEach(() => {
     mockWsCalls.length = 0;
+    mockAgentOptions.length = 0;
+    mockUndiciCalls.length = 0;
     fetchMock = jest.fn();
     jest.spyOn(global, "fetch").mockImplementation(fetchMock);
   });
@@ -56,12 +81,15 @@ describe("ClabApiClient", () => {
     jest.restoreAllMocks();
   });
 
-  function makeClient(apiUrl = "https://clab.example:8090/"): ClabApiClient {
+  function makeClient(
+    apiUrl = "https://clab.example:8090/",
+    tlsInsecure = true,
+  ): ClabApiClient {
     return new ClabApiClient({
       apiUrl,
       username: "user1",
       password: "secret1",
-      tlsInsecure: true,
+      tlsInsecure,
     });
   }
 
@@ -242,5 +270,45 @@ describe("ClabApiClient", () => {
       rows: 40,
     });
     expect(init.headers?.Authorization).toBe("Bearer t1");
+  });
+
+  test("passes insecure dispatcher to fetch when tlsInsecure is true", async () => {
+    const client = makeClient();
+    fetchMock
+      .mockResolvedValueOnce(loginResponse("t1"))
+      .mockResolvedValueOnce(
+        jsonResponse(200, [{ name: "n1" }] satisfies ClabContainerInfo[]),
+      );
+
+    await client.getToken();
+    await client.getLab("lab1");
+
+    // one shared agent, constructed with rejectUnauthorized: false
+    expect(mockAgentOptions).toEqual([{ connect: { rejectUnauthorized: false } }]);
+    // both requests (login + getLab) went through undici with the dispatcher
+    expect(mockUndiciCalls).toHaveLength(2);
+    const [, loginInit] = mockUndiciCalls[0] as [
+      string,
+      { dispatcher?: unknown },
+    ];
+    const [, labInit] = mockUndiciCalls[1] as [
+      string,
+      { dispatcher?: unknown },
+    ];
+    expect(loginInit.dispatcher).toBeDefined();
+    expect(labInit.dispatcher).toBeDefined();
+  });
+
+  test("does not pass a dispatcher when tlsInsecure is false", async () => {
+    const client = makeClient("https://clab.example:8090/", false);
+    fetchMock.mockResolvedValueOnce(loginResponse("t1"));
+
+    await client.getToken();
+
+    expect(mockUndiciCalls).toHaveLength(0);
+    expect(mockAgentOptions).toHaveLength(0);
+    const calls = fetchMock.mock.calls as unknown as FetchArgs[];
+    expect(calls).toHaveLength(1);
+    expect(calls[0][1]).not.toHaveProperty("dispatcher");
   });
 });
