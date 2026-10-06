@@ -12,6 +12,15 @@ export interface TerminalSessionInfo {
   sessionId: string;
 }
 
+// models.SSHAccessResponse from the clab-api-server swagger spec
+export interface SSHAccessResponse {
+  command?: string;
+  expiration?: string;
+  host: string;
+  port: number;
+  username: string;
+}
+
 export interface ClabContainerInfo {
   name?: string;
   container_id?: string;
@@ -110,6 +119,17 @@ export default class ClabApiClient {
     await this.authedFetch(`/api/v1/labs/${encodeURIComponent(labName)}`, {
       method: "DELETE",
     });
+  }
+
+  async createNodeSshAccess(
+    labName: string,
+    nodeName: string,
+  ): Promise<SSHAccessResponse> {
+    const response = await this.authedFetch(
+      `/api/v1/labs/${encodeURIComponent(labName)}/nodes/${encodeURIComponent(nodeName)}/ssh`,
+      { method: "POST" },
+    );
+    return (await response.json()) as SSHAccessResponse;
   }
 
   async createTerminalSession(

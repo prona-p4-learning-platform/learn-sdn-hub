@@ -154,6 +154,65 @@ describe("ClabApiClient", () => {
     expect(mockWsCalls[0].options.rejectUnauthorized).toBe(false);
   });
 
+  test("createNodeSshAccess posts to node ssh path and returns parsed body", async () => {
+    const client = makeClient();
+    fetchMock
+      .mockResolvedValueOnce(loginResponse("t1"))
+      .mockResolvedValueOnce(
+        jsonResponse(200, {
+          command: "ssh -p 2225 p4@192.168.78.53",
+          expiration: "2026-10-06T12:00:00Z",
+          host: "192.168.78.53",
+          port: 2225,
+          username: "p4",
+        }),
+      );
+
+    const access = await client.createNodeSshAccess("lab1", "clab-lab1-jumphost");
+
+    expect(access).toEqual({
+      command: "ssh -p 2225 p4@192.168.78.53",
+      expiration: "2026-10-06T12:00:00Z",
+      host: "192.168.78.53",
+      port: 2225,
+      username: "p4",
+    });
+    const calls = fetchMock.mock.calls as unknown as FetchArgs[];
+    expect(calls).toHaveLength(2);
+    const [url, init] = calls[1];
+    expect(url).toBe(
+      "https://clab.example:8090/api/v1/labs/lab1/nodes/clab-lab1-jumphost/ssh",
+    );
+    expect(init.method).toBe("POST");
+    expect(init.headers?.Authorization).toBe("Bearer t1");
+  });
+
+  test("createNodeSshAccess re-authenticates once on 401", async () => {
+    const client = makeClient();
+    fetchMock
+      .mockResolvedValueOnce(loginResponse("t1"))
+      .mockResolvedValueOnce(jsonResponse(401, { error: "unauthorized" }))
+      .mockResolvedValueOnce(loginResponse("t2"))
+      .mockResolvedValueOnce(
+        jsonResponse(200, { host: "192.168.78.53", port: 2225, username: "p4" }),
+      );
+
+    const access = await client.createNodeSshAccess("lab1", "clab-lab1-jumphost");
+
+    expect(access).toEqual({
+      host: "192.168.78.53",
+      port: 2225,
+      username: "p4",
+    });
+    const calls = fetchMock.mock.calls as unknown as FetchArgs[];
+    expect(calls).toHaveLength(4);
+    expect(loginCalls(calls)).toHaveLength(2);
+    expect(calls[3][0]).toBe(
+      "https://clab.example:8090/api/v1/labs/lab1/nodes/clab-lab1-jumphost/ssh",
+    );
+    expect(calls[3][1].headers?.Authorization).toBe("Bearer t2");
+  });
+
   test("createTerminalSession posts protocol shell with cols/rows", async () => {
     const client = makeClient();
     fetchMock
