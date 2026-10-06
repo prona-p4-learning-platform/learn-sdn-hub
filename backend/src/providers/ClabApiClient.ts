@@ -61,6 +61,11 @@ export default class ClabApiClient {
       : null;
   }
 
+  /** Base URL of the clab API (without trailing slash). */
+  get apiUrl(): string {
+    return this.baseUrl;
+  }
+
   async getToken(): Promise<string> {
     if (this.token !== null && Date.now() < this.tokenExpiresAt) {
       return this.token;
