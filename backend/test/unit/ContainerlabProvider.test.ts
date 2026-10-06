@@ -38,6 +38,7 @@ interface MockClient {
   putWorkspaceFile: jest.Mock;
   deployLabByPath: jest.Mock;
   deleteLab: jest.Mock;
+  createNodeSshAccess: jest.Mock;
 }
 
 function textResponse(status: number, body: string): Response {
@@ -64,6 +65,7 @@ function makeClient(): MockClient {
     putWorkspaceFile: jest.fn(),
     deployLabByPath: jest.fn(),
     deleteLab: jest.fn(),
+    createNodeSshAccess: jest.fn(),
   };
 }
 
@@ -359,14 +361,54 @@ describe("ContainerLabProvider createServer/deleteServer/getServer", () => {
         ipv4_address: "10.10.10.5/24",
       },
     ] as ClabContainerInfo[]);
+    client.createNodeSshAccess.mockResolvedValue({
+      host: "192.168.78.53",
+      port: 2225,
+      username: "p4",
+    });
 
     const endpoint = await provider.getServer(labName);
 
-    expect(endpoint.IPAddress).toBe("10.10.10.5");
+    // transport goes through the clab-api-server node SSH proxy
+    expect(client.createNodeSshAccess).toHaveBeenCalledWith(
+      labName,
+      `clab-${labName}-jumphost`,
+    );
+    expect(endpoint.IPAddress).toBe("192.168.78.53");
+    expect(endpoint.SSHPort).toBe(2225);
     expect(endpoint.instance).toBe(labName);
+    // managementAddresses still maps node names for DockerConsole resolution
     expect(endpoint.managementAddresses).toEqual({
       server1: "10.10.10.2:22",
       "clab-clab-lab-7-alice-jumphost": "10.10.10.5:22",
     });
+  });
+
+  test("getServer falls back to jumphost mgmt IP when ssh access fails", async () => {
+    client.getLab.mockResolvedValue([
+      {
+        name: "server1",
+        state: "running",
+        status: "Up 5 seconds",
+        ipv4_address: "10.10.10.2/24",
+      },
+      {
+        name: `clab-${labName}-jumphost`,
+        state: "running",
+        status: "Up 5 seconds",
+        ipv4_address: "10.10.10.5/24",
+      },
+    ] as ClabContainerInfo[]);
+    client.createNodeSshAccess.mockRejectedValue(new Error("proxy down"));
+    const warnMock = jest.spyOn(console, "warn").mockImplementation(() => {});
+
+    const endpoint = await provider.getServer(labName);
+
+    // fallback: jumphost container management IP, default SSH port
+    expect(endpoint.IPAddress).toBe("10.10.10.5");
+    expect(endpoint.SSHPort).toBe(22);
+    expect(warnMock).toHaveBeenCalledWith(
+      expect.stringContaining("clab-clab-lab-7-alice-jumphost"),
+    );
   });
 });

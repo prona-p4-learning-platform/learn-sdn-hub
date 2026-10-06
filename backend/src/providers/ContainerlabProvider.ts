@@ -411,22 +411,60 @@ export default class ContainerLabProvider implements InstanceProvider {
       }
     }
 
-    // Prefer the management IP of the jumphost container, fall back to the
-    // first container (previous behavior).
-    const jumphostName = "clab-" + instance + "-jumphost";
-    const jumphost = containers.find(
-      (container) => container.name === jumphostName,
+    // Resolve the jumphost container with the same exact/suffix resolution
+    // DockerConsole uses: exact container-name match, else a unique name
+    // ending in "-jumphost".
+    const jumphostNodeName = "jumphost";
+    let jumphostContainer = containers.find(
+      (container) => container.name === jumphostNodeName,
     );
-    const jumphostIp = (jumphost?.ipv4_address ?? "").split("/")[0] || "";
-    const representativeIP =
+    if (jumphostContainer === undefined) {
+      const suffixMatches = containers.filter(
+        (container) =>
+          typeof container.name === "string" &&
+          container.name.endsWith(`-${jumphostNodeName}`),
+      );
+      jumphostContainer =
+        suffixMatches.length === 1 ? suffixMatches[0] : undefined;
+    }
+    const jumphostIp =
+      (jumphostContainer?.ipv4_address ?? "").split("/")[0] || "";
+
+    // Default transport: direct container management IP (works only when the
+    // backend can reach the clab host's Docker bridge).
+    let ipAddress =
       jumphostIp || (firstContainer?.ipv4_address ?? "").split("/")[0] || "";
+    let sshPort = this.sshPort;
+
+    // Preferred transport: the clab-api-server node SSH proxy, so backends on
+    // a different host can reach the node. Deployment must not fail when the
+    // proxy is unavailable (DockerShell-only environments), so failures fall
+    // back to the management address above.
+    const jumphostContainerName = jumphostContainer?.name;
+    if (jumphostContainerName) {
+      try {
+        const access = await this.client.createNodeSshAccess(
+          instance,
+          jumphostContainerName,
+        );
+        ipAddress = access.host;
+        sshPort = access.port;
+      } catch (err) {
+        console.warn(
+          "ContainerLabProvider: Node SSH access for " +
+            jumphostContainerName +
+            " failed, falling back to container management address: " +
+            (err instanceof Error ? err.message : String(err)),
+        );
+      }
+    }
 
     return {
       instance: instance,
       providerInstanceStatus:
         "Environment will be deleted at " + deadline.toISOString(),
-      IPAddress: representativeIP,
-      SSHPort: this.sshPort,
+      IPAddress: ipAddress,
+      SSHPort: sshPort,
       LanguageServerPort: this.lsPort,
       managementAddresses: Object.keys(managementAddresses).length
         ? managementAddresses
