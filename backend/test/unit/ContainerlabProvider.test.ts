@@ -1,6 +1,8 @@
 import ContainerLabProvider from "../../src/providers/ContainerlabProvider";
 import ClabApiClient from "../../src/providers/ClabApiClient";
+import { ClabApiError } from "../../src/providers/ClabApiClient";
 import type { ClabContainerInfo } from "../../src/providers/ClabApiClient";
+import { InstanceNotFoundErrorMessage } from "../../src/providers/Provider";
 import { load } from "js-yaml";
 
 // The provider starts a 5-minute prune scheduler in its constructor; mocking it
@@ -399,6 +401,30 @@ describe("ContainerLabProvider createServer/deleteServer/getServer", () => {
     expect(client.deleteLab).toHaveBeenCalledWith(labName);
   });
 
+  test("deleteServer maps a 404 to instance-not-found", async () => {
+    client.deleteLab.mockRejectedValue(
+      new ClabApiError(
+        "ClabApiClient request to /api/v1/labs/clab-lab-7-alice failed with status 404",
+        404,
+      ),
+    );
+
+    await expect(provider.deleteServer(labName)).rejects.toThrow(
+      InstanceNotFoundErrorMessage,
+    );
+  });
+
+  test("deleteServer passes other client errors through", async () => {
+    client.deleteLab.mockRejectedValue(
+      new ClabApiError(
+        "ClabApiClient request to /api/v1/labs/clab-lab-7-alice failed with status 502",
+        502,
+      ),
+    );
+
+    await expect(provider.deleteServer(labName)).rejects.toThrow("502");
+  });
+
   test("prune lists labs via client and deletes only stale ones", async () => {
     client.listLabs.mockResolvedValue({
       "clab-lab-1-bob": [
@@ -554,5 +580,125 @@ describe("ContainerLabProvider createServer/deleteServer/getServer", () => {
     expect(warnMock).toHaveBeenCalledWith(
       expect.stringContaining("clab-clab-lab-7-alice-jumphost"),
     );
+  });
+
+  test("getServer maps a 404 status to instance-not-found", async () => {
+    client.getLab.mockRejectedValue(
+      new ClabApiError(
+        "ClabApiClient request to /api/v1/labs/clab-lab-7-alice failed with status 404",
+        404,
+      ),
+    );
+
+    await expect(provider.getServer(labName)).rejects.toThrow(
+      InstanceNotFoundErrorMessage,
+    );
+  });
+
+  test("getServer maps other client errors to a generic failure", async () => {
+    client.getLab.mockRejectedValue(
+      new ClabApiError(
+        "ClabApiClient request to /api/v1/labs/clab-lab-7-alice failed with status 500",
+        500,
+      ),
+    );
+
+    await expect(provider.getServer(labName)).rejects.toThrow(
+      "Failed to get server instance",
+    );
+  });
+
+  test("getServer falls back to jumphost mgmt IP when the ssh access response is malformed", async () => {
+    client.getLab.mockResolvedValue([
+      {
+        name: "server1",
+        state: "running",
+        status: "Up 5 seconds",
+        ipv4_address: "10.10.10.2/24",
+      },
+      {
+        name: `clab-${labName}-jumphost`,
+        state: "running",
+        status: "Up 5 seconds",
+        ipv4_address: "10.10.10.5/24",
+      },
+    ] as ClabContainerInfo[]);
+    client.createNodeSshAccess.mockResolvedValue({
+      host: 42,
+      port: "2225",
+    });
+    const warnMock = jest.spyOn(console, "warn").mockImplementation(() => {});
+
+    const endpoint = await provider.getServer(labName);
+
+    expect(endpoint.IPAddress).toBe("10.10.10.5");
+    expect(endpoint.SSHPort).toBe(22);
+    expect(warnMock).toHaveBeenCalledWith(
+      expect.stringContaining("malformed SSH access response"),
+    );
+  });
+
+  test("createServer tolerates a 404 on early polls", async () => {
+    installFetch([[topologyUrl, textResponse(200, topologyYaml)]]);
+    client.createWorkspaceDirectory.mockResolvedValue(undefined);
+    client.putWorkspaceFile.mockResolvedValue(undefined);
+    client.deployLabByPath.mockResolvedValue(undefined);
+    client.getLab
+      .mockRejectedValueOnce(
+        new ClabApiError(
+          "ClabApiClient request to /api/v1/labs/clab-lab-7-alice failed with status 404",
+          404,
+        ),
+      )
+      .mockResolvedValue([
+        {
+          name: "server1",
+          state: "running",
+          status: "Up 5 seconds",
+          ipv4_address: "10.10.10.2/24",
+        },
+      ] as ClabContainerInfo[]);
+    const sleepMock = jest
+      .spyOn(provider, "sleep")
+      .mockResolvedValue(undefined);
+
+    const endpoint = await provider.createServer("alice", 7, "clab-lab", {
+      clabTopology: topologyUrl,
+    });
+
+    // two polls (one tolerated 404 retry) + the final getServer lookup
+    expect(client.getLab).toHaveBeenCalledTimes(3);
+    expect(sleepMock).toHaveBeenCalledWith(2000);
+    expect(endpoint.instance).toBe(labName);
+  });
+
+  test("createServer fails fast and cleans up when a container exits", async () => {
+    installFetch([[topologyUrl, textResponse(200, topologyYaml)]]);
+    client.createWorkspaceDirectory.mockResolvedValue(undefined);
+    client.putWorkspaceFile.mockResolvedValue(undefined);
+    client.deployLabByPath.mockResolvedValue(undefined);
+    client.getLab.mockResolvedValue([
+      {
+        name: "server1",
+        state: "exited",
+        status: "Exited (1) 5 seconds ago",
+        ipv4_address: "10.10.10.2/24",
+      },
+    ] as ClabContainerInfo[]);
+    client.deleteLab.mockResolvedValue(undefined);
+    const sleepMock = jest
+      .spyOn(provider, "sleep")
+      .mockResolvedValue(undefined);
+
+    await expect(
+      provider.createServer("alice", 7, "clab-lab", {
+        clabTopology: topologyUrl,
+      }),
+    ).rejects.toThrow(/exited/);
+
+    expect(client.deleteLab).toHaveBeenCalledWith(labName);
+    // no retry loop: fail fast instead of polling to timeout
+    expect(client.getLab).toHaveBeenCalledTimes(1);
+    expect(sleepMock).not.toHaveBeenCalled();
   });
 });

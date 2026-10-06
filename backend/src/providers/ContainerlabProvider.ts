@@ -8,6 +8,7 @@ import { ToadScheduler, SimpleIntervalJob, AsyncTask } from "toad-scheduler";
 import { load, dump } from "js-yaml";
 import path from "path";
 import ClabApiClient from "./ClabApiClient";
+import { ClabApiError } from "./ClabApiClient";
 import type { ClabContainerInfo } from "./ClabApiClient";
 import {
   collectReferencedBindSources,
@@ -85,7 +86,7 @@ export default class ContainerLabProvider implements InstanceProvider {
       this.clab_apiUrl = ENV_URL.endsWith("/") ? ENV_URL : ENV_URL + "/";
     else {
       throw new Error(
-        "ContainerLabProvider: No API Url provided (CLAB_AUTHURL).",
+        "ContainerLabProvider: No API Url provided (CLAB_APIURL).",
       );
     }
 
@@ -98,12 +99,12 @@ export default class ContainerLabProvider implements InstanceProvider {
         this.maxInstanceLifetimeMinutes = parsedLifetime;
       else {
         throw new Error(
-          "ContainerLabProvider: Provided instance lifetime cannot be parsed (CONTAINERLAB_MAX_INSTANCE_LIFETIME_MINUTES).",
+          "ContainerLabProvider: Provided instance lifetime cannot be parsed (CLAB_MAX_INSTANCE_LIFETIME_MINUTES).",
         );
       }
     } else {
       throw new Error(
-        "DockerProvider: No instance lifetime provided (CLAB_MAX_INSTANCE_LIFETIME_MINUTES).",
+        "ContainerLabProvider: No instance lifetime provided (CLAB_MAX_INSTANCE_LIFETIME_MINUTES).",
       );
     }
 
@@ -122,6 +123,11 @@ export default class ContainerLabProvider implements InstanceProvider {
     }
     // check for the optional lab name prefix
     this.labPrefix = process.env.CLAB_LAB_PREFIX ?? "";
+    if (this.labPrefix === "") {
+      console.log(
+        "ContainerLabProvider: CLAB_LAB_PREFIX not set; prune will treat ALL labs on the clab-api-server as owned (set CLAB_LAB_PREFIX on shared servers)",
+      );
+    }
 
     // check whether the clab API should accept self-signed certificates
     const ENV_TLS_INSECURE = process.env.CLAB_API_TLS_INSECURE;
@@ -213,7 +219,9 @@ export default class ContainerLabProvider implements InstanceProvider {
           const fileUrl = resolveFileUrl(topologyUrl, entry);
           let response: Response;
           try {
-            response = await fetch(fileUrl);
+            response = await fetch(fileUrl, {
+              signal: AbortSignal.timeout(10_000),
+            });
           } catch (err) {
             throw new Error(
               `ContainerLabProvider: Failed to fetch referenced file ${fileUrl}: ${
@@ -250,13 +258,31 @@ export default class ContainerLabProvider implements InstanceProvider {
 
       let running = false;
       for (let attempt = 0; attempt < pollMaxAttempts; attempt++) {
-        const containers = await this.client.getLab(labName);
+        let containers: ClabContainerInfo[];
+        try {
+          containers = await this.client.getLab(labName);
+        } catch (err) {
+          // the clab-api-server registers the lab asynchronously after the
+          // deploy call; a 404 on early polls means "not yet registered"
+          if (err instanceof ClabApiError && err.status === 404) {
+            await this.sleep(pollIntervalMs);
+            continue;
+          }
+          throw err;
+        }
         if (
           containers.length > 0 &&
           containers.every((container) => container.state === "running")
         ) {
           running = true;
           break;
+        }
+        // a container that exited will not come back; stop polling and run
+        // the usual cleanup path
+        if (containers.some((container) => container.state === "exited")) {
+          throw new Error(
+            `ContainerLabProvider: Lab ${labName} has a container in 'exited' state; aborting deploy.`,
+          );
         }
         await this.sleep(pollIntervalMs);
       }
@@ -288,11 +314,11 @@ export default class ContainerLabProvider implements InstanceProvider {
     try {
       containers = await this.client.getLab(instance);
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      if (message.includes("status 404")) {
+      if (err instanceof ClabApiError && err.status === 404) {
         // Instance not found
         throw new Error(InstanceNotFoundErrorMessage);
       }
+      const message = err instanceof Error ? err.message : String(err);
       throw new Error(
         "ContainerLabProvider: Failed to get server instance. " + message,
       );
@@ -394,6 +420,16 @@ export default class ContainerLabProvider implements InstanceProvider {
           instance,
           jumphostContainerName,
         );
+        if (
+          typeof access?.host !== "string" ||
+          access.host.length === 0 ||
+          typeof access?.port !== "number" ||
+          !Number.isInteger(access.port)
+        ) {
+          throw new Error(
+            "malformed SSH access response (missing host or port)",
+          );
+        }
         if (nonDialableSshHosts[access.host]) {
           const apiUrlHost = new URL(this.client.apiUrl).hostname;
           console.log(
@@ -431,7 +467,17 @@ export default class ContainerLabProvider implements InstanceProvider {
 
   async deleteServer(labName: string): Promise<void> {
     // destroy the lab; workspace files are kept
-    await this.client.deleteLab(labName);
+    try {
+      await this.client.deleteLab(labName);
+    } catch (err) {
+      // a lab that is already gone must surface as instance-not-found so
+      // Environment.stop removes the environment from the persister instead
+      // of staying stuck
+      if (err instanceof ClabApiError && err.status === 404) {
+        throw new Error(InstanceNotFoundErrorMessage);
+      }
+      throw err;
+    }
   }
 
   async pruneServerInstance(): Promise<void> {
@@ -538,6 +584,7 @@ export default class ContainerLabProvider implements InstanceProvider {
         headers: {
           accept: "application/yaml",
         },
+        signal: AbortSignal.timeout(10_000),
       });
     } catch (err) {
       throw new Error(
