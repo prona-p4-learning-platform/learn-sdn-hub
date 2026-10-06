@@ -12,6 +12,7 @@
     "start:localmultiuservm": "ts-node src/LocalMultiuserVMApplication.ts",
     "start:openstack": "ts-node src/OpenStackApplication.ts",
     "start:docker": "ts-node src/DockerApplication.ts",
+    "start:containerlab": "ts-node --files src/ContainerLabApplication.ts",
     "start:docker-dev": "nodemon src/DockerApplication.ts",
     "start:firecracker": "ts-node --files src/FirecrackerApplication.ts",
     "start:proxmox": "ts-node --files src/ProxmoxApplication.ts",
