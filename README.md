@@ -218,7 +218,7 @@ To isolate the lxc instances in proxmox, a separate (isolated) virtual network (
 ### Run the backend using containerlab for assignments
 (using [ContainerlabProvider.ts](/backend/src/providers/ContainerlabProvider.ts))
 
-The backend also supports [containerlab](https://containerlab.dev/) labs as assignments. The labs are deployed on a remote host by [clab-api-server](https://github.com/srl-labs/clab-api-server), which the backend talks to via its REST and WebSocket API. A **minimum clab-api-server version providing the workspace file endpoints (`POST /api/v1/labs/workspace/directory`, `PUT /api/v1/labs/workspace/file`), the `POST /api/v1/labs/{labName}/deploy?path=` endpoint and the terminal-sessions API is required** — older releases without these endpoints cannot be used.
+The backend also supports [containerlab](https://containerlab.dev/) labs as assignments. The labs are deployed on a remote host by [clab-api-server](https://github.com/srl-labs/clab-api-server), which the backend talks to via its REST and WebSocket API. A **minimum clab-api-server version of v0.7.0 providing the workspace file endpoints (`POST /api/v1/labs/workspace/directory`, `PUT /api/v1/labs/workspace/file`), the `POST /api/v1/labs/{labName}/deploy?path=` endpoint and the terminal-sessions API is required** — older releases without these endpoints cannot be used.
 
 ```sh
 export CLAB_USERNAME="clab-username"
@@ -232,7 +232,7 @@ export CLAB_LAB_PREFIX=""
 export CLAB_API_TLS_INSECURE=false
 ```
 
-`CLAB_USERNAME` and `CLAB_PASSWORD` are the credentials used to authenticate against clab-api-server, `CLAB_APIURL` is its base URL (normalized to exactly one trailing slash). `CLAB_MAX_INSTANCE_LIFETIME_MINUTES` (required) limits how long a deployed lab may live before it is pruned. `CLAB_TOKEN_DURATION_IN_MINUTES` (optional, default `60`) is the lifetime of the Bearer tokens the backend requests. `CLAB_LAB_PREFIX` (optional, default `""`) is prepended to every lab name. Set `CLAB_API_TLS_INSECURE=true` if the clab-api-server uses a self-signed certificate; the default `false` enforces strict TLS validation.
+`CLAB_USERNAME` and `CLAB_PASSWORD` are the credentials used to authenticate against clab-api-server, `CLAB_APIURL` is its base URL (normalized to exactly one trailing slash). `CLAB_MAX_INSTANCE_LIFETIME_MINUTES` (required) limits how long a deployed lab may live before it is pruned. `CLAB_TOKEN_DURATION_IN_MINUTES` (optional, default `60`) is the lifetime of the Bearer tokens the backend requests. `CLAB_LAB_PREFIX` (optional, default `""`) is prepended to every lab name. **Warning:** if the clab-api-server is shared with other users, set `CLAB_LAB_PREFIX` to a unique prefix — with the default empty prefix the periodic prune treats *all* labs on the clab-api-server as owned by this backend and may delete foreign labs once they exceed the configured lifetime. Set `CLAB_API_TLS_INSECURE=true` (or `1`) if the clab-api-server uses a self-signed certificate; the default `false` enforces strict TLS validation.
 
 Each lab is named `${CLAB_LAB_PREFIX}${environmentId}-${groupNumber}-${username}`, so every group and user gets its own isolated lab.
 
