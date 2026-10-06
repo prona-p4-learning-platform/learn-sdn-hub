@@ -221,6 +221,90 @@ describe("ContainerLabProvider createServer/deleteServer/getServer", () => {
     );
   });
 
+  test("creates parent directories for nested bind sources", async () => {
+    installFetch([
+      [topologyUrl, textResponse(200, topologyYaml)],
+      [fileUrl, textResponse(200, dnsmasqConf)],
+    ]);
+    client.createWorkspaceDirectory.mockResolvedValue(undefined);
+    client.putWorkspaceFile.mockResolvedValue(undefined);
+    client.deployLabByPath.mockResolvedValue(undefined);
+    client.getLab.mockResolvedValue([
+      {
+        name: "server1",
+        state: "running",
+        status: "Up 5 seconds",
+        ipv4_address: "10.10.10.2/24",
+      },
+    ] as ClabContainerInfo[]);
+
+    await provider.createServer("alice", 7, "clab-lab", {
+      clabTopology: topologyUrl,
+    });
+
+    const dirCalls = client.createWorkspaceDirectory.mock.calls as Array<
+      [string]
+    >;
+    const dirPaths = dirCalls.map((call) => call[0]);
+    expect(dirPaths).toEqual(
+      expect.arrayContaining([labName, `${labName}/server1`]),
+    );
+
+    // the nested parent directory must exist before the nested file is written
+    const dirOrder = client.createWorkspaceDirectory.mock.invocationCallOrder;
+    const putCalls = client.putWorkspaceFile.mock.calls as Array<[string]>;
+    const putOrder = client.putWorkspaceFile.mock.invocationCallOrder;
+    const nestedDirOrder =
+      dirOrder[dirCalls.findIndex((call) => call[0] === `${labName}/server1`)];
+    const nestedPutOrder =
+      putOrder[
+        putCalls.findIndex(
+          (call) => call[0] === `${labName}/server1/dnsmasq.conf`,
+        )
+      ];
+    expect(nestedDirOrder).toBeLessThan(nestedPutOrder);
+    // and the lab directory before every file write
+    expect(dirOrder[dirCalls.findIndex((call) => call[0] === labName)]).toBeLessThan(
+      Math.min(...putOrder),
+    );
+  });
+
+  test("injects jumphost into staged topology", async () => {
+    installFetch([
+      [topologyUrl, textResponse(200, topologyYaml)],
+      [fileUrl, textResponse(200, dnsmasqConf)],
+    ]);
+    client.createWorkspaceDirectory.mockResolvedValue(undefined);
+    client.putWorkspaceFile.mockResolvedValue(undefined);
+    client.deployLabByPath.mockResolvedValue(undefined);
+    client.getLab.mockResolvedValue([
+      {
+        name: "server1",
+        state: "running",
+        status: "Up 5 seconds",
+        ipv4_address: "10.10.10.2/24",
+      },
+    ] as ClabContainerInfo[]);
+
+    await provider.createServer("alice", 7, "clab-lab", {
+      clabTopology: topologyUrl,
+    });
+
+    const putCalls = client.putWorkspaceFile.mock.calls as unknown as Array<
+      [string, string]
+    >;
+    const topologyPut = putCalls.find(
+      (call) => call[0] === `${labName}/${labName}.clab.yml`,
+    );
+    expect(topologyPut).toBeDefined();
+    const staged = load(topologyPut![1]) as {
+      topology?: { nodes?: Record<string, { image?: string }> };
+    };
+    expect(staged.topology?.nodes?.jumphost).toMatchObject({
+      image: "alpine:latest",
+    });
+  });
+
   test("rejects with the missing file URL and cleans up", async () => {
     installFetch([
       [topologyUrl, textResponse(200, topologyYaml)],

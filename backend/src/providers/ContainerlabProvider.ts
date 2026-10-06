@@ -6,6 +6,7 @@ import {
 //import { Client } from "ssh2";
 import { ToadScheduler, SimpleIntervalJob, AsyncTask } from "toad-scheduler";
 import { load, dump } from "js-yaml";
+import path from "path";
 import ClabApiClient from "./ClabApiClient";
 import type { ClabContainerInfo } from "./ClabApiClient";
 import {
@@ -15,6 +16,12 @@ import {
 //import Environment from "../Environment";
 
 const schedulerIntervalSeconds = 5 * 60;
+
+// Poll interval and attempt budget for waiting until all lab containers are
+// running after deployLabByPath (60 x 2s = bounded 2 min, allowing for image
+// pulls on first deploy).
+const pollIntervalMs = 2000;
+const pollMaxAttempts = 60;
 
 interface Token {
   token: string;
@@ -248,6 +255,9 @@ export default class ContainerLabProvider implements InstanceProvider {
       }
 
       topology = this.changeTopologyName(topology, labName);
+      // spec §3: every deployed lab gets a jumphost node so Shell terminals
+      // have a well-known entry container
+      topology = this.addJumphostToTopology(topology);
 
       // stage files referenced by bind mounts (only possible for URL sources)
       const stagedFiles: Array<{ path: string; content: string }> = [];
@@ -273,9 +283,16 @@ export default class ContainerLabProvider implements InstanceProvider {
         }
       }
 
-      // create the workspace and stage topology and referenced files
+      // create the workspace and stage topology and referenced files; the
+      // clab API requires every file's parent directory to exist first
       const topologyPath = `${labName}/${labName}.clab.yml`;
-      await this.client.createWorkspaceDirectory(labName);
+      const directories = new Set<string>([labName]);
+      for (const file of stagedFiles) {
+        directories.add(path.dirname(`${labName}/${file.path}`));
+      }
+      for (const directory of directories) {
+        await this.client.createWorkspaceDirectory(directory);
+      }
       await this.client.putWorkspaceFile(topologyPath, dump(topology));
       for (const file of stagedFiles) {
         await this.client.putWorkspaceFile(`${labName}/${file.path}`, file.content);
@@ -285,7 +302,7 @@ export default class ContainerLabProvider implements InstanceProvider {
       await this.client.deployLabByPath(labName, topologyPath);
 
       let running = false;
-      for (let attempt = 0; attempt < 10; attempt++) {
+      for (let attempt = 0; attempt < pollMaxAttempts; attempt++) {
         const containers = await this.client.getLab(labName);
         if (
           containers.length > 0 &&
@@ -294,7 +311,7 @@ export default class ContainerLabProvider implements InstanceProvider {
           running = true;
           break;
         }
-        await this.sleep(2000);
+        await this.sleep(pollIntervalMs);
       }
       if (!running) {
         throw new Error(
@@ -592,6 +609,35 @@ export default class ContainerLabProvider implements InstanceProvider {
   changeTopologyName(topology: object, newName: string): object {
     const topo = topology as {[key: string]: string | object};
     topo["name"] = newName;
+    return topo;
+  }
+
+  addJumphostToTopology(topology: object): object {
+    const topo = topology as Record<string, unknown>;
+    if (!topo["topology"] || typeof topo["topology"] !== "object") {
+      topo["topology"] = {};
+    }
+    const topologyBlock = topo["topology"] as Record<string, unknown>;
+    if (!topologyBlock["nodes"] || typeof topologyBlock["nodes"] !== "object") {
+      topologyBlock["nodes"] = {};
+    }
+    const nodes = topologyBlock["nodes"] as Record<string, unknown>;
+    nodes["jumphost"] = {
+      kind: "linux",
+      image: "alpine:latest",
+      group: "hosts",
+      exec: [
+        "ip addr add 192.168.188.2/24 dev eth1",
+        "apk add openrc openssh",
+        "ssh-keygen -A",
+        "mkdir -p /run/openrc",
+        "touch /run/openrc/softlevel",
+        "rc-update add sshd",
+        "rc-service sshd start",
+        "adduser -D p4",
+        "ash -c 'echo p4:p4 | chpasswd'",
+      ],
+    };
     return topo;
   }
 }
