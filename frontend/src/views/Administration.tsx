@@ -45,10 +45,17 @@ const DesktopValidator = z.object({
   remoteDesktopHostname: z.string().optional(),
 });
 
+const DockerShellValidator = z.object({
+  type: z.literal("DockerShell"),
+  name: z.string(),
+  containerName: z.string(),
+});
+
 const TerminalTypeValidator = z.union([
   ShellValidator,
   WebAppValidator,
   DesktopValidator,
+  DockerShellValidator,
 ]);
 
 const AliasedFileValidator = z.object({
