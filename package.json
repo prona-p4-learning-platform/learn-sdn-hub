@@ -8,6 +8,9 @@
   },
   "author": "",
   "license": "ISC",
+  "scripts": {
+    "start:containerlab": "npm run start:containerlab --prefix backend"
+  },
   "bugs": {
     "url": "https://github.com/prona-p4-learning-platform/learn-sdn-hub/issues"
   },
