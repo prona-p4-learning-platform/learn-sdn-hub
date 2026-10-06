@@ -23,12 +23,6 @@ const schedulerIntervalSeconds = 5 * 60;
 const pollIntervalMs = 2000;
 const pollMaxAttempts = 60;
 
-interface Token {
-  token: string;
-  issued_at: number; // ms since epoch
-  expires_at: number; // ms since epoch
-}
-
 export default class ContainerLabProvider implements InstanceProvider {
   // ContainerLab config
   private clab_username: string;
@@ -41,12 +35,8 @@ export default class ContainerLabProvider implements InstanceProvider {
   // whether the clab API client should accept self-signed TLS certificates
   private tlsInsecure: boolean;
 
-  // REST client for the clab API (injectable for tests)
+  // REST client for the clab API (injectable for tests); owns authentication
   private client: ClabApiClient;
-
-  // the authentication token from keystone
-  private clab_token?: Token;
-  private clab_token_duration: number;
 
   // ContainerLab Provider config
   private maxInstanceLifetimeMinutes: number;
@@ -105,20 +95,18 @@ export default class ContainerLabProvider implements InstanceProvider {
       );
     }
 
+    let tokenDurationMs = 60 * 60 * 1000; // default token duration 60 minutes
     const ENV_TOKEN_DURATION = process.env.CLAB_TOKEN_DURATION_IN_MINUTES
     if(ENV_TOKEN_DURATION) {
       const TOKEN_DURATION = parseInt(ENV_TOKEN_DURATION);
       if(!isNaN(TOKEN_DURATION)) {
-        this.clab_token_duration = TOKEN_DURATION*60*1000;
+        tokenDurationMs = TOKEN_DURATION*60*1000;
       }
       else {
         throw new Error(
           "ContainerLabProvider: Provided token duration cannot be parsed (CLAB_TOKEN_DURATION_IN_MINUTES).",
         );
       }
-    }
-    else {
-      this.clab_token_duration = 60*60*1000; // default token duration 60 minutes
     }
     // check for the optional lab name prefix
     this.labPrefix = process.env.CLAB_LAB_PREFIX ?? "";
@@ -138,7 +126,7 @@ export default class ContainerLabProvider implements InstanceProvider {
         username: this.clab_username,
         password: this.clab_password,
         tlsInsecure: this.tlsInsecure,
-        tokenDurationMs: this.clab_token_duration,
+        tokenDurationMs: tokenDurationMs,
       });
 
     const scheduler = new ToadScheduler();
@@ -162,67 +150,14 @@ export default class ContainerLabProvider implements InstanceProvider {
 
     scheduler.addSimpleIntervalJob(job);
 
-    this.getToken().catch((err: unknown) => {
-      console.log(
-        "ContainerLabProvider: Initial authentication to ContainerLab failed: " +
-          (err instanceof Error ? err.message : String(err)),
-      );
-    });
-  }
-
-  async getToken(): Promise<void> {
-    const tokenExpires = this.clab_token?.expires_at ?? Date.now();
-    const now = Date.now();
-
-    console.log(
-      "Token expires at: " +
-        new Date(tokenExpires).toISOString() +
-        " now: " +
-        new Date(now).toISOString(),
-    );
-
-    // add 5 sec for the token to be valid for subsequent operations
-    if (this.clab_token !== undefined && now <= tokenExpires + 5000) {
-      return;
-    }
-
-    // authenticate to ContainerLab and get a token
-    const data_auth = {
-      username: this.clab_username,
-      password: this.clab_password,
-    };
-    const response = await fetch(this.clab_apiUrl + "login", {
-      signal: AbortSignal.timeout(10000), // 10 seconds timeout
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(data_auth),
-    });
-
-    if (!response.ok || !response.body) {
-      throw new Error(
-        "ContainerLabProvider: Authentication failed: No token received",
-      );
-    }
-
-    const data = (await response.json()) as { token?: string };
-
-    if (!data.token) {
-      throw new Error(
-        "ContainerLabProvider: Authentication failed: No token received",
-      );
-    }
-
-    const issued_at = Date.now();
-
-    if (this.clab_token === undefined) {
-      this.clab_token = {} as Token;
-    }
-
-    this.clab_token.token = data.token;
-    this.clab_token.issued_at = issued_at - 10000; // workaround, set issued at to 10 sec in the past, because 10 sec timeout above
-    this.clab_token.expires_at = issued_at + this.clab_token_duration; // token valid for configured duration
+    this.client
+      .getToken()
+      .catch((err: unknown) => {
+        console.log(
+          "ContainerLabProvider: Initial authentication to ContainerLab failed: " +
+            (err instanceof Error ? err.message : String(err)),
+        );
+      });
   }
 
   async createServer(
@@ -478,46 +413,11 @@ export default class ContainerLabProvider implements InstanceProvider {
   }
 
   async pruneServerInstance(): Promise<void> {
-    // Clab API response types
-    type ClabInspectOutput = Record<string, ClabContainerInfo[]>;
-
-    type ClabContainerInfo = {
-      name: string;
-      container_id: string;
-      image: string;
-      kind: string;
-      state: string;
-      status: string;
-      ipv4_address: string;
-      ipv6_address: string;
-      lab_name: string;
-      labPath: string;
-      absLabPath: string;
-      group: string;
-      owner: string;
-    };
-
-    // Authentication token
-    await this.getToken();
-    const token = this.clab_token?.token;
-    if (!token) {
-      throw new Error("ContainerLabProvider: Cannot prune instances: missing auth token!");
-    }
+    // Authentication is owned by the client
+    await this.client.getToken();
 
     // Request a list of labs and containers
-    const response = await fetch(`${this.clab_apiUrl}api/v1/labs`, {
-      method: "GET",
-      signal: AbortSignal.timeout(10_000),
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
-    if (!response.ok) {
-      const body = await response.text().catch(() => "");
-      throw new Error(`ContainerLabProvider: Failed to list labs (${response.status}): ${body}`);
-    }
-
-    // Interpret response as clab output types
-    const labs = (await response.json()) as ClabInspectOutput;
+    const labs = await this.client.listLabs();
 
     // Maximum allowed age of instances and prefix of current application lab
     const maxAgeMs = this.maxInstanceLifetimeMinutes * 60_000;
@@ -571,7 +471,7 @@ export default class ContainerLabProvider implements InstanceProvider {
       for (const c of containers) {
         if (c.state && c.state !== "running") continue;
 
-        const uptime = parseUptimeMs(c.status);
+        const uptime = parseUptimeMs(c.status ?? "");
         if (uptime !== undefined) labAgeMs = Math.max(labAgeMs, uptime);
       }
 

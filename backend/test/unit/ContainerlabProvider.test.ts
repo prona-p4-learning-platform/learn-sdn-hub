@@ -34,6 +34,8 @@ type FetchArgs = [input: RequestInfo | URL, init?: RequestInit];
 
 interface MockClient {
   getLab: jest.Mock;
+  listLabs: jest.Mock;
+  getToken: jest.Mock;
   createWorkspaceDirectory: jest.Mock;
   putWorkspaceFile: jest.Mock;
   deployLabByPath: jest.Mock;
@@ -61,6 +63,9 @@ function emptyOkResponse(): Response {
 function makeClient(): MockClient {
   return {
     getLab: jest.fn(),
+    listLabs: jest.fn(),
+    // constructor fire-and-forget initial auth awaits a promise
+    getToken: jest.fn().mockResolvedValue("t0"),
     createWorkspaceDirectory: jest.fn(),
     putWorkspaceFile: jest.fn(),
     deployLabByPath: jest.fn(),
@@ -344,6 +349,35 @@ describe("ContainerLabProvider createServer/deleteServer/getServer", () => {
     client.deleteLab.mockResolvedValue(undefined);
     await provider.deleteServer(labName);
     expect(client.deleteLab).toHaveBeenCalledWith(labName);
+  });
+
+  test("prune lists labs via client and deletes only stale ones", async () => {
+    client.listLabs.mockResolvedValue({
+      "clab-lab-1-bob": [
+        {
+          name: "n1",
+          state: "running",
+          status: "Up 61 minutes",
+          ipv4_address: "10.10.10.2/24",
+        },
+      ],
+      "clab-lab-2-carol": [
+        {
+          name: "n2",
+          state: "running",
+          status: "Up 5 minutes",
+          ipv4_address: "10.10.10.3/24",
+        },
+      ],
+    });
+    client.deleteLab.mockResolvedValue(undefined);
+
+    await provider.pruneServerInstance();
+
+    expect(client.listLabs).toHaveBeenCalledTimes(1);
+    // maxInstanceLifetimeMinutes is 60: only the 61-minute-old lab is pruned
+    expect(client.deleteLab).toHaveBeenCalledTimes(1);
+    expect(client.deleteLab).toHaveBeenCalledWith("clab-lab-1-bob");
   });
 
   test("getServer returns jumphost IPAddress", async () => {
