@@ -1459,6 +1459,13 @@ export default class Environment {
         const fileNameWithExpanededVars = supplementalFile
           .replace("$user", this.username)
           .replace("$environment", this.environmentId);
+        if (this.filehandler === undefined) {
+          console.warn(
+            "Environment: no filehandler available, skipping supplemental file " +
+              supplementalFile,
+          );
+          continue;
+        }
         await this.filehandler
           ?.readFile(fileNameWithExpanededVars, "binary")
           .then((content) => {

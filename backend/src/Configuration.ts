@@ -16,14 +16,14 @@ environments.set("Containerlab-Dnsmasq-TopologyUrl", {
         name: "dnsmasq-host",
         containerName: "server1",
       },
-      // A regular Shell terminal connects over SSH to the jumphost
-      // (mgmt-host) container of the lab for comparison.
+      // A regular Shell terminal logged into the jumphost itself (the host
+      // running clab-api-server) for comparison.
       {
         type: "Shell",
         name: "jumphost",
         cwd: "/home/p4/",
         executable: "ssh",
-        params: ["$(SERVER_IP)"],
+        params: [],
         provideTty: true,
       },
     ],
