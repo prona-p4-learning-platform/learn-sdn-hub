@@ -37,6 +37,38 @@ export interface ClabContainerInfo {
 const DEFAULT_TOKEN_DURATION_MS = 60 * 60 * 1000;
 // Expire the cached token 5s before its actual expiry to avoid racing the server.
 const TOKEN_EXPIRY_MARGIN_MS = 5000;
+// Hard cap for every REST request against the clab-api-server so a hung
+// connection cannot stall the provider (merged with caller-provided signals).
+const REQUEST_TIMEOUT_MS = 10_000;
+
+/** Error thrown for non-OK clab-api-server responses; carries the HTTP status. */
+export class ClabApiError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+  ) {
+    super(message);
+    this.name = "ClabApiError";
+  }
+}
+
+/** Reads (a truncated form of) an error response body, tolerating unreadable ones. */
+async function describeErrorResponse(
+  path: string,
+  response: Response,
+): Promise<string> {
+  const base = `ClabApiClient request to ${path} failed with status ${response.status}`;
+  let bodyText = "";
+  try {
+    bodyText = (await response.text()).trim();
+  } catch {
+    // body unreadable — fall back to the status-only message
+  }
+  if (bodyText.length === 0) {
+    return base;
+  }
+  return `${base}: ${bodyText.slice(0, 200)}`;
+}
 
 export default class ClabApiClient {
   private readonly baseUrl: string;
@@ -79,8 +111,9 @@ export default class ClabApiClient {
       }),
     });
     if (!response.ok) {
-      throw new Error(
-        `ClabApiClient login failed with status ${response.status}`,
+      throw new ClabApiError(
+        await describeErrorResponse("login", response),
+        response.status,
       );
     }
     const body = (await response.json()) as { token?: string };
@@ -178,11 +211,17 @@ export default class ClabApiClient {
   }
 
   private doFetch(url: string, init: RequestInit): Promise<Response> {
+    // Hard cap for every request; a caller-provided abort signal is merged in
+    // and its abort wins alongside the timeout.
+    const requestSignal = init.signal
+      ? AbortSignal.any([init.signal, AbortSignal.timeout(REQUEST_TIMEOUT_MS)])
+      : AbortSignal.timeout(REQUEST_TIMEOUT_MS);
+    const initWithTimeout: RequestInit = { ...init, signal: requestSignal };
     if (this.insecureDispatcher === null) {
-      return fetch(url, init);
+      return fetch(url, initWithTimeout);
     }
     return undiciFetch(url, {
-      ...init,
+      ...initWithTimeout,
       dispatcher: this.insecureDispatcher,
     } as unknown as UndiciRequestInit) as unknown as Promise<Response>;
   }
@@ -202,14 +241,16 @@ export default class ClabApiClient {
       this.tokenExpiresAt = 0;
       response = await attempt(await this.getToken());
       if (response.status === 401) {
-        throw new Error(
+        throw new ClabApiError(
           `ClabApiClient request to ${path} failed with status 401 after re-authentication`,
+          401,
         );
       }
     }
     if (!response.ok) {
-      throw new Error(
-        `ClabApiClient request to ${path} failed with status ${response.status}`,
+      throw new ClabApiError(
+        await describeErrorResponse(path, response),
+        response.status,
       );
     }
     return response;

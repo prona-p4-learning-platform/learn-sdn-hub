@@ -1,10 +1,12 @@
 import ClabApiClient from "../../src/providers/ClabApiClient";
+import { ClabApiError } from "../../src/providers/ClabApiClient";
 import type { ClabContainerInfo } from "../../src/providers/ClabApiClient";
 
 interface FetchInit {
   method?: string;
   headers?: Record<string, string>;
   body?: string;
+  signal?: AbortSignal;
 }
 
 type FetchArgs = [url: string, init: FetchInit];
@@ -310,5 +312,52 @@ describe("ClabApiClient", () => {
     const calls = fetchMock.mock.calls as unknown as FetchArgs[];
     expect(calls).toHaveLength(1);
     expect(calls[0][1]).not.toHaveProperty("dispatcher");
+  });
+
+  test("passes an abort signal as request timeout to every fetch", async () => {
+    const client = makeClient();
+    fetchMock
+      .mockResolvedValueOnce(loginResponse("t1"))
+      .mockResolvedValueOnce(
+        jsonResponse(200, [{ name: "n1" }] satisfies ClabContainerInfo[]),
+      );
+
+    await client.getToken();
+    await client.getLab("lab1");
+
+    const calls = fetchMock.mock.calls as unknown as FetchArgs[];
+    expect(calls).toHaveLength(2);
+    expect(calls[0][1].signal).toBeInstanceOf(AbortSignal);
+    expect(calls[1][1].signal).toBeInstanceOf(AbortSignal);
+  });
+
+  test("throws ClabApiError with status and truncated body on non-OK", async () => {
+    const client = makeClient();
+    fetchMock.mockResolvedValueOnce(loginResponse("t1"));
+    await client.getToken();
+    fetchMock.mockResolvedValue({
+      ok: false,
+      status: 502,
+      text: () => Promise.resolve(`proxy-error-${"x".repeat(500)}`),
+    });
+
+    const err = await client.getLab("lab1").then(
+      () => {
+        throw new Error("expected getLab to reject");
+      },
+      (e: unknown) => e,
+    );
+
+    expect(err).toBeInstanceOf(ClabApiError);
+    const apiError = err as ClabApiError;
+    expect(apiError.status).toBe(502);
+    expect(apiError.message).toContain("failed with status 502");
+    // body is included but truncated to its first 200 characters
+    expect(apiError.message).toContain(`proxy-error-${"x".repeat(188)}`);
+    expect(apiError.message.length).toBeLessThan(
+      "ClabApiClient request to /api/v1/labs/lab1 failed with status 502: ".length +
+        200 +
+        1,
+    );
   });
 });
