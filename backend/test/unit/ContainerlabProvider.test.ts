@@ -308,11 +308,56 @@ describe("ContainerLabProvider createServer/deleteServer/getServer", () => {
     );
     expect(topologyPut).toBeDefined();
     const staged = load(topologyPut![1]) as {
-      topology?: { nodes?: Record<string, { image?: string }> };
+      topology?: {
+        nodes?: Record<string, { image?: string; exec?: string[] }>;
+      };
     };
-    expect(staged.topology?.nodes?.jumphost).toMatchObject({
+    // collision-safe name: user topologies commonly define their own "jumphost"
+    expect(staged.topology?.nodes?.["learn-sdn-hub-jumphost"]).toMatchObject({
       image: "alpine:latest",
     });
+  });
+
+  test("injected jumphost exec chain daemonizes sshd without interface assumptions", async () => {
+    installFetch([
+      [topologyUrl, textResponse(200, topologyYaml)],
+      [fileUrl, textResponse(200, dnsmasqConf)],
+    ]);
+    client.createWorkspaceDirectory.mockResolvedValue(undefined);
+    client.putWorkspaceFile.mockResolvedValue(undefined);
+    client.deployLabByPath.mockResolvedValue(undefined);
+    client.getLab.mockResolvedValue([
+      {
+        name: "server1",
+        state: "running",
+        status: "Up 5 seconds",
+        ipv4_address: "10.10.10.2/24",
+      },
+    ] as ClabContainerInfo[]);
+
+    await provider.createServer("alice", 7, "clab-lab", {
+      clabTopology: topologyUrl,
+    });
+
+    const putCalls = client.putWorkspaceFile.mock.calls as unknown as Array<
+      [string, string]
+    >;
+    const topologyPut = putCalls.find(
+      (call) => call[0] === `${labName}/${labName}.clab.yml`,
+    );
+    expect(topologyPut).toBeDefined();
+    const staged = load(topologyPut![1]) as {
+      topology?: {
+        nodes?: Record<string, { exec?: string[] }>;
+      };
+    };
+    const exec = staged.topology?.nodes?.["learn-sdn-hub-jumphost"]?.exec ?? [];
+    // first exec failure stops the chain: no interface-dependent commands
+    for (const command of exec) {
+      expect(command.startsWith("ip addr")).toBe(false);
+    }
+    // sshd must be started directly (no openrc dependency)
+    expect(exec).toContain("/usr/sbin/sshd");
   });
 
   test("rejects with the missing file URL and cleans up", async () => {
