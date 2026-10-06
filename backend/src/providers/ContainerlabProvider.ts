@@ -582,20 +582,21 @@ export default class ContainerLabProvider implements InstanceProvider {
       topologyBlock["nodes"] = {};
     }
     const nodes = topologyBlock["nodes"] as Record<string, unknown>;
-    nodes["jumphost"] = {
+    // collision-safe name: user topologies commonly define their own
+    // "jumphost" node, and containerlab rejects duplicate node names.
+    // The exec chain works on ANY container (no interface assumptions —
+    // containerlab stops at the first failing exec) and starts sshd directly
+    // as a daemon, without an openrc dependency.
+    nodes["learn-sdn-hub-jumphost"] = {
       kind: "linux",
       image: "alpine:latest",
       group: "hosts",
       exec: [
-        "ip addr add 192.168.188.2/24 dev eth1",
-        "apk add openrc openssh",
+        "apk add openssh",
         "ssh-keygen -A",
-        "mkdir -p /run/openrc",
-        "touch /run/openrc/softlevel",
-        "rc-update add sshd",
-        "rc-service sshd start",
         "adduser -D p4",
         "ash -c 'echo p4:p4 | chpasswd'",
+        "/usr/sbin/sshd",
       ],
     };
     return topo;
