@@ -1,3 +1,5 @@
+import { Agent, fetch as undiciFetch } from "undici";
+import type { Dispatcher, RequestInit as UndiciRequestInit } from "undici";
 import WebSocket from "ws";
 
 export interface ClabApiClientOptions {
@@ -42,6 +44,7 @@ export default class ClabApiClient {
   private readonly password: string;
   private readonly tlsInsecure: boolean;
   private readonly tokenDurationMs: number;
+  private readonly insecureDispatcher: Dispatcher | null;
   private token: string | null = null;
   private tokenExpiresAt = 0;
 
@@ -51,13 +54,18 @@ export default class ClabApiClient {
     this.password = options.password;
     this.tlsInsecure = options.tlsInsecure ?? false;
     this.tokenDurationMs = options.tokenDurationMs ?? DEFAULT_TOKEN_DURATION_MS;
+    // Node's global fetch (undici) has no per-request TLS bypass, so insecure
+    // REST calls go through an undici Agent with rejectUnauthorized: false.
+    this.insecureDispatcher = this.tlsInsecure
+      ? new Agent({ connect: { rejectUnauthorized: false } })
+      : null;
   }
 
   async getToken(): Promise<string> {
     if (this.token !== null && Date.now() < this.tokenExpiresAt) {
       return this.token;
     }
-    const response = await fetch(`${this.baseUrl}/login`, {
+    const response = await this.doFetch(`${this.baseUrl}/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -164,20 +172,30 @@ export default class ClabApiClient {
     return new WebSocket(url, wsOptions);
   }
 
+  private doFetch(url: string, init: RequestInit): Promise<Response> {
+    if (this.insecureDispatcher === null) {
+      return fetch(url, init);
+    }
+    return undiciFetch(url, {
+      ...init,
+      dispatcher: this.insecureDispatcher,
+    } as unknown as UndiciRequestInit) as unknown as Promise<Response>;
+  }
+
   private async authedFetch(
     path: string,
     init: RequestInit,
   ): Promise<Response> {
-    const doFetch = (authToken: string): Promise<Response> =>
-      fetch(`${this.baseUrl}${path}`, {
+    const attempt = (authToken: string): Promise<Response> =>
+      this.doFetch(`${this.baseUrl}${path}`, {
         ...init,
         headers: { ...init.headers, Authorization: `Bearer ${authToken}` },
       });
-    let response = await doFetch(await this.getToken());
+    let response = await attempt(await this.getToken());
     if (response.status === 401) {
       this.token = null;
       this.tokenExpiresAt = 0;
-      response = await doFetch(await this.getToken());
+      response = await attempt(await this.getToken());
       if (response.status === 401) {
         throw new Error(
           `ClabApiClient request to ${path} failed with status 401 after re-authentication`,
