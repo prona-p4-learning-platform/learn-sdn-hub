@@ -876,15 +876,17 @@ export default class Environment {
     //   endpoint.SSHPort,
     //   endpoint.SSHJumpHost,
     // );
-    this.filehandler = await FileHandler.create(
-      this.environmentId,
-      this.username,
-      this.groupNumber,
-      this.sessionId,
-      endpoint.IPAddress,
-      endpoint.SSHPort,
-      endpoint.SSHJumpHost,
-    );
+    if (desc.editableFiles.length > 0) {
+      this.filehandler = await FileHandler.create(
+        this.environmentId,
+        this.username,
+        this.groupNumber,
+        this.sessionId,
+        endpoint.IPAddress,
+        endpoint.SSHPort,
+        endpoint.SSHJumpHost,
+      );
+    }
 
     for (const file of desc.editableFiles)
       this.addEditableFile(file.alias, file.absFilePath);

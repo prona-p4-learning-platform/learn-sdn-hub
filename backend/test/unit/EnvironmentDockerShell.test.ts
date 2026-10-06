@@ -1,13 +1,22 @@
 import { EventEmitter } from "events";
 import DockerConsole from "../../src/consoles/DockerConsole";
+import FileHandler from "../../src/filehandler/SSHFileHandler";
 import type ClabApiClient from "../../src/providers/ClabApiClient";
 import type { VMEndpoint } from "../../src/providers/Provider";
 import type { TerminalType } from "../../src/Environment";
-import {
+import type { InstanceProvider } from "../../src/providers/Provider";
+import type { Persister } from "../../src/database/Persister";
+import Environment, {
+  type EnvironmentDescription,
   createConsoleForSubterminal,
   resetClabApiClient,
   getClabApiClient,
 } from "../../src/Environment";
+
+jest.mock("../../src/filehandler/SSHFileHandler", () => ({
+  __esModule: true as const,
+  default: { create: jest.fn() },
+}));
 
 jest.mock("../../src/consoles/SSHConsole", () => {
   const MockSSHConsole = jest.fn(function (
@@ -184,5 +193,92 @@ describe("getClabApiClient", () => {
     process.env.CLAB_USERNAME = "admin";
     process.env.CLAB_PASSWORD = "secret";
     expect(() => getClabApiClient()).toThrow(/CLAB_APIURL/);
+  });
+});
+
+describe("Environment.start filehandler creation", () => {
+  const FileHandlerMock = FileHandler as unknown as { create: jest.Mock };
+
+  function makeStartConfig(
+    editableFiles: Array<{ alias: string; absFilePath: string }>,
+  ): EnvironmentDescription {
+    return {
+      type: "normal",
+      terminals: [],
+      editableFiles,
+      stopCommands: [],
+      description: "test",
+      assignmentLabSheet: "test.md",
+    };
+  }
+
+  function makeEnvironment(
+    editableFiles: Array<{ alias: string; absFilePath: string }>,
+  ): Environment {
+    const provider = {
+      getServer: jest.fn().mockResolvedValue({
+        IPAddress: "10.0.0.1",
+        SSHPort: 22,
+        instance: "inst-1",
+        RemoteDesktopPort: undefined,
+        SSHJumpHost: undefined,
+      }),
+    } as unknown as InstanceProvider;
+    const persister = {
+      GetUserEnvironments: jest.fn().mockResolvedValue([
+        {
+          environment: "env-1",
+          description: "test",
+          instance: "inst-1",
+          ipAddress: "10.0.0.1",
+          port: undefined,
+        },
+      ]),
+      AddUserEnvironment: jest.fn().mockResolvedValue(undefined),
+    } as unknown as Persister;
+
+    const PrivateEnvironment = Environment as unknown as new (
+      username: string,
+      groupNumber: number,
+      sessionId: string,
+      environmentId: string,
+      configuration: EnvironmentDescription,
+      environmentProvider: InstanceProvider,
+      persister: Persister,
+    ) => Environment;
+    return new PrivateEnvironment(
+      "user",
+      1,
+      "session-1",
+      "env-1",
+      makeStartConfig(editableFiles),
+      provider,
+      persister,
+    );
+  }
+
+  beforeEach(() => {
+    FileHandlerMock.create.mockReset();
+    FileHandlerMock.create.mockResolvedValue({ close: jest.fn() });
+  });
+
+  it("does not create a filehandler for environments without editableFiles", async () => {
+    const env = makeEnvironment([]);
+    await env.start(undefined, "session-1", false);
+
+    expect(FileHandlerMock.create).not.toHaveBeenCalled();
+  });
+
+  it("creates a filehandler when editableFiles are declared", async () => {
+    const env = makeEnvironment([
+      { alias: "p4app", absFilePath: "/tmp/p4app.mininet" },
+    ]);
+    await env.start(undefined, "session-1", false);
+
+    expect(FileHandlerMock.create).toHaveBeenCalledTimes(1);
+    const args = FileHandlerMock.create.mock.calls[0] as unknown as Array<unknown>;
+    expect(args[0]).toBe("env-1");
+    expect(args[1]).toBe("user");
+    expect(args[2]).toBe(1);
   });
 });
