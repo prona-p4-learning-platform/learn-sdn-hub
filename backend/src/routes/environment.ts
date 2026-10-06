@@ -76,6 +76,7 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
           subterminals.filter(
             (subterminal) =>
               (subterminal.type === "Shell" && subterminal.provideTty) ||
+              subterminal.type === "DockerShell" ||
               subterminal.type === "Desktop" ||
               subterminal.type === "WebApp",
           ),
