@@ -660,7 +660,7 @@ function Environment(): JSX.Element {
 
                     return (
                       <TerminalTabs tabNames={terminalTabNames}>
-                        {terminals}
+                        {terminals.flat()}
                       </TerminalTabs>
                     );
                   } else return null;
