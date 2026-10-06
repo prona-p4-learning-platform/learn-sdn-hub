@@ -117,11 +117,17 @@ export default class DockerConsole extends EventEmitter implements Console {
             this.emit("data", decoded);
           } else {
             this.initialConsoleBuffer.push(decoded);
+            while (this.initialConsoleBuffer.length > 1000) {
+              this.initialConsoleBuffer.shift();
+            }
           }
         } else if (this.initialConsoleBufferConsumed) {
           this.emit("data", frame.data);
         } else {
           this.initialConsoleBuffer.push(frame.data);
+          while (this.initialConsoleBuffer.length > 1000) {
+            this.initialConsoleBuffer.shift();
+          }
         }
         break;
       case "exit":

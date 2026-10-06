@@ -111,6 +111,33 @@ describe("DockerConsole", () => {
     expect(console.consumeInitialConsoleBuffer()).toBe("");
   });
 
+  it("caps the initial console buffer at 1000 entries, dropping the oldest", async () => {
+    const mock = new MockClabApiClient();
+    const { promise, resolve } = Promise.withResolvers<void>();
+    const console = createConsole(mock, "srl1");
+    console.once("ready", resolve);
+    await promise;
+
+    for (let i = 0; i < 1001; i++) {
+      mock.fakeWs.emit(
+        "message",
+        Buffer.from(
+          JSON.stringify({
+            type: "output",
+            data: Buffer.from(`out-${i}`).toString("base64"),
+            encoding: "base64",
+          }),
+        ),
+      );
+    }
+
+    expect(console.initialConsoleBuffer).toHaveLength(1000);
+    const buffered = console.consumeInitialConsoleBuffer();
+    expect(buffered).not.toContain("out-0");
+    expect(buffered).toContain("out-1");
+    expect(buffered).toContain("out-1000");
+  });
+
   it("passes through raw output frames without blind base64 decoding", async () => {
     const mock = new MockClabApiClient();
     const { promise, resolve } = Promise.withResolvers<void>();
