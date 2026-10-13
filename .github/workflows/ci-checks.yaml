@@ -1,0 +1,161 @@
+# DRAFT — target location in the repo: .github/workflows/ci-checks.yaml
+#
+# Complements build-push-images.yaml (which runs lint/type-check/tests AND builds/pushes
+# container images, but only for master/feature/**/fix/** and tags). This workflow:
+#   - also runs on develop (push and pull request),
+#   - does NOT build container images (fast feedback),
+#   - checks the onboarding material (deck render and a credential scan).
+#
+# Verify once in a real run before merging.
+
+name: CI Checks
+
+on:
+  push:
+    branches: ["master", "develop", "feature/**", "fix/**"]
+  pull_request:
+    branches: ["master", "develop", "feature/**"]
+
+concurrency:
+  group: ci-checks-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  changes:
+    name: Detect changed areas
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      onboarding: ${{ steps.filter.outputs.onboarding }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Path filter
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          base: ${{ github.event_name == 'push' && github.event.before || '' }}
+          filters: |
+            backend:
+              - 'backend/**'
+            frontend:
+              - 'frontend/**'
+            onboarding:
+              - 'onboarding/**'
+              - 'onboarding-german/**'
+
+  backend:
+    name: Backend checks
+    needs: changes
+    if: ${{ needs.changes.outputs.backend == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./backend
+        run: npm ci
+
+      - name: Run tests
+        working-directory: ./backend
+        run: npm test
+
+      - name: Run lint
+        working-directory: ./backend
+        run: npm run lint
+
+      - name: Run type check
+        working-directory: ./backend
+        run: npm run type-check
+
+  frontend:
+    name: Frontend checks
+    needs: changes
+    if: ${{ needs.changes.outputs.frontend == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Run lint
+        working-directory: ./frontend
+        run: npm run lint
+
+      # Runs as soon as a "test" script exists (Vitest; see the frontend test task).
+      - name: Run tests
+        working-directory: ./frontend
+        run: npm test --if-present
+
+      - name: Run type check
+        working-directory: ./frontend
+        run: npm run type-check
+
+      - name: Build
+        working-directory: ./frontend
+        run: npm run build
+
+  onboarding:
+    name: Onboarding material
+    needs: changes
+    if: ${{ needs.changes.outputs.onboarding == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Scan for credentials
+        run: |
+          set -e
+          # Credentials must never end up in onboarding material (e.g. MongoDB Atlas URLs).
+          if grep -rInE '(mongodb(\+srv)?|postgres(ql)?|mysql|redis)://[^"'"'"'[:space:]]*:[^"'"'"'@[:space:]]+@' onboarding/ onboarding-german/; then
+            echo "::error::Credentials found in onboarding material. Secrets do not belong in the repository."
+            exit 1
+          fi
+          if grep -rInE '(CLAB_PASSWORD|PROXMOX_TOKENSECRET|OPENSTACK_PASSWORD|JWT_SECRET)[[:space:]]*=[[:space:]]*[^"'"'"'[:space:]]+' onboarding/ onboarding-german/; then
+            echo "::error::Hard-coded credentials found in onboarding material."
+            exit 1
+          fi
+          echo "No credentials found."
+
+      - name: Setup Node.js 22
+        if: ${{ hashFiles('onboarding-german/slides/*.md') != '' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      # Marp decks are canonical; every deck under onboarding-german/slides must render.
+      - name: Render Marp decks
+        if: ${{ hashFiles('onboarding-german/slides/*.md') != '' }}
+        run: |
+          set -e
+          for f in onboarding-german/slides/*.md; do
+            echo "==> marp --html $f"
+            npx --yes @marp-team/marp-cli@4 "$f" --html --allow-local-files -o /tmp/$(basename "$f" .md).html
+          done
