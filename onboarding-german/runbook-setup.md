@@ -99,4 +99,4 @@ Vor jeder Erfolgsmeldung ausführen und die Ausgabe im PR nennen.
 
 ## Entwicklungswerkzeuge (agentisch)
 
-Der Zugang zu LLM-Endpunkten (lokale GPU-Endpunkte über einen Proxy) wird von der Betreuung gestellt. Für agentische Werkzeuge gilt: **erst Plan, dann Code** — Details und Guardrails siehe `../repo-drafts/AGENTS.md`.
+Der Zugang zu LLM-Endpunkten (lokale GPU-Endpunkte über einen Proxy) wird von der Betreuung gestellt. Für agentische Werkzeuge gilt: **erst Plan, dann Code** — Details und Guardrails siehe [`AGENTS.md`](../AGENTS.md).

@@ -18,7 +18,7 @@ style: |
 # learn-sdn-hub — Code-Tour
 
 **Bachelor-Projekt AI1021 · WiSe 2026/27 · NetLab**
-Stand: `master` = `88a8b7c` (06.10.2026)
+Stand: `master` = `bd0d698` (13.10.2026)
 
 ---
 
