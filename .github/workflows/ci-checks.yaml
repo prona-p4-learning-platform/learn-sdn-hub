@@ -1,12 +1,8 @@
-# DRAFT — target location in the repo: .github/workflows/ci-checks.yaml
-#
-# Complements build-push-images.yaml (which runs lint/type-check/tests AND builds/pushes
-# container images, but only for master/feature/**/fix/** and tags). This workflow:
-#   - also runs on develop (push and pull request),
-#   - does NOT build container images (fast feedback),
-#   - checks the onboarding material (deck render and a credential scan).
-#
-# Verify once in a real run before merging.
+# Fast checks: backend tests/lint/type-check and frontend lint/type-check/build
+# without container image builds. Complements build-push-images.yaml (image
+# builds, master/feature/fix and tags only). This workflow additionally runs on
+# develop (push and PR) and checks the onboarding material (deck render and
+# credential scan).
 
 name: CI Checks
 
