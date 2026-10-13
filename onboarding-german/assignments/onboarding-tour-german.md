@@ -1,6 +1,9 @@
-<!-- Wird als backend/src/assignments/onboarding-tour-german.md ins Repo übernommen und über
-     Configuration.ts als Assignment "Onboarding-Tour" registriert. Das -german-Suffix
-     kennzeichnet das deutschsprachige Assignment (Konvention: prona-sdn-intro-german.md). -->
+<!-- Die verbindliche Kopie liegt als backend/src/assignments/onboarding-tour-german.md im Repo
+     (dort lädt der Backend die Lab-Sheets her); diese Kopie dient nur dem Onboarding-Ordner
+     als Auffindbarkeit. Änderungen zuerst in backend/src/assignments/ vornehmen und dann
+     hierher spiegeln. Registriert über Configuration.ts als Assignment "Onboarding-Tour".
+     Das -german-Suffix kennzeichnet das deutschsprachige Assignment
+     (Konvention: prona-sdn-intro-german.md). -->
 
 # Onboarding-Tour
 

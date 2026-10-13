@@ -100,6 +100,10 @@ environments.set("Onboarding-Tour", {
   ],
   description: "Onboarding tour: first own assignment in learn-sdn-hub",
   assignmentLabSheet: "../assignments/onboarding-tour-german.md",
+  // keep the lab sheet served from the backend source tree (robust against
+  // deployments built from backend/Dockerfile, where nothing outside backend/
+  // is available at runtime)
+  assignmentLabSheetLocation: "backend",
 });
 
 environments.set("p4basic-with-guacamole", {

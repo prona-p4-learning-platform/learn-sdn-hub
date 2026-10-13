@@ -11,7 +11,7 @@ Material für die Einarbeitung neuer Gruppen in `learn-sdn-hub`. Dieses Verzeich
 | Datei | Zweck |
 |---|---|
 | `slides/code-tour.md` | Code-Tour als **Marp**-Deck: Architektur, Stationen 1–10, Terminal-/Editor-Pfad, Provider-Naht, Containerlab, CI, Team-Prozess. Basis für die Sitzung „Code-Tour" und zum Nachlesen |
-| `assignments/onboarding-tour-german.md` | Lab-Sheet des Einstiegs-Assignments „Onboarding-Tour" (gehört ins Repo als `backend/src/assignments/onboarding-tour-german.md`; das Assignment selbst wird in `backend/src/Configuration.ts` unter dem Key `Onboarding-Tour` registriert) |
+| `assignments/onboarding-tour-german.md` | Lab-Sheet des Einstiegs-Assignments „Onboarding-Tour" — **verbindliche Kopie**: `backend/src/assignments/onboarding-tour-german.md` (dort lädt das Backend die Lab-Sheets her; hier nur gespiegelt. Registriert in `backend/src/Configuration.ts` unter dem Key `Onboarding-Tour`) |
 | `runbook-setup.md` | Betriebs-Runbook für die zwei empfohlenen Entwicklungswege (Node-Workspaces, Containerlab-Host) inkl. Persistenz/Secrets |
 | `tasks/frontend-tests.md` | vorbereitete Team-Aufgabe „Frontend-Tests einführen" mit Setup-Schritten und Akzeptanzkriterien |
 | `../AGENTS.md` | Guardrails für agentische Werkzeuge und Kurz-Einstieg für Menschen |
