@@ -20,6 +20,7 @@ npm install                     # npm-Workspaces: backend + frontend
 cd backend
 export DOCKER_IMAGE="prona/p4-container"
 export DOCKER_CMD="-s"
+export DOCKER_MAX_INSTANCE_LIFETIME_MINUTES=120
 npm run start:docker
 ```
 
