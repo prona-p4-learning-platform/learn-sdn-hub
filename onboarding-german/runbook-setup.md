@@ -21,8 +21,8 @@ cd backend
 export DOCKER_IMAGE="prona/p4-container"
 export DOCKER_CMD="-s"
 export DOCKER_MAX_INSTANCE_LIFETIME_MINUTES=120
-export SSH_USERNAME=p4
-export SSH_PASSWORD=p4
+export SSH_USERNAME="p4"
+export SSH_PASSWORD="p4"
 npm run start:docker
 ```
 
@@ -34,8 +34,8 @@ $env:DOCKER_SOCKET_PATH="//./pipe/docker_engine"
 $env:DOCKER_IMAGE="prona/p4-container"
 $env:DOCKER_CMD="-s"
 $env:DOCKER_MAX_INSTANCE_LIFETIME_MINUTES=120
-$env:SSH_USERNAME=p4
-$env:SSH_PASSWORD=p4
+$env:SSH_USERNAME="p4"
+$env:SSH_PASSWORD="p4"
 npm run start:docker
 ```
 
