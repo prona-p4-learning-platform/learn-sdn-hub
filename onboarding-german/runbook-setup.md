@@ -24,6 +24,17 @@ export DOCKER_MAX_INSTANCE_LIFETIME_MINUTES=120
 npm run start:docker
 ```
 
+unter Windows z.B. in der PowerShell Variablen entsprechend setzen mit `$env:` und auch den docker socket path auf dessen Location unter Windows anpassen:
+
+```powershell
+cd backend
+$env:DOCKER_SOCKET_PATH="//./pipe/docker_engine"
+$env:DOCKER_IMAGE="prona/p4-container"
+$env:DOCKER_CMD="-s"
+$env:DOCKER_MAX_INSTANCE_LIFETIME_MINUTES=120
+npm run start:docker
+```
+
 Alternativen mit demselben Muster: `npm run start:proxmox`, `npm run start:firecracker`, `npm run start:openstack`, `npm run start:localmultiuservm`, `npm run start:k8s`.
 
 **Terminal 2 — Frontend:**
