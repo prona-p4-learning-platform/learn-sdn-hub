@@ -106,6 +106,225 @@ environments.set("Onboarding-Tour", {
   assignmentLabSheetLocation: "backend",
 });
 
+// Network-Basics: very small own assignment for onboarding.
+environments.set("Network-Basics", {
+  type: "normal",
+  terminals: [
+    [
+      {
+        type: "Shell",
+        name: "bash",
+        cwd: "/home/p4",
+        executable: "touch /home/p4/answers.md && bash",
+        params: [""],
+        provideTty: true,
+      },
+    ],
+  ],
+  editableFiles: [
+    {
+      absFilePath: "/home/p4/answers.md",
+      alias: "answers.md",
+    },
+  ],
+  stopCommands: [],
+  steps: [
+    {
+      name: "1",
+      label: "inspect the loopback interface",
+      tests: [
+        {
+          type: "TerminalBufferSearch",
+          terminal: "(.*)",
+          match: "(.*)ip (.*)a(ddr)?(.*)",
+          successMessage: "Interface listing found in the terminal buffer.",
+          errorHint: "Run `ip -brief addr` in the terminal and look for `lo`.",
+        },
+      ],
+    },
+    {
+      name: "2",
+      label: "ping the loopback address",
+      tests: [
+        {
+          type: "TerminalBufferSearch",
+          terminal: "(.*)",
+          match: "(.*)ping -c(.*)",
+          successMessage: "ping found in the terminal buffer.",
+          errorHint: "Run `ping -c 3 127.0.0.1` in the terminal.",
+        },
+      ],
+    },
+    {
+      name: "3",
+      label: "write your observation into answers.md",
+      tests: [
+        {
+          type: "SSHCommand",
+          command: "grep -ci loopback /home/p4/answers.md",
+          stdOutMatch: "[1-9](.*)",
+          successMessage: "answers.md mentions the loopback interface.",
+          errorHint:
+            "Explain in answers.md what the loopback interface is for and click Deploy in the editor.",
+          gradualAssistance: [
+            {
+              failedCounter: 3,
+              hint: "Use the word 'loopback' in your answer and save the file.",
+            },
+          ],
+        },
+      ],
+    },
+  ],
+  description: "Network-Basics: inspect interfaces and check reachability",
+  assignmentLabSheet: "../assignments/network-basics.md",
+  assignmentLabSheetLocation: "backend",
+});
+
+// assignment idea: students inspect their instance from the
+// terminal and write the answers to answers.txt using the editor. Each check
+// compares a line of answers.txt with the real value on the instance
+environments.set("System-Detective", {
+  type: "normal",
+  terminals: [
+    [
+      {
+        type: "Shell",
+        name: "bash",
+        cwd: "/home/p4",
+        // create answers.txt so the editor can open it right away
+        executable: "touch answers.txt",
+        params: [""],
+        provideTty: true,
+      },
+    ],
+  ],
+  editableFiles: [
+    {
+      absFilePath: "/home/p4/answers.txt",
+      alias: "answers.txt",
+    },
+  ],
+  stopCommands: [],
+  steps: [
+    {
+      name: "1",
+      label: "find the hostname of your instance",
+      tests: [
+        {
+          type: "SSHCommand",
+          command: 'grep -q "$(hostname)" /home/p4/answers.txt && echo ok',
+          stdOutMatch: "ok",
+          successMessage: "Hostname found.",
+          errorHint: "answers.txt does not contain the hostname of your instance.",
+          gradualAssistance: [
+            { failedCounter: 2, hint: "Run `hostname` in the terminal and put the result on its own line." },
+          ],
+        },
+      ],
+    },
+    {
+      name: "2",
+      label: "find the IP address of your instance",
+      tests: [
+        {
+          type: "SSHCommand",
+          command: 'grep -q "$(hostname -i)" /home/p4/answers.txt && echo ok',
+          stdOutMatch: "ok",
+          successMessage: "IP address found.",
+          errorHint: "answers.txt does not contain an IP address of your instance.",
+          gradualAssistance: [
+            { failedCounter: 2, hint: "Run `hostname -I` and put one of the addresses on its own line." },
+          ],
+        },
+      ],
+    },
+    {
+      name: "3",
+      label: "find the kernel version of your instance",
+      tests: [
+        {
+          type: "SSHCommand",
+          command: 'grep -q "$(uname -r)" /home/p4/answers.txt && echo ok',
+          stdOutMatch: "ok",
+          successMessage: "Kernel version found.",
+          errorHint: "answers.txt does not contain the kernel release of your instance.",
+          gradualAssistance: [
+            { failedCounter: 2, hint: "Run `uname -r` and put the result on its own line." },
+          ],
+        },
+      ],
+    },
+  ],
+  description: "System detective: find out facts about your instance",
+  assignmentLabSheet: "../assignments/system-detective.md",
+  assignmentLabSheetLocation: "backend",
+});
+
+//change 'n clear assignment (german)
+environments.set("Change-n-Clear", {
+  type: "normal",
+  terminals: [
+    [
+      {
+        type: "Shell",
+        name: "my bash",
+        cwd: "/home/p4",
+        executable: "bash",
+        params: [""],
+        provideTty: true,
+      },
+    ],
+  ],
+  editableFiles: [
+    {
+      absFilePath: "/home/p4/onboarding/notes.md",
+      alias: "notes.md",
+    },
+  ],
+  stopCommands: [],
+  steps: [
+    {
+      name: "1",
+      label: "go to the temp direcotry using 'cd /tmp'",
+      // useless test
+      tests: [
+        {
+          type: "SSHCommand",
+          command: "cd /tmp &&pwd",
+          stdOutMatch: "^/tmp\\s*$",
+          successMessage: "Instance reachable.",
+          errorHint: "Check the SSH console to the instance.",
+          gradualAssistance: [
+            { failedCounter: 2, hint: "Check provider status and ports in the environment view." },
+          ],
+        },
+      ],
+    },
+    {
+      name: "2",
+      label: "run 'clear' in any terminal",
+      // tests for cd, since the user probably used it for the first task.
+      // should that not be the case however, the test will still accomplish the goal since cd is run automatically by the shell when it opens
+      tests: [
+        {
+          type: "TerminalBufferSearch",
+          terminal: "(.*)",
+          match: "^(?![\\s\\S]*cd)[\\s\\S]*$",
+          successMessage: "terminal buffer is empty",
+          errorHint: "Run `clear` in the terminal.",
+        },
+      ],
+    },
+  ],
+  description: "Onboarding tour: first own assignment in learn-sdn-hub",
+  assignmentLabSheet: "../assignments/change-n-clear-german.md",
+  // keep the lab sheet served from the backend source tree (robust against
+  // deployments built from backend/Dockerfile, where nothing outside backend/
+  // is available at runtime)
+  assignmentLabSheetLocation: "backend",
+});
+
 environments.set("Linux-Network-Basics", {
   type: "normal",
   terminals: [
