@@ -124,13 +124,17 @@ export default class DockerProvider implements InstanceProvider {
     this.host = process.env.DOCKER_HOST;
     this.socketPath = process.env.DOCKER_SOCKET_PATH;
 
-    this.dockerodeInstance = new Dockerode({
-      socketPath: this.socketPath,
-      protocol: this.protocol,
-      host: this.host,
-      port: this.port,
+    // only pass options that are actually configured to avoid
+    // overriding docker-modem's platform-specific defaults
+    // (e.g. unix socket paths on Linux, npipe on Windows)
+    const dockerodeOptions: Dockerode.DockerOptions = {
       timeout: 20000,
-    });
+    };
+    if (this.socketPath) dockerodeOptions.socketPath = this.socketPath;
+    if (this.protocol) dockerodeOptions.protocol = this.protocol;
+    if (this.host) dockerodeOptions.host = this.host;
+    if (this.port) dockerodeOptions.port = this.port;
+    this.dockerodeInstance = new Dockerode(dockerodeOptions);
 
     // TODO: use env vars to allow configuration of port numbers?
     this.sshPort = 22;
