@@ -87,3 +87,7 @@ No shared file is touched. Documented in `README.md` (new env vars: none; new se
 - No MongoDB schema changes (`updateEnvironments` path untouched).
 - No frontend changes (assignment listing already comes from the API).
 - Lab-sheet files stay where they are (`backend/src/assignments/*.md`), referenced by relative path as today.
+
+### 8. Additional tasks and dependencies
+
+- The onboarding-german folder contains an onboaring tour for the students written in German. This references in slides and markdown files Configuration.ts and needs to be updated. Also, README.md in the main directory of the repo contains an "Assignment Configuration" section that need slight changing, stating that individual files are used and included when assignments are served from the backend (it is also possible to fetch the assignments from MongoDB, but this is a separate option).
