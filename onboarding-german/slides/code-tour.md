@@ -94,13 +94,14 @@ und beim Start automatisch geladen:
 export const name = "l2_learning_switch";
 export const environment: EnvironmentDescription = {
   type: "normal",
+  // ... Terminals, Dateien, Prüf-Schritte wie bei jedem Assignment ...
   terminals: [[{ type: "Shell", name: "bash", cwd: "/home/p4", executable: "make", params: [""], provideTty: true }]],
   editableFiles: [{ absFilePath: "/home/p4/…/basic.p4", alias: "basic.p4" }],
   stopCommands: [],
   steps: [{ name: "1", label: "make h1 ping h2 work", tests: [ /* siehe nächste Folie */ ] }],
   description: "…",
   assignmentLabSheet: "../assignments/p4basic.md",
-});
+};
 ```
 
 Wichtige Felder: `topologyUrl` (containerlab), `providerImage`/`providerDockerCmd`,

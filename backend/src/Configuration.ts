@@ -1,8 +1,6 @@
 import { AssignmentData } from "./database/Persister";
 import { EnvironmentDescription } from "./Environment";
 
-// Configuration.ts holds the main configuration regarding the assignments that can be deployed, its contents can also be red from MongoDB, which would make this file obsolete
-
 import fs from "fs";
 import path from "path";
 

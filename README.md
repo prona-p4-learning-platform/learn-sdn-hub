@@ -64,7 +64,7 @@ Configuration of assignments, editable files, lab sheets, SSH consoles etc. is d
 docker run -it --mount type=bind,source="$(pwd)"/assignments,target=/home/p4/learn-sdn-hub/backend/src/assignments --rm -p 3001:3001 prona/learn-sdn-hub -t $BACKEND_TYPE -a $VBOX_IP_ADDRESSES
 ```
 
-Examples for the assignment files and the assignments directory are provided in [examples](/examples).
+Examples for the per-assignment definition files are provided in [examples/assignments/environments](/examples/assignments/environments).
 
 More sophisticated examples to run learn-sdn-hub in production environments are provided in [docker-container-scripts](/examples/docker-container-scripts).
 
