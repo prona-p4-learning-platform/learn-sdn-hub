@@ -58,7 +58,7 @@ Ein Assignment = Konfiguration + Lab-Sheet + Instanz-Provider + Prüf-Schritte.
 | Pfad | Inhalt |
 |---|---|
 | `backend/src/` | Express-Backend (CommonJS, ts-node, jest) |
-| `backend/src/Configuration.ts` | **Assignment-Definitionen** (Datenmodell) |
+| `backend/src/assignments/environments/` | **Assignment-Definitionen** (Datenmodell — eine Datei pro Assignment) |
 | `backend/src/Environment.ts` | Kern: Deploy/Stop, Konsolen, Prüf-Schritte, Submission, Exam |
 | `backend/src/providers/` | Provider + `ClabApiClient` + `TopologyFiles` |
 | `frontend/src/` | React 18 + Vite + MUI + Monaco + xterm.js + yjs |
@@ -83,12 +83,16 @@ Diese Kette endet immer bei: **Provider-Instanz + Persister + Auth-Providern**.
 
 ---
 
-## Station 2 — Assignment-Konfiguration (`Configuration.ts`)
+## Station 2 — Assignment-Konfiguration (`assignments/environments/`)
 
-Ein Assignment ist ein Objekt `EnvironmentDescription` in einer Map:
+Ein Assignment ist ein Objekt `EnvironmentDescription`, definiert in einer eigenen
+Datei pro Assignment (z. B. `backend/src/assignments/environments/l2-learning-switch.ts`)
+und beim Start automatisch geladen:
 
 ```ts
-environments.set("l2_learning_switch", {
+// backend/src/assignments/environments/l2-learning-switch.ts
+export const name = "l2_learning_switch";
+export const environment: EnvironmentDescription = {
   type: "normal",
   terminals: [[{ type: "Shell", name: "bash", cwd: "/home/p4", executable: "make", params: [""], provideTty: true }]],
   editableFiles: [{ absFilePath: "/home/p4/…/basic.p4", alias: "basic.p4" }],
@@ -286,7 +290,7 @@ export MONGODB_URL=…                         # ContainerLabApplication bricht 
 npm run start:containerlab
 ```
 
-Beispiel-Assignment: `Containerlab-Dnsmasq-TopologyUrl` in `Configuration.ts`,
+Beispiel-Assignment: `Containerlab-Dnsmasq-TopologyUrl` in `backend/src/assignments/environments/containerlab-dnsmasq-topology-url.ts`,
 Vorlagen unter `examples/containerlab-provider/`.
 
 <br/>
@@ -330,7 +334,8 @@ Baue dein eigenes, minimales Assignment in `learn-sdn-hub`:
 2. **eine** editierbare Datei,
 3. **zwei** Prüf-Schritte (`SSHCommand` + `TerminalBufferSearch`),
 4. Lab-Sheet in `backend/src/assignments/onboarding-tour-german.md`,
-5. Registrierung in `Configuration.ts`.
+5. Registrierung durch Anlegen der Assignment-Datei
+   `backend/src/assignments/environments/onboarding-tour.ts`.
 
 Verifikation: Assignment deployen → beide Schritte grün → stoppen; `npm test`, `lint`, `type-check` grün.
 
@@ -356,7 +361,7 @@ Themen entstehen aus: offenen Issues (`#283`, `#284`, `#175`, Exam `#312–#314`
 ## Referenzen
 
 - `README.md` — Betrieb, Provider, Assignment-Konfiguration, Collaboration, OIDC.
-- `backend/src/Configuration.ts` — alle Beispiel-Assignments.
+- `backend/src/assignments/environments/` — alle Beispiel-Assignments (eine Datei pro Assignment).
 - `examples/` — Beispiel-Konfiguration, Assignments, Startskripte, containerlab-Samples.
 - `docs/superpowers/` — Spec/Plan-Vorbild (Containerlab-Fertigstellung).
 - `onboarding-german/runbook-setup.md` — Setup im Detail · `onboarding-german/tasks/` — vorbereitete Aufgaben.
