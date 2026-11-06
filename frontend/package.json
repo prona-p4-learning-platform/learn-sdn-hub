@@ -49,7 +49,7 @@
     "y-webrtc": "^10.3.0",
     "y-websocket": "^2.0.4",
     "yjs": "^13.6.20",
-    "zod": "^3.24.1",
+    "zod": "^4.6.6",
     "zustand": "^5.0.2"
   },
   "devDependencies": {
