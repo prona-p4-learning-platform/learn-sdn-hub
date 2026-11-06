@@ -94,7 +94,7 @@ Weitere optionale Variablen: `CLAB_TOKEN_DURATION_IN_MINUTES` (Default 60), `CLA
 
 > ⚠️ **`CLAB_LAB_PREFIX` setzen, wenn der clab-api-server geteilt ist.** Mit leerem Präfix behandelt der periodische Prune *alle* Labs auf dem Server als eigene und kann fremde Labs löschen, sobald deren Lebensdauer überschritten ist.
 
-**Assignments mit Topologie:** Ein Assignment kann seine Topologie über `topologyUrl` beziehen; die Datei wird geladen, auf den gruppen-eigenen Lab-Namen umgeschrieben und im clab-api-server-Workspace abgelegt. Relativ referenzierte Dateien (z. B. `server1/dnsmasq.conf`) werden mitgeladen — Referenzen müssen **innerhalb** des Topologie-Verzeichnisses bleiben. Vorlagen: `examples/containerlab-provider/` und das Assignment `Containerlab-Dnsmasq-TopologyUrl` in `backend/src/Configuration.ts`.
+**Assignments mit Topologie:** Ein Assignment kann seine Topologie über `topologyUrl` beziehen; die Datei wird geladen, auf den gruppen-eigenen Lab-Namen umgeschrieben und im clab-api-server-Workspace abgelegt. Relativ referenzierte Dateien (z. B. `server1/dnsmasq.conf`) werden mitgeladen — Referenzen müssen **innerhalb** des Topologie-Verzeichnisses bleiben. Vorlagen: `examples/containerlab-provider/` und das Assignment `Containerlab-Dnsmasq-TopologyUrl` in `backend/src/assignments/environments/containerlab-dnsmasq-topology-url.ts`.
 
 **Terminals:** `DockerShell` verbindet sich über die Terminal-Sessions des API-Servers direkt in einen Lab-Container (kein `sshd` nötig); `Shell` verbindet per SSH auf den Jumphost-/Management-Host des Labs.
 
