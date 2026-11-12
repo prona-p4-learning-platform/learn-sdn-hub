@@ -243,8 +243,19 @@ export default class DockerProvider implements InstanceProvider {
     const container = await this.dockerodeInstance
       .createContainer(containerOptions)
       .catch((reason) => {
+        const dockerError = reason as DockerodeError;
         const originalMessage =
           reason instanceof Error ? reason.message : "Unknown error";
+
+        if (
+          dockerError?.statusCode === 404 &&
+          originalMessage.includes("No such image")
+        ) {
+          throw new Error(
+            `DockerProvider: Could not create container because image "${containerImage}" is not available locally. Pull it first using "docker pull ${containerImage}".\n${originalMessage}`,
+          );
+        }  
+
         throw new Error(
           "DockerProvider: Could not create container.\n" + originalMessage,
         );
