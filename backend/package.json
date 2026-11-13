@@ -54,11 +54,11 @@
   "dependencies": {
     "@kubernetes/client-node": "^1.4.0",
     "@node-rs/bcrypt": "^1.10.7",
-    "axios": "^1.16.0",
+    "axios": "^1.20.0",
     "celebrate": "^15.0.3",
     "connect-history-api-fallback": "^2.0.0",
     "cors": "^2.8.5",
-    "dockerode": "^4.0.9",
+    "dockerode": "^5.0.1",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "js-base64": "^3.7.7",
@@ -72,9 +72,9 @@
     "proxmox-api": "^1.1.1",
     "ssh2": "^1.16.0",
     "toad-scheduler": "^3.0.1",
-    "undici": "^8.11.2",
+    "undici": "^8.12.2",
     "ws": "^8.21.0",
     "yjs": "^13.6.20",
-    "zod": "^4.3.6"
+    "zod": "^4.6.6"
   }
 }
