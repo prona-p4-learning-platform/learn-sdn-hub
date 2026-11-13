@@ -99,9 +99,18 @@ interface AssignmentStepTestTerminalBufferSearch {
   gradualAssistance?: Array<GradualAssistanceType>;
 }
 
+interface AssignmentStepTestDialog {
+  type: "Dialog";
+  message: string;
+  successMessage: string;
+  errorHint?: string;
+  gradualAssistance?: Array<GradualAssistanceType>;
+}
+
 type AssignmentStepTestType =
   | AssignmentStepTestSSHCommand
-  | AssignmentStepTestTerminalBufferSearch;
+  | AssignmentStepTestTerminalBufferSearch
+  | AssignmentStepTestDialog;
 
 export type TerminalStateType = {
   endpoint: string;
@@ -127,6 +136,11 @@ export interface SubmissionAdminOverviewEntry extends Submission {
   terminalEndpoints: string[];
   assignmentRef?: string;
   userRef?: string;
+  dialogAnswers?: Array<{
+    stepIndex: string;
+    question: string;
+    answer: string;
+  }>;
 }
 
 export interface SubmissionAdminEntryDetails {
@@ -326,6 +340,13 @@ export default class Environment {
   private testCounter: Map<string, number> = new Map<string, number>();
   private isReady: boolean;
   private examStartTime?: Date;
+  private uniqueEnvironmentId: string;
+  // temporary in-memory storage for dialog test answers; will be persisted on submit
+  private dialogAnswers: Array<{
+    stepIndex: string;
+    question: string;
+    answer: string;
+  }> = [];
 
   private getErrorHint(test: AssignmentStepTestType, stepIndex: string) {
     if (test.gradualAssistance === undefined) {
@@ -455,6 +476,7 @@ export default class Environment {
     this.groupNumber = groupNumber;
     this.sessionId = sessionId;
     this.environmentId = environmentId;
+    this.uniqueEnvironmentId = `${environmentId}-${Date.now()}`;
     this.isReady = false;
 
     //TODO go through all environments stored in db and check if instances are still running, if not remove environment in db
@@ -481,6 +503,10 @@ export default class Environment {
 
   public getDesktopByAlias(alias: string): DesktopInstance | undefined {
     return this.activeDesktops.get(alias);
+  }
+
+  public getUniqueEnvironmentId(): string {
+    return this.uniqueEnvironmentId;
   }
 
   static async createEnvironment(
@@ -1342,6 +1368,7 @@ export default class Environment {
   async test(
     stepIndex: string,
     terminalStates: TerminalStateType[],
+    dialogAnswer?: string,
   ): Promise<TestResult> {
     console.log("TESTING step " + stepIndex);
 
@@ -1387,6 +1414,42 @@ export default class Environment {
               testOutput +=
                 "FAILED: " + this.getErrorHint(test, stepIndex) + " ";
             });
+        } else if (test.type === "Dialog") {
+          // if no dialog answer is provided, return special code to ask
+          // the frontend to show a dialog for user input
+          if (dialogAnswer === undefined) {
+            return Promise.resolve({
+              code: 299, // special code for "needs dialog input"
+              message: test.message,
+            });
+          }
+
+          // accept any non-empty answer
+          if (dialogAnswer.trim().length > 0) {
+            testOutput += "PASSED: " + test.successMessage + " ";
+            testPassed = true;
+            // store dialog answer temporarily; will be persisted on submit
+            const existingIndex = this.dialogAnswers.findIndex(
+              (item) => item.stepIndex === stepIndex,
+            );
+            const dialogAnswerEntry = {
+              stepIndex: stepIndex,
+              question: test.message,
+              answer: dialogAnswer.trim(),
+            };
+            if (existingIndex !== -1) {
+              // update existing answer
+              this.dialogAnswers[existingIndex] = dialogAnswerEntry;
+            } else {
+              // add new answer
+              this.dialogAnswers.push(dialogAnswerEntry);
+            }
+          } else {
+            const errorMsg =
+              test.errorHint || "Please provide a non-empty answer.";
+            testOutput += "FAILED: " + errorMsg + " ";
+            testPassed = false;
+          }
         }
 
         // if any of the terminalStates matched
@@ -1505,18 +1568,33 @@ export default class Environment {
     if (this.configuration.steps !== undefined) {
       for (let i = 0; i < parseInt(stepIndex); i++) {
         const step = this.configuration.steps[i];
-        const testResult = await this.test(i.toString(), terminalStates);
+        // for Dialog tests, pass the stored answer so the step can be
+        // evaluated and counted towards bonus points during submission
+        const storedDialogAnswer = this.dialogAnswers.find(
+          (answer) => answer.stepIndex === i.toString(),
+        )?.answer;
+        const testResult = await this.test(
+          i.toString(),
+          terminalStates,
+          storedDialogAnswer,
+        );
         if (testResult.code === 201) bonusPoints += step.bonusPoints ?? 0;
       }
     }
+
+    // submit all dialog answers collected so far
+    const dialogAnswersToSubmit =
+      this.dialogAnswers.length > 0 ? this.dialogAnswers : undefined;
 
     await this.persister.SubmitUserEnvironment(
       this.username,
       this.groupNumber,
       this.environmentId,
+      this.uniqueEnvironmentId,
       terminalStates,
       submittedFiles,
       bonusPoints,
+      dialogAnswersToSubmit,
     );
   }
 
