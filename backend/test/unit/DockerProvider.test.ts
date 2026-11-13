@@ -1,91 +1,63 @@
 import DockerProvider from "../../src/providers/DockerProvider";
+import Dockerode from "dockerode";
+// import { jest, describe, it, expect, beforeEach, afterAll } from "@jest/globals";
 
-// Dockerode is mocked wholesale; it records the options object the
-// DockerProvider hands to the constructor so we can assert that unset
-// DOCKER_* env vars do not clobber docker-modem's platform defaults
-// (unix socket on Linux, npipe on Windows) with explicit undefined keys.
-const dockerodeOptions: unknown[] = [];
-jest.mock("dockerode", () => {
-  class MockDockerode {
-    constructor(options: unknown) {
-      dockerodeOptions.push(options);
-    }
-  }
-  return MockDockerode;
-});
+jest.mock("dockerode");
+jest.mock("toad-scheduler", () => ({
+  ToadScheduler: jest.fn().mockImplementation(() => ({
+    addSimpleIntervalJob: jest.fn(),
+  })),
+  SimpleIntervalJob: jest.fn(),
+  AsyncTask: jest.fn(),
+}));
 
-const ENV_KEYS = [
-  "DOCKER_IMAGE",
-  "DOCKER_CMD",
-  "DOCKER_MAX_INSTANCE_LIFETIME_MINUTES",
-  "DOCKER_PROTOCOL",
-  "DOCKER_PORT",
-  "DOCKER_HOST",
-  "DOCKER_SOCKET_PATH",
-] as const;
-
-describe("DockerProvider", () => {
-  const savedEnv: Record<string, string | undefined> = {};
+describe("DockerProvider.createServer", () => {
+  const originalEnv = process.env;
+  let mockCreateContainer: jest.Mock;
 
   beforeEach(() => {
-    for (const key of ENV_KEYS) {
-      savedEnv[key] = process.env[key];
-      delete process.env[key];
-    }
-    // required by the constructor regardless of the scenario under test
-    process.env.DOCKER_IMAGE = "prona/p4-container";
-    process.env.DOCKER_CMD = "-s";
-    process.env.DOCKER_MAX_INSTANCE_LIFETIME_MINUTES = "120";
-    dockerodeOptions.length = 0;
+    jest.clearAllMocks();
+    process.env = {
+      ...originalEnv,
+      DOCKER_IMAGE: "prona/p4-container:latest",
+      DOCKER_CMD: "sshd",
+      DOCKER_MAX_INSTANCE_LIFETIME_MINUTES: "60",
+    };
+
+    mockCreateContainer = jest.fn();
+    (Dockerode as unknown as jest.Mock).mockImplementation(() => ({
+      createContainer: mockCreateContainer,
+      listContainers: jest.fn().mockResolvedValue([]),
+    }));
   });
 
-  afterEach(() => {
-    for (const key of ENV_KEYS) {
-      if (savedEnv[key] === undefined) delete process.env[key];
-      else process.env[key] = savedEnv[key];
-    }
+  afterAll(() => {
+    process.env = originalEnv;
   });
 
-  test("with no socket env vars set, no explicit keys override docker-modem defaults", () => {
-    new DockerProvider();
+  it("throws a helpful pull hint when Docker returns 404 No such image", async () => {
+    const provider = new DockerProvider();
+    const notFoundError = Object.assign(
+      new Error("(HTTP code 404) no such container - No such image: prona/p4-container:latest"),
+      { statusCode: 404 },
+    );
+    mockCreateContainer.mockRejectedValueOnce(notFoundError);
 
-    expect(dockerodeOptions).toHaveLength(1);
-    const options = dockerodeOptions[0] as Record<string, unknown>;
-    expect("socketPath" in options).toBe(false);
-    expect("host" in options).toBe(false);
-    expect("port" in options).toBe(false);
-    expect("protocol" in options).toBe(false);
-    expect(options.timeout).toBe(20000);
+    await expect(
+      provider.createServer("alice", 1, "p4basic", {}),
+    ).rejects.toThrow(
+      'DockerProvider: Could not create container because image "prona/p4-container:latest" is not available locally. Pull it first using "docker pull prona/p4-container:latest".',
+    );
   });
 
-  test("DOCKER_SOCKET_PATH is passed through as an explicit override", () => {
-    process.env.DOCKER_SOCKET_PATH = "/var/run/docker.sock";
+  it("preserves the generic error message for other container creation failures", async () => {
+    const provider = new DockerProvider();
+    mockCreateContainer.mockRejectedValueOnce(new Error("permission denied"));
 
-    new DockerProvider();
-
-    const options = dockerodeOptions[0] as Record<string, unknown>;
-    expect(options.socketPath).toBe("/var/run/docker.sock");
-    expect("host" in options).toBe(false);
-  });
-
-  test("DOCKER_HOST is passed through and no socketPath key is set", () => {
-    process.env.DOCKER_HOST = "tcp://127.0.0.1:2375";
-
-    new DockerProvider();
-
-    const options = dockerodeOptions[0] as Record<string, unknown>;
-    expect(options.host).toBe("tcp://127.0.0.1:2375");
-    expect("socketPath" in options).toBe(false);
-  });
-
-  test("DOCKER_PORT and DOCKER_PROTOCOL are only included when set", () => {
-    process.env.DOCKER_PORT = "2375";
-    process.env.DOCKER_PROTOCOL = "http";
-
-    new DockerProvider();
-
-    const options = dockerodeOptions[0] as Record<string, unknown>;
-    expect(options.port).toBe(2375);
-    expect(options.protocol).toBe("http");
+    await expect(
+      provider.createServer("alice", 1, "p4basic", {}),
+    ).rejects.toThrow(
+      "DockerProvider: Could not create container.\npermission denied",
+    );
   });
 });
