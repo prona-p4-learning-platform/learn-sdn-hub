@@ -416,16 +416,24 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
         reqWithUser.user.groupNumber,
         reqWithUser.user.sessionId,
       );
-      const { activeStep, terminalState } = reqWithUser.body as {
+      const { activeStep, terminalState, dialogAnswer } = reqWithUser.body as {
         activeStep: string;
         terminalState: TerminalStateType[];
+        dialogAnswer?: string;
       };
 
       if (env) {
         env
-          .test(activeStep, terminalState)
+          .test(activeStep, terminalState, dialogAnswer)
           .then((testResult) => {
-            if (testResult.code >= 200 && testResult.code < 251) {
+            if (testResult.code === 299) {
+              // special code for dialog test - the frontend needs to ask the
+              // user for input and send it back with the next request
+              res.status(200).json({
+                status: "dialog",
+                message: testResult.message,
+              });
+            } else if (testResult.code >= 200 && testResult.code < 251) {
               res.status(testResult.code).json({
                 status: "passed",
                 message: testResult.message,
