@@ -42,9 +42,11 @@ export default function BackendTimer({ environmentName, groupNumber }: BackendTi
         if (payload.success) {
           if (payload.data.hasTimer) {
             if (payload.data.remainingMinutes === 0 && !popupShown) {
-              console.log("Zeit um, wurde abgegeben");
+              console.log("Time is up, exam expired");
               popupShown = true;
-              alert("Die Prüfungszeit ist abgelaufen. Ihre Arbeit wurde automatisch abgegeben.");
+              alert(
+                "The exam time has expired. Please make sure to submit your work.",
+              );
             }
             setValue(formatTime(payload.data.remainingMinutes));
           } else {
@@ -59,7 +61,7 @@ export default function BackendTimer({ environmentName, groupNumber }: BackendTi
       }
     };
 
-    // initial fetch + alle 1 Sekunde aktualisieren
+    // initial fetch + update every second
     void fetchTimer();
     const intervalId = setInterval(() => {
       void fetchTimer();

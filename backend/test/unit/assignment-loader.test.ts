@@ -27,6 +27,7 @@ describe("assignment loader", () => {
   });
 
   it("the module-level registry contains every production assignment", () => {
-    expect(environments.size).toBe(26);
+    expect(environments.size).toBe(27);
+    expect(environments.get("Example-Exam")).toBeDefined();
   });
 });

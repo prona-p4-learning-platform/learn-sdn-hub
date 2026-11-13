@@ -90,7 +90,4 @@ export const environment: EnvironmentDescription = {
   providerProxmoxTemplateTag: "learn-sdn-hub-template-acn-p4",
   useCollaboration: true,
   useLanguageClient: false,
-
-  isExam: true,
-  durationMinutes: 90,
 };

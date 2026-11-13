@@ -132,9 +132,11 @@ export interface Persister {
     username: string,
     groupNumber: number,
     environment: string,
+    uniqueEnvironmentId: string,
     terminalStates: TerminalStateType[],
     submittedFiles: SubmissionFileType[],
-    bonusPoints: number
+    bonusPoints: number,
+    dialogAnswers?: Array<{ stepIndex: string; question: string; answer: string }>
   ) => Promise<void>;
   GetUserSubmissions: (
     username: string,
