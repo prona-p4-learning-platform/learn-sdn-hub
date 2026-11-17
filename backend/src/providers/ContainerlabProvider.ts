@@ -41,6 +41,7 @@ export default class ContainerLabProvider implements InstanceProvider {
   private clab_username: string;
   private clab_password: string;
   private clab_apiUrl: string;
+  private clab_apiTimeout: number = 30_000; // default to 30 seconds
 
   // lab name prefix applied to every deployed lab (default: "")
   private labPrefix: string;
@@ -88,6 +89,19 @@ export default class ContainerLabProvider implements InstanceProvider {
       throw new Error(
         "ContainerLabProvider: No API Url provided (CLAB_APIURL).",
       );
+    }
+
+    // check for ContainerLab API timeout, default to 20 seconds if not provided. The timeout is used for all API calls to the clab-api-server, including deployLabByPath and getLab.
+    const ENV_TIMEOUT = process.env.CLAB_API_TIMEOUT;
+    if (ENV_TIMEOUT) {
+      const parsedTimeout = parseInt(ENV_TIMEOUT);
+      if (!isNaN(parsedTimeout)) {
+        this.clab_apiTimeout = parsedTimeout;
+      } else {
+        throw new Error(
+          "ContainerLabProvider: Provided API timeout cannot be parsed (CLAB_API_TIMEOUT).",
+        );
+      }
     }
 
     // check for max instance lifetime
@@ -141,6 +155,7 @@ export default class ContainerLabProvider implements InstanceProvider {
       client ??
       new ClabApiClient({
         apiUrl: this.clab_apiUrl,
+        apiTimeout: this.clab_apiTimeout,
         username: this.clab_username,
         password: this.clab_password,
         tlsInsecure: this.tlsInsecure,

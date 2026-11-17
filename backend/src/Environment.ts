@@ -221,6 +221,7 @@ let clabApiClientSingleton: ClabApiClient | undefined;
 export function getClabApiClient(): ClabApiClient {
   if (clabApiClientSingleton) return clabApiClientSingleton;
 
+  // TODO: use uniform variables and definitions not separate ones in Environment.ts and ContainerlabProvider.ts
   const apiUrl = process.env.CLAB_APIURL;
   if (!apiUrl)
     throw new Error("Environment: No CLab API URL provided (CLAB_APIURL).");
@@ -230,6 +231,8 @@ export function getClabApiClient(): ClabApiClient {
   const password = process.env.CLAB_PASSWORD;
   if (!password)
     throw new Error("Environment: No CLab password provided (CLAB_PASSWORD).");
+
+  const apiTimeout = parseInt(process.env.CLAB_API_TIMEOUT_MS ?? "30_000"); // default timeout 30 seconds
 
   const tlsInsecure =
     process.env.CLAB_API_TLS_INSECURE === "true" ||
@@ -248,6 +251,7 @@ export function getClabApiClient(): ClabApiClient {
 
   clabApiClientSingleton = new ClabApiClient({
     apiUrl,
+    apiTimeout,
     username,
     password,
     tlsInsecure,
