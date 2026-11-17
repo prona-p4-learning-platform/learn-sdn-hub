@@ -91,7 +91,7 @@ export default class ContainerLabProvider implements InstanceProvider {
       );
     }
 
-    // check for ContainerLab API timeout, default to 20 seconds if not provided. The timeout is used for all API calls to the clab-api-server, including deployLabByPath and getLab.
+    // check for ContainerLab API timeout. The timeout is used for all API calls to the clab-api-server, including deployLabByPath and getLab.
     const ENV_TIMEOUT = process.env.CLAB_API_TIMEOUT;
     if (ENV_TIMEOUT) {
       const parsedTimeout = parseInt(ENV_TIMEOUT);
