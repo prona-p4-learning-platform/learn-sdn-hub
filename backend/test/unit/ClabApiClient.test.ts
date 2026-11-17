@@ -89,6 +89,7 @@ describe("ClabApiClient", () => {
   ): ClabApiClient {
     return new ClabApiClient({
       apiUrl,
+      apiTimeout: 10000,
       username: "user1",
       password: "secret1",
       tlsInsecure,
