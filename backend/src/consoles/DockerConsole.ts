@@ -107,32 +107,46 @@ export default class DockerConsole extends EventEmitter implements Console {
       return;
     }
     switch (frame.type) {
-      case "output":
+      case "output": {
         if (frame.data === undefined) {
           return;
         }
-        if (frame.encoding === "base64") {
-          const decoded = Buffer.from(frame.data, "base64").toString();
-          if (this.initialConsoleBufferConsumed) {
-            this.emit("data", decoded);
-          } else {
-            this.initialConsoleBuffer.push(decoded);
-            while (this.initialConsoleBuffer.length > 1000) {
-              this.initialConsoleBuffer.shift();
-            }
-          }
-        } else if (this.initialConsoleBufferConsumed) {
-          this.emit("data", frame.data);
-        } else {
-          this.initialConsoleBuffer.push(frame.data);
-          while (this.initialConsoleBuffer.length > 1000) {
-            this.initialConsoleBuffer.shift();
-          }
+        // if (frame.encoding === "base64") {
+        //   const decoded = Buffer.from(frame.data, "base64").toString();
+        //   if (this.initialConsoleBufferConsumed) {
+        //     this.emit("data", decoded);
+        //   } else {
+        //     this.initialConsoleBuffer.push(decoded);
+        //     while (this.initialConsoleBuffer.length > 1000) {
+        //       this.initialConsoleBuffer.shift();
+        //     }
+        //   }
+        // } else if (this.initialConsoleBufferConsumed) {
+        //   this.emit("data", frame.data);
+        // } else {
+        //   this.initialConsoleBuffer.push(frame.data);
+        //   while (this.initialConsoleBuffer.length > 1000) {
+        //     this.initialConsoleBuffer.shift();
+        //   }
+        // }
+
+        const outputData = frame.encoding === "base64"
+          ? Buffer.from(frame.data, "base64").toString()
+          : frame.data;
+
+        this.initialConsoleBuffer.push(outputData);
+        while (this.initialConsoleBuffer.length > 1000) {
+          this.initialConsoleBuffer.shift();
         }
-        break;
+
+        this.emit("data", outputData);
+        break; 
+      }
       case "exit":
         console.debug(
-          `DockerConsole: terminal session exited (exitCode: ${frame.exitCode ?? "unknown"}, error: ${frame.error ?? "none"})`,
+          `DockeUnexpected lexical declaration in case block.eslintno-case-declarations
+const outputData: string
+rConsole: terminal session exited (exitCode: ${frame.exitCode ?? "unknown"}, error: ${frame.error ?? "none"})`,
         );
         this.emitCloseOnce();
         break;
@@ -164,7 +178,7 @@ export default class DockerConsole extends EventEmitter implements Console {
   public consumeInitialConsoleBuffer(): string {
     this.initialConsoleBufferConsumed = true;
     const buffered = this.initialConsoleBuffer.join("");
-    this.initialConsoleBuffer = [];
+    // this.initialConsoleBuffer = [];
     return buffered;
   }
 

@@ -108,7 +108,7 @@ describe("DockerConsole", () => {
       ),
     );
     expect(dataEvents).toEqual(["hello"]);
-    expect(console.consumeInitialConsoleBuffer()).toBe("");
+    expect(console.consumeInitialConsoleBuffer()).toBe("motdhello");
   });
 
   it("caps the initial console buffer at 1000 entries, dropping the oldest", async () => {

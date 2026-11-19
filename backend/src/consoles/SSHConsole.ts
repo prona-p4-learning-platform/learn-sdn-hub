@@ -286,12 +286,12 @@ export default class SSHConsole extends EventEmitter implements Console {
             console.error("SSH shell error: ", err);
           })
           .on("data", (data: string) => {
-            if (!this.initialConsoleBufferConsumed) {
+            // if (!this.initialConsoleBufferConsumed) {
               this.initialConsoleBuffer.push(data);
               while (this.initialConsoleBuffer.length > 1000) {
                 this.initialConsoleBuffer.shift();
               }
-            }
+            // }
             this.emit("data", data);
           });
         // write command to console
@@ -359,13 +359,13 @@ export default class SSHConsole extends EventEmitter implements Console {
   }
 
   consumeInitialConsoleBuffer(): string {
-    if (this.initialConsoleBufferConsumed) {
-      return "";
-    } else {
+    // if (this.initialConsoleBufferConsumed) {
+    //   return "";
+    // } else {
       const initialConsoleBufferContent = this.initialConsoleBuffer.join("");
-      this.initialConsoleBuffer = [];
+      // this.initialConsoleBuffer = [];
       this.initialConsoleBufferConsumed = true;
       return initialConsoleBufferContent;
-    }
+    // }
   }
 }
