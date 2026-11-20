@@ -23,7 +23,9 @@ function TabPanel(props: TabsProps) {
       {...other}
     >
       {value === index && (
-        <Box p={1}>
+        <Box sx={{
+          p: 1
+        }}>
           <div className="adminContent">{children}</div>
         </Box>
       )}
