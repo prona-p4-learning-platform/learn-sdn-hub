@@ -17,7 +17,7 @@ export interface Console {
   writeLine(data: string): void;
   close(environmentId: string, groupNumber: number, sessionId?: string): void;
   resize(columns: number, lines: number): void;
-  consumeInitialConsoleBuffer(): string;
+  getBufferedOutput(): string;
   command: string;
   args: Array<string>;
   cwd: string;
@@ -54,13 +54,14 @@ export default class SSHConsole extends EventEmitter implements Console {
   public cwd: string;
   private provideTty: boolean;
   private stream?: ClientChannel;
-  public initialConsoleBuffer: Array<string>;
-  public initialConsoleBufferConsumed = false;
+  public consoleBuffer: Array<string>;
+  private currentConsoleBufferDataSize: number = 0;
   private static sshConnections: Map<string, CustomizedSSHClient> = new Map();
   public stdout = "";
   public stderr = "";
   public exitCode = "";
   public exitSignal = "";
+  public static readonly MAX_BUFFER_SIZE = 1024 * 1024; // 1 MB
 
   // maybe check .emit() calls and close() handlers and remove possibly redundant ones,
   // several of them were added to ensure proper cleanup of ssh connections, otherwise leaking connections could occur
@@ -86,7 +87,7 @@ export default class SSHConsole extends EventEmitter implements Console {
     // this.args = args;
     this.cwd = cwd;
     this.provideTty = provideTty;
-    this.initialConsoleBuffer = new Array<string>();
+    this.consoleBuffer = new Array<string>();
     let sshConsole: CustomizedSSHClient;
     // sharing connections in the same group would be possible and multiple users can then use the same xterm.js together,
     // however refresh/different console sizes (which is inevitable due to different browser window sizes) etc. will lead to console corruption
@@ -286,10 +287,12 @@ export default class SSHConsole extends EventEmitter implements Console {
             console.error("SSH shell error: ", err);
           })
           .on("data", (data: string) => {
-            if (!this.initialConsoleBufferConsumed) {
-              this.initialConsoleBuffer.push(data);
-              while (this.initialConsoleBuffer.length > 1000) {
-                this.initialConsoleBuffer.shift();
+            this.consoleBuffer.push(data);
+            this.currentConsoleBufferDataSize += data.length;
+            while (this.currentConsoleBufferDataSize > SSHConsole.MAX_BUFFER_SIZE && this.consoleBuffer.length > 1) {
+              const removedData = this.consoleBuffer.shift();
+              if (removedData) {
+                this.currentConsoleBufferDataSize -= removedData.length;
               }
             }
             this.emit("data", data);
@@ -358,14 +361,8 @@ export default class SSHConsole extends EventEmitter implements Console {
     this.stream?.setWindow(lines, columns, 0, 0);
   }
 
-  consumeInitialConsoleBuffer(): string {
-    if (this.initialConsoleBufferConsumed) {
-      return "";
-    } else {
-      const initialConsoleBufferContent = this.initialConsoleBuffer.join("");
-      this.initialConsoleBuffer = [];
-      this.initialConsoleBufferConsumed = true;
-      return initialConsoleBufferContent;
-    }
+  getBufferedOutput(): string {
+    const consoleBufferContent = this.consoleBuffer.join("");
+    return consoleBufferContent;
   }
 }

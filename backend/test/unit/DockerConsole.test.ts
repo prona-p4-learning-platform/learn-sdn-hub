@@ -63,6 +63,13 @@ function createConsole(
   );
 }
 
+function emitOutput(mock: MockClabApiClient, data: string): void {
+  mock.fakeWs.emit(
+    "message",
+    Buffer.from(JSON.stringify({ type: "output", data })),
+  );
+}
+
 describe("DockerConsole", () => {
   it("creates a shell terminal session and emits ready", async () => {
     const mock = new MockClabApiClient();
@@ -95,7 +102,7 @@ describe("DockerConsole", () => {
 
     const dataEvents: Array<string> = [];
     console.on("data", (data: string) => dataEvents.push(data));
-    expect(console.consumeInitialConsoleBuffer()).toBe("motd");
+    expect(console.getBufferedOutput()).toBe("motd");
 
     mock.fakeWs.emit(
       "message",
@@ -108,34 +115,45 @@ describe("DockerConsole", () => {
       ),
     );
     expect(dataEvents).toEqual(["hello"]);
-    expect(console.consumeInitialConsoleBuffer()).toBe("");
+    expect(console.getBufferedOutput()).toBe("motdhello");
   });
 
-  it("caps the initial console buffer at 1000 entries, dropping the oldest", async () => {
+  it("caps the console buffer by total size, dropping the oldest chunks", async () => {
     const mock = new MockClabApiClient();
     const { promise, resolve } = Promise.withResolvers<void>();
     const console = createConsole(mock, "srl1");
     console.once("ready", resolve);
     await promise;
 
-    for (let i = 0; i < 1001; i++) {
-      mock.fakeWs.emit(
-        "message",
-        Buffer.from(
-          JSON.stringify({
-            type: "output",
-            data: Buffer.from(`out-${i}`).toString("base64"),
-            encoding: "base64",
-          }),
-        ),
-      );
+    // 4 chunks fill the buffer exactly, the 5th one pushes the oldest out
+    const chunkSize = DockerConsole.MAX_BUFFER_SIZE / 4;
+    for (let i = 0; i < 5; i++) {
+      emitOutput(mock, `[chunk-${i}]`.padEnd(chunkSize, "x"));
     }
 
-    expect(console.initialConsoleBuffer).toHaveLength(1000);
-    const buffered = console.consumeInitialConsoleBuffer();
-    expect(buffered).not.toContain("out-0");
-    expect(buffered).toContain("out-1");
-    expect(buffered).toContain("out-1000");
+    expect(console.consoleBuffer).toHaveLength(4);
+    const buffered = console.getBufferedOutput();
+    expect(buffered).toHaveLength(DockerConsole.MAX_BUFFER_SIZE);
+    expect(buffered).not.toContain("[chunk-0]");
+    expect(buffered).toContain("[chunk-1]");
+    expect(buffered).toContain("[chunk-4]");
+  });
+
+  it("keeps the newest chunk even if it alone exceeds the buffer size", async () => {
+    const mock = new MockClabApiClient();
+    const { promise, resolve } = Promise.withResolvers<void>();
+    const console = createConsole(mock, "srl1");
+    console.once("ready", resolve);
+    await promise;
+
+    emitOutput(mock, "[small]");
+    emitOutput(mock, "[big]".padEnd(DockerConsole.MAX_BUFFER_SIZE + 1, "x"));
+
+    expect(console.consoleBuffer).toHaveLength(1);
+    const buffered = console.getBufferedOutput();
+    expect(buffered).not.toContain("[small]");
+    expect(buffered.startsWith("[big]")).toBe(true);
+    expect(buffered).toHaveLength(DockerConsole.MAX_BUFFER_SIZE + 1);
   });
 
   it("passes through raw output frames without blind base64 decoding", async () => {
@@ -147,7 +165,7 @@ describe("DockerConsole", () => {
 
     const dataEvents: Array<string> = [];
     console.on("data", (data: string) => dataEvents.push(data));
-    console.consumeInitialConsoleBuffer();
+    console.getBufferedOutput();
     mock.fakeWs.emit(
       "message",
       Buffer.from(JSON.stringify({ type: "output", data: "raw-motd" })),

@@ -7,8 +7,9 @@ export default class DockerConsole extends EventEmitter implements Console {
   public command: string;
   public args: Array<string>;
   public cwd: string;
-  public initialConsoleBuffer: Array<string> = [];
-  public initialConsoleBufferConsumed = false;
+  public consoleBuffer: Array<string> = [];
+  private currentConsoleBufferDataSize: number = 0;
+  public static readonly MAX_BUFFER_SIZE = 1024 * 1024;
 
   private client: ClabApiClient;
   private labName: string;
@@ -107,29 +108,30 @@ export default class DockerConsole extends EventEmitter implements Console {
       return;
     }
     switch (frame.type) {
-      case "output":
+      case "output": {
         if (frame.data === undefined) {
           return;
         }
-        if (frame.encoding === "base64") {
-          const decoded = Buffer.from(frame.data, "base64").toString();
-          if (this.initialConsoleBufferConsumed) {
-            this.emit("data", decoded);
-          } else {
-            this.initialConsoleBuffer.push(decoded);
-            while (this.initialConsoleBuffer.length > 1000) {
-              this.initialConsoleBuffer.shift();
-            }
-          }
-        } else if (this.initialConsoleBufferConsumed) {
-          this.emit("data", frame.data);
-        } else {
-          this.initialConsoleBuffer.push(frame.data);
-          while (this.initialConsoleBuffer.length > 1000) {
-            this.initialConsoleBuffer.shift();
+
+        const outputData = frame.encoding === "base64"
+          ? Buffer.from(frame.data, "base64").toString()
+          : frame.data;
+
+        this.consoleBuffer.push(outputData);
+        this.currentConsoleBufferDataSize += outputData.length;
+        while (
+          this.currentConsoleBufferDataSize > DockerConsole.MAX_BUFFER_SIZE &&
+          this.consoleBuffer.length > 1
+        ) {
+          const removedData = this.consoleBuffer.shift();
+          if (removedData !== undefined) {
+            this.currentConsoleBufferDataSize -= removedData.length;
           }
         }
-        break;
+
+        this.emit("data", outputData);
+        break; 
+      }
       case "exit":
         console.debug(
           `DockerConsole: terminal session exited (exitCode: ${frame.exitCode ?? "unknown"}, error: ${frame.error ?? "none"})`,
@@ -161,10 +163,8 @@ export default class DockerConsole extends EventEmitter implements Console {
     this.ws?.send(JSON.stringify({ type: "resize", cols: columns, rows: lines }));
   }
 
-  public consumeInitialConsoleBuffer(): string {
-    this.initialConsoleBufferConsumed = true;
-    const buffered = this.initialConsoleBuffer.join("");
-    this.initialConsoleBuffer = [];
+  public getBufferedOutput(): string {
+    const buffered = this.consoleBuffer.join("");
     return buffered;
   }
 
