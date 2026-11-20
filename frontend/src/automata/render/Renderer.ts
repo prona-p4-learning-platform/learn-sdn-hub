@@ -21,7 +21,7 @@ export class Renderer {
 
   constructor(
     private readonly gpu: GpuContext,
-    private readonly clearValue: GPUColor = { r: 0.08, g: 0.09, b: 0.11, a: 1 },
+    private readonly clearValue: GPUColor = { r: 0.1, g: 0.1, b: 0.1, a: 1 },
   ) { }
 
   addLayer(layer: RenderLayer): void {

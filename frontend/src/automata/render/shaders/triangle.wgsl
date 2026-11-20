@@ -1,5 +1,6 @@
 struct Frame {
   aspect: f32,
+  time: f32,
 }
 
 @group(0) @binding(0) var<uniform> frame: Frame;
@@ -29,7 +30,11 @@ fn vs_main(@builtin(vertex_index) index: u32) -> VertexOut {
   );
 
   var out: VertexOut;
-  out.position = vec4f(positions[index] * scale, 0.0, 1.0);
+  let c = cos(frame.time);
+  let s = sin(frame.time);
+  let p = positions[index];
+  let rotated = vec2f(p.x * c - p.y * s, p.x * s + p.y * c);
+  out.position = vec4f(rotated * scale, 0.0, 1.0);
   out.color = colors[index];
   return out;
 }

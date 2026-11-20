@@ -43,6 +43,7 @@ export class TriangleLayer implements RenderLayer {
 
   draw(pass: GPURenderPassEncoder, frame: FrameInfo): void {
     this.uniformData[0] = frame.width / frame.height;
+    this.uniformData[1] = frame.time / 1000;
     this.device.queue.writeBuffer(this.uniformBuffer, 0, this.uniformData);
 
     pass.setPipeline(this.pipeline);
