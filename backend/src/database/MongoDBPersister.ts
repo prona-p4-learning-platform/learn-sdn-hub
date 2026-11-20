@@ -40,6 +40,8 @@ export interface SubmissionEntry {
   terminalStatus: TerminalStateType[];
   submittedFiles: SubmissionFileType[];
   points?: number;
+  // exam score (grade points); `points` remains bonus points
+  gradePoints?: number;
   dialogAnswers?: Array<{ stepIndex: string; question: string; answer: string }>;
 }
 
@@ -54,6 +56,7 @@ interface NewAssignment {
   assignmentLabSheet?: string | undefined;
   labSheetName?: string | undefined;
   maxBonusPoints?: number | undefined;
+  maxGradePoints?: number | undefined;
 }
 
 interface MongoLabSheet {
@@ -319,7 +322,8 @@ export default class MongoDBPersister implements Persister {
     terminalStates: TerminalStateType[],
     submittedFiles: SubmissionFileType[],
     bonusPoints: number,
-    dialogAnswers?: Array<{ stepIndex: string; question: string; answer: string }>
+    dialogAnswers?: Array<{ stepIndex: string; question: string; answer: string }>,
+    gradePoints?: number
   ): Promise<void> {
     console.log(
       "Storing assignment result for user: " +
@@ -387,6 +391,9 @@ export default class MongoDBPersister implements Persister {
         terminalStatus: terminalStates,
         submittedFiles: submittedFiles,
         points: bonusPoints,
+        // only persist the field when set so old documents and non-exam
+        // submissions stay free of null/undefined gradePoints entries
+        ...(gradePoints !== undefined ? { gradePoints } : {}),
         dialogAnswers: dialogAnswers,
       })
       .catch((err) => {
@@ -415,6 +422,7 @@ export default class MongoDBPersister implements Persister {
             assignmentName: submission.environment,
             lastChanged: submission.submissionCreated,
             points: submission.points,
+            gradePoints: submission.gradePoints,
           });
         }
 
@@ -675,6 +683,7 @@ export default class MongoDBPersister implements Persister {
       name: assignment.name,
       assignmentLabSheetLocation: "database",
       ...(assignment.maxBonusPoints !== undefined && { maxBonusPoints: assignment.maxBonusPoints }),
+      ...(assignment.maxGradePoints !== undefined && { maxGradePoints: assignment.maxGradePoints }),
       ...(assignment.assignmentLabSheet !== undefined && { assignmentLabSheet: assignment.assignmentLabSheet }),
       ...(sheetId && { sheetId }),
     };
@@ -693,6 +702,7 @@ export default class MongoDBPersister implements Persister {
       _id: insertedAssignment._id.toString(),
       name: insertedAssignment.name,
       maxBonusPoints: insertedAssignment.maxBonusPoints ?? undefined,
+      maxGradePoints: insertedAssignment.maxGradePoints ?? undefined,
       assignmentLabSheet: insertedAssignment.assignmentLabSheet ?? undefined,
     };
   }
@@ -732,7 +742,7 @@ export default class MongoDBPersister implements Persister {
   async UpdateAssignment(update: AssignmentUpdate): Promise<void> {
     const client = await this.getClient();
 
-    const { _id, _sheetId, description, maxBonusPoints, name, labSheetContent, labSheetName } = update;
+    const { _id, _sheetId, description, maxBonusPoints, maxGradePoints, name, labSheetContent, labSheetName } = update;
     const assignmentId = new ObjectId(_id);
     const labSheetId = new ObjectId(_sheetId);
 
@@ -743,7 +753,7 @@ export default class MongoDBPersister implements Persister {
       .collection("assignments")
       .updateOne(
         { _id: assignmentId },
-        { $set: { description: description, maxBonusPoints: maxBonusPoints, name: name }},
+        { $set: { description: description, maxBonusPoints: maxBonusPoints, maxGradePoints: maxGradePoints, name: name }},
       )
       .then(() => undefined)
 
@@ -769,6 +779,7 @@ export default class MongoDBPersister implements Persister {
             name: 1,
             steps: 1,
             maxBonusPoints: 1,
+            maxGradePoints: 1,
             assignmentLabSheet: 1,
             sheetId: 1,
             assignmentLabSheetLocation: 1,
@@ -885,6 +896,7 @@ export default class MongoDBPersister implements Persister {
               fileNames: { $addToSet: "$submittedFiles.fileName" },
               terminalEndpoints: { $addToSet: "$terminalStatus.endpoint" },
               points: { $first: { $ifNull: ["$points", null] } },
+              gradePoints: { $first: { $ifNull: ["$gradePoints", null] } },
               dialogAnswers: { $first: "$dialogAnswers" },
             },
           },
@@ -908,6 +920,9 @@ export default class MongoDBPersister implements Persister {
           terminalEndpoints: submission.terminalEndpoints,
           ...(submission.points !== null && {
             points: submission.points,
+          }),
+          ...(submission.gradePoints !== null && {
+            gradePoints: submission.gradePoints,
           }),
           ...(submission.dialogAnswers && {
             dialogAnswers: submission.dialogAnswers,
@@ -963,19 +978,44 @@ export default class MongoDBPersister implements Persister {
 
   async UpdateSubmissionPoints(
     submissionID: string,
-    points: number,
+    // at least one value must be settable; fields left out are untouched
+    pointsUpdate: { points?: number; gradePoints?: number },
   ): Promise<void> {
+    if (pointsUpdate.points === undefined && pointsUpdate.gradePoints === undefined) {
+      throw new Error("UpdateSubmissionPoints called without points or gradePoints");
+    }
+
+    const $set: { points?: number; gradePoints?: number } = {};
+    if (pointsUpdate.points !== undefined) {
+      $set.points = pointsUpdate.points;
+    }
+    if (pointsUpdate.gradePoints !== undefined) {
+      $set.gradePoints = pointsUpdate.gradePoints;
+    }
+
     const client = await this.getClient();
     const courseObjID = new ObjectId(submissionID);
     return client
       .db()
       .collection("submissions")
-      .updateOne({ _id: courseObjID }, { $set: { points: points } })
+      .updateOne({ _id: courseObjID }, { $set })
       .then((data) => {
         if (data.modifiedCount === 0) {
           throw new Error("Could not update points for submission");
         }
       });
+  }
+
+  async GetSubmissionEnvironment(submissionID: string): Promise<string> {
+    const client = await this.getClient();
+    const submission = await client
+      .db()
+      .collection("submissions")
+      .findOne({ _id: new ObjectId(submissionID) });
+    if (!submission) {
+      throw new Error("Submission not found");
+    }
+    return submission.environment as string;
   }
 
   async GetTerminalData(submissionID: string): Promise<TerminalStateType[]> {

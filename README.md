@@ -342,6 +342,8 @@ BACKEND_USER_ALLOWED_ASSIGNMENTS
 If you want to be able to assign points to subimssions, you need to set ``maxBonusPoints`` in the assignment configuration file. The points can then be assigned in the admin panel.
 For MongoDB you can also set the ``maxBonusPoints`` in the assignment document of the ``assignments`` collection as an ``Int32``.
 
+For exams (``isExam: true``), assignments can additionally define **grade points** (the exam score) next to the bonus points (e.g. earned in previous labs). Set ``points`` on each assignment step; ``maxGradePoints`` is then computed automatically as the sum of the step points (it can also be set explicitly in the assignment configuration file or in the MongoDB ``assignments`` document). Grade points and bonus points are stored and shown separately for the examiner; the student UI calls them "points" instead of "bonus points" for exams.
+
 ### Enable Collaboration
 
 Users in the same group can use collaboration to work in the editor together.

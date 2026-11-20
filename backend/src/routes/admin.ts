@@ -15,6 +15,7 @@ import { broadcastSheetUpdate } from "../websocket/SheetHandler";
 export interface CreateAssignmentBody {
   name: string;
   maxBonusPoints?: number;
+  maxGradePoints?: number;
   assignmentLabSheet?: string;
   labSheetName?: string;
 }
@@ -22,6 +23,32 @@ export interface CreateAssignmentBody {
 export interface DeleteAssignmentBody {
   _id: string;
   _sheetId: string;
+}
+
+/**
+ * Validates awarded points against the assignment's limits.
+ * Returns an error message when a limit is violated, undefined otherwise.
+ * Limits that are not defined are not enforced (same behavior as the frontend).
+ */
+export function validatePointsAgainstLimits(
+  pointsUpdate: { points?: number; gradePoints?: number },
+  limits: { maxBonusPoints?: number; maxGradePoints?: number },
+): string | undefined {
+  if (
+    limits.maxBonusPoints !== undefined &&
+    pointsUpdate.points !== undefined &&
+    pointsUpdate.points > limits.maxBonusPoints
+  ) {
+    return `Points must be between 0 and ${limits.maxBonusPoints}`;
+  }
+  if (
+    limits.maxGradePoints !== undefined &&
+    pointsUpdate.gradePoints !== undefined &&
+    pointsUpdate.gradePoints > limits.maxGradePoints
+  ) {
+    return `Grade points must be between 0 and ${limits.maxGradePoints}`;
+  }
+  return undefined;
 }
 
 export default (persister: Persister): Router => {
@@ -122,13 +149,14 @@ export default (persister: Persister): Router => {
       (async () => {
         console.log('request', _req.body)
         try {
-          const { name, maxBonusPoints, assignmentLabSheet, labSheetName } = _req.body;
+          const { name, maxBonusPoints, maxGradePoints, assignmentLabSheet, labSheetName } = _req.body;
           if (!name) {
             return res.status(400).json({ error: true, message: "Missing name" });
           }
           const assignment = {
             name: name,
             maxBonusPoints: maxBonusPoints ?? undefined,
+            maxGradePoints: maxGradePoints ?? undefined,
             assignmentLabSheet,
             labSheetName,
           };
@@ -531,10 +559,56 @@ export default (persister: Persister): Router => {
       (async () => {
         const reqWithUser = req as RequestWithUser;
         const body = reqWithUser.body as Record<string, number>;
+        const pointsUpdate: { points?: number; gradePoints?: number } = {};
+
+        // at least one of the two values must be present; each must be a
+        // non-negative number
+        if (body.points !== undefined) {
+          if (typeof body.points !== "number" || isNaN(body.points) || body.points < 0) {
+            return res.status(400).json({
+              error: true,
+              message: "points must be a non-negative number",
+            });
+          }
+          pointsUpdate.points = body.points;
+        }
+        if (body.gradePoints !== undefined) {
+          if (typeof body.gradePoints !== "number" || isNaN(body.gradePoints) || body.gradePoints < 0) {
+            return res.status(400).json({
+              error: true,
+              message: "gradePoints must be a non-negative number",
+            });
+          }
+          pointsUpdate.gradePoints = body.gradePoints;
+        }
+        if (pointsUpdate.points === undefined && pointsUpdate.gradePoints === undefined) {
+          return res.status(400).json({
+            error: true,
+            message: "At least one of points or gradePoints must be set",
+          });
+        }
+
         try {
+          // server-side max enforcement (defense in depth; the frontend
+          // validates against the same limits). Assignments without a
+          // defined limit are not enforced.
+          const assignmentName = await persister.GetSubmissionEnvironment(
+            reqWithUser.params.submissionID,
+          );
+          const env = environments.get(assignmentName);
+          if (env) {
+            const limitError = validatePointsAgainstLimits(pointsUpdate, {
+              maxBonusPoints: env.maxBonusPoints,
+              maxGradePoints: env.maxGradePoints,
+            });
+            if (limitError) {
+              return res.status(400).json({ error: true, message: limitError });
+            }
+          }
+
           const response = await persister.UpdateSubmissionPoints(
             reqWithUser.params.submissionID,
-            body.points,
+            pointsUpdate,
           );
           return res.status(200).json(response);
         } catch (err) {

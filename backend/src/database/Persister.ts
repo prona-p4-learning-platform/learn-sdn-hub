@@ -49,6 +49,7 @@ export interface AssignmentUpdate extends LabSheet {
   _id: string;
   name?: string;
   maxBonusPoints?: number;
+  maxGradePoints?: number;
   assignmentLabSheet?: string;
   description?: string;
 }
@@ -90,6 +91,7 @@ export interface AssignmentData {
   name: string;
   steps?: Array<AssignmentStep>;
   maxBonusPoints?: number;
+  maxGradePoints?: number;
   assignmentLabSheet?: string;
   labSheetName?: string;
   sheetId?: string;
@@ -136,7 +138,8 @@ export interface Persister {
     terminalStates: TerminalStateType[],
     submittedFiles: SubmissionFileType[],
     bonusPoints: number,
-    dialogAnswers?: Array<{ stepIndex: string; question: string; answer: string }>
+    dialogAnswers?: Array<{ stepIndex: string; question: string; answer: string }>,
+    gradePoints?: number
   ) => Promise<void>;
   GetUserSubmissions: (
     username: string,
@@ -152,7 +155,7 @@ export interface Persister {
     courseID: string,
   ): Promise<ResponseObject>;
   CreateAssignments(): Promise<AssignmentData[]>;
-  CreateAssignment(assignment: { name: string; maxBonusPoints?: number; assignmentLabSheet?: string, labSheetName?: string }): Promise<AssignmentData>;
+  CreateAssignment(assignment: { name: string; maxBonusPoints?: number; maxGradePoints?: number; assignmentLabSheet?: string, labSheetName?: string }): Promise<AssignmentData>;
   UpdateAssignment(update: AssignmentUpdate): Promise<void>;
   DeleteAssignment(assignment: AssignmentDelete): Promise<void>;
   GetAllAssignments(): Promise<AssignmentData[] | string[]>;
@@ -163,7 +166,12 @@ export interface Persister {
     assignmentIDs: string[],
   ): Promise<void>;
   GetSubmissionFile(submissionID: string, fileName: string): Promise<FileData>;
-  UpdateSubmissionPoints(submissionID: string, points: number): Promise<void>;
+  UpdateSubmissionPoints(
+    submissionID: string,
+    // at least one value must be settable; fields left out are untouched
+    pointsUpdate: { points?: number; gradePoints?: number },
+  ): Promise<void>;
+  GetSubmissionEnvironment(submissionID: string): Promise<string>;
   GetTerminalData(submissionID: string): Promise<TerminalStateType[]>;
   LoadEnvironments(): Promise<void>;
 }

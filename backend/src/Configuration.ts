@@ -77,6 +77,15 @@ export function updateEnvironment(env: EnvironmentDescription | AssignmentData):
   } else if (env.maxBonusPoints === undefined && bonusPoints > 0) {
     env.maxBonusPoints = bonusPoints;
   }
+
+  // Grade points (exam score) mirror the bonusPoints computation.
+  const gradePoints = env.steps?.reduce((sum, step) => sum + (step.points ?? 0), 0) ?? 0;
+
+  if (env.maxGradePoints !== undefined && gradePoints > env.maxGradePoints) {
+    env.maxGradePoints = gradePoints;
+  } else if (env.maxGradePoints === undefined && gradePoints > 0) {
+    env.maxGradePoints = gradePoints;
+  }
 }
 
 export default getEnvironments();

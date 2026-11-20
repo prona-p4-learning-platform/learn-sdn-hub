@@ -139,7 +139,8 @@ export default class MemoryPersister implements Persister {
     terminalStates: TerminalStateType[],
     submittedFiles: SubmissionFileType[],
     bonusPoints: number,
-    dialogAnswers?: Array<{ stepIndex: string; question: string; answer: string }>
+    dialogAnswers?: Array<{ stepIndex: string; question: string; answer: string }>,
+    gradePoints?: number
   ): Promise<void> {
     return new Promise((resolve) => {
       console.log(
@@ -181,6 +182,14 @@ export default class MemoryPersister implements Persister {
         bonusPoints.toString(),
         "utf8"
       );
+
+      if (gradePoints !== undefined) {
+        fs.writeFileSync(
+          path.resolve(resultPath, "gradePoints.txt"),
+          gradePoints.toString(),
+          "utf8"
+        );
+      }
 
       if (dialogAnswers && dialogAnswers.length > 0) {
         fs.writeFileSync(
@@ -231,10 +240,21 @@ export default class MemoryPersister implements Persister {
             if (isNaN(bonusPoints))
               bonusPoints = 0;
 
+            // gradePoints (exam score) is optional; older submissions have no
+            // gradePoints.txt and keep gradePoints undefined.
+            let gradePoints: number | undefined;
+            const gradePointsPath = path.resolve(resultPathRoot, submissionDir, "gradePoints.txt");
+            if (fs.existsSync(gradePointsPath)) {
+              gradePoints = Number.parseInt(fs.readFileSync(gradePointsPath, {encoding: "utf8"}));
+              if (isNaN(gradePoints))
+                gradePoints = 0;
+            }
+
             const submission = {
               assignmentName: assignmentName,
               lastChanged: lastMTime,
-              points: bonusPoints
+              points: bonusPoints,
+              gradePoints: gradePoints
             };
 
             submissions.push(submission);
@@ -322,8 +342,12 @@ export default class MemoryPersister implements Persister {
 
   UpdateSubmissionPoints(
     _submissionID: string,
-    _points: number,
+    _pointsUpdate: { points?: number; gradePoints?: number },
   ): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
+
+  GetSubmissionEnvironment(_submissionID: string): Promise<string> {
     throw new Error("Method not implemented.");
   }
 

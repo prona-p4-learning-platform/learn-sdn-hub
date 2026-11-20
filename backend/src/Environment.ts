@@ -74,6 +74,9 @@ export interface AssignmentStep {
   label: string;
   tests: Array<AssignmentStepTestType>;
   bonusPoints?: number;
+  // Grade points awarded for passing this step (exam scoring; per-step
+  // equivalent of bonusPoints). Never merged with bonusPoints.
+  points?: number;
 }
 
 interface GradualAssistanceType {
@@ -126,6 +129,8 @@ export interface Submission {
   assignmentName: string;
   lastChanged: Date;
   points?: number;
+  // Exam score earned on this submission; `points` remains bonus points.
+  gradePoints?: number;
 }
 
 export interface SubmissionAdminOverviewEntry extends Submission {
@@ -198,6 +203,8 @@ export interface EnvironmentDescription {
   useCollaboration?: boolean;
   useLanguageClient?: boolean;
   maxBonusPoints?: number;
+  // Exam score limit; auto-computed from step points if omitted.
+  maxGradePoints?: number;
   mountKubeconfig?: boolean;
   markdownFiles?: Array<string>;
   sheetId?: string;
@@ -1569,6 +1576,7 @@ export default class Environment {
     }
 
     let bonusPoints = 0;
+    let gradePoints = 0;
     if (this.configuration.steps !== undefined) {
       for (let i = 0; i < parseInt(stepIndex); i++) {
         const step = this.configuration.steps[i];
@@ -1582,7 +1590,10 @@ export default class Environment {
           terminalStates,
           storedDialogAnswer,
         );
-        if (testResult.code === 201) bonusPoints += step.bonusPoints ?? 0;
+        if (testResult.code === 201) {
+          bonusPoints += step.bonusPoints ?? 0;
+          gradePoints += step.points ?? 0;
+        }
       }
     }
 
@@ -1599,6 +1610,7 @@ export default class Environment {
       submittedFiles,
       bonusPoints,
       dialogAnswersToSubmit,
+      gradePoints,
     );
   }
 

@@ -21,7 +21,9 @@ export const environment: EnvironmentDescription = {
     {
       name: "1",
       label: "MatrNr Eingabe",
+      // bonusPoints: bonus for previous labs; points: exam score (grade points)
       bonusPoints: 5,
+      points: 10,
       tests: [
         {
           type: "Dialog",
@@ -35,6 +37,7 @@ export const environment: EnvironmentDescription = {
       name: "2",
       label: "Name Eingabe",
       bonusPoints: 5,
+      points: 10,
       tests: [
         {
           type: "Dialog",

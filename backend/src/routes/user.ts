@@ -82,7 +82,14 @@ export default (
       const loggedInUser = reqWithUser.user.username;
 
       let tempAssignmentMap = new Map(environments);
-      let pointsMap = new Map<string, number>();
+      let pointsMap = new Map<
+        string,
+        {
+          maxBonusPoints: number;
+          maxGradePoints?: number;
+          isExam: boolean;
+        }
+      >();
 
       for (const authProvider of authProviders) {
         tempAssignmentMap = await authProvider.filterAssignmentList(
@@ -95,11 +102,22 @@ export default (
           Array.from(tempAssignmentMap.entries()).reduce(
             (acc, [key, value]) => {
               if (value.maxBonusPoints !== undefined) {
-                acc.set(key, value.maxBonusPoints);
+                acc.set(key, {
+                  maxBonusPoints: value.maxBonusPoints,
+                  maxGradePoints: value.maxGradePoints,
+                  isExam: value.isExam ?? false,
+                });
               }
               return acc;
             },
-            new Map<string, number>(),
+            new Map<
+              string,
+              {
+                maxBonusPoints: number;
+                maxGradePoints?: number;
+                isExam: boolean;
+              }
+            >(),
           ),
         );
       }
