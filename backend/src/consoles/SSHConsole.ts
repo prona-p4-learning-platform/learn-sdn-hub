@@ -55,11 +55,13 @@ export default class SSHConsole extends EventEmitter implements Console {
   private provideTty: boolean;
   private stream?: ClientChannel;
   public consoleBuffer: Array<string>;
+  private currentConsoleBufferDataSize: number = 0;
   private static sshConnections: Map<string, CustomizedSSHClient> = new Map();
   public stdout = "";
   public stderr = "";
   public exitCode = "";
   public exitSignal = "";
+  public static readonly MAX_BUFFER_SIZE = 1024 * 1024; // 1 MB
 
   // maybe check .emit() calls and close() handlers and remove possibly redundant ones,
   // several of them were added to ensure proper cleanup of ssh connections, otherwise leaking connections could occur
@@ -286,8 +288,12 @@ export default class SSHConsole extends EventEmitter implements Console {
           })
           .on("data", (data: string) => {
             this.consoleBuffer.push(data);
-            while (this.consoleBuffer.length > 1000) {
-              this.consoleBuffer.shift();
+            this.currentConsoleBufferDataSize += data.length;
+            while (this.currentConsoleBufferDataSize > SSHConsole.MAX_BUFFER_SIZE && this.consoleBuffer.length > 1) {
+              const removedData = this.consoleBuffer.shift();
+              if (removedData) {
+                this.currentConsoleBufferDataSize -= removedData.length;
+              }
             }
             this.emit("data", data);
           });

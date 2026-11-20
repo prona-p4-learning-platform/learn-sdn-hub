@@ -8,6 +8,8 @@ export default class DockerConsole extends EventEmitter implements Console {
   public args: Array<string>;
   public cwd: string;
   public consoleBuffer: Array<string> = [];
+  private currentConsoleBufferDataSize: number = 0;
+  public static readonly MAX_BUFFER_SIZE = 1024 * 1024;
 
   private client: ClabApiClient;
   private labName: string;
@@ -116,8 +118,15 @@ export default class DockerConsole extends EventEmitter implements Console {
           : frame.data;
 
         this.consoleBuffer.push(outputData);
-        while (this.consoleBuffer.length > 1000) {
-          this.consoleBuffer.shift();
+        this.currentConsoleBufferDataSize += outputData.length;
+        while (
+          this.currentConsoleBufferDataSize > DockerConsole.MAX_BUFFER_SIZE &&
+          this.consoleBuffer.length > 1
+        ) {
+          const removedData = this.consoleBuffer.shift();
+          if (removedData !== undefined) {
+            this.currentConsoleBufferDataSize -= removedData.length;
+          }
         }
 
         this.emit("data", outputData);
