@@ -17,7 +17,7 @@ export interface Console {
   writeLine(data: string): void;
   close(environmentId: string, groupNumber: number, sessionId?: string): void;
   resize(columns: number, lines: number): void;
-  consumeInitialConsoleBuffer(): string;
+  getBufferedOutput(): string;
   command: string;
   args: Array<string>;
   cwd: string;
@@ -54,8 +54,7 @@ export default class SSHConsole extends EventEmitter implements Console {
   public cwd: string;
   private provideTty: boolean;
   private stream?: ClientChannel;
-  public initialConsoleBuffer: Array<string>;
-  public initialConsoleBufferConsumed = false;
+  public consoleBuffer: Array<string>;
   private static sshConnections: Map<string, CustomizedSSHClient> = new Map();
   public stdout = "";
   public stderr = "";
@@ -86,7 +85,7 @@ export default class SSHConsole extends EventEmitter implements Console {
     // this.args = args;
     this.cwd = cwd;
     this.provideTty = provideTty;
-    this.initialConsoleBuffer = new Array<string>();
+    this.consoleBuffer = new Array<string>();
     let sshConsole: CustomizedSSHClient;
     // sharing connections in the same group would be possible and multiple users can then use the same xterm.js together,
     // however refresh/different console sizes (which is inevitable due to different browser window sizes) etc. will lead to console corruption
@@ -286,12 +285,10 @@ export default class SSHConsole extends EventEmitter implements Console {
             console.error("SSH shell error: ", err);
           })
           .on("data", (data: string) => {
-            // if (!this.initialConsoleBufferConsumed) {
-              this.initialConsoleBuffer.push(data);
-              while (this.initialConsoleBuffer.length > 1000) {
-                this.initialConsoleBuffer.shift();
-              }
-            // }
+            this.consoleBuffer.push(data);
+            while (this.consoleBuffer.length > 1000) {
+              this.consoleBuffer.shift();
+            }
             this.emit("data", data);
           });
         // write command to console
@@ -358,14 +355,8 @@ export default class SSHConsole extends EventEmitter implements Console {
     this.stream?.setWindow(lines, columns, 0, 0);
   }
 
-  consumeInitialConsoleBuffer(): string {
-    // if (this.initialConsoleBufferConsumed) {
-    //   return "";
-    // } else {
-      const initialConsoleBufferContent = this.initialConsoleBuffer.join("");
-      // this.initialConsoleBuffer = [];
-      this.initialConsoleBufferConsumed = true;
-      return initialConsoleBufferContent;
-    // }
+  getBufferedOutput(): string {
+    const consoleBufferContent = this.consoleBuffer.join("");
+    return consoleBufferContent;
   }
 }

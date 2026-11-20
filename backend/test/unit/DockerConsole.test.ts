@@ -95,7 +95,7 @@ describe("DockerConsole", () => {
 
     const dataEvents: Array<string> = [];
     console.on("data", (data: string) => dataEvents.push(data));
-    expect(console.consumeInitialConsoleBuffer()).toBe("motd");
+    expect(console.getBufferedOutput()).toBe("motd");
 
     mock.fakeWs.emit(
       "message",
@@ -108,7 +108,7 @@ describe("DockerConsole", () => {
       ),
     );
     expect(dataEvents).toEqual(["hello"]);
-    expect(console.consumeInitialConsoleBuffer()).toBe("motdhello");
+    expect(console.getBufferedOutput()).toBe("motdhello");
   });
 
   it("caps the initial console buffer at 1000 entries, dropping the oldest", async () => {
@@ -131,8 +131,8 @@ describe("DockerConsole", () => {
       );
     }
 
-    expect(console.initialConsoleBuffer).toHaveLength(1000);
-    const buffered = console.consumeInitialConsoleBuffer();
+    expect(console.consoleBuffer).toHaveLength(1000);
+    const buffered = console.getBufferedOutput();
     expect(buffered).not.toContain("out-0");
     expect(buffered).toContain("out-1");
     expect(buffered).toContain("out-1000");
@@ -147,7 +147,7 @@ describe("DockerConsole", () => {
 
     const dataEvents: Array<string> = [];
     console.on("data", (data: string) => dataEvents.push(data));
-    console.consumeInitialConsoleBuffer();
+    console.getBufferedOutput();
     mock.fakeWs.emit(
       "message",
       Buffer.from(JSON.stringify({ type: "output", data: "raw-motd" })),

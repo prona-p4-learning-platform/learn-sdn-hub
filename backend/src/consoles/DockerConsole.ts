@@ -7,8 +7,7 @@ export default class DockerConsole extends EventEmitter implements Console {
   public command: string;
   public args: Array<string>;
   public cwd: string;
-  public initialConsoleBuffer: Array<string> = [];
-  public initialConsoleBufferConsumed = false;
+  public consoleBuffer: Array<string> = [];
 
   private client: ClabApiClient;
   private labName: string;
@@ -111,32 +110,14 @@ export default class DockerConsole extends EventEmitter implements Console {
         if (frame.data === undefined) {
           return;
         }
-        // if (frame.encoding === "base64") {
-        //   const decoded = Buffer.from(frame.data, "base64").toString();
-        //   if (this.initialConsoleBufferConsumed) {
-        //     this.emit("data", decoded);
-        //   } else {
-        //     this.initialConsoleBuffer.push(decoded);
-        //     while (this.initialConsoleBuffer.length > 1000) {
-        //       this.initialConsoleBuffer.shift();
-        //     }
-        //   }
-        // } else if (this.initialConsoleBufferConsumed) {
-        //   this.emit("data", frame.data);
-        // } else {
-        //   this.initialConsoleBuffer.push(frame.data);
-        //   while (this.initialConsoleBuffer.length > 1000) {
-        //     this.initialConsoleBuffer.shift();
-        //   }
-        // }
 
         const outputData = frame.encoding === "base64"
           ? Buffer.from(frame.data, "base64").toString()
           : frame.data;
 
-        this.initialConsoleBuffer.push(outputData);
-        while (this.initialConsoleBuffer.length > 1000) {
-          this.initialConsoleBuffer.shift();
+        this.consoleBuffer.push(outputData);
+        while (this.consoleBuffer.length > 1000) {
+          this.consoleBuffer.shift();
         }
 
         this.emit("data", outputData);
@@ -144,9 +125,7 @@ export default class DockerConsole extends EventEmitter implements Console {
       }
       case "exit":
         console.debug(
-          `DockeUnexpected lexical declaration in case block.eslintno-case-declarations
-const outputData: string
-rConsole: terminal session exited (exitCode: ${frame.exitCode ?? "unknown"}, error: ${frame.error ?? "none"})`,
+          `DockerConsole: terminal session exited (exitCode: ${frame.exitCode ?? "unknown"}, error: ${frame.error ?? "none"})`,
         );
         this.emitCloseOnce();
         break;
@@ -175,10 +154,8 @@ rConsole: terminal session exited (exitCode: ${frame.exitCode ?? "unknown"}, err
     this.ws?.send(JSON.stringify({ type: "resize", cols: columns, rows: lines }));
   }
 
-  public consumeInitialConsoleBuffer(): string {
-    this.initialConsoleBufferConsumed = true;
-    const buffered = this.initialConsoleBuffer.join("");
-    // this.initialConsoleBuffer = [];
+  public getBufferedOutput(): string {
+    const buffered = this.consoleBuffer.join("");
     return buffered;
   }
 
