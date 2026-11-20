@@ -1341,7 +1341,6 @@ export default class Environment {
 
   async test(
     stepIndex: string,
-    terminalStates: TerminalStateType[],
   ): Promise<TestResult> {
     console.log("TESTING step " + stepIndex);
 
@@ -1355,28 +1354,17 @@ export default class Environment {
         // per default test result is false
         if (test.type === "TerminalBufferSearch") {
           // search in terminalBuffer for match
-          if (terminalStates.length === 0) {
-            return Promise.reject(
-              new Error(
-                "No terminal states available. Please use the terminals to run the steps given in the assignment and check again.",
-              ),
-            );
-          } else {
-            for (const terminalState of terminalStates) {
-              const split = terminalState.endpoint.split("/");
-              const element = split.pop();
-
-              if (element !== undefined && element.match(test.terminal)) {
-                if (terminalState.state.match(test.match)) {
-                  testOutput += "PASSED: " + test.successMessage + " ";
-                  testPassed = true;
-                }
+          for (const [consoleType, activeConsole] of this.activeConsoles.entries()) {
+            if (consoleType.match(test.terminal)) {
+              if (activeConsole.getBufferedOutput().match(test.match)) {
+                testOutput += "PASSED: " + test.successMessage + " ";
+                testPassed = true;
               }
             }
-
-            if (testPassed !== true)
-              testOutput += "FAILED: " + this.getErrorHint(test, stepIndex);
           }
+          if (testPassed !== true)
+            testOutput += "FAILED: " + this.getErrorHint(test, stepIndex);
+        
         } else if (test.type === "SSHCommand") {
           await this.runSSHCommand(test.command, test.stdOutMatch)
             .then(() => {
@@ -1505,7 +1493,7 @@ export default class Environment {
     if (this.configuration.steps !== undefined) {
       for (let i = 0; i < parseInt(stepIndex); i++) {
         const step = this.configuration.steps[i];
-        const testResult = await this.test(i.toString(), terminalStates);
+        const testResult = await this.test(i.toString());
         if (testResult.code === 201) bonusPoints += step.bonusPoints ?? 0;
       }
     }

@@ -416,14 +416,13 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
         reqWithUser.user.groupNumber,
         reqWithUser.user.sessionId,
       );
-      const { activeStep, terminalState } = reqWithUser.body as {
+      const { activeStep } = reqWithUser.body as {
         activeStep: string;
-        terminalState: TerminalStateType[];
       };
 
       if (env) {
         env
-          .test(activeStep, terminalState)
+          .test(activeStep)
           .then((testResult) => {
             if (testResult.code >= 200 && testResult.code < 251) {
               res.status(testResult.code).json({
