@@ -88,13 +88,14 @@ const AssignmentList = <T extends WithId>({
 
   return (
     <Grid
-      ml={0}
-      mt={0.1}
       container
       spacing={2}
-      justifyContent="center"
-      alignItems="stretch"
-    >
+      sx={{
+        ml: 0,
+        mt: 0.1,
+        justifyContent: "center",
+        alignItems: "stretch"
+      }}>
       <Grid item>
         <TransferList
           customListProps={{
@@ -109,7 +110,9 @@ const AssignmentList = <T extends WithId>({
         />
       </Grid>
       <Grid item>
-        <Grid container direction="column" alignItems="center">
+        <Grid container direction="column" sx={{
+          alignItems: "center"
+        }}>
           <Button
             sx={{ my: 0.5 }}
             variant="outlined"

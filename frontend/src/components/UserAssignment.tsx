@@ -188,8 +188,16 @@ const UserAssignment = ({
   };
 
   return (
-    <Grid container spacing={2} justifyContent="center" alignItems="center">
-      <Grid item ml={0}>
+    <Grid
+      container
+      spacing={2}
+      sx={{
+        justifyContent: "center",
+        alignItems: "center"
+      }}>
+      <Grid item sx={{
+        ml: 0
+      }}>
         <FormControl sx={{ m: 1, width: 600 }} size="small">
           <InputLabel id="course-select-label">Course</InputLabel>
           <Select
@@ -211,12 +219,13 @@ const UserAssignment = ({
         </FormControl>
       </Grid>
       <Grid
-        ml={0}
         container
         spacing={2}
-        justifyContent="center"
-        alignItems="center"
-      >
+        sx={{
+          ml: 0,
+          justifyContent: "center",
+          alignItems: "center"
+        }}>
         <AssignmentList<User>
           unassignedItems={unassignedUsers}
           assignedItems={assignedUsers}
@@ -231,13 +240,21 @@ const UserAssignment = ({
           leftListTitle="Available Users"
           rightListTitle="Users in Course"
         />
-        <Grid container justifyContent="center" alignItems="flex-end">
+        <Grid
+          container
+          sx={{
+            justifyContent: "center",
+            alignItems: "flex-end"
+          }}>
           <Grid
             item
-            sx={{ width: 612, mt: 1, display: "flex" }}
-            justifyContent="flex-end"
-            alignItems="flex-end"
-          >
+            sx={{
+              justifyContent: "flex-end",
+              alignItems: "flex-end",
+              width: 612,
+              mt: 1,
+              display: "flex"
+            }}>
             <LoadingButton
               color="primary"
               onClick={handleUpdateUsers}

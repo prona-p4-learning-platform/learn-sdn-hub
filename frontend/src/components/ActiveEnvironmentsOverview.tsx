@@ -162,132 +162,134 @@ const ActiveEnvironmentsOverview = ({ activeUsers, reloadActiveUsers }: ActiveEn
 
   return (
     <>
-    <Grid
-      item
-      xs={4}
-      sx={
-      {
-        margin: "auto",
-        padding: 2,
-        overflowY: "auto",
-        minWidth: "600px",
-      }
-    }>
-      <Typography variant="h6" gutterBottom>
-        Active environments
-      </Typography>
-      <Button
-        onClick={() => void reloadActiveUsers()}
-      >
-        Reload
-      </Button>
-      {Object.entries(groupedUsers).map(([envName, users]) => {
-        const usersByGroup = users.reduce<Record<number, typeof users>>((acc, user) => {
-          if (!acc[user.groupNumber]) {
-            acc[user.groupNumber] = [];
-          }
-          acc[user.groupNumber].push(user);
-          return acc;
-        }, {});
-        return (
-          <Accordion key={envName}>
-            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-              <Typography>{envName}</Typography>
-            </AccordionSummary>
-            <AccordionDetails>
-              <div style={{ paddingLeft: 16, margin: 0 }}>
-                {Object.entries(usersByGroup).map(([groupNumber, groupUsers]) => {
-                  const ports = Array.from(
-                    new Set(
-                      groupUsers
-                        .map((u) => u.port)
-                        .filter((p): p is number => p !== undefined)
-                    )
-                  );
-                  return (
-                    <div key={groupNumber} style={{ marginBottom: 12 }}>
-                      <Typography variant="subtitle1">
-                        Group {groupNumber} (
-                        {groupUsers.map((user, index) => (
-                          <span key={user._id}>
-                            {user.username}
-                            {index < groupUsers.length - 1 && ", "}
-                          </span>
-                        ))}
-                        )
-                        {ports.length > 0 && <> — Port: {ports.join(", ")}</>}
-                      </Typography>
-                      <Grid container spacing={1} flexDirection="row">
-                        <Grid item>
-                          <Button
-                            variant="contained"
-                            color="primary"
-                            startIcon={<CloudOffIcon />}
-                            onClick={() => {
-                              handleConfirmationUndeployDialogOpen(envName, Number(groupNumber));
-                            }}
-                          >
-                            Undeploy
-                          </Button>
+      <Grid
+        item
+        xs={4}
+        sx={
+        {
+          margin: "auto",
+          padding: 2,
+          overflowY: "auto",
+          minWidth: "600px",
+        }
+      }>
+        <Typography variant="h6" gutterBottom>
+          Active environments
+        </Typography>
+        <Button
+          onClick={() => void reloadActiveUsers()}
+        >
+          Reload
+        </Button>
+        {Object.entries(groupedUsers).map(([envName, users]) => {
+          const usersByGroup = users.reduce<Record<number, typeof users>>((acc, user) => {
+            if (!acc[user.groupNumber]) {
+              acc[user.groupNumber] = [];
+            }
+            acc[user.groupNumber].push(user);
+            return acc;
+          }, {});
+          return (
+            <Accordion key={envName}>
+              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                <Typography>{envName}</Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                <div style={{ paddingLeft: 16, margin: 0 }}>
+                  {Object.entries(usersByGroup).map(([groupNumber, groupUsers]) => {
+                    const ports = Array.from(
+                      new Set(
+                        groupUsers
+                          .map((u) => u.port)
+                          .filter((p): p is number => p !== undefined)
+                      )
+                    );
+                    return (
+                      <div key={groupNumber} style={{ marginBottom: 12 }}>
+                        <Typography variant="subtitle1">
+                          Group {groupNumber} (
+                          {groupUsers.map((user, index) => (
+                            <span key={user._id}>
+                              {user.username}
+                              {index < groupUsers.length - 1 && ", "}
+                            </span>
+                          ))}
+                          )
+                          {ports.length > 0 && <> — Port: {ports.join(", ")}</>}
+                        </Typography>
+                        <Grid container spacing={1} sx={{
+                          flexDirection: "row"
+                        }}>
+                          <Grid item>
+                            <Button
+                              variant="contained"
+                              color="primary"
+                              startIcon={<CloudOffIcon />}
+                              onClick={() => {
+                                handleConfirmationUndeployDialogOpen(envName, Number(groupNumber));
+                              }}
+                            >
+                              Undeploy
+                            </Button>
+                          </Grid>
+                          <Grid item>
+                            <Button
+                              variant="contained"
+                              color="primary"
+                              onClick={() => {
+                                const params = new URLSearchParams({
+                                  groupNumber: String(groupNumber),
+                                });
+                                window.open(`/environment/${envName}?${params.toString()}`, "_blank");
+                              }}
+                            >
+                              Join
+                            </Button>
+                          </Grid>
                         </Grid>
-                        <Grid item>
-                          <Button
-                            variant="contained"
-                            color="primary"
-                            onClick={() => {
-                              const params = new URLSearchParams({
-                                groupNumber: String(groupNumber),
-                              });
-                              window.open(`/environment/${envName}?${params.toString()}`, "_blank");
-                            }}
-                          >
-                            Join
-                          </Button>
-                        </Grid>
-                      </Grid>
-                    </div>
-                  );
-                })}
-              </div>
-            </AccordionDetails>
-          </Accordion>
-        );
+                      </div>
+                    );
+                  })}
+                </div>
+              </AccordionDetails>
+            </Accordion>
+          );
 
-      })}
-      <Dialog
-        open={confirmationUndeployDialogOpen.dialogOpen}
-        onClose={handleConfirmationUndeployDialogClose}
-        aria-describedby="alert-dialog-undeploy-confirmation-description"
-      >
-        <DialogContent>
-          <DialogContentText id="alert-dialog-undeploy-confirmation-description">
-            Undeploy environment?
-            <br />
-            All processes and unsubmitted changes will be lost.
-            <br />
-            { "Other users still using the environment " +
-              "will also be disconnected." }
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button
-            onClick={handleConfirmationUndeployDialogClose}
-            color="primary"
-            autoFocus
-          >
-            No
-          </Button>
-          <Button
-            onClick={handleConfirmationUndeployDialogConfirm}
-            color="primary"
-          >
-            Yes
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Grid>
+        })}
+        <Dialog
+          open={confirmationUndeployDialogOpen.dialogOpen}
+          onClose={handleConfirmationUndeployDialogClose}
+          aria-describedby="alert-dialog-undeploy-confirmation-description"
+        >
+          <DialogContent>
+            <DialogContentText id="alert-dialog-undeploy-confirmation-description">
+              Undeploy environment?
+              <br />
+              All processes and unsubmitted changes will be lost.
+              <br />
+              { "Other users still using the environment " +
+                "will also be disconnected." }
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button
+              onClick={handleConfirmationUndeployDialogClose}
+              color="primary"
+              autoFocus
+            >
+              No
+            </Button>
+            <Button
+              onClick={handleConfirmationUndeployDialogConfirm}
+              color="primary"
+            >
+              Yes
+            </Button>
+          </DialogActions>
+        </Dialog>
+      </Grid>
     </>
-  )
+  );
 }
 
 export default ActiveEnvironmentsOverview;

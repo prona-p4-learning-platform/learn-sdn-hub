@@ -138,150 +138,153 @@ const ActiveEnvironmentOverview = ({ assignments, createAssignment, updateAssign
 
   return (
     <>
-    <Grid
-      container
-      spacing={2}
-      justifyContent="center"
-      alignItems="center"
-      flexDirection="column"
-    >
-      <AssignmentDrawer
-        assignments={assignments}
-        toggleDrawer={(open) => () => { void toggleDrawer(open)(); }}
-        setEditorType={setEditorType}
-        open={open}
-        setExistingAssignment={setNewAssignment}
-      />
-      <Grid item>
-        <Box
-          component="form"
-          onSubmit={(e) => { void handleSubmit(e); }}
-          sx={{
-            display: "flex",
-            flexDirection: "column",
-            gap: 2,
-            minWidth: 600,
-            width: "100%",
-          }}
-        >
-          <h2>Update Assignment</h2>
-          <Button onClick={toggleDrawer(true)} variant="contained">Choose Assignment</Button>
-          <TextField
-            value={newAssignment?.name || ""}
-            id="assignmentName"
-            name="assignmentName"
-            label="Assignment Name"
-            required={true}
-            InputProps={{
-              readOnly: true,
+      <Grid
+        container
+        spacing={2}
+        sx={{
+          justifyContent: "center",
+          alignItems: "center",
+          flexDirection: "column"
+        }}>
+        <AssignmentDrawer
+          assignments={assignments}
+          toggleDrawer={(open) => () => { void toggleDrawer(open)(); }}
+          setEditorType={setEditorType}
+          open={open}
+          setExistingAssignment={setNewAssignment}
+        />
+        <Grid item>
+          <Box
+            component="form"
+            onSubmit={(e) => { void handleSubmit(e); }}
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 2,
+              minWidth: 600,
+              width: "100%",
             }}
-            onChange={(e) =>
-              setNewAssignment((prev) =>
-                prev ? { ...prev, name: e.target.value } : { name: e.target.value }
-              )
-            }
-          />
-          {/*
-          <TextField
-            value={newAssignment?.labSheetName || ""}
-            id="SheetName"
-            name="SheetName"
-            label="Lab Sheet Name"
-            required={true}
-            onChange={(e) =>
-              setNewAssignment((prev) =>
-                prev ? { ...prev, labSheetName: e.target.value } : { labSheetName: e.target.value }
-              )
-            }
-          />
-          */}
-          <ResizeableSplitScreen
-            setNewAssignment={setNewAssignment}
-            newAssignment={newAssignment}
-          />
-          {/*
-          <TextField
-            value={newAssignment?.maxBonusPoints ?? ""}
-            type="number"
-            id="MaxBonusPoints"
-            name="MaxBonusPoints"
-            label="Max Bonus Points"
-            onChange={(e) =>
-              setNewAssignment((prev) => ({
-                ...prev,
-                maxBonusPoints: e.target.value === "" ? undefined : Number(e.target.value),
-              }))
-            }
-          />
-          <LoadingButton
-            type={"submit"}
-            variant="contained"
-            loading={loading}
           >
-            {editorType === "Create" ? "Create Assignment" : "Update Assignment"}
-          </LoadingButton>
-          */}
-          <LoadingButton
-            type={"submit"}
-            variant="contained"
-            loading={loading}
-            disabled={editorType === "Create"}
-          >
-            Update Assignment
-          </LoadingButton>
-          {/*
-          {editorType === "Edit" && (
+            <h2>Update Assignment</h2>
+            <Button onClick={toggleDrawer(true)} variant="contained">Choose Assignment</Button>
+            <TextField
+              value={newAssignment?.name || ""}
+              id="assignmentName"
+              name="assignmentName"
+              label="Assignment Name"
+              required={true}
+              onChange={(e) =>
+                setNewAssignment((prev) =>
+                  prev ? { ...prev, name: e.target.value } : { name: e.target.value }
+                )
+              }
+              slotProps={{
+                input: {
+                  readOnly: true,
+                }
+              }}
+            />
+            {/*
+            <TextField
+              value={newAssignment?.labSheetName || ""}
+              id="SheetName"
+              name="SheetName"
+              label="Lab Sheet Name"
+              required={true}
+              onChange={(e) =>
+                setNewAssignment((prev) =>
+                  prev ? { ...prev, labSheetName: e.target.value } : { labSheetName: e.target.value }
+                )
+              }
+            />
+            */}
+            <ResizeableSplitScreen
+              setNewAssignment={setNewAssignment}
+              newAssignment={newAssignment}
+            />
+            {/*
+            <TextField
+              value={newAssignment?.maxBonusPoints ?? ""}
+              type="number"
+              id="MaxBonusPoints"
+              name="MaxBonusPoints"
+              label="Max Bonus Points"
+              onChange={(e) =>
+                setNewAssignment((prev) => ({
+                  ...prev,
+                  maxBonusPoints: e.target.value === "" ? undefined : Number(e.target.value),
+                }))
+              }
+            />
             <LoadingButton
-              color="error"
+              type={"submit"}
               variant="contained"
-              onClick={() => void handleDeleteAssignment()}
+              loading={loading}
             >
-              Delete Assignment
+              {editorType === "Create" ? "Create Assignment" : "Update Assignment"}
             </LoadingButton>
-          )}
-          */}
-        </Box>
-      </Grid>
-      <Dialog
-        open={confirmationDialogOpen}
-        onClose={handleCloseConfirmationDialog}
-        aria-describedby="alert-dialog-undeploy-confirmation-description"
-      >
-        <DialogContent>
-          <DialogContentText id="alert-dialog-undeploy-confirmation-description">
-            Save changes?
-            <br />
-            Existing data will be overwritten. Running environments will be updated.
-            {Object.keys(activeGroupsForAssignment).length > 0 && (
-              <>
-                <br /><br />
-                Active Groups working on <strong>{newAssignment?.name}</strong>:
-                <br />
-                <List>
-                  {Object.entries(activeGroupsForAssignment).map(([group, users]) => (
-                    <ListItem key={group}>
-                      Group {group} ({users.join(", ")})
-                    </ListItem>
-                  ))}
-                </List>
-              </>
+            */}
+            <LoadingButton
+              type={"submit"}
+              variant="contained"
+              loading={loading}
+              disabled={editorType === "Create"}
+            >
+              Update Assignment
+            </LoadingButton>
+            {/*
+            {editorType === "Edit" && (
+              <LoadingButton
+                color="error"
+                variant="contained"
+                onClick={() => void handleDeleteAssignment()}
+              >
+                Delete Assignment
+              </LoadingButton>
             )}
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseConfirmationDialog} color="primary" autoFocus>
-            No
-          </Button>
-          <Button
-            onClick={() => {
-              void handleConfirmUpdate();
-            }}
-            color="primary">
-            Yes
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Grid>
+            */}
+          </Box>
+        </Grid>
+        <Dialog
+          open={confirmationDialogOpen}
+          onClose={handleCloseConfirmationDialog}
+          aria-describedby="alert-dialog-undeploy-confirmation-description"
+        >
+          <DialogContent>
+            <DialogContentText id="alert-dialog-undeploy-confirmation-description">
+              Save changes?
+              <br />
+              Existing data will be overwritten. Running environments will be updated.
+              {Object.keys(activeGroupsForAssignment).length > 0 && (
+                <>
+                  <br /><br />
+                  Active Groups working on <strong>{newAssignment?.name}</strong>:
+                  <br />
+                  <List>
+                    {Object.entries(activeGroupsForAssignment).map(([group, users]) => (
+                      <ListItem key={group}>
+                        Group {group} ({users.join(", ")})
+                      </ListItem>
+                    ))}
+                  </List>
+                </>
+              )}
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCloseConfirmationDialog} color="primary" autoFocus>
+              No
+            </Button>
+            <Button
+              onClick={() => {
+                void handleConfirmUpdate();
+              }}
+              color="primary">
+              Yes
+            </Button>
+          </DialogActions>
+        </Dialog>
+      </Grid>
     </>
   );
 };
