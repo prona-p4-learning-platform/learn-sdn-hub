@@ -28,6 +28,10 @@ const routes = createBrowserRouter(
           path: "/environment/:environmentName",
           lazy: () => import("./views/Environment"),
         },
+        {
+          path: "/game/:assignment",
+          lazy: () => import("./views/Game"),
+        },
       ],
     },
   ],
