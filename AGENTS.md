@@ -51,7 +51,8 @@ npm run format:check                     # prettier, per workspace
 |---|---|
 | `backend/src/Api.ts`, `Server.ts`, `Config.ts` | HTTP/WebSocket entry, routing, OIDC configuration |
 | `backend/src/Environment.ts` | Core: deploy/stop, consoles, check steps, submissions, exam fields |
-| `backend/src/Configuration.ts` | **Assignment definitions** (`environments.set(...)`) — data model, not a place for logic |
+| `backend/src/assignments/environments/` | **Assignment definitions** — one file per assignment exporting `name` and `environment` (typed `EnvironmentDescription`); auto-loaded at boot, fail-fast on missing exports or duplicate names |
+| `backend/src/Configuration.ts` | Assignment **loader** (directory scan + registration) and the MongoDB override path (`updateEnvironments`) — no assignment definitions here anymore |
 | `backend/src/providers/` | Instance providers: `Provider.ts` (interface), `DockerProvider`, `ProxmoxProvider`, `ContainerlabProvider` + `ClabApiClient` + `TopologyFiles` |
 | `backend/src/consoles/`, `backend/src/websocket/` | Terminal, lab sheet, LSP, remote desktop paths |
 | `backend/src/filehandler/` | File read/write over SSH for the editor |
@@ -63,7 +64,7 @@ npm run format:check                     # prettier, per workspace
 | `onboarding-german/` | German onboarding material for new student cohorts (intro material only) |
 | `dev-stack/k8s/`, `helm/` | Kubernetes deployment |
 
-**Where does my change belong?** New provider → `providers/` plus an `*Application.ts` and a start script in `backend/package.json`. New assignment → `Configuration.ts` plus a lab sheet in `assignments/`. New check logic → `Environment.ts` (test types) with a unit test. UI → `frontend/src/`.
+**Where does my change belong?** New provider → `providers/` plus an `*Application.ts` and a start script in `backend/package.json`. New assignment → a file in `backend/src/assignments/environments/` plus a lab sheet in `backend/src/assignments/`. New check logic → `Environment.ts` (test types) with a unit test. UI → `frontend/src/`.
 
 ## Conventions
 
@@ -72,7 +73,7 @@ npm run format:check                     # prettier, per workspace
 - **Formatting/linting:** Prettier and ESLint are configured; do not reformat unrelated files. Only add new `eslint-disable` comments with a justification/TODO (as done elsewhere in the repo).
 - **No unsolicited refactorings**, no repo-wide renames, no "cleanup on the side" — separate PRs.
 - **No new runtime dependencies** without agreement (the backend already ships `ws`, `js-yaml`, `toad-scheduler`, `ssh2`).
-- **Keep docs current:** document new environment variables in `README.md`, document assignment fields as comments in `Configuration.ts`.
+- **Keep docs current:** document new environment variables in `README.md`, document assignment-specific fields as comments in the assignment's file under `backend/src/assignments/environments/`.
 - **Language:** code, comments and repository-facing docs are English. German is reserved for onboarding material aimed at German-speaking student cohorts and must be marked with a `-german` suffix (e.g. `onboarding-german/`, `backend/src/assignments/onboarding-tour-german.md`).
 
 ## How agents should work

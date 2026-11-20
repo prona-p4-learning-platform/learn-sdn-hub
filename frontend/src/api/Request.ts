@@ -59,7 +59,7 @@ export function createCustomFetch(
 
         try {
           const parsed = destr(defaultPayload, { strict: true });
-          const validated = validator.parse(parsed) as ResultType;
+          const validated = validator.parse(parsed);
 
           return {
             success: true,

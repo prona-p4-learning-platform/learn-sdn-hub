@@ -21,6 +21,21 @@ cd backend
 export DOCKER_IMAGE="prona/p4-container"
 export DOCKER_CMD="-s"
 export DOCKER_MAX_INSTANCE_LIFETIME_MINUTES=120
+export SSH_USERNAME="p4"
+export SSH_PASSWORD="p4"
+npm run start:docker
+```
+
+unter Windows z.B. in der PowerShell Variablen entsprechend setzen mit `$env:` und auch den docker socket path auf dessen Location unter Windows anpassen:
+
+```powershell
+cd backend
+$env:DOCKER_SOCKET_PATH="//./pipe/docker_engine"
+$env:DOCKER_IMAGE="prona/p4-container"
+$env:DOCKER_CMD="-s"
+$env:DOCKER_MAX_INSTANCE_LIFETIME_MINUTES=120
+$env:SSH_USERNAME="p4"
+$env:SSH_PASSWORD="p4"
 npm run start:docker
 ```
 
@@ -79,7 +94,7 @@ Weitere optionale Variablen: `CLAB_TOKEN_DURATION_IN_MINUTES` (Default 60), `CLA
 
 > ⚠️ **`CLAB_LAB_PREFIX` setzen, wenn der clab-api-server geteilt ist.** Mit leerem Präfix behandelt der periodische Prune *alle* Labs auf dem Server als eigene und kann fremde Labs löschen, sobald deren Lebensdauer überschritten ist.
 
-**Assignments mit Topologie:** Ein Assignment kann seine Topologie über `topologyUrl` beziehen; die Datei wird geladen, auf den gruppen-eigenen Lab-Namen umgeschrieben und im clab-api-server-Workspace abgelegt. Relativ referenzierte Dateien (z. B. `server1/dnsmasq.conf`) werden mitgeladen — Referenzen müssen **innerhalb** des Topologie-Verzeichnisses bleiben. Vorlagen: `examples/containerlab-provider/` und das Assignment `Containerlab-Dnsmasq-TopologyUrl` in `backend/src/Configuration.ts`.
+**Assignments mit Topologie:** Ein Assignment kann seine Topologie über `topologyUrl` beziehen; die Datei wird geladen, auf den gruppen-eigenen Lab-Namen umgeschrieben und im clab-api-server-Workspace abgelegt. Relativ referenzierte Dateien (z. B. `server1/dnsmasq.conf`) werden mitgeladen — Referenzen müssen **innerhalb** des Topologie-Verzeichnisses bleiben. Vorlagen: `examples/containerlab-provider/` und das Assignment `Containerlab-Dnsmasq-TopologyUrl` in `backend/src/assignments/environments/containerlab-dnsmasq-topology-url.ts`.
 
 **Terminals:** `DockerShell` verbindet sich über die Terminal-Sessions des API-Servers direkt in einen Lab-Container (kein `sshd` nötig); `Shell` verbindet per SSH auf den Jumphost-/Management-Host des Labs.
 

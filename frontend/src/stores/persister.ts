@@ -4,7 +4,7 @@ import { z } from "zod";
 import isEqual from "lodash-es/isEqual";
 
 const persisterSchema = z.object({
-  state: z.record(z.unknown()),
+  state: z.record(z.string(), z.unknown()),
   version: z.number(),
 });
 

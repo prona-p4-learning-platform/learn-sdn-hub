@@ -4,6 +4,9 @@ import WebSocket from "ws";
 
 export interface ClabApiClientOptions {
   apiUrl: string;
+  // Hard cap for every REST request against the clab-api-server so a hung
+  // connection cannot stall the provider (merged with caller-provided signals).
+  apiTimeout: number;
   username: string;
   password: string;
   tlsInsecure?: boolean;
@@ -37,9 +40,6 @@ export interface ClabContainerInfo {
 const DEFAULT_TOKEN_DURATION_MS = 60 * 60 * 1000;
 // Expire the cached token 5s before its actual expiry to avoid racing the server.
 const TOKEN_EXPIRY_MARGIN_MS = 5000;
-// Hard cap for every REST request against the clab-api-server so a hung
-// connection cannot stall the provider (merged with caller-provided signals).
-const REQUEST_TIMEOUT_MS = 10_000;
 
 /** Error thrown for non-OK clab-api-server responses; carries the HTTP status. */
 export class ClabApiError extends Error {
@@ -72,6 +72,7 @@ async function describeErrorResponse(
 
 export default class ClabApiClient {
   private readonly baseUrl: string;
+  private readonly timeout: number;
   private readonly username: string;
   private readonly password: string;
   private readonly tlsInsecure: boolean;
@@ -82,6 +83,7 @@ export default class ClabApiClient {
 
   constructor(options: ClabApiClientOptions) {
     this.baseUrl = options.apiUrl.replace(/\/+$/, "");
+    this.timeout = options.apiTimeout;
     this.username = options.username;
     this.password = options.password;
     this.tlsInsecure = options.tlsInsecure ?? false;
@@ -214,8 +216,8 @@ export default class ClabApiClient {
     // Hard cap for every request; a caller-provided abort signal is merged in
     // and its abort wins alongside the timeout.
     const requestSignal = init.signal
-      ? AbortSignal.any([init.signal, AbortSignal.timeout(REQUEST_TIMEOUT_MS)])
-      : AbortSignal.timeout(REQUEST_TIMEOUT_MS);
+      ? AbortSignal.any([init.signal, AbortSignal.timeout(this.timeout)])
+      : AbortSignal.timeout(this.timeout);
     const initWithTimeout: RequestInit = { ...init, signal: requestSignal };
     if (this.insecureDispatcher === null) {
       return fetch(url, initWithTimeout);

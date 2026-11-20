@@ -1,7 +1,8 @@
 <!-- Die verbindliche Kopie liegt als backend/src/assignments/onboarding-tour-german.md im Repo
      (dort lädt der Backend die Lab-Sheets her); diese Kopie dient nur dem Onboarding-Ordner
      als Auffindbarkeit. Änderungen zuerst in backend/src/assignments/ vornehmen und dann
-     hierher spiegeln. Registriert über Configuration.ts als Assignment "Onboarding-Tour".
+     hierher spiegeln. Registriert über die Assignment-Datei
+     backend/src/assignments/environments/onboarding-tour.ts als Assignment "Onboarding-Tour".
      Das -german-Suffix kennzeichnet das deutschsprachige Assignment
      (Konvention: prona-sdn-intro-german.md). -->
 
@@ -15,7 +16,7 @@ es im Browser an, wie prüft die Plattform deine Arbeit?
 
 ```mermaid
 flowchart LR
-  C["Configuration.ts<br/>Assignment-Definition"] --> E["Environment.ts<br/>Deploy + Prüf-Schritte"]
+  C["Assignment-Datei<br/>environments/onboarding-tour.ts"] --> E["Environment.ts<br/>Deploy + Prüf-Schritte"]
   E --> P["InstanceProvider<br/>Docker / Containerlab"]
   P --> I["Instanz<br/>Terminal + Dateien"]
   I --> U["Browser<br/>xterm.js + Monaco"]
@@ -50,7 +51,7 @@ Zustand der Instanz — ein gutes Beispiel dafür, wie unterschiedlich Prüf-Sch
 
 1. Ergänze im Lab-Sheet `backend/src/assignments/onboarding-tour-german.md` einen eigenen Abschnitt
    mit einer Beobachtung, die dir aufgefallen ist.
-2. Ergänze in `backend/src/Configuration.ts` im Eintrag `Onboarding-Tour` **einen** weiteren
+2. Ergänze in `backend/src/assignments/environments/onboarding-tour.ts` **einen** weiteren
    Prüf-Schritt (z. B. `SSHCommand` mit `command: "ls /home/p4"`).
 3. Deploye neu und verifiziere, dass alle Schritte grün werden.
 
@@ -59,8 +60,8 @@ Implementierungsdetails.
 
 ## Reflexionsfragen
 
-1. Welche Rolle spielt `Configuration.ts` und welche `Environment.ts`? Wo würdest du ein neues
-   Feld für ein Assignment ergänzen?
+1. Welche Rolle spielt die Assignment-Datei (`environments/onboarding-tour.ts`) und welche
+   `Environment.ts`? Wo würdest du ein neues Feld für ein Assignment ergänzen?
 2. Welcher Teil des Terminalpfads hat dich beim Lesen am meisten überrascht?
 3. Wo hättest du für deine Erweiterung Hilfe von einem Werkzeug gebraucht — und wo hat es dich
    in die Irre geführt?
@@ -70,7 +71,8 @@ Implementierungsdetails.
 
 ## Abgabe
 
-- Branch `feature/<issue>-onboarding-tour` mit: geänderter `Configuration.ts`, geändertem
+- Branch `feature/<issue>-onboarding-tour` mit: geänderter Assignment-Datei
+  (`backend/src/assignments/environments/onboarding-tour.ts`), geändertem
   Lab-Sheet, PR-Beschreibung mit **Plan-Absatz** (Ziel, Akzeptanzkriterium, betroffene Dateien)
   und **KI-Notiz** (Tool/Kategorie, Anwendungsfall, Grad der manuellen Nacharbeit).
 - Nachweis: Screenshot der grünen Schritte; `npm test`, `npm run lint`, `npm run type-check` grün.
@@ -78,5 +80,6 @@ Implementierungsdetails.
 ## Referenzen
 
 - `README.md` — Betrieb und Assignment-Konfiguration.
-- `backend/src/Configuration.ts` — Beispiele für Terminals, Dateien, Schritte, Submissions.
+- `backend/src/assignments/environments/` — Beispiele für Terminals, Dateien, Schritte,
+  Submissions (eine Datei pro Assignment).
 - `onboarding-german/slides/code-tour.md` — Code-Tour (Architektur).

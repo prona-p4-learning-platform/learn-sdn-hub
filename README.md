@@ -58,13 +58,13 @@ docker run -it --rm -p 3001:3001 prona/learn-sdn-hub -t $BACKEND_TYPE -a $VBOX_I
 
 The container image runs the backend using the provider specified by "-t". Possible providers are localvm, localmultiuservm and openstack. You can get further help regarding the options by running ```docker run -it --rm prona/learn-sdn-hub -h```. In the case of localvm or localmultiuservm backend type, VBOX_IP_ADDRESSES is expected to lead to a host or a list of hosts that can be reached using SSH (on the port specified by VBOX_SSH_PORTS, and login using SSH_USERNAME, SSH_PASSWORD). For P4 assignments, the host needs to contain all necessary P4 tools, p4c, bmv2, mininet etc. See next [section](#prepare-a-p4-host) for details, if you do not already have a host containing P4 toolchain (like P4 tutorials VM, p4-learning VM etc.)
 
-Configuration of assignments, editable files, lab sheets, SSH consoles etc. needs to be done in backend/src/Configuration.ts. Assignment lab sheets need to be stored in backend/src/assigments. You can mount a local Configuration.ts file and a local assignments directory in the container using:
+Configuration of assignments, editable files, lab sheets, SSH consoles etc. is done in per-assignment files under backend/src/assignments/environments (one `.ts` file per assignment, loaded automatically at startup). Assignment lab sheets need to be stored in backend/src/assignments. You can mount a local assignments directory in the container using:
 
 ```sh
-docker run -it --mount type=bind,source="$(pwd)"/assignments,target=/home/p4/learn-sdn-hub/backend/src/assignments --mount type=bind,source="$(pwd)"/Configuration.ts,target=/home/p4/learn-sdn-hub/backend/src/Configuration.ts --rm -p 3001:3001 prona/learn-sdn-hub -t $BACKEND_TYPE -a $VBOX_IP_ADDRESSES
+docker run -it --mount type=bind,source="$(pwd)"/assignments,target=/home/p4/learn-sdn-hub/backend/src/assignments --rm -p 3001:3001 prona/learn-sdn-hub -t $BACKEND_TYPE -a $VBOX_IP_ADDRESSES
 ```
 
-Examples for the Configuration.ts file and the assignments directory are provided in [examples](/examples).
+Examples for the per-assignment definition files are provided in [examples/assignments/environments](/examples/assignments/environments).
 
 More sophisticated examples to run learn-sdn-hub in production environments are provided in [docker-container-scripts](/examples/docker-container-scripts).
 
@@ -288,7 +288,23 @@ VITE_REACT_APP_BACKEND_HTTP_PORT=16000
 
 ### Assignment Configuration
 
-Configuration of assignments, editable files, lab sheets, SSH consoles etc. needs to be done in backend/src/Configuration.ts. Assignment lab sheets can be stored in backend/src/assigments or retrieved from the deployed instance.
+Configuration of assignments, editable files, lab sheets, SSH consoles etc. is done in per-assignment files under backend/src/assignments/environments (one `.ts` file per assignment, automatically loaded at startup — the loader fails fast on missing exports or duplicate assignment names). Assignment lab sheets can be stored in backend/src/assignments or retrieved from the deployed instance. Alternatively, assignments can be served from MongoDB via `updateEnvironments` (see [Using MongoDB as authentication and persistence provider](#using-mongodb-as-authentication-and-persistence-provider)).
+
+### Session Lifetime Configuration
+
+The JWT session lifetime can be configured to limit how long a user's login session remains valid. By default, sessions expire after 2 hours (120 minutes).
+
+```sh
+export JWT_SESSION_LIFETIME_MINUTES="120"
+```
+
+You can adjust this value to any positive integer representing the number of minutes. For example, to set sessions to expire after 4 hours:
+
+```sh
+export JWT_SESSION_LIFETIME_MINUTES="240"
+```
+
+If this environment variable is not set or contains an invalid value, the default of 120 minutes (2 hours) will be used.
 
 ### Using MongoDB as authentication and persistence provider
 

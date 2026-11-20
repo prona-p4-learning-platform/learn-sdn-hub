@@ -35,10 +35,12 @@ export interface SubmissionEntry {
   username: string;
   groupNumber: number;
   environment: string;
+  uniqueEnvironmentId: string;
   submissionCreated: Date;
   terminalStatus: TerminalStateType[];
   submittedFiles: SubmissionFileType[];
   points?: number;
+  dialogAnswers?: Array<{ stepIndex: string; question: string; answer: string }>;
 }
 
 export type MongoAssignment = Omit<NewAssignment, "_id" | "sheetId"> & {
@@ -313,9 +315,11 @@ export default class MongoDBPersister implements Persister {
     username: string,
     groupNumber: number,
     environment: string,
+    uniqueEnvironmentId: string,
     terminalStates: TerminalStateType[],
     submittedFiles: SubmissionFileType[],
-    bonusPoints: number
+    bonusPoints: number,
+    dialogAnswers?: Array<{ stepIndex: string; question: string; answer: string }>
   ): Promise<void> {
     console.log(
       "Storing assignment result for user: " +
@@ -335,13 +339,15 @@ export default class MongoDBPersister implements Persister {
     // delete previous submissions of user and group, to ensure that there is
     // only one/most recent submission for the assignment
 
-    // delete all previous submissions of this environment for the current user
+    // delete all previous submissions of this environment instance for the
+    // current user (submissions of previous deployments remain untouched)
     const delUser = client
       .db()
       .collection<SubmissionEntry>("submissions")
       .deleteMany({
         username: username,
         environment: environment,
+        uniqueEnvironmentId: uniqueEnvironmentId,
       })
       .catch((err) => {
         throw new Error(
@@ -349,13 +355,15 @@ export default class MongoDBPersister implements Persister {
         );
       });
 
-    // delete all previous submissions of this environment for the current group
+    // delete all previous submissions of this environment instance for the
+    // current group (submissions of previous deployments remain untouched)
     const delGroup = client
       .db()
       .collection<SubmissionEntry>("submissions")
       .deleteMany({
         groupNumber: groupNumber,
         environment: environment,
+        uniqueEnvironmentId: uniqueEnvironmentId,
       })
       .catch((err) => {
         throw new Error(
@@ -374,10 +382,12 @@ export default class MongoDBPersister implements Persister {
         username: username,
         groupNumber: groupNumber,
         environment: environment,
+        uniqueEnvironmentId: uniqueEnvironmentId,
         submissionCreated: now,
         terminalStatus: terminalStates,
         submittedFiles: submittedFiles,
-        points: bonusPoints
+        points: bonusPoints,
+        dialogAnswers: dialogAnswers,
       })
       .catch((err) => {
         throw new Error("Failed to store submissions in mongodb.\n" + err);
@@ -875,6 +885,7 @@ export default class MongoDBPersister implements Persister {
               fileNames: { $addToSet: "$submittedFiles.fileName" },
               terminalEndpoints: { $addToSet: "$terminalStatus.endpoint" },
               points: { $first: { $ifNull: ["$points", null] } },
+              dialogAnswers: { $first: "$dialogAnswers" },
             },
           },
         ])
@@ -897,6 +908,9 @@ export default class MongoDBPersister implements Persister {
           terminalEndpoints: submission.terminalEndpoints,
           ...(submission.points !== null && {
             points: submission.points,
+          }),
+          ...(submission.dialogAnswers && {
+            dialogAnswers: submission.dialogAnswers,
           }),
         }),
       );

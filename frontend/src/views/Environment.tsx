@@ -246,7 +246,19 @@ function Environment(): JSX.Element {
     setShowSubmitDialog(false);
   }
 
-  async function checkStepTest() {
+  // Promise-based dialog that waits for user input - using native prompt
+  function handleDialogTestOpen(message: string): Promise<string | null> {
+    return new Promise((resolve) => {
+      // Use setTimeout to ensure the prompt opens after any pending state updates
+      setTimeout(() => {
+        const answer = window.prompt(message);
+        resolve(answer);
+      }, 100);
+    });
+  }
+
+  async function checkStepTest(stepIndex?: number) {
+    const currentStep = stepIndex !== undefined ? stepIndex : activeStep;
     // should send terminalState (maybe even editorState) if needed to backend and wait for result of test
     const testSnack = enqueueSnackbar("Testing step result...", {
       variant: "info",
@@ -260,18 +272,79 @@ function Environment(): JSX.Element {
         {
           method: "POST",
           body: {
-            activeStep: activeStep,
+            activeStep: currentStep,
             terminalState: terminalState,
           },
         },
       );
 
       if (payload.success) {
-        if (payload.data.status === "passed") {
+        // Check if this is a Dialog test that needs user input
+        if (payload.data.status === "dialog") {
+          closeSnackbar(testSnack);
+
+          // Show dialog and wait for user's answer
+          const userAnswer = await handleDialogTestOpen(payload.data.message);
+
+          // If user cancelled, stop here
+          if (userAnswer === null) {
+            enqueueSnackbar("Test cancelled", { variant: "info" });
+            return;
+          }
+
+          // Submit the answer to backend for validation
+          const validationSnack = enqueueSnackbar("Validating answer...", {
+            variant: "info",
+            persist: true,
+          });
+
+          try {
+            const validationPayload = await APIRequest(
+              `/environment/${environmentName}/test`,
+              httpStatusValidator,
+              {
+                method: "POST",
+                body: {
+                  activeStep: currentStep,
+                  terminalState: terminalState,
+                  dialogAnswer: userAnswer,
+                },
+              },
+            );
+
+            closeSnackbar(validationSnack);
+
+            if (validationPayload.success) {
+              if (validationPayload.data.status === "passed") {
+                enqueueSnackbar("Test passed!", { variant: "success" });
+                if (currentStep < state.stepLabels.length) {
+                  setActiveStep(currentStep + 1);
+                }
+              } else {
+                enqueueSnackbar(validationPayload.data.message, {
+                  variant: "error",
+                });
+              }
+            } else throw validationPayload.error;
+          } catch (error) {
+            closeSnackbar(validationSnack);
+            let errorMessage = "Unknown error";
+            if (error instanceof FetchError) {
+              const httpError = await getHttpError(error);
+              if (httpError.success) errorMessage = httpError.data.message;
+              else errorMessage = httpError.error.message;
+            } else if (error instanceof Error) {
+              errorMessage = error.message;
+            }
+            enqueueSnackbar(`Validation failed! (${errorMessage})`, {
+              variant: "error",
+            });
+          }
+        } else if (payload.data.status === "passed") {
           enqueueSnackbar("Test passed!", { variant: "success" });
 
-          if (activeStep < state.stepLabels.length) {
-            setActiveStep(activeStep + 1);
+          if (currentStep < state.stepLabels.length) {
+            setActiveStep(currentStep + 1);
           }
         } else {
           enqueueSnackbar(payload.data.message, { variant: "error" });
@@ -552,16 +625,16 @@ function Environment(): JSX.Element {
                 >
                   {state.stepLabels.length > 0 && (
                     <Grid item>
-                      <Stepper activeStep={activeStep}>
+                      <Stepper nonLinear activeStep={activeStep}>
                         {Array.isArray(state.stepLabels) &&
                           state.stepLabels.length > 0 &&
                           state.stepLabels.map((stepLabel, index) => (
                             <Step key={index}>
                               <StepButton
-                                disabled={index !== activeStep}
                                 key={index}
                                 onClick={() => {
-                                  void checkStepTest();
+                                  setActiveStep(index);
+                                  void checkStepTest(index);
                                 }}
                               >
                                 {stepLabel}

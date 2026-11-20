@@ -9,7 +9,7 @@ const assignmentsValidator = z.array(
     type: EnvironmentSchema
   })
 )
-const pointsValidator = z.record(z.number())
+const pointsValidator = z.record(z.string(), z.number())
 const deployedEnvironmentValidator = z.array(
   z.object({
     assignmentName: z.string(),

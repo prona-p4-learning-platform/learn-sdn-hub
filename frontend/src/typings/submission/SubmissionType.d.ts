@@ -9,4 +9,9 @@ export type SubmissionAdminOverviewEntry = {
   points?: number;
   assignmentRef?: string;
   userRef?: string;
+  dialogAnswers?: Array<{
+    stepIndex: string;
+    question: string;
+    answer: string;
+  }>;
 };
