@@ -1,8 +1,8 @@
-# Automaton — Design
+# Automata — Design
 
 **Status:** approved in chat, 2026-11-13 (design discussion; implementation not started)
-**Branch:** `feature/lax-trauty-automaton` (from `develop`)
-**Goal:** A new task type `"game"` for learn-sdn-hub: **Automaton**, a multiplayer engineering/automation game (resource extraction, logistics, production chains) in a shared, persistent 3D world, rendered with WebGPU in the browser. Assignments define goals ("deliver 30 iron ingots/min") that are checked and submitted through the platform like any other assignment.
+**Branch:** `feature/lax-trauty-automata` (from `develop`)
+**Goal:** A new task type `"game"` for learn-sdn-hub: **Automata**, a multiplayer engineering/automation game (resource extraction, logistics, production chains) in a shared, persistent 3D world, rendered with WebGPU in the browser. Assignments define goals ("deliver 30 iron ingots/min") that are checked and submitted through the platform like any other assignment.
 
 ## Decisions (from the design discussion)
 
@@ -10,7 +10,7 @@
 |---|---|
 | Integration | New `EnvironmentType` **`"game"`** — follows the `k8s` / `k8s-vcluster` precedent (own list section, own routes, own view). **No provider instance** is deployed. |
 | View | Own route `/game/:assignment`, **full assignment area** WebGPU canvas; lab sheet, goals (steps) and submit as in-game overlays. |
-| Server | Separate long-running service **`automaton-server`** (own process/container), **not** in the backend process and **not** a provider instance. |
+| Server | Separate long-running service **`automata-server`** (own process/container), **not** in the backend process and **not** a provider instance. |
 | Access | Browser → backend WebSocket proxy (JWT + authorization) → world server. World server is internal only. |
 | Worlds | One server process hosts many worlds on a worker-thread pool. World types: **course world, group world, personal sandbox**. Start screen in-game lists worlds the backend allows. |
 | Terrain | Smooth, **static** (not editable), generated deterministically from a seed: 3D density (surface + caves), meshed client-side (surface nets). |
@@ -51,9 +51,9 @@
 └──────┬───────────────────┬──────────┘
        │ internal HTTP     │ internal WS (token)
 ┌──────▼───────────────────▼──────────┐
-│ automaton-server (new service)      │
+│ automata-server (new service)      │
 │  main thread: HTTP/WS I/O, routing  │
-│  WorkerPool ─ worker N: WorldRuntime│──── MongoDB (automaton_* collections)
+│  WorkerPool ─ worker N: WorldRuntime│──── MongoDB (automata_* collections)
 │                 (tick, sim, AOI)    │     or in-memory store
 └─────────────────────────────────────┘
 ```
@@ -62,37 +62,37 @@
 
 | Path | Package | Content |
 |---|---|---|
-| `automaton/core/` | `@learn-sdn-hub/automaton-core` | Pure TypeScript, **no Node or DOM APIs**: world ids, binary protocol codec, deterministic noise + density, mesher, deposit generator, grid/placement rules, simulation (belts, machines, networks), catch-up solver. Used by server and frontend. |
-| `automaton/server/` | `@learn-sdn-hub/automaton-server` | World server: HTTP/WS entry, worker pool, `WorldRuntime`, persistence stores, internal admin/query API. Runs with `ts-node` like the backend. |
+| `automata/core/` | `@learn-sdn-hub/automata-core` | Pure TypeScript, **no Node or DOM APIs**: world ids, binary protocol codec, deterministic noise + density, mesher, deposit generator, grid/placement rules, simulation (belts, machines, networks), catch-up solver. Used by server and frontend. |
+| `automata/server/` | `@learn-sdn-hub/automata-server` | World server: HTTP/WS entry, worker pool, `WorldRuntime`, persistence stores, internal admin/query API. Runs with `ts-node` like the backend. |
 | `backend/src/routes/game.ts` | backend | REST: world list, step checks, submit, admin world operations (proxied). |
 | `backend/src/websocket/GameHandler.ts` | backend | WS proxy browser ↔ world server. |
 | `backend/src/game/` | backend | `worldAccess.ts` (pure: which worlds may this user join), `WorldServerClient.ts` (internal HTTP client). |
 | `frontend/src/views/Game.tsx` | frontend | Route `/game/:assignment`. |
 | `frontend/src/components/assignments/GameAssignments.tsx` | frontend | Assignment list section with "Play" button. |
-| `frontend/src/automaton/` | frontend | Renderer, workers, networking, input, overlays. |
-| `backend/src/assignments/environments/automaton-*.ts` + `backend/src/assignments/automaton-*.md` | backend | Game assignments + lab sheets (per-assignment file convention). |
+| `frontend/src/automata/` | frontend | Renderer, workers, networking, input, overlays. |
+| `backend/src/assignments/environments/automata-*.ts` + `backend/src/assignments/automata-*.md` | backend | Game assignments + lab sheets (per-assignment file convention). |
 
-Root `package.json` workspaces become `["backend", "frontend", "automaton/core", "automaton/server"]`.
+Root `package.json` workspaces become `["backend", "frontend", "automata/core", "automata/server"]`.
 
 ### Task type `"game"`
 
 `EnvironmentType` (`backend/src/Environment.ts:143`) and the frontend `EnvironmentSchema` (`frontend/src/hooks.ts:5`) gain `"game"`. A game assignment is a normal per-assignment file:
 
 ```ts
-// backend/src/assignments/environments/automaton-intro.ts
+// backend/src/assignments/environments/automata-intro.ts
 import type { EnvironmentDescription } from "../../Environment";
 
-export const name = "Automaton-Intro";
+export const name = "Automata-Intro";
 export const environment: EnvironmentDescription = {
   type: "game",
-  description: "Automaton: first production chain",
-  assignmentLabSheet: "../assignments/automaton-intro.md",
+  description: "Automata: first production chain",
+  assignmentLabSheet: "../assignments/automata-intro.md",
   assignmentLabSheetLocation: "backend", // "instance" is rejected for game assignments
   terminals: [],
   editableFiles: [],
   stopCommands: [],
   game: {
-    template: "temperate",          // terrain/resource preset in automaton-core
+    template: "temperate",          // terrain/resource preset in automata-core
     seed: 4711,
     worldTypes: ["course", "group", "sandbox"],
     gradedWorldTypes: ["course", "group"],
@@ -133,25 +133,25 @@ Ids are deterministic, so worlds are created lazily on first join — nobody cre
 1. `GET /api/game/:assignment/worlds` → backend resolves allowed world ids (`worldAccess.ts`, pure function of user, courses, assignment `game` block) and merges status from the world server (`active | idle | readonly`, players online).
 2. One world → client joins directly; several → start screen.
 3. Client opens `WS /ws/game/:assignment/:worldId`, first message `auth <jwt> <group>` (same handshake as `websocket/index.ts`).
-4. Backend re-checks the world id is allowed, then opens the upstream WS to `AUTOMATON_SERVER_URL` with an internal hello: `{ token: AUTOMATON_INTERNAL_TOKEN, worldId, template, seed, rules, username, groupNumber, role }`. The world server creates the world if missing (using these params) and trusts only this hello.
+4. Backend re-checks the world id is allowed, then opens the upstream WS to `AUTOMATA_SERVER_URL` with an internal hello: `{ token: AUTOMATA_INTERNAL_TOKEN, worldId, template, seed, rules, username, groupNumber, role }`. The world server creates the world if missing (using these params) and trusts only this hello.
 5. Bytes are piped both ways; either side closing closes the other.
 
 ### World server
 
 - **Main thread:** HTTP (internal API) + WS (internal, token-checked), routes messages by `worldId` to the owning worker over a `MessagePort`.
-- **Worker pool:** `AUTOMATON_WORKERS` (default: CPU count − 1, min 1). A world is assigned to the least-loaded worker when it loads.
+- **Worker pool:** `AUTOMATA_WORKERS` (default: CPU count − 1, min 1). A world is assigned to the least-loaded worker when it loads.
 - **`WorldRuntime`** (one per loaded world, inside a worker): tick loop, simulation state, occupancy map, players + area of interest, persistence hooks. No shared state between worlds.
-- **Lifecycle:** `(none) → ACTIVE` on first join; `ACTIVE → IDLE` after `AUTOMATON_IDLE_UNLOAD_MINUTES` (default 10) without players (state saved, `lastTickAt` + measured rates stored); `IDLE → ACTIVE` on join (catch-up runs first); `→ ARCHIVED` (read-only) manually or at `archiveAt`; `→ DELETED` only by admin. Sandboxes idle longer than `AUTOMATON_SANDBOX_TTL_DAYS` (default 30) are deleted by a daily job.
-- **Limits:** `AUTOMATON_MAX_LOADED_WORLDS` (refuse new loads beyond, message on start screen), `rules.maxPlayers`, world radius, per-player build rate limit (default 10 actions/s), max entities per world (default 20 000), max inbound message size (64 KiB).
+- **Lifecycle:** `(none) → ACTIVE` on first join; `ACTIVE → IDLE` after `AUTOMATA_IDLE_UNLOAD_MINUTES` (default 10) without players (state saved, `lastTickAt` + measured rates stored); `IDLE → ACTIVE` on join (catch-up runs first); `→ ARCHIVED` (read-only) manually or at `archiveAt`; `→ DELETED` only by admin. Sandboxes idle longer than `AUTOMATA_SANDBOX_TTL_DAYS` (default 30) are deleted by a daily job.
+- **Limits:** `AUTOMATA_MAX_LOADED_WORLDS` (refuse new loads beyond, message on start screen), `rules.maxPlayers`, world radius, per-player build rate limit (default 10 actions/s), max entities per world (default 20 000), max inbound message size (64 KiB).
 - **Persistence:** MongoDB when `MONGODB_URL` is set, otherwise in-memory (dev only, lost on restart).
 
 | Collection | Content |
 |---|---|
-| `automaton_worlds` | `_id` (worldId), type, assignment, template, seed, rules, status, `archiveAt?`, createdAt, lastActiveAt, lastTickAt, measuredRates |
-| `automaton_entities` | worldId, entityId, kind, cell `{x,y,z}`, rotation, owner, config, region key — written in batches (≤ 2 s after change) |
-| `automaton_sim_state` | worldId, region key, serialized belt contents / machine buffers / network storage — every 30 s and on unload |
-| `automaton_players` | worldId, username, position, inventory, lastSeen |
-| `automaton_metrics` | worldId, owner, resource, per-minute delivery buckets (for throughput checks), TTL 7 days |
+| `automata_worlds` | `_id` (worldId), type, assignment, template, seed, rules, status, `archiveAt?`, createdAt, lastActiveAt, lastTickAt, measuredRates |
+| `automata_entities` | worldId, entityId, kind, cell `{x,y,z}`, rotation, owner, config, region key — written in batches (≤ 2 s after change) |
+| `automata_sim_state` | worldId, region key, serialized belt contents / machine buffers / network storage — every 30 s and on unload |
+| `automata_players` | worldId, username, position, inventory, lastSeen |
+| `automata_metrics` | worldId, owner, resource, per-minute delivery buckets (for throughput checks), TTL 7 days |
 
 Terrain and deposits are **never stored** — they are a pure function of `(template, seed)`.
 
@@ -167,7 +167,7 @@ Terrain and deposits are **never stored** — they are a pure function of `(temp
 | `POST` | `/internal/worlds/:id/kick` | `{ username }` |
 | `DELETE` | `/internal/worlds/:id` | delete world |
 
-All require `Authorization: Bearer $AUTOMATON_INTERNAL_TOKEN`. Admin routes in `backend/src/routes/admin.ts` (behind `AdminRoleMiddleware`) proxy to these.
+All require `Authorization: Bearer $AUTOMATA_INTERNAL_TOKEN`. Admin routes in `backend/src/routes/admin.ts` (behind `AdminRoleMiddleware`) proxy to these.
 
 ## Terrain
 
@@ -180,7 +180,7 @@ All require `Authorization: Bearer $AUTOMATON_INTERNAL_TOKEN`. Admin routes in `
 
 ## Resources and deposits
 
-- **Kinds:** registry entries `{ id, kind: "solid" | "fluid" | "gas" | "energy", … }` in `automaton-core` (`iron-ore`, `copper-ore`, `coal`, `water`, `crude-oil`, `natural-gas`, `steam`, `power`, …; final list in Stage 4/5 plans).
+- **Kinds:** registry entries `{ id, kind: "solid" | "fluid" | "gas" | "energy", … }` in `automata-core` (`iron-ore`, `copper-ore`, `coal`, `water`, `crude-oil`, `natural-gas`, `steam`, `power`, …; final list in Stage 4/5 plans).
 - **Deposits:** `ore-cluster` (solid), `well` (fluid), `vent` (gas, or energy for `geothermal`). Fields: `{ id, type, resourceId, position, purity: impure|normal|pure }` → rate multiplier 0.5 / 1 / 2.
 - **Generation:** per 64 × 64 m region, seeded Poisson-disc sampling (RNG = hash(seed, rx, rz)); candidates on the surface and on cave floors (density sign change with air above); valid only with a flat extractor footprint (corner height spread ≤ 1 m) and clearance. Deeper candidates favour rarer resources. Deterministic ids `dep:<rx>:<rz>:<i>`.
 - **Infinite.** Deposits never deplete and are indestructible anchors.
@@ -220,7 +220,7 @@ Binary WebSocket frames, little-endian, `u8` message type + payload. Protocol ve
 
 ## Catch-up
 
-On unload the world stores measured per-entity rates over the last 60 s. On load with `dt = now − lastTickAt` (capped at `archiveAt` and `AUTOMATON_CATCHUP_MAX_DAYS`, default 14):
+On unload the world stores measured per-entity rates over the last 60 s. On load with `dt = now − lastTickAt` (capped at `archiveAt` and `AUTOMATA_CATCHUP_MAX_DAYS`, default 14):
 
 1. Build the production graph from measured rates.
 2. Find the next event (a buffer/storage fills or empties, a fuel runs out); advance all inventories linearly to it.
@@ -232,7 +232,7 @@ Cost is O(events), not O(ticks). **Catch-up never writes throughput metrics** �
 
 - New step test type `WorldQuery` (`Environment.ts` union) with queries: `throughput` (resource, minPerMinute, windowMinutes), `entityCount` (entity, min, powered?), `stored` (resource, min), each with `scope: "own" | "world"` (`own` = caller's group in course worlds).
 - `POST /api/game/:assignment/test` `{ worldId, stepIndex }` → backend checks access and `gradedWorldTypes`, calls `/internal/worlds/:id/query` per test, returns the same `TestResult` shape the normal assignment view uses.
-- `POST /api/game/:assignment/submit` `{ worldId }` → runs all step checks, then `persister.SubmitUserEnvironment(username, groupNumber, assignment, [], [{ fileName: "automaton-report.json", fileContent }], bonusPoints)` — the existing submission storage and admin "Submission Overview" work unchanged. The report contains step results, world id, owner stats.
+- `POST /api/game/:assignment/submit` `{ worldId }` → runs all step checks, then `persister.SubmitUserEnvironment(username, groupNumber, assignment, [], [{ fileName: "automata-report.json", fileContent }], bonusPoints)` — the existing submission storage and admin "Submission Overview" work unchanged. The report contains step results, world id, owner stats.
 
 ## Admin
 
@@ -242,21 +242,21 @@ New **"Worlds"** tab in `Administration.tsx`: list (type, assignment, status, pl
 
 | Variable | Where | Default | Purpose |
 |---|---|---|---|
-| `AUTOMATON_SERVER_URL` | backend | unset | e.g. `http://localhost:3002`; unset → game assignments show "not available" |
-| `AUTOMATON_INTERNAL_TOKEN` | backend + server | — (required on server) | shared secret backend ↔ server |
-| `AUTOMATON_PORT` | server | `3002` | internal HTTP/WS port |
+| `AUTOMATA_SERVER_URL` | backend | unset | e.g. `http://localhost:3002`; unset → game assignments show "not available" |
+| `AUTOMATA_INTERNAL_TOKEN` | backend + server | — (required on server) | shared secret backend ↔ server |
+| `AUTOMATA_PORT` | server | `3002` | internal HTTP/WS port |
 | `MONGODB_URL` | server | unset | persistence; unset → in-memory |
-| `AUTOMATON_WORKERS` | server | CPUs − 1 | worker threads |
-| `AUTOMATON_IDLE_UNLOAD_MINUTES` | server | `10` | unload empty worlds |
-| `AUTOMATON_MAX_LOADED_WORLDS` | server | `50` | memory guard |
-| `AUTOMATON_SANDBOX_TTL_DAYS` | server | `30` | sandbox cleanup |
-| `AUTOMATON_CATCHUP_MAX_DAYS` | server | `14` | catch-up cap |
+| `AUTOMATA_WORKERS` | server | CPUs − 1 | worker threads |
+| `AUTOMATA_IDLE_UNLOAD_MINUTES` | server | `10` | unload empty worlds |
+| `AUTOMATA_MAX_LOADED_WORLDS` | server | `50` | memory guard |
+| `AUTOMATA_SANDBOX_TTL_DAYS` | server | `30` | sandbox cleanup |
+| `AUTOMATA_CATCHUP_MAX_DAYS` | server | `14` | catch-up cap |
 
 ## Deployment
 
-- **Local dev:** `cd automaton/server && npm run dev` (port 3002) next to backend (3001) and frontend (3000). Vite's existing `^/ws/.*` and `^/api/.*` proxies cover the new paths.
-- **Docker Compose:** `automaton-server` service in `docker-compose.yml` / `docker-compose-build.yml`, own `automaton/server/Dockerfile`.
-- **Helm:** `deployment-automaton-server.yaml` + `service-automaton-server.yaml` (ClusterIP only, never in the ingress), `automatonServer.enabled` value, **1 replica** (in-memory world state; the backend also runs `replicaCount: 1`).
+- **Local dev:** `cd automata/server && npm run dev` (port 3002) next to backend (3001) and frontend (3000). Vite's existing `^/ws/.*` and `^/api/.*` proxies cover the new paths.
+- **Docker Compose:** `automata-server` service in `docker-compose.yml` / `docker-compose-build.yml`, own `automata/server/Dockerfile`.
+- **Helm:** `deployment-automata-server.yaml` + `service-automata-server.yaml` (ClusterIP only, never in the ingress), `automataServer.enabled` value, **1 replica** (in-memory world state; the backend also runs `replicaCount: 1`).
 
 ## Security
 
@@ -278,8 +278,8 @@ New **"Worlds"** tab in `Administration.tsx`: list (type, assignment, status, pl
 
 | Package | Workspace | Kind | Why |
 |---|---|---|---|
-| `ws` | automaton/server | runtime | WS server (already used by backend) |
-| `mongodb` | automaton/server | runtime | persistence (already used by backend) |
+| `ws` | automata/server | runtime | WS server (already used by backend) |
+| `mongodb` | automata/server | runtime | persistence (already used by backend) |
 | `@webgpu/types` | frontend | dev | WebGPU typings |
 | `vitest`, `@testing-library/react`, `jsdom` | frontend | dev | frontend tests as prescribed in AGENTS.md (no frontend test setup exists yet) |
 
@@ -289,17 +289,17 @@ No other new runtime dependencies. Noise, math, meshing, protocol codec are writ
 
 | Area | Where | What |
 |---|---|---|
-| core | `automaton/core/test` (jest) | noise/density golden vectors, mesher invariants (closed surface, no NaN), deposit generation determinism, protocol round-trip, placement rules, belt throughput exactness, recipe timing, power/fluid/gas solvers, catch-up vs. tick simulation |
-| server | `automaton/server/test/unit` + `/integration` (jest, `@shelf/jest-mongodb`) | worker routing, lifecycle (idle unload, reload), internal API auth, Mongo store |
+| core | `automata/core/test` (jest) | noise/density golden vectors, mesher invariants (closed surface, no NaN), deposit generation determinism, protocol round-trip, placement rules, belt throughput exactness, recipe timing, power/fluid/gas solvers, catch-up vs. tick simulation |
+| server | `automata/server/test/unit` + `/integration` (jest, `@shelf/jest-mongodb`) | worker routing, lifecycle (idle unload, reload), internal API auth, Mongo store |
 | backend | `backend/test/unit` | loader validation for `game`, `worldAccess`, `GameHandler` auth/forwarding (mocked upstream), game routes |
 | frontend | `frontend` (vitest + RTL) | start screen, overlays, WebGPU-unavailable message; canvas/renderer skipped (jsdom) |
 | manual | running stack | two users in two browsers see each other, build, produce; verified per stage |
 
 ## Implementation stages
 
-Each stage is one PR into `feature/lax-trauty-automaton` (later merged towards `develop`/`master`), with its own plan:
+Each stage is one PR into `feature/lax-trauty-automata` (later merged towards `develop`/`master`), with its own plan:
 
-1. `docs/superpowers/plans/2026-11-13-automaton-stage-1-platform.md` — task type, packages, world server skeleton, proxy, start screen, presence.
+1. `docs/superpowers/plans/2026-11-13-automata-stage-1-platform.md` — task type, packages, world server skeleton, proxy, start screen, presence.
 2. `…-stage-2-terrain.md` — deterministic terrain with caves, meshing, rendering, movement, deposits.
 3. `…-stage-3-building.md` — grid, foundations, placement, ownership, plots, entity persistence.
 4. `…-stage-4-solids.md` — simulation core, extractors, belts, machines, sinks, client replica.

@@ -1,12 +1,10 @@
-# Automaton Stage 3 — Building, Ownership and Plots Implementation Plan
+# Automata Stage 3 — Building, Ownership and Plots Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
->
 > **Refine before execution:** task-level plan; expand into step-level detail against the code after Stage 2.
 
 **Goal:** Players place and remove foundations and (still inert) machines on a 1 m grid, snapped to terrain and deposits, with server-side validation, ownership and group plots. Entities persist across server restarts and are replicated to all players in range.
 
-**Spec:** `docs/superpowers/specs/2026-11-13-automaton-design.md` (sections *Building*, *Networking*, *World server → Persistence*).
+**Spec:** `docs/superpowers/specs/2026-11-13-automata-design.md` (sections *Building*, *Networking*, *World server → Persistence*).
 
 **Depends on:** Stage 2 merged.
 
@@ -26,7 +24,7 @@
 
 ### Task 1: Entity catalogue and grid model (core)
 
-**Files:** `automaton/core/src/grid/{cells.ts,entities.ts,occupancy.ts}`, tests.
+**Files:** `automata/core/src/grid/{cells.ts,entities.ts,occupancy.ts}`, tests.
 
 - [ ] Cell coordinates, rotation (0–3), footprint rotation, port positions/directions after rotation.
 - [ ] Entity kinds for this stage: `foundation` (4×4×1), `miner`, `pump`, `gas-extractor`, `smelter`, `constructor`, `container`, `sink`, `belt` (straight/curve, 1×1), `pipe`, `pole` — data only (no behaviour yet).
@@ -34,7 +32,7 @@
 
 ### Task 2: Placement rules (core)
 
-**Files:** `automaton/core/src/grid/placement.ts`, tests.
+**Files:** `automata/core/src/grid/placement.ts`, tests.
 
 - [ ] Foundation rule (corners on ground within 2 m, ≤ 50 % solid volume), machine rule (fully on foundation tops, volume air and free), extractor rule (snap to matching deposit type, one extractor per deposit), belts/pipes may run on foundations or terrain-free air with supports later (v1: on foundations only).
 - [ ] World radius, build ceiling, bedrock checks.
@@ -42,15 +40,15 @@
 
 ### Task 3: Ownership and plots (core + server)
 
-**Files:** `automaton/core/src/grid/plots.ts`, `automaton/server/src/world/Ownership.ts`, tests.
+**Files:** `automata/core/src/grid/plots.ts`, `automata/server/src/world/Ownership.ts`, tests.
 
-- [ ] Plot allocation in deterministic ring order around spawn (`rules.plots.size`), stored in `automaton_worlds.plots`; allocated on a group's first build.
+- [ ] Plot allocation in deterministic ring order around spawn (`rules.plots.size`), stored in `automata_worlds.plots`; allocated on a group's first build.
 - [ ] Rules: course world → build only inside own plot; group world and sandbox → anywhere; remove/configure only by owner; admin overrides.
 - [ ] Tests: allocation order stable, two groups never share a plot, owner/admin/foreign cases.
 
 ### Task 4: Protocol and server actions
 
-**Files:** `automaton/core/src/protocol/*` (version bump), `automaton/server/src/WorldRuntime.ts`, `automaton/server/src/world/EntityStore.ts`.
+**Files:** `automata/core/src/protocol/*` (version bump), `automata/server/src/WorldRuntime.ts`, `automata/server/src/world/EntityStore.ts`.
 
 - [ ] Messages: `Build`, `Remove`, `Configure`, `ActionResult`, `SubscribeRegions`, `EntitySnapshot`, `EntityAdded/Removed/Updated`.
 - [ ] Area of interest: clients subscribe to regions within view distance; server sends snapshots on subscribe and deltas afterwards.
@@ -59,14 +57,14 @@
 
 ### Task 5: Entity persistence
 
-**Files:** `automaton/server/src/store/{EntityRepository.ts,MongoEntityRepository.ts,MemoryEntityRepository.ts}`, tests (unit + integration).
+**Files:** `automata/server/src/store/{EntityRepository.ts,MongoEntityRepository.ts,MemoryEntityRepository.ts}`, tests (unit + integration).
 
-- [ ] `automaton_entities` with region key index; batched writes; load per region on world load.
+- [ ] `automata_entities` with region key index; batched writes; load per region on world load.
 - [ ] Integration test: build N entities, unload world, reload, identical entity set and occupancy.
 
 ### Task 6: Client build mode
 
-**Files:** `frontend/src/automaton/build/{BuildMode.ts,GhostRenderer.ts}`, `frontend/src/automaton/render/EntityRenderer.ts`, `frontend/src/automaton/ui/{BuildMenu.tsx,Hud.tsx}`.
+**Files:** `frontend/src/automata/build/{BuildMode.ts,GhostRenderer.ts}`, `frontend/src/automata/render/EntityRenderer.ts`, `frontend/src/automata/ui/{BuildMenu.tsx,Hud.tsx}`.
 
 - [ ] Build menu (MUI overlay), ghost snapped to grid / deposit with valid (green) / invalid (red, reason tooltip) state using the same core placement rules; R rotates, X removes, click places.
 - [ ] Instanced entity rendering (one draw per kind), simple placeholder meshes defined in code.
