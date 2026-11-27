@@ -536,10 +536,125 @@ A web search on 2026-11-27 found no existing use of thrumite, pyrelith, rimeglas
 | 116 | Names | Thrumite, pyrelith, rimeglass, concordite and the resonance reactor are settled (open question 37). | The engine part names stay placeholders until the tier content review. |
 | 117 | Schedule | The target stays March 2027 with everything in v1 (open question 60). The author's team works on Automata nearly full time. | Confirms #11 after the scope grew. The rewritten stage plans keep every feature in v1 and propose a stage for each feature added since #49 (energy in full, reactor, day and night, travel, map, chat, display names, world overview, onboarding, audio). |
 
+## 2026-11-27 — Energy discussion
+
+The author went through five points of the energy draft.
+
+### Decided
+
+| # | Topic | Decision | Consequences |
+|---|---|---|---|
+| 118 | Machine speed | Every machine's speed can be set in its menu, as in Satisfactory. The same menu holds the upgrade slots. | Answers the tier 4 by-product trap (unburned fuel backing up into the refinery when fuel generators throttle with the rest): players underclock the refinery or the coal generators, or buffer fuel in tanks. Generator priorities (discussed) are not needed. Speed range and mainsprings: proposed below. |
+| 119 | Geothermal swing | Stays as drafted (50–150 % over 60 s). Batteries cover the swing, demand spikes and fuel running out. | — |
+| 120 | Wiring | Machines are wired to poles by hand, as in Satisfactory (as drafted). | No automatic connection within a pole's range. |
+| 121 | Final rate test | Engine phase 6 is sized so that the required production needs about 1–2 GW. | The resonance reactor (#101) is the natural route; many gas turbines also work. Phase 6 numbers come with the tier content review. |
+| 122 | Fuse | Overload trips the grid's fuse, as in Satisfactory: when demand exceeds what generators and batteries deliver, the whole grid stops until a player resets the fuse. | Replaces the brownout rule (spec *Simulation*, satisfaction ratio; GDD section 12) and the Stage 5 review focus "power fairness". Machines run at full speed or not at all, so the speed setting (#118) is the tool for fitting demand to supply. A grid on geothermal without enough batteries trips once per cycle (#119). Details proposed below. |
+
+### Proposed, awaiting confirmation
+
+- *(Confirmed as #123.)* **Speed range (#118).** The slider runs from 1 to 100 % on every machine from the start; each mainspring raises the maximum by 50 %, up to 250 % with three. Speed is set in whole percent.
+- *(Confirmed as #123.)* **One power curve (#118).** Power draw follows speed^1.6 over the whole range (50 % → 0.33×, 150 % → 1.9×, 200 % → 3.0×, 250 % → 4.3×) instead of speed² for mainsprings only. Underclocking saves energy per item and overclocking costs extra, so "fewer fast machines or more slow ones" is a real trade-off. Core computes it from a fixed table, so it stays integer and deterministic.
+- *(Confirmed as #123.)* **Upgrades per machine kind.** Mainsprings fit every machine, generators and extractors included; on a generator, output and fuel use both scale linearly with speed. Escapements fit machines that draw power or burn fuel, not generators. Harmonic cores fit production machines and extractors, not generators (double output without extra input would be free power).
+- *(Confirmed as #123.)* **Fuse details (#122).** The fuse trips when demand exceeds generation plus what the batteries can discharge (50 MW each). Everything in the grid stops, and generators stop burning fuel. A player of the owning team resets it at a generator, battery or power switch of that grid; if demand is still too high, it trips again at once. A fuse that trips while nobody is near, or during catch-up, stays tripped until someone resets it, and the grid stands still meanwhile. The power panel shows a tripped fuse and its cause.
+- *(Confirmed as #123.)* **Switches (#122).** A power switch (tier 2) joins or separates two grids by hand. A priority switch (tier 3) cuts off the grid behind it before the fuse would trip, so a team can protect its important lines.
+
+## 2026-11-27 — Upgrade names, long-distance power
+
+### Decided
+
+| # | Topic | Decision | Consequences |
+|---|---|---|---|
+| 123 | Energy proposals | Confirmed as proposed: speed range (1–100 %, +50 % per speed upgrade, up to 250 %), one power curve (speed^1.6), upgrades per machine kind, fuse details, power and priority switches. | Assumed: the confirmation covers these five; the rest of the energy draft (GDD section 12) stays the working basis, its numbers starting values to tune. |
+| 124 | Upgrade names | The mainspring is called **speed upgrade**, the escapement **efficiency upgrade**; the harmonic core keeps its name. | Earlier entries keep the old names; the GDD uses the new ones. |
+
+### Proposed, awaiting confirmation
+
+- *(Confirmed as #125.)* **Long-distance power (author's question: which tier, where does it make sense?).** The draft puts power towers in tier 5, but tier 3 is where power first has to come from far away: geothermal vents sit in the highlands (#38), while bases start in grassland or forest (#38), up to about 2 km apart (#96). With 40 m steel poles that is up to 50 poles per line. Proposed:
+  - Steel poles (40 m) move to tier 2: steel is a tier 2 product, so they unlock once the team has steel (#18).
+  - Power towers (150 m, 2 wires, about 20 m tall so their wires clear hills) move to tier 3, made from steel, concrete and copper wire, together with geothermal. A 2 km line takes 14 towers.
+  - Superconducting towers (400 m) in tier 5, made with superconducting wire, for tier 6's three-biome network: a 2 km line takes 5 of them.
+  - Drag placement (#52) for tower lines places the towers along the line at their range and wires them, showing the total cost as for belts (#61). Machines are still wired to poles by hand (#120).
+  - Wires cost copper wire by length, so long lines keep the tier 1 copper wire line busy.
+
+## 2026-11-27 — Long-distance power and insulation
+
+### Decided
+
+| # | Topic | Decision | Consequences |
+|---|---|---|---|
+| 125 | Long-distance power | As proposed: steel poles (40 m) in tier 2 once the team has steel; power towers (150 m, about 20 m tall) in tier 3 with geothermal; superconducting towers (400 m) in tier 5; dragging a tower line places and wires the towers and shows the total cost; wires cost copper wire by length. | Pole table and tier rows in the GDD updated. Machines are still wired to poles by hand (#120). |
+
+### Open
+
+61. **Insulation.** Answered by #126.
+
+### Proposed, awaiting confirmation
+
+- *(Option A confirmed as #126.)* **Insulation (open question 61).** Real overhead lines are bare as well: transmission lines are uninsulated conductors, held off their towers by glass or porcelain insulators, and only cables near people or inside buildings are insulated. Options:
+  - *A. Bare lines, insulated cable later* (recommended). Wires between poles stay bare copper wire; each pole and tower carries insulators that are part of its recipe, with no separate item. Rubber brings **insulated cable** (copper wire + rubber) in tier 4 as an ingredient for tier 4–6 parts and the superconducting tower. The models show the insulators.
+  - *B. Early insulation from wood.* A resin from trees (tier 2, tree farm) coats wire into an early insulated wire; rubber cable replaces it in tier 4. More realistic indoors, but one more item and one more source.
+  - *C. Abstract it away.* A cable item made from copper wire, as in Satisfactory, with insulation never mentioned.
+
+## 2026-11-27 — Insulation and superconducting wire
+
+### Decided
+
+| # | Topic | Decision | Consequences |
+|---|---|---|---|
+| 126 | Insulation | Option A (open question 61): wires between poles stay bare copper wire, as real overhead lines are; every pole and tower carries insulators as part of its recipe, with no separate item. Rubber brings insulated cable (copper wire + rubber) in tier 4. | Insulated cable is an ingredient for tier 4–6 parts and the superconducting tower (#125). The pole and tower models show their insulators. |
+
+### Proposed, awaiting confirmation
+
+- *(Confirmed as #127.)* **Superconducting wire (author's question: what is it made of?).** The draft names it as a tier 5 product but gives no recipe. Proposed: **copper wire + rimeglass + coolant**, made in a machine with three inputs; the coolant is used up while the wire is drawn. In the fiction, rimeglass makes copper superconduct at normal temperatures, so the wire needs no cooling once made (#76). It follows #62: tier 5's new sources (rimeglass, ice via coolant) combined with a tier 1 product, so the copper wire line stays busy until the end. Real high-temperature superconductors are copper-oxide ceramics, so copper plus a crystal is not far off. Used in superconducting towers (#125), superconducting coils (engine phase 5) and, as a rimeglass product, resonance cells (#101). Ratios come with the balance numbers.
+
+## 2026-11-27 — Superconducting wire confirmed
+
+| # | Topic | Decision | Consequences |
+|---|---|---|---|
+| 127 | Superconducting wire | As proposed: copper wire + rimeglass + coolant, in a machine with three inputs; the coolant is used up in making it; no cooling in operation. | Recorded in the tier 5 row of the GDD. |
+
+## 2026-11-27 — Catalogue and remaining gaps
+
+The design now covers the systems, but not the full content: many items, machines and recipes are only named in the tier table, without recipe, machine or numbers. Open questions 62–65 frame a full catalogue; once they are answered, a catalogue draft follows for review. Questions 66–73 are remaining design gaps.
+
+### Open
+
+62. **Playtime target.** How long should a small team take from first login to waking the engine? It sets every quantity: phase amounts, recipe times, extractor rates.
+63. **Machine roster.** A small set of general machines, or machines specialised per product? Do production machines come in tiers, or only extractors?
+64. **Belt and pipe tiers.** How many, at which rates.
+65. **Where the catalogue lives.** A design document now, or straight into code.
+66. **Water and the world's edge.** Are there lakes or a sea; can pumps draw from them; what does a player see at the edge of the world radius?
+67. **Items between players.** Nobody can open another team's containers (#72) or connect to its buildings (#98), so items cannot change teams. Ground drops, a trade dialog, or nothing?
+68. **Item sink.** A building that destroys items, and one that vents fluids and gases, for by-products and overflow.
+69. **UI language.** English only, or German as well?
+70. **Cosmetic building pieces.** Walls, roofs, stairs, railings, lamps, or only functional pieces?
+71. **Weather.** Visual-only rain and snow, like day and night (#100)?
+72. **Settings menu.** What players can adjust.
+73. **Defaults.** Maximum team size, default building limits (#87), default maximum players per world.
+
+### Proposed, awaiting confirmation
+
+- **62:** about 40 hours of play for a team of three to wake the engine, roughly a semester at a few hours a week; phase 1 after about 2–3 hours, each later phase longer than the one before.
+- **63:** a Satisfactory-style roster with one machine per job shape: one input, two inputs, four inputs, smelting, alloy smelting, refining, fluid mixing. Production machines have no tiers; extractors get one tier per tiered ore (#17); speed comes from speed settings and upgrades (#118).
+- **64:** five belt tiers that double each time (30, 60, 120, 240, 480 items/min, in tiers 1 to 5); two pipe tiers for fluids and gases (300 and 600 m³/min, in tiers 2 and 4).
+- **65:** `docs/automata/catalogue.md` now, with resources, items, machines, buildings and recipes at starting numbers. Once Stage 4 brings `automata/core/src/catalog/`, the code is authoritative and the document points to it, as the GDD intro says.
+- **66:** a global sea level: terrain below it is water, so a sea surrounds the world beyond its radius and inland basins become lakes. Water pumps work on any lake or the sea; water wells stay for places without open water. Players can wade and swim slowly.
+- **67:** a trade dialog between two nearby players in which both confirm; no ground drops, so no loose items to store.
+- **68:** an item sink (tier 1) and a fluid vent (tier 2) that destroy what they receive, without any reward.
+- **69:** English first, with every text in one string table, so German can follow without code changes.
+- **70:** a small cosmetic set (walls, windows, roofs, stairs, railings, lamps) without gameplay effects, since the team makes the art.
+- **71:** later, visual only, if time remains.
+- **72:** key rebinding, mouse sensitivity, field of view, view distance and graphics quality, volumes per category (#115), always day (#102), minimap on or off (#106), hints on or off (#110).
+- **73:** no team size limit below the world's maximum players; 32 players per world by default; default building limits 2 000 per player, 6 000 per team and 20 000 per world (the spec's entity cap). Whether an endgame factory at 1–2 GW (#121) fits under that cap and the tick budget is checked against the Stage 4 benchmark.
+
 ## Where things stand (end of 2026-11-27)
 
-- **Awaiting the author's answer:** the energy proposal (GDD section 12, with the resonance reactor). Until then it serves as the working basis.
-- **Later:** player health (open question 59).
-- **Still awaiting review:** the tier and phase contents in `game-design.md` section 9 (sources, products, engine parts and their names, the tier 4 problem after #76 and #92) and the remaining **Draft** markers there (biome deposits, copper and coal within about 200 m of spawn, pacing targets, stone tools without a workbench, ruins and puzzles, machine upgrades, scanner). These are catalogue data and do not block the rewrite.
-- Recipe numbers come with implementation.
-- **Next step:** rewrite the spec and stage plans in `docs/superpowers/` from this log and the GDD (#54), folding in the plan review findings that are still open (first entry).
+Session paused here; the next one starts from this list.
+
+1. **Answer open questions 62–73** (entry *Catalogue and remaining gaps*, each with a proposal), by number. 62–65 frame the catalogue; 66–73 are remaining design gaps.
+2. **Draft `docs/automata/catalogue.md`** from the answers to 62–65: every item per tier, the machine roster with inputs, outputs, footprint and power, recipes at starting numbers, extractor tiers and rates, tools, storage sizes, engine phase quantities, loot tables, puzzles and alternative recipes. Settle the GDD's remaining **Draft** markers in the same pass: biome deposits, spawn distances, pacing, scanner, ruins and puzzles, machine upgrade sources, energy numbers, whether stone tools need the workbench.
+   - Known gaps the catalogue closes: machines for steel, concrete, sulfuric acid and coolant; recipes for copper sheet, wooden beam, iron rod and gear, resonator, rimeglass lens, cryo lattices, concordite parts and resonance cells; belt and pipe rates; extractor tiers; container sizes; phase quantities; engine part names (#116).
+3. **Rewrite the spec and stage plans** in `docs/superpowers/` (#54) from this log, the GDD and the catalogue: fold in the plan review findings that are still open (first entry: A1–A3, A6, B5, B7, B8 and the smaller ones, including the `AGENTS.md` architecture map), and give every feature added since #49 a stage (#117).
+
+- **Parked:** player health (open question 59).
+- **Assumption to confirm on the way:** #123 treats the rest of the energy draft (GDD section 12) as the working basis.

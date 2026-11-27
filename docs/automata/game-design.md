@@ -172,10 +172,10 @@ No single resource carries a tier; the engine phase checks that all of a tier's 
 |---|---|---|---|---|---|---|
 | 0 | none; wood and loose stone (spawn) | hands | trees, rock formations, stone deposit | scarcity: nothing respawns | hand: stone axe and pickaxe; placeable: workbench (wood), wooden chest, furnace (stone), simple supports (wood) | 3 |
 | 1 | copper ore (grassland, forest; surface) | stone pickaxe | coal deposits; stone and wood get processed | first automation; ratios (extractors vs. furnaces) | copper ingot, wire and sheet, stone brick, wooden beam, charcoal; burner extractor (burns wood, charcoal or coal), belts, splitter and merger, supports, vertical belts, scanner, engine link | 3–4 |
-| 2 | iron ore (highlands; surface and shallow caves) | copper pickaxe | water wells, limestone deposits, tree farm (renewable wood) | shared power grid, water, recipes with several inputs | iron plate, rod and gear, steel (iron + coal), concrete (limestone + water); coal generator (burns wood, charcoal or coal; needs water) with water pump, wooden poles, electric extractor, constructor, pipes, tank, faster belts, tree farm | 4–5 |
-| 3 | **thrumite**, a humming crystal that stores energy (cave floor deposits and wall formations below about −30 m in forest and highlands, #70) | iron pickaxe | geothermal vents with sulfur deposits around them (highlands) | caves: moving things up and down; storing power; power from fixed places | sulfuric acid (sulfur + water), resonator, storage cell; batteries, geothermal generator, steel poles, faster belts, teleport beacons (#105) | 5 |
-| 4 | **pyrelith**, a stone that holds heat (deep under the desert, next to oil) | thrumite pickaxe | crude oil wells, sand deposits (desert) | **Draft** (#76 removed slag): refining: every refinery recipe makes fuel next to plastic or rubber, so the fuel needs a consumer | pyrelith ingot, glass (sand), plastic, rubber and fuel (oil, #92); oil pump, refinery, fuel generator | 5 |
-| 5 | **rimeglass**, a clear crystal (deep under the tundra) | pyrelith pickaxe | natural gas wells (tundra, desert), ice deposits (tundra) | gas pressure: pressurised natural gas handles more throughput, compressors raise pressure between networks | coolant (from ice, an ordinary ingredient, #76), rimeglass lens, superconducting wire; gas extractor, compressor, pressure tanks, gas turbine, power towers | 5 |
+| 2 | iron ore (highlands; surface and shallow caves) | copper pickaxe | water wells, limestone deposits, tree farm (renewable wood) | shared power grid, water, recipes with several inputs | iron plate, rod and gear, steel (iron + coal), concrete (limestone + water); coal generator (burns wood, charcoal or coal; needs water) with water pump, wooden and steel poles, electric extractor, constructor, pipes, tank, faster belts, tree farm | 4–5 |
+| 3 | **thrumite**, a humming crystal that stores energy (cave floor deposits and wall formations below about −30 m in forest and highlands, #70) | iron pickaxe | geothermal vents with sulfur deposits around them (highlands) | caves: moving things up and down; storing power; power from fixed places | sulfuric acid (sulfur + water), resonator, storage cell; batteries, geothermal generator, power towers, faster belts, teleport beacons (#105) | 5 |
+| 4 | **pyrelith**, a stone that holds heat (deep under the desert, next to oil) | thrumite pickaxe | crude oil wells, sand deposits (desert) | **Draft** (#76 removed slag): refining: every refinery recipe makes fuel next to plastic or rubber, so the fuel needs a consumer | pyrelith ingot, glass (sand), plastic, rubber and fuel (oil, #92), insulated cable (copper wire + rubber, #126); oil pump, refinery, fuel generator | 5 |
+| 5 | **rimeglass**, a clear crystal (deep under the tundra) | pyrelith pickaxe | natural gas wells (tundra, desert), ice deposits (tundra) | gas pressure: pressurised natural gas handles more throughput, compressors raise pressure between networks | coolant (from ice, an ordinary ingredient, #76), rimeglass lens, superconducting wire (copper wire + rimeglass + coolant, #127); gas extractor, compressor, pressure tanks, gas turbine, superconducting towers | 5 |
 | 6 | **concordite**, an alloy fused from thrumite, pyrelith and rimeglass products (made, not mined) | — | — | long distances: three far-apart biomes at once | concordite ingot and parts, concordite tools; resonance cell, resonance reactor (#101) | 5 |
 
 Solids come first without a power grid (burner machines use fuel), which matches Stage 4; power, fluids and gases arrive with tiers 2 to 5, which matches Stage 5. Phase 1 gates tier 2, so the engine link and phase deliveries belong to Stage 4.
@@ -198,7 +198,7 @@ Part names and recipes are placeholders:
 | 3 | resonant coils (thrumite + copper wire + steel), storage cells (thrumite + sulfuric acid + reinforced casing), motors | a vault in forest or highland caves | tier 4 |
 | 4 | heat exchangers (pyrelith + steel + glass), polymer housings (plastic + glass), resonant coils | a vault in the desert | tier 5 |
 | 5 | superconducting coils, cryo lattices, heat exchangers | a vault in the tundra | tier 6 |
-| 6 | concordite parts at a rate held over a set time | an ancient seal | the engine wakes up: the final goal |
+| 6 | concordite parts at a rate held over a set time, sized so the required production needs about 1–2 GW (#121) | an ancient seal | the engine wakes up: the final goal |
 
 **Scanner.** From tier 1, points to the nearest deposit of a chosen kind; a later upgrade also finds ruins.
 
@@ -235,7 +235,7 @@ Part names and recipes are placeholders:
 
 - **Belts** show every item they carry as a small 3D model (#8). Belt tiers have fixed speeds.
 - **Splitters and mergers**; splitters can filter by item.
-- **Machines** have input buffers, crafting progress and output buffers. A full output stops the machine.
+- **Machines** have input buffers, crafting progress and output buffers. A full output stops the machine. Every machine's speed can be set in its menu, which also holds its upgrade slots (#118): 1–100 % from the start, up to 250 % with speed upgrades (#123).
 - **Status everywhere:** each machine shows working, starved, blocked or unpowered; belts and pipes show their fill; a statistics panel shows produced and consumed amounts per resource, for the own team and for the whole world (#80).
 
 ### Machine upgrades — **Draft**
@@ -244,11 +244,11 @@ Slots as in Mekanism, rare ingredients from exploring as in Satisfactory. Each m
 
 | Upgrade | Effect | Downside | Source |
 |---|---|---|---|
-| Mainspring | +50 % speed each, up to 3 | power (or fuel) use grows faster than speed | crafted from tier 2; needs ancient gears from ruins |
-| Escapement | −25 % energy per item each | takes a slot a mainspring could use | crafted from tier 3 |
+| Speed upgrade | raises the speed limit by 50 % each, up to 3 | power (or fuel) use grows faster than speed | crafted from tier 2; needs ancient gears from ruins |
+| Efficiency upgrade | −25 % energy per item each | takes a slot a speed upgrade could use | crafted from tier 3 |
 | Harmonic core | doubles output without extra input | about 4× the power; one per machine | found only in some vaults; never craftable |
 
-Power factors (**Draft**): with n mainsprings a machine runs at speed 1 + n/2 and draws speed² as much power (×2.25, ×4, ×6.25); each escapement multiplies the energy per item by 0.75; a harmonic core multiplies power by 4. Burner machines burn fuel at the same factors.
+Power factors (#123): power follows speed^1.6 over the whole speed range (50 % → 0.33×, 150 % → 1.9×, 200 % → 3.0×, 250 % → 4.3×); each efficiency upgrade multiplies the energy per item by 0.75; a harmonic core multiplies power by 4. Burner machines burn fuel at the same factors. Speed upgrades fit every machine (on a generator, output and fuel scale linearly with speed); efficiency upgrades fit machines that draw power or burn fuel; harmonic cores fit production machines and extractors, not generators.
 
 Speeding up one machine moves the bottleneck to its inputs, its outputs or the power grid, and the status displays show it moving. A harmonic core turns a single machine into a ratio problem.
 
@@ -258,23 +258,26 @@ Speeding up one machine moves the bottleneck to its inputs, its outputs or the p
 
 Each tier's energy step matches the tier's new problem: tier 2 brings ratios and fuel logistics, tier 3 power from fixed places that needs storage, tier 4 a by-product that pays for itself, tier 5 generation that depends on pressure, tier 6 a reactor fed from three far-apart biomes. Power is shown in MW and energy in MJ; the simulation counts integer kW and kJ (one tick at 1 MW = 50 kJ). All numbers are starting values to tune.
 
-**Grid.** A grid is everything connected by poles and wires (drag placement, #52); machines connect to a pole by a wire. A wire costs copper wire by its length and may not pass through terrain, so power reaches caves through their entrances, as belts do (#69). Wires connect only to the own team's poles and machines, so every grid belongs to one team (#98).
+**Grid.** A grid is everything connected by poles and wires (drag placement, #52); machines are wired to a pole by hand, as in Satisfactory (#120). A wire costs copper wire by its length and may not pass through terrain, so power reaches caves through their entrances, as belts do (#69). Wires connect only to the own team's poles and machines, so every grid belongs to one team (#98).
 
 | Pole | Tier | Wire range | Wires per pole |
 |---|---|---|---|
 | Wooden pole | 2 | 20 m | 4 |
-| Steel pole | 3 | 40 m | 6 |
-| Power tower (superconducting wire) | 5 | 150 m | 2 |
+| Steel pole | 2, once the team has steel | 40 m | 6 |
+| Power tower (about 20 m tall) | 3 | 150 m | 2 |
+| Superconducting tower | 5 | 400 m | 2 |
 
-Power towers carry power across the large worlds (#95), to geothermal vents and between the far-apart biomes of tier 6.
+Power towers arrive with geothermal in tier 3, because the vents sit in the highlands, up to about 2 km from a base (#125): a 2 km line takes 14 towers. Superconducting towers carry tier 6's three-biome network (5 for 2 km). Dragging a tower line places the towers at their range and wires them, showing the total cost first (#61); machines are still wired to poles by hand (#120). Wires cost copper wire by length, which keeps the tier 1 copper wire line busy. They are bare, as real overhead lines are; every pole and tower carries insulators as part of its recipe, and the models show them (#126).
 
 **Every tick:**
 
 1. Working machines draw their full power; idle machines (starved or blocked) draw nothing.
 2. Supply comes in order: fixed generators (geothermal) produce their current output; fuel generators cover the rest, all at the same load; batteries discharge only when the generators at full load fall short.
-3. If supply still falls short, every machine in the grid runs at the same reduced rate (satisfaction = supply ÷ demand).
+3. If supply still falls short, the grid's fuse trips: the whole grid stops until a player of the team resets it (#122).
 4. Leftover capacity charges batteries, up to each battery's charge rate: first surplus from fixed generators, then spare capacity of fuel generators.
 5. Fuel generators burn fuel in proportion to their load, so an oversized power plant only costs buildings, not fuel.
+
+**Fuse and switches (#122, #123):** the fuse trips when demand exceeds generation plus what the batteries can discharge. Everything in the grid stops, generators included. A player of the owning team resets it at a generator, battery or power switch of that grid; if demand is still too high, it trips again at once. A fuse that trips while nobody is near, or during catch-up, stays tripped until someone resets it. A power switch (tier 2) joins or separates two grids by hand; a priority switch (tier 3) cuts off the grid behind it before the fuse would trip, so a team can protect its important lines. Machine speeds (#118) fit demand to supply.
 
 **Fuels.**
 
@@ -298,7 +301,7 @@ Burner machines burn fuel while they work: the furnace at 1 MW (one coal per min
 | Gas turbine | 5 | 250 MW | natural gas 150 m³/min (at 1 bar), a minimum pressure (e.g. 2 bar) | stops below the minimum pressure, which ties power to tier 5's pressure problem |
 | Resonance reactor | 6 | 1.5 GW | one resonance cell per minute (made from thrumite, pyrelith and rimeglass products), water 300 m³/min | no waste, no radiation (#101); its cells need all three far-apart biomes, and it powers the final rate test (#66) |
 
-**Battery** (tier 3, thrumite): stores 600 MJ, charges and discharges at up to 50 MW. One battery per normal geothermal vent smooths its swing into a steady 80 MW.
+**Battery** (tier 3, thrumite): stores 600 MJ, charges and discharges at up to 50 MW. One battery per normal geothermal vent smooths its swing into a steady 80 MW. Batteries also cover demand spikes and bridge fuel running out (#119).
 
 **Ratio targets** for the recipes: in tier 2, one electric extractor on a normal coal deposit (target 60 coal/min) and one water pump (target 60 m³/min) feed two coal generators, 60 MW in total. In tier 4, the fuel a refinery makes next to plastic or rubber runs slightly more than that refinery and its oil pump need.
 
@@ -317,7 +320,7 @@ Burner machines burn fuel while they work: the furnace at 1 MW (one coal per min
 
 Upgrades change these (section 11).
 
-**Status.** Generators show working, idle (no demand), no fuel, no water or low pressure, always with an icon (section 15). A power panel per grid shows capacity, demand, satisfaction, battery charge and each generator's load; the statistics panel (#80) counts energy produced and consumed.
+**Status.** Generators show working, idle (no demand), no fuel, no water or low pressure, always with an icon (section 15). A power panel per grid shows capacity, demand, battery charge, each generator's load and a tripped fuse with its cause; the statistics panel (#80) counts energy produced and consumed.
 
 **Not planned:** solar power (day and night are purely visual, #100, so no output may depend on them), capacity limits on wires (belts and pipes already teach capacity limits). Nuclear power with waste and radiation: the resonance reactor takes its place (#101).
 
@@ -357,5 +360,6 @@ First person only (#7): WASD, mouse look, pointer lock, jump, sprint, build mode
 ## 16. Open points
 
 - Review of every **Draft** marker: biome deposits and spawn distances (section 6), ruins and puzzles (6), tier and phase contents including the tier 4 problem, scanner and pacing (9), machine upgrades and their power factors (11), energy (12).
+- The full catalogue (items, machines, buildings, recipes with starting numbers), framed by open questions 62–65; remaining design gaps 66–73 (water and world edge, items between players, item sink, UI language, cosmetic pieces, weather, settings, defaults).
 - Player health (open question 59), discussed later.
 - Recipes and balance numbers; inventory and stack sizes revisited with balancing (#112).
