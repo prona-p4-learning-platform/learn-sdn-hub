@@ -31,6 +31,31 @@ The following screenshots show the environment used to teach the basic functions
 
 The assignment shown in the screenshots was based on the [p4-boilerplate](https://github.com/prona-p4-learning-platform/p4-boilerplate). You can find the code and lab exercises in [Example3-LearningSwitch](https://github.com/prona-p4-learning-platform/p4-boilerplate/tree/main/Example3-LearningSwitch). [p4-container](https://github.com/prona-p4-learning-platform/p4-container) can be used as container image for the instances using the docker providerto run the tasks of the assignment. It already contains all requirements for a learn-sdn-hub instance (primarily, SSH server and LSP proxy).
 
+## Architecture
+
+```
+Browser (React + Vite)
+   │  HTTP /api/*                │  WebSocket /ws/*
+   ▼                              ▼
+Backend (Express + TypeScript, Node 22)
+   ├─ routes/        ───────►  Environment  ───►  Persister (memory | MongoDB)
+   │                                              Auth (plaintext | MongoDB | OIDC)
+   ├─ websocket/     ───────►  console / lab sheet / language server / remote desktop
+   └─ providers/     ───────►  instance providers (Docker, Proxmox, Firecracker,
+                                 OpenStack, Kubernetes, containerlab → clab-api-server)
+```
+
+An assignment combines a configuration (`backend/src/assignments/environments/*.ts`), a lab sheet (Markdown), an instance provider and check steps. See [AGENTS.md](/AGENTS.md#architecture-map) for the full directory-level architecture map.
+
+## Documentation
+
+| Where | What |
+|---|---|
+| This README | Features, quick start, manual install, app-level configuration (assignments, sessions, MongoDB, collaboration, language client, OIDC) |
+| [docs/providers/](/docs/providers) | Setup and environment variables for each instance provider |
+| [AGENTS.md](/AGENTS.md#architecture-map) | Architecture map, repository conventions and guardrails for human and agentic contributors |
+| [onboarding-german/](/onboarding-german) | German-language onboarding material (code tour, setup runbook, starter assignment) for the current semester's student cohort |
+
 ## Quick start installation and configuration using provided Docker image
 
 For test deployments you can use our provided docker image. It is not intended for production use cases. However, to get a self-contained environment that can be used to test learn-sdn-hub right away,
@@ -94,173 +119,20 @@ You can copy the production build of the frontend to the static directory of the
 
 ## Configuration
 
-### Run the backend using Docker instances for assignments
-(using [DockerProvider.ts](/backend/src/providers/DockerProvider.ts))
+### Instance Providers
 
-Assignments for users and their groups can be started using Docker containers offering a light weight
-instance format. 
+Each instance provider deploys and manages the hosts, VMs, containers or labs that run an assignment. Select one with `BACKEND_TYPE` (or the matching `start:*` npm script) and configure it via environment variables documented in its own page:
 
-```sh
-BACKEND_HTTP_PORT="3001"
-BACKEND_TYPE="docker"
-```
-
-Docker daemon connection defaults to var/run/docker.sock, see https://github.com/apocas/dockerode.
-Using Windows ``//./pipe/docker_engine`` should be used. dockerode also supports using a remote
-connection to Docker daemon.
-
-```sh
-DOCKER_SOCKET_PATH="//./pipe/docker_engine"
-DOCKER_SOCKET_PATH="/var/run/docker.sock"
-DOCKER_HOST="127.0.0.1"
-DOCKER_PORT="3000"
-DOCKER_PROTOCOL="http"
-```
-
-Docker provider configuration must provide a default image that will be used for the started 
-containers. 
-
-```sh
-# image must provide SSH port and connection
-export DOCKER_IMAGE="prona/p4-container"clearer
-```
-
-Also, an entrypoint/iniial cmd can be specified. 
-
-```sh
-DOCKER_CMD="-s"
-```
-
-Instances and containers can be automatically
-stopped and deleted (pruning) after a specified maximum lifetime.
-
-```sh
-DOCKER_MAX_INSTANCE_LIFETIME_MINUTES="120"
-```
+| Provider | Use case | Docs |
+|---|---|---|
+| Docker | Lightweight containers, fastest local/dev setup | [docs/providers/docker.md](/docs/providers/docker.md) |
+| Proxmox LXC | LXC containers on a Proxmox cluster | [docs/providers/proxmox.md](/docs/providers/proxmox.md) |
+| Firecracker | microVMs, stronger isolation than containers | [docs/providers/firecracker.md](/docs/providers/firecracker.md) |
+| OpenStack | VM instances in an OpenStack cloud | [docs/providers/openstack.md](/docs/providers/openstack.md) |
+| Kubernetes | Pods in a (tenant-aware) Kubernetes cluster | [docs/providers/kubernetes.md](/docs/providers/kubernetes.md) |
+| containerlab | containerlab labs via clab-api-server | [docs/providers/containerlab.md](/docs/providers/containerlab.md) |
 
 Further configuration options can be specified on a per-assignment basis in the assignment configuration file.
-
-### Run the backend using OpenStack instances for assignments
-(using [OpenStackProvider.ts](/backend/src/providers/OpenStackProvider.ts))
-
-Instead of using a preinstalled local VM or host to run your P4 code and assignments, also an OpenStack provider is available, that creates OpenStack instances for deployed assignments. In OpenStack an image is necessary, that contains p4 tool chain etc., as documented above for the local VM use-case. OpenStack keystone needs to be available using v3.
-
-```
-export OPENSTACK_USERNAME=<Username to access OpenStack API>
-export OPENSTACK_PASSWORD=<Passwort for connection to OpenStack>
-export OPENSTACK_AUTHURL=<OpenStack Auth URL, needs to support keystone identity API v3, e.g., "https://my-openstack-cloud:5000/v3">
-export OPENSTACK_REGION=<OpenStack region, e.g., "RegionOne">
-export OPENSTACK_TENANTID=<OpenStack tenant/project ID>
-export OPENSTACK_DOMAINNAME=<OpenStack domain, e.g., "default">
-export SSH_USERNAME=<Username to be used for the ssh connection, e.g., "p4">
-export SSH_PASSWORD=<Password to be used for the ssh connection>
-```
-
-Optionally you can also ```export SSH_PRIVATE_KEY_PATH=<SSH keyfile>``` to use an SSH keyfile for the connections to the host running your P4 assignments.
-
-[start-learn-sdn-hub.sh](/examples/start-learn-sdn-hub.sh) can be used as a reference to create a startup script.
-
-
-### Run the backend using Firecracker microVMs for assignments
-(using [FirecrackerProvider.ts](/backend/src/providers/FirecrackerProvider.ts))
-
-The backend also supports Firecracker microVMs to run the assignments offering a balance between light-weight fast deployment and increased isolation compared to using docker containers. This can for example prevent situations where loops created in networks lead to high load of kernel processes when using containers.
-
-```
-export FIRECRACKER_SOCKET_PATH_PREFIX="/tmp/firecracker.socket"
-
-export FIRECRACKER_KERNEL_IMAGE="/storage/ubuntu-firecracker/ubuntu-vmlinux"
-export FIRECRACKER_KERNEL_BOOT_ARGS="console=ttyS0 reboot=k panic=1 pci=off"
-export FIRECRACKER_ROOTFS_DRIVE="/storage/ubuntu-firecracker/ubuntu-containerlab.ext4"
-
-export FIRECRACKER_VCPU_COUNT="4" 
-export FIRECRACKER_MEM_SIZE_MIB="4096"
-export FIRECRACKER_MEM_BALLOON_SIZE_MIB="2048"#export PROXMOX_MAX_INSTANCE_LIFETIME_MINUTES=5
-
-export FIRECRACKER_NETWORK_CIDR="172.16.0.0/24"
-export FIRECRACKER_BRIDGE_INTERFACE="fc0"
-
-export FIRECRACKER_MAX_INSTANCE_LIFETIME_MINUTES=120
-```
-
-To setup the firecracker bridge, see, e.g., provided [examples](/examples).
-
-
-### Run the backend using proxmox for assignments
-(using [ProxmoxProvider.ts](/backend/src/providers/ProxmoxProvider.ts))
-
-The backend also supports proxmox lxc to run the assignments. 
-
-```
-export PROXMOX_NETWORK_CIDR="172.30.0.0/16"
-export PROXMOX_NETWORK_GATEWAY_IP="172.30.0.1"
-
-export PROXMOX_HOST="10.2.3.4:8006"
-export PROXMOX_TOKENID="user@pam!learn-sdn-hub"
-export PROXMOX_TOKENSECRET="34e..."
-
-export PROXMOX_TEMPLATE_TAG="learn-sdn-hub-template"
-export PROXMOX_TARGET_HOST="pvecompute2"
-
-export PROXMOX_SSH_JUMP_HOST="10.1.2.3"
-export PROXMOX_SSH_JUMP_HOST_PORT="22"
-export PROXMOX_SSH_JUMP_HOST_USER="p4"
-export PROXMOX_SSH_JUMP_HOST_PASSWORD="p4"
-
-export PROXMOX_MAX_INSTANCE_LIFETIME_MINUTES=120
-```
-
-Connection to proxmox a token that is allowed to create lxs containers. Assignments are clone from the specified template (`PROXMOX_TEMPLATE_TAG`) and placed as new lxc containers on the target host (`PROXMOX_TARGET_HOST`) in the proxmox cluster.
-
-To isolate the lxc instances in proxmox, a separate (isolated) virtual network (`PROXMOX_NETWORK_CIDR`) should be created first and an lxc created as a router with an interface in the isolated virtual network for the assignment lxcs (`PROXMOX_NETWORK_GATEWAY_IP`) and an interface connecting to external networks (`PROXMOX_NETWORK_GATEWAY_IP`). The router acts also as an jumphost host on its external IP (`PROXMOX_SSH_JUMP_HOST`) to allow the backend to reach the isolated assignment instances. Another option would be to host the backend on the router.
-
-
-### Run the backend using containerlab for assignments
-(using [ContainerlabProvider.ts](/backend/src/providers/ContainerlabProvider.ts))
-
-The backend also supports [containerlab](https://containerlab.dev/) labs as assignments. The labs are deployed on a remote host by [clab-api-server](https://github.com/srl-labs/clab-api-server), which the backend talks to via its REST and WebSocket API. A **minimum clab-api-server version of v0.7.0 providing the workspace file endpoints (`POST /api/v1/labs/workspace/directory`, `PUT /api/v1/labs/workspace/file`), the `POST /api/v1/labs/{labName}/deploy?path=` endpoint and the terminal-sessions API is required** — older releases without these endpoints cannot be used.
-
-```sh
-export CLAB_USERNAME="clab-username"
-export CLAB_PASSWORD="clab-password"
-export CLAB_APIURL="https://<clab-host>:8090"
-export CLAB_MAX_INSTANCE_LIFETIME_MINUTES=120
-
-# optional
-export CLAB_TOKEN_DURATION_IN_MINUTES=60
-export CLAB_LAB_PREFIX=""
-export CLAB_API_TLS_INSECURE=false
-```
-
-`CLAB_USERNAME` and `CLAB_PASSWORD` are the credentials used to authenticate against clab-api-server, `CLAB_APIURL` is its base URL (normalized to exactly one trailing slash). `CLAB_MAX_INSTANCE_LIFETIME_MINUTES` (required) limits how long a deployed lab may live before it is pruned. `CLAB_TOKEN_DURATION_IN_MINUTES` (optional, default `60`) is the lifetime of the Bearer tokens the backend requests. `CLAB_LAB_PREFIX` (optional, default `""`) is prepended to every lab name. **Warning:** if the clab-api-server is shared with other users, set `CLAB_LAB_PREFIX` to a unique prefix — with the default empty prefix the periodic prune treats *all* labs on the clab-api-server as owned by this backend and may delete foreign labs once they exceed the configured lifetime. Set `CLAB_API_TLS_INSECURE=true` (or `1`) if the clab-api-server uses a self-signed certificate; the default `false` enforces strict TLS validation.
-
-Each lab is named `${CLAB_LAB_PREFIX}${environmentId}-${groupNumber}-${username}`, so every group and user gets its own isolated lab.
-
-An example assignment deploying a topology from a URL with container-based terminals is provided in [sample-assignment-topologyurl.ts](/examples/containerlab-provider/sample-assignment-topologyurl.ts); a matching sample topology (including a management host node) is in [sample-topology-with-mgmt-host.clab.yml](/examples/containerlab-provider/sample-topology-with-mgmt-host.clab.yml).
-
-#### Terminals
-
-Two terminal types are supported for containerlab assignments:
-
-* `DockerShell` terminals (`{type: "DockerShell", name, containerName}`) connect directly to a container of the lab through clab-api-server's terminal sessions (server-side PTY-backed `docker exec`), so no `sshd` is needed inside the lab images.
-* Regular `Shell` terminals connect over SSH to the jumphost (management host) container of the lab.
-
-#### Deploying from a URL with referenced files
-
-An assignment's `topologyUrl` points to a containerlab topology YAML file served by a web server. The provider fetches the topology, renames the lab to the per-group lab name and deploys it in the clab-api-server workspace.
-
-Topology files may reference additional files with relative bind mounts, e.g.:
-
-```yaml
-nodes:
-  server1:
-    kind: linux
-    binds:
-      - server1/dnsmasq.conf:/etc/dnsmasq.conf
-```
-
-Such referenced files are fetched — resolved relative to the directory containing the topology URL, e.g. `https://<webhost>/labs/sample.clab.yml` → `https://<webhost>/labs/server1/dnsmasq.conf` — and staged together with the rewritten topology into the clab-api-server workspace. The lab is then deployed by path from that workspace directory, so the remote deployment host does not need access to the original web server. If a referenced file cannot be fetched, the deploy fails and the error names the missing file's URL; the partially created lab is cleaned up.
-
 
 ### Run the frontend separatly (only recommended for development and debugging purposes)
 
@@ -370,33 +242,6 @@ The examples in the repository also show how to use tmux to allow shared termina
 ### Enable languageClient
 
 To enable monaco languageClient, ``useLanguageClient: true`` needs to be set in the assignment configuration file. ``rootPath`` and ``workspaceFolders`` can also be defined there, to allow, e.g., auto completion across files in these folders. The instance must provide an LSP port (LSP proxy as described above), e.g., 3005 TCP supporting the languages used in the editor. See [servers.yml](https://github.com/prona-p4-learning-platform/p4-container/blob/master/servers.yml) for an example to use Python and P4 LSP in the proxy. The [lsp.service](https://github.com/prona-p4-learning-platform/p4-container/blob/master/lsp.service) file and [Dockerfile](https://github.com/prona-p4-learning-platform/p4-container/blob/58647e3cdda328f805678e974ea8e780bc9aa27a/Dockerfile#L100) show how the LSP proxy can be configured and started.
-
-
-### Kubernetes Assignments
-You can run assignments in a Kubernetes environment using the [cc-container](https://github.com/prona-p4-learning-platform/cc-container) as assignment template. A `kubeconfig` file can be generated by the endpoint in the Kubernetes cluster and this file is than mounted in the assignment container/VM. Simply add the `mountKubeconfig` field to the assignment configuration.
-
-> Make sure that the Kubernetes cluster has setup the [cc-mgmt](https://github.com/prona-p4-learning-platform/cc-mgmt) environment.
-
-For the connection to the Kubernetes cluster, you need to set the following environment variables when running the backend:
-```sh
-# IP of the Kubernetes management service
-K8S_MGMT_SVC_IP="xxx.xxx.xxx.xxx" 
-
-# SSH Password for the Kubernetes management service
-K8S_MGMT_PASSWORD="..." 
-
-# Cluster IP that is used in the kubeconfig file
-K8S_CLUSTER_IP="https://xxx.xxx.xxx.xxx:6443" 
-
-# The certificate authority data (base64 encoded) that is used in the kubeconfig file
-K8S_CERT_AUTH_DATA="LS0tLS1CRUd..."
-
-# The path in the backend where the kubeconfig file is stored
-KUBECTL_STORE_PATH="/tmp" 
-```
-
-#### Kubernetes Backend and Container Images
-Documentation regarding the setup of learn-sdn-hub in Kubernetes as well as using tenant-aware k8s (vcluster) to run assignments in Kubernetes is provided in the README in the [dev-stack](https://github.com/prona-p4-learning-platform/learn-sdn-hub/tree/master/dev-stack/k8s) folder.
 
 ### OIDC example
 An example to use OIDC is provided in the examples folder of this repo [oidc-extension](/examples/oidc-extension).
