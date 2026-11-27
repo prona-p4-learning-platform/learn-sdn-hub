@@ -189,7 +189,9 @@ function Assignments(): JSX.Element {
         </Typography>
       )}
       {status.preparing && (
-        <Typography style={{ marginTop: "0.5rem" }} color="warning.main">
+        <Typography style={{ marginTop: "0.5rem" }} sx={{
+          color: "warning.main"
+        }}>
           Deployment actions are temporarily disabled while an environment is
           being prepared for you or one of your group members.
         </Typography>

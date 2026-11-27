@@ -53,9 +53,11 @@ const AddEntryDialog: React.FC<AddEntryDialogProps> = ({
     <Dialog
       open={open}
       onClose={onClose}
-      PaperProps={{
-        component: "form",
-        onSubmit: handleSubmit,
+      slotProps={{
+        paper: {
+          component: "form",
+          onSubmit: handleSubmit,
+        }
       }}
     >
       <DialogTitle>{title}</DialogTitle>
