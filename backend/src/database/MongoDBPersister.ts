@@ -796,6 +796,7 @@ export default class MongoDBPersister implements Persister {
       _id: a._id,
       name: a.name,
       maxBonusPoints: a.maxBonusPoints ?? undefined,
+      maxGradePoints: a.maxGradePoints ?? undefined,
       assignmentLabSheet: a.assignmentLabSheet ?? undefined,
       sheetId: a.sheetId ?? undefined,
       assignmentLabSheetLocation: (a.assignmentLabSheetLocation as "backend" | "instance" | "database") ?? undefined,

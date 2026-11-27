@@ -7,6 +7,7 @@ export type SubmissionAdminOverviewEntry = {
   fileNames: string[];
   terminalEndpoints: string[];
   points?: number;
+  gradePoints?: number;
   assignmentRef?: string;
   userRef?: string;
   dialogAnswers?: Array<{

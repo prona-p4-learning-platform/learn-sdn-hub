@@ -37,7 +37,7 @@ interface SubmissionProps {
 }
 
 interface PointsError {
-  [submission: string]: boolean;
+  [submission: string]: { bonus?: boolean; grade?: boolean };
 }
 
 const submissionAdminOverviewEntrySchema = z.object({
@@ -89,7 +89,12 @@ const SubmissionOverview = ({ assignments }: SubmissionProps): JSX.Element => {
   const [pointsErrors, setPointsErrors] = useState<PointsError>({});
   const [submissionIDDialog, setSubmissionIDDialog] = useState<string>("");
   const [assignmentNameDialog, setAssignmentNameDialog] = useState<string>("");
-  const [pointsDialog, setPointsDialog] = useState<number>(0);
+  const [pointsDialog, setPointsDialog] = useState<number | undefined>(
+    undefined,
+  );
+  const [gradePointsDialog, setGradePointsDialog] = useState<
+    number | undefined
+  >(undefined);
   const [openDialog, setOpenDialog] = useState(false);
   const [fileContents, setFileContents] = useState<Record<string, string>>({});
   const [expandedFiles, setExpandedFiles] = useState<string[]>([]);
@@ -165,6 +170,13 @@ const SubmissionOverview = ({ assignments }: SubmissionProps): JSX.Element => {
 
   const assignPoints = async () => {
     try {
+      const pointsUpdate: { points?: number; gradePoints?: number } = {};
+      if (pointsDialog !== undefined) {
+        pointsUpdate.points = pointsDialog;
+      }
+      if (gradePointsDialog !== undefined) {
+        pointsUpdate.gradePoints = gradePointsDialog;
+      }
       const result = await APIRequest(
         `/admin/submission/${submissionIDDialog}/points`,
         defaultValidator,
@@ -173,21 +185,34 @@ const SubmissionOverview = ({ assignments }: SubmissionProps): JSX.Element => {
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({
-            points: pointsDialog,
-          }),
+          body: JSON.stringify(pointsUpdate),
         },
       );
 
       if (result.success) {
+        const awarded: string[] = [];
+        if (gradePointsDialog !== undefined) {
+          awarded.push(`${gradePointsDialog} exam points`);
+        }
+        if (pointsDialog !== undefined) {
+          awarded.push(`${pointsDialog} bonus points`);
+        }
         enqueueSnackbar(
-          `Successfully awarded ${pointsDialog} bonus points to ${getUserOfSubmission(submissionIDDialog)} for ${assignmentNameDialog}`,
+          `Successfully awarded ${awarded.join(" and ")} to ${getUserOfSubmission(submissionIDDialog)} for ${assignmentNameDialog}`,
           { variant: "success" },
         );
         setSubmissions((prevSubmissions) =>
           prevSubmissions.map((submission) =>
             submission.submissionID === submissionIDDialog
-              ? { ...submission, points: pointsDialog }
+              ? {
+                  ...submission,
+                  ...(pointsDialog !== undefined && {
+                    points: pointsDialog,
+                  }),
+                  ...(gradePointsDialog !== undefined && {
+                    gradePoints: gradePointsDialog,
+                  }),
+                }
               : submission,
           ),
         );
@@ -234,17 +259,20 @@ const SubmissionOverview = ({ assignments }: SubmissionProps): JSX.Element => {
     }
   };
 
-  // Assignment has maxBonusPoints but not all submissions have been awarded points
+  // Assignment has max points but not all submissions have been fully graded
   const hasAssignmentOpenPoints = (assignmentName: string) => {
     const assignment = getAssignmentByName(assignmentName);
-    if (assignment?.maxBonusPoints == null) {
+    if (
+      assignment?.maxBonusPoints == null &&
+      assignment?.maxGradePoints == null
+    ) {
       return false;
     }
     const submissionsOfAssignment = submissions.filter(
       (submission) => submission.assignmentName === assignmentName,
     );
     return submissionsOfAssignment.some(
-      (submission) => submission.points == null,
+      (submission) => !isSubmissionGraded(submission),
     );
   };
 
@@ -254,10 +282,15 @@ const SubmissionOverview = ({ assignments }: SubmissionProps): JSX.Element => {
     groupSubmissions: SubmissionAdminOverviewEntry[],
   ) => {
     const assignment = getAssignmentByName(assignmentName);
-    if (assignment?.maxBonusPoints == null) {
+    if (
+      assignment?.maxBonusPoints == null &&
+      assignment?.maxGradePoints == null
+    ) {
       return false;
     }
-    return groupSubmissions.some((submission) => submission.points == null);
+    return groupSubmissions.some(
+      (submission) => !isSubmissionGraded(submission),
+    );
   };
 
   const getUserOfSubmission = (submissionID: string) => {
@@ -268,10 +301,10 @@ const SubmissionOverview = ({ assignments }: SubmissionProps): JSX.Element => {
   };
 
   const submissionAlreadyAwardedPoints = (submissionID: string) => {
-    return submissions.some(
-      (submission) =>
-        submission.submissionID === submissionID && submission.points != null,
+    const submission = submissions.find(
+      (submission) => submission.submissionID === submissionID,
     );
+    return submission?.points != null || submission?.gradePoints != null;
   };
 
   const getPointsOfSubmission = (submissionID: string) => {
@@ -290,26 +323,67 @@ const SubmissionOverview = ({ assignments }: SubmissionProps): JSX.Element => {
     return assignments.find((assignment) => assignment.name === assignmentName);
   };
 
+  // A submission is fully graded when every applicable point type has a value
+  // (exams: grade points and, if configured, bonus points; normal assignments:
+  // bonus points only)
+  const isSubmissionGraded = (submission: SubmissionAdminOverviewEntry) => {
+    const assignment = getAssignmentByName(submission.assignmentName);
+    const needsBonus = assignment?.maxBonusPoints != null;
+    const needsGrade = assignment?.maxGradePoints != null;
+    if (needsBonus && needsGrade) {
+      return submission.points != null && submission.gradePoints != null;
+    }
+    if (needsGrade) {
+      return submission.gradePoints != null;
+    }
+    return submission.points != null;
+  };
+
+  const getMaxGradePointsOfAssignment = (assignmentName: string) => {
+    const assignment = getAssignmentByName(assignmentName);
+    return assignment?.maxGradePoints || undefined;
+  };
+
+  // Exams carry grade points; the examiner view detects them via maxGradePoints
+  // (file-based exams define isExam in the assignment file; DB-created
+  // exam-like assignments set maxGradePoints)
+  const isExamAssignment = (assignmentName: string) => {
+    return getMaxGradePointsOfAssignment(assignmentName) !== undefined;
+  };
+
+  const getGradePointsOfSubmission = (submissionID: string) => {
+    const submission = submissions.find(
+      (submission) => submission.submissionID === submissionID,
+    );
+    return submission?.gradePoints || 0;
+  };
+
   const handlePointsChange = (
     event: React.ChangeEvent<HTMLInputElement>,
     assignmentName: string,
   ) => {
     const value = event.target.value;
-    const submissionID = event.target.id.split("_")[2];
+    const [fieldPrefix, , submissionID] = event.target.id.split("_");
     const curAssignment = getAssignmentByName(assignmentName);
+    const isGradeField = fieldPrefix === "gradePoints";
+    const max = isGradeField
+      ? curAssignment?.maxGradePoints
+      : curAssignment?.maxBonusPoints;
     let curValue = false;
     if (
       value === "" ||
       isNaN(Number(value)) ||
       Number(value) < 0 ||
-      (curAssignment?.maxBonusPoints !== undefined &&
-        Number(value) > curAssignment.maxBonusPoints)
+      (max !== undefined && Number(value) > max)
     ) {
       curValue = true;
     }
     setPointsErrors((prevErrors) => ({
       ...prevErrors,
-      [submissionID]: curValue,
+      [submissionID]: {
+        ...prevErrors[submissionID],
+        [isGradeField ? "grade" : "bonus"]: curValue,
+      },
     }));
   };
 
@@ -317,10 +391,76 @@ const SubmissionOverview = ({ assignments }: SubmissionProps): JSX.Element => {
     event: React.FormEvent<HTMLFormElement>,
     submissionID: string,
     assignmentName: string,
-    points: string,
+    bonusPoints: string,
+    gradePoints?: string,
   ) => {
     event.preventDefault();
     const maxPoints = getMaxPointsOfAssignment(assignmentName);
+    const maxGrade = getMaxGradePointsOfAssignment(assignmentName);
+
+    if (maxGrade !== undefined) {
+      // Exam: award exam points and/or bonus points, validated separately
+      const bonusValue =
+        bonusPoints !== undefined && bonusPoints !== ""
+          ? Number(bonusPoints)
+          : undefined;
+      const gradeValue =
+        gradePoints !== undefined && gradePoints !== ""
+          ? Number(gradePoints)
+          : undefined;
+
+      if (bonusValue === undefined && gradeValue === undefined) {
+        enqueueSnackbar(
+          "Error awarding points: At least one of exam points or bonus points must be provided",
+          { variant: "error" },
+        );
+        return;
+      }
+      if (
+        bonusValue !== undefined &&
+        (maxPoints === undefined ||
+          isNaN(bonusValue) ||
+          bonusValue < 0 ||
+          bonusValue > maxPoints)
+      ) {
+        enqueueSnackbar(
+          `Error awarding bonus points: Points must be between 0 and ${maxPoints}`,
+          { variant: "error" },
+        );
+        return;
+      }
+      if (
+        gradeValue !== undefined &&
+        (isNaN(gradeValue) || gradeValue < 0 || gradeValue > maxGrade)
+      ) {
+        enqueueSnackbar(
+          `Error awarding exam points: Points must be between 0 and ${maxGrade}`,
+          { variant: "error" },
+        );
+        return;
+      }
+      const submission = submissions.find(
+        (s) => s.submissionID === submissionID,
+      );
+      const bonusUnchanged =
+        bonusValue === undefined || submission?.points === bonusValue;
+      const gradeUnchanged =
+        gradeValue === undefined || submission?.gradePoints === gradeValue;
+      if (bonusUnchanged && gradeUnchanged) {
+        enqueueSnackbar(
+          `Error awarding points: Points are the same as before`,
+          { variant: "error" },
+        );
+        return;
+      }
+      setSubmissionIDDialog(submissionID);
+      setAssignmentNameDialog(assignmentName);
+      setPointsDialog(bonusValue);
+      setGradePointsDialog(gradeValue);
+      setOpenDialog(true);
+      return;
+    }
+
     if (maxPoints === undefined) {
       enqueueSnackbar(
         "Error awarding bonus points: Assignment has no max points set",
@@ -328,9 +468,9 @@ const SubmissionOverview = ({ assignments }: SubmissionProps): JSX.Element => {
       );
       return;
     } else if (
-      isNaN(Number(points)) ||
-      Number(points) > maxPoints ||
-      Number(points) < 0
+      isNaN(Number(bonusPoints)) ||
+      Number(bonusPoints) > maxPoints ||
+      Number(bonusPoints) < 0
     ) {
       enqueueSnackbar(
         `Error awarding bonus points: Points must be between 0 and ${maxPoints}`,
@@ -338,7 +478,7 @@ const SubmissionOverview = ({ assignments }: SubmissionProps): JSX.Element => {
       );
       return;
     } else if (
-      Number(points) ===
+      Number(bonusPoints) ===
       submissions.find((s) => s.submissionID === submissionID)?.points
     ) {
       enqueueSnackbar(
@@ -350,7 +490,8 @@ const SubmissionOverview = ({ assignments }: SubmissionProps): JSX.Element => {
 
     setSubmissionIDDialog(submissionID);
     setAssignmentNameDialog(assignmentName);
-    setPointsDialog(Number(points));
+    setPointsDialog(Number(bonusPoints));
+    setGradePointsDialog(undefined);
     setOpenDialog(true);
   };
 
@@ -392,7 +533,8 @@ const SubmissionOverview = ({ assignments }: SubmissionProps): JSX.Element => {
     setOpenDialog(false);
     setSubmissionIDDialog("");
     setAssignmentNameDialog("");
-    setPointsDialog(0);
+    setPointsDialog(undefined);
+    setGradePointsDialog(undefined);
   };
 
   const handleFileAccordionChange = (
@@ -535,7 +677,9 @@ const SubmissionOverview = ({ assignments }: SubmissionProps): JSX.Element => {
               <Typography variant="body1">
                 {assignmentName}{" "}
                 {hasAssignmentOpenPoints(assignmentName)
-                  ? "(Some bonus points are still open)"
+                  ? isExamAssignment(assignmentName)
+                    ? "(Some points are still open)"
+                    : "(Some bonus points are still open)"
                   : ""}
               </Typography>
             </AccordionSummary>
@@ -564,7 +708,9 @@ const SubmissionOverview = ({ assignments }: SubmissionProps): JSX.Element => {
                       <Typography variant="body1">
                         Group {groupNumber}{" "}
                         {hasGroupOpenPoints(assignmentName, groupSubmissions)
-                          ? "(Some bonus points are still open)"
+                          ? isExamAssignment(assignmentName)
+                            ? "(Some points are still open)"
+                            : "(Some bonus points are still open)"
                           : ""}
                       </Typography>
                     </AccordionSummary>
@@ -800,8 +946,10 @@ const SubmissionOverview = ({ assignments }: SubmissionProps): JSX.Element => {
                                     </Box>
                                   ),
                               )}
-                            {getMaxPointsOfAssignment(assignmentName) !==
-                              undefined && (
+                            {(getMaxPointsOfAssignment(assignmentName) !==
+                              undefined ||
+                              getMaxGradePointsOfAssignment(assignmentName) !==
+                                undefined) && (
                               <Box
                                 flex="1"
                                 component="form"
@@ -815,11 +963,18 @@ const SubmissionOverview = ({ assignments }: SubmissionProps): JSX.Element => {
                                         `bonusPoints_input_${submission.submissionID}`,
                                       ) as HTMLInputElement
                                     )?.value,
+                                    (
+                                      document.getElementById(
+                                        `gradePoints_input_${submission.submissionID}`,
+                                      ) as HTMLInputElement
+                                    )?.value,
                                   )
                                 }
                               >
                                 <Typography variant="body1">
-                                  Award bonus points for submission:
+                                  {isExamAssignment(assignmentName)
+                                    ? "Award points for submission:"
+                                    : "Award bonus points for submission:"}
                                 </Typography>
                                 <Box
                                   mb={1}
@@ -828,24 +983,59 @@ const SubmissionOverview = ({ assignments }: SubmissionProps): JSX.Element => {
                                   alignItems="center"
                                   width="100%"
                                 >
-                                  <TextField
-                                    required
-                                    error={
-                                      pointsErrors[submission.submissionID]
-                                    }
-                                    id={`bonusPoints_input_${submission.submissionID}`}
-                                    label="Points"
-                                    onChange={(
-                                      event: React.ChangeEvent<HTMLInputElement>,
-                                    ) =>
-                                      handlePointsChange(event, assignmentName)
-                                    }
-                                    helperText={`Points must be between 0 and ${getMaxPointsOfAssignment(
-                                      assignmentName,
-                                    )}`}
-                                    variant="standard"
-                                    defaultValue={submission.points || ""}
-                                  />
+                                  {isExamAssignment(assignmentName) && (
+                                    <TextField
+                                      error={
+                                        pointsErrors[submission.submissionID]
+                                          ?.grade
+                                      }
+                                      id={`gradePoints_input_${submission.submissionID}`}
+                                      label="Exam points"
+                                      onChange={(
+                                        event: React.ChangeEvent<HTMLInputElement>,
+                                      ) =>
+                                        handlePointsChange(
+                                          event,
+                                          assignmentName,
+                                        )
+                                      }
+                                      helperText={`Points must be between 0 and ${getMaxGradePointsOfAssignment(
+                                        assignmentName,
+                                      )}`}
+                                      variant="standard"
+                                      defaultValue={submission.gradePoints || ""}
+                                      sx={{ mr: 3 }}
+                                    />
+                                  )}
+                                  {getMaxPointsOfAssignment(assignmentName) !==
+                                    undefined && (
+                                    <TextField
+                                      required={!isExamAssignment(assignmentName)}
+                                      error={
+                                        pointsErrors[submission.submissionID]
+                                          ?.bonus
+                                      }
+                                      id={`bonusPoints_input_${submission.submissionID}`}
+                                      label={
+                                        isExamAssignment(assignmentName)
+                                          ? "Bonus points"
+                                          : "Points"
+                                      }
+                                      onChange={(
+                                        event: React.ChangeEvent<HTMLInputElement>,
+                                      ) =>
+                                        handlePointsChange(
+                                          event,
+                                          assignmentName,
+                                        )
+                                      }
+                                      helperText={`Points must be between 0 and ${getMaxPointsOfAssignment(
+                                        assignmentName,
+                                      )}`}
+                                      variant="standard"
+                                      defaultValue={submission.points || ""}
+                                    />
+                                  )}
                                   <Button
                                     variant="contained"
                                     color="primary"
@@ -894,26 +1084,76 @@ const SubmissionOverview = ({ assignments }: SubmissionProps): JSX.Element => {
           ))}
       </Menu>
       <Dialog open={openDialog} onClose={handleDialogClose}>
-        <DialogTitle>Confirm Bonus Points</DialogTitle>
+        <DialogTitle>
+          {isExamAssignment(assignmentNameDialog)
+            ? "Confirm Points"
+            : "Confirm Bonus Points"}
+        </DialogTitle>
         <DialogContent>
-          {submissionAlreadyAwardedPoints(submissionIDDialog) && (
-            <Typography variant="body1" sx={{ color: "red", mb: 1 }}>
-              This submission has already been awarded{" "}
-              <strong>{getPointsOfSubmission(submissionIDDialog) || 0}</strong>{" "}
-              bonus points. Submitting this form will overwrite the existing
-              points.
+          {submissionAlreadyAwardedPoints(submissionIDDialog) &&
+            (isExamAssignment(assignmentNameDialog) ? (
+              <Typography variant="body1" sx={{ color: "red", mb: 1 }}>
+                This submission has already been awarded{" "}
+                <strong>
+                  {getGradePointsOfSubmission(submissionIDDialog) || 0}
+                </strong>{" "}
+                points
+                {getMaxPointsOfAssignment(assignmentNameDialog) !==
+                  undefined && (
+                  <>
+                    {" "}
+                    and{" "}
+                    <strong>
+                      {getPointsOfSubmission(submissionIDDialog) || 0}
+                    </strong>{" "}
+                    bonus points
+                  </>
+                )}
+                . Submitting this form will overwrite the existing values.
+              </Typography>
+            ) : (
+              <Typography variant="body1" sx={{ color: "red", mb: 1 }}>
+                This submission has already been awarded{" "}
+                <strong>
+                  {getPointsOfSubmission(submissionIDDialog) || 0}
+                </strong>{" "}
+                bonus points. Submitting this form will overwrite the existing
+                points.
+              </Typography>
+            ))}
+          {isExamAssignment(assignmentNameDialog) ? (
+            <Typography variant="body1">
+              Are you sure you want to award{" "}
+              {gradePointsDialog !== undefined && (
+                <strong>
+                  {gradePointsDialog} out of{" "}
+                  {getMaxGradePointsOfAssignment(assignmentNameDialog)} points
+                </strong>
+              )}
+              {gradePointsDialog !== undefined &&
+                pointsDialog !== undefined &&
+                " and "}
+              {pointsDialog !== undefined && (
+                <strong>
+                  {pointsDialog} out of{" "}
+                  {getMaxPointsOfAssignment(assignmentNameDialog)} bonus points
+                </strong>
+              )}{" "}
+              to <strong>{getUserOfSubmission(submissionIDDialog)}</strong> for{" "}
+              <strong>{assignmentNameDialog}</strong>?
+            </Typography>
+          ) : (
+            <Typography variant="body1">
+              Are you sure you want to award{" "}
+              <strong>
+                {pointsDialog} out of{" "}
+                {getMaxPointsOfAssignment(assignmentNameDialog)}
+              </strong>{" "}
+              bonus points to{" "}
+              <strong>{getUserOfSubmission(submissionIDDialog)}</strong> for{" "}
+              <strong>{assignmentNameDialog}</strong>?
             </Typography>
           )}
-          <Typography variant="body1">
-            Are you sure you want to award{" "}
-            <strong>
-              {pointsDialog} out of{" "}
-              {getMaxPointsOfAssignment(assignmentNameDialog)}
-            </strong>{" "}
-            bonus points to{" "}
-            <strong>{getUserOfSubmission(submissionIDDialog)}</strong> for{" "}
-            <strong>{assignmentNameDialog}</strong>?
-          </Typography>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleDialogConfirm} color="primary">

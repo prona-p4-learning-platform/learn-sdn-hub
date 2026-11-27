@@ -25,6 +25,9 @@ const AssignmentItem = ({name, data, onDeploy, onUndeploy, onResubmit}:Props): J
   const isActiveDeployment = isDeployedUser
   const canDeploy = !(data.deployedUser.length > 0 || ((data.deployedGroup.length > 0) && !data.deployedGroup.includes(name)))
 
+  const limit = data.pointLimits[name]
+  const isExam = limit?.isExam ?? false
+
   const getSubmissionTooltip = () => {
     if(submission) {
       return `Finished. Last successful submission: ${submission.lastChanged.toLocaleString(undefined, { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit" })}`
@@ -32,17 +35,46 @@ const AssignmentItem = ({name, data, onDeploy, onUndeploy, onResubmit}:Props): J
   }
 
   const getPointsTooltip = () => {
-    const limit = data.pointLimits[name]
-    if(submission?.points) {
-      return `You have earned ${submission.points} out of ${limit} bonus points.`
-    }
-    if(submission && !submission.points) {
-      return "The submission was not graded yet"
-    }
     if(limit) {
+      if(isExam) {
+        if(submission?.gradePoints !== undefined) {
+          return `You have earned ${submission.gradePoints} out of ${limit.maxGradePoints} points.`
+        }
+        if(submission) {
+          return "The submission was not graded yet"
+        }
+        return "You can earn points by submiting this assignemnt!"
+      }
+      if(submission?.points) {
+        return `You have earned ${submission.points} out of ${limit.maxBonusPoints} bonus points.`
+      }
+      if(submission) {
+        return "The submission was not graded yet"
+      }
       return "You can earn bonus points by subbmiting this assignemnt!"
     }
     return "No bonus points available"
+  }
+
+  const renderPointsProgress = (earned: number | undefined, max: number | undefined, label?: string) => {
+    if(max === undefined) {
+      return null
+    }
+    const percentage = earned && max ? (earned / max) * 100 : 0
+    return (
+      <Box sx={{ display: "inline-flex", alignItems: "center", ml: 2 }}>
+        <Box sx={{ width: "100px" }}>
+          <LinearProgress
+            variant="determinate"
+            value={percentage}
+            color={isSubmitted ? "primary" : "warning"}
+          />
+        </Box>
+        <Typography variant="body2" color="text.secondary">
+          {earned ?? "?"} / {max}{label ? ` ${label}` : ""}
+        </Typography>
+      </Box>
+    )
   }
   return (
     <ListItem divider>
@@ -92,19 +124,17 @@ const AssignmentItem = ({name, data, onDeploy, onUndeploy, onResubmit}:Props): J
             onClick={() => onResubmit(name)}
           />
         </Tooltip>
-        {data.pointLimits[name] ? (
+        {limit ? (
           <Tooltip title={getPointsTooltip()}>
-            <Box sx={{ display: "inline-flex", alignItems: "center", ml: 2 }}>
-              <Box sx={{ width: "100px" }}>
-                <LinearProgress
-                  variant="determinate"
-                  value={submission?.points && data.pointLimits[name] ? (submission.points / data.pointLimits[name]) * 100 : 0}
-                  color={isSubmitted ? "primary" : "warning"}
-                />
-              </Box>
-              <Typography variant="body2" color="text.secondary">
-                {submission?.points ?? "?"} / {data.pointLimits[name]}
-              </Typography>
+            <Box sx={{ display: "flex", flexDirection: "column", alignItems: "flex-end", ml: 2 }}>
+              {isExam ? (
+                <>
+                  {renderPointsProgress(submission?.gradePoints, limit.maxGradePoints, "points")}
+                  {limit.maxBonusPoints > 0 && renderPointsProgress(submission?.points, limit.maxBonusPoints, "bonus points")}
+                </>
+              ) : (
+                limit.maxBonusPoints > 0 && renderPointsProgress(submission?.points, limit.maxBonusPoints)
+              )}
             </Box>
           </Tooltip>
         ) : (

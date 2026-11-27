@@ -4,6 +4,7 @@ export type Assignment = {
   _id: string;
   name: string;
   maxBonusPoints?: number;
+  maxGradePoints?: number;
   assignmentLabSheet?: string;
   assignmentLabSheetLocation?: "backend" | "instance" | "database";
   labSheetName?: string;
@@ -17,4 +18,5 @@ export interface NewAssignment extends EnvironmentDescription {
   sheetId?: string;
   assignmentLabSheet?: string;
   maxBonusPoints?: number;
+  maxGradePoints?: number;
 }

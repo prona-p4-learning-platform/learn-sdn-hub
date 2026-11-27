@@ -199,7 +199,6 @@ const ActiveEnvironmentOverview = ({ assignments, createAssignment, updateAssign
             setNewAssignment={setNewAssignment}
             newAssignment={newAssignment}
           />
-          {/*
           <TextField
             value={newAssignment?.maxBonusPoints ?? ""}
             type="number"
@@ -213,14 +212,20 @@ const ActiveEnvironmentOverview = ({ assignments, createAssignment, updateAssign
               }))
             }
           />
-          <LoadingButton
-            type={"submit"}
-            variant="contained"
-            loading={loading}
-          >
-            {editorType === "Create" ? "Create Assignment" : "Update Assignment"}
-          </LoadingButton>
-          */}
+          <TextField
+            value={newAssignment?.maxGradePoints ?? ""}
+            type="number"
+            id="MaxGradePoints"
+            name="MaxGradePoints"
+            label="Max Grade Points"
+            helperText="Exam score limit; leave empty for non-exam assignments"
+            onChange={(e) =>
+              setNewAssignment((prev) => ({
+                ...prev,
+                maxGradePoints: e.target.value === "" ? undefined : Number(e.target.value),
+              }))
+            }
+          />
           <LoadingButton
             type={"submit"}
             variant="contained"

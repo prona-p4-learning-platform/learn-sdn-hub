@@ -94,6 +94,7 @@ const assignmentValidator = z.object({
   _id: z.string(),
   name: z.string(),
   maxBonusPoints: z.number().optional(),
+  maxGradePoints: z.number().optional(),
   assignmentLabSheet: z.string().optional(),
   labSheetName: z.string().optional(),
   sheetId: z.string().optional(),
@@ -271,6 +272,7 @@ function Administration(): JSX.Element {
           body: JSON.stringify({
             name: assignment.name,
             maxBonusPoints: assignment.maxBonusPoints,
+            maxGradePoints: assignment.maxGradePoints,
             assignmentLabSheet: assignment.assignmentLabSheet,
             labSheetName: assignment.labSheetName,
           }),
@@ -305,6 +307,7 @@ function Administration(): JSX.Element {
           body: JSON.stringify({
             name: update.name,
             maxBonusPoints: update.maxBonusPoints,
+            maxGradePoints: update.maxGradePoints,
             assignmentLabSheet: update.assignmentLabSheet,
             _sheetId: update.sheetId,
             //description: update.description,

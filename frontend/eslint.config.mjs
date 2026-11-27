@@ -53,5 +53,5 @@ export default tseslint.config(
       eqeqeq: ["error", "always", { null: "ignore" }],
     },
   },
-  { ignores: ["public/", "build/", "node_modules/", "vite.config.ts"] },
+  { ignores: ["public/", "build/", "node_modules/", "vite.config.ts", "vitest.config.ts"] },
 );

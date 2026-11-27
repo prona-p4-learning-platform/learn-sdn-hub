@@ -9,7 +9,14 @@ const assignmentsValidator = z.array(
     type: EnvironmentSchema
   })
 )
-const pointsValidator = z.record(z.string(), z.number())
+const pointsValidator = z.record(
+  z.string(),
+  z.object({
+    maxBonusPoints: z.number(),
+    maxGradePoints: z.number().optional(),
+    isExam: z.boolean(),
+  })
+)
 const deployedEnvironmentValidator = z.array(
   z.object({
     assignmentName: z.string(),
@@ -24,6 +31,7 @@ const submissionsValidator = z.array(
     assignmentName: z.string().min(1),
     lastChanged: z.string().transform((v) => new Date(v)),
     points: z.number().optional(),
+    gradePoints: z.number().optional(),
   })
 )
 
@@ -33,18 +41,24 @@ export interface Assignment {
   type: AssignmentType
 }
 
+export type PointLimits = {
+  maxBonusPoints: number
+  maxGradePoints?: number
+  isExam: boolean
+}
+
 export interface AssignmentContextData {
   deployedUser: string[]
   deployedGroup: string[]
   preparing: boolean
   progressAssignment: string
-  submissions: { assignmentName: string; lastChanged: Date; points?: number }[]
-  pointLimits: Record<string, number | undefined>
+  submissions: { assignmentName: string; lastChanged: Date; points?: number; gradePoints?: number }[]
+  pointLimits: Record<string, PointLimits | undefined>
 }
 
 export function useAssignmentsData(): {
   assignments: Assignment[];
-  points: Record<string, number>;
+  points: Record<string, PointLimits | undefined>;
 } {
   const assignmentsQuery = useQuery({
     queryKey: ["assignments"],
