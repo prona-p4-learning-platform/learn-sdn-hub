@@ -59,12 +59,13 @@ describe("AssignmentItem points wording", () => {
     })
     renderItem(data, "exam-1")
 
-    // grade points are the only student-visible bar, worded as "points" — never "bonus points"
-    expect(screen.getByText("20 / 40 points")).toBeInTheDocument()
+    // grade points are the only student-visible bar; exam wording lives in
+    // the hover tooltip — never "bonus points"
+    expect(screen.getByText("20 / 40")).toBeInTheDocument()
     // bonus points are examiner-only: no bonus bar, no bonus wording
     expect(screen.queryByText(/bonus points/)).not.toBeInTheDocument()
 
-    const tooltip = await openPointsTooltip(/20 \/ 40 points/)
+    const tooltip = await openPointsTooltip(/20 \/ 40/)
     expect(tooltip).toHaveTextContent("You have earned 20 out of 40 points.")
     expect(tooltip).not.toHaveTextContent("bonus points")
   })
@@ -78,9 +79,9 @@ describe("AssignmentItem points wording", () => {
     })
     renderItem(data, "exam-1")
 
-    expect(screen.getByText("? / 40 points")).toBeInTheDocument()
+    expect(screen.getByText("? / 40")).toBeInTheDocument()
 
-    const tooltip = await openPointsTooltip(/\? \/ 40 points/)
+    const tooltip = await openPointsTooltip(/\? \/ 40/)
     expect(tooltip).toHaveTextContent("The submission was not graded yet")
   })
 

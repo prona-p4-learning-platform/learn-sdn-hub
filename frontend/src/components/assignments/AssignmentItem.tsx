@@ -56,13 +56,15 @@ const AssignmentItem = ({name, data, onDeploy, onUndeploy, onResubmit}:Props): J
     return "No bonus points available"
   }
 
-  const renderPointsProgress = (earned: number | undefined, max: number | undefined, label?: string) => {
+  const renderPointsProgress = (earned: number | undefined, max: number | undefined) => {
     if(max === undefined) {
       return null
     }
     const percentage = earned && max ? (earned / max) * 100 : 0
+    // fixed-width column: ListItemSecondaryAction is right-aligned, so a
+    // wider cluster would shift the buttons left relative to other rows
     return (
-      <Box sx={{ display: "inline-flex", alignItems: "center" }}>
+      <Box sx={{ display: "inline-flex", alignItems: "center", width: "180px" }}>
         <Box sx={{ width: "100px" }}>
           <LinearProgress
             variant="determinate"
@@ -70,8 +72,8 @@ const AssignmentItem = ({name, data, onDeploy, onUndeploy, onResubmit}:Props): J
             color={isSubmitted ? "primary" : "warning"}
           />
         </Box>
-        <Typography variant="body2" color="text.secondary">
-          {earned ?? "?"} / {max}{label ? ` ${label}` : ""}
+        <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: "nowrap" }}>
+          {earned ?? "?"} / {max}
         </Typography>
       </Box>
     )
@@ -128,7 +130,7 @@ const AssignmentItem = ({name, data, onDeploy, onUndeploy, onResubmit}:Props): J
           <Tooltip title={getPointsTooltip()}>
             <Box sx={{ display: "inline-flex", alignItems: "center", ml: 2 }}>
               {isExam && limit.maxGradePoints !== undefined ? (
-                renderPointsProgress(submission?.gradePoints, limit.maxGradePoints, "points")
+                renderPointsProgress(submission?.gradePoints, limit.maxGradePoints)
               ) : (
                 renderPointsProgress(submission?.points, limit.maxBonusPoints)
               )}
@@ -138,7 +140,7 @@ const AssignmentItem = ({name, data, onDeploy, onUndeploy, onResubmit}:Props): J
           <Box
             sx={{ display: "inline-flex", alignItems: "center", ml: 2 }}
           >
-            <Box sx={{ width: "158px" }}>
+            <Box sx={{ width: "180px" }}>
               <Typography variant="body2" color="text.secondary">
                 No bonus points
               </Typography>
