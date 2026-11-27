@@ -282,23 +282,50 @@ The author asked for a tier recommendation drawing on modded Minecraft, Terraria
 
 ### Proposed, awaiting review
 
-- **Tier principle (keeps #17).** Each tier brings a new material, a new place and a new kind of problem. The next pickaxe and extractor cost many processed parts of the current tier, so the factory sets the pace, not hand-mining.
-- **Tier ladder.** 0 primitive, 1 copper, 2 iron plus steel, 3 thrumite (cave crystal, stores energy), 4 pyrelith (desert, heat, slag by-product), 5 rimeglass (tundra, needs pressurised gas as coolant), 6 concordite (fused from the three, not mined). Replaces the first draft: steel moves into tier 2, batteries to tier 3, oil to tier 4, gas to tier 5. The biome deposit column changes accordingly.
-- **Final goal.** An ancient engine at the world centre, fed concordite parts at set rates in phases. In-game only; not the assignment goals left out by #25.
+- *(Superseded by #62.)* **Tier principle (keeps #17).** Each tier brings a new material, a new place and a new kind of problem. The next pickaxe and extractor cost many processed parts of the current tier, so the factory sets the pace, not hand-mining.
+- *(Reworked by #62; contents still under review.)* **Tier ladder.** 0 primitive, 1 copper, 2 iron plus steel, 3 thrumite (cave crystal, stores energy), 4 pyrelith (desert, heat, slag by-product), 5 rimeglass (tundra, needs pressurised gas as coolant), 6 concordite (fused from the three, not mined). Replaces the first draft: steel moves into tier 2, batteries to tier 3, oil to tier 4, gas to tier 5. The biome deposit column changes accordingly.
+- *(Superseded by #63–#66.)* **Final goal.** An ancient engine at the world centre, fed concordite parts at set rates in phases. In-game only; not the assignment goals left out by #25.
 - **Machine upgrades.** 3 upgrade slots and 1 core slot per machine: mainspring (+50 % speed, power grows faster), escapement (−25 % energy per item), harmonic core (double output at about 4× power; vault-only, never craftable, limited per world).
 - **Ruins.** Wrecks (surface, common), vaults (caves, puzzle door), ancient seals (deep, rare; concordite tools plus a large puzzle). Puzzles are delivery, power, pressure and routing tasks (#6).
 - **Loot.** Once per structure per team; a player who looted a structure cannot loot it again through another team.
-- **Progression dependency.** From tier 3 on, each tier's key machine blueprint lies in a vault in that tier's biome; generation guarantees enough vaults. Upgrades and alternative recipes are optional.
+- *(Superseded by #67.)* **Progression dependency.** From tier 3 on, each tier's key machine blueprint lies in a vault in that tier's biome; generation guarantees enough vaults. Upgrades and alternative recipes are optional.
 - **Scanner.** From tier 1; points to the nearest deposit of a chosen kind; an upgrade also finds ruins.
-- **Stage placement.** Ruins are generated with the world in Stage 2; loot and the once-per-team rule in Stage 3; upgrades, alternative recipes, the scanner and delivery puzzles in Stage 4; power and pressure puzzles, tiers 2 to 6 and the final goal in Stage 5.
+- *(Changed by #64: the engine link and phase deliveries move to Stage 4.)* **Stage placement.** Ruins are generated with the world in Stage 2; loot and the once-per-team rule in Stage 3; upgrades, alternative recipes, the scanner and delivery puzzles in Stage 4; power and pressure puzzles, tiers 2 to 6 and the final goal in Stage 5.
 
 ### Open
 
-36. **Final goal scope.** One engine per world that all teams build up together, or one per team?
+36. **Final goal scope.** Answered by #64.
 37. **Invented names.** Thrumite, pyrelith, rimeglass and concordite are placeholders until checked for existing use.
 
-## Where things stand (end of 2026-11-26)
+## 2026-11-27 — Tier structure and the ancient engine
 
-- **Awaiting the author's review:** the proposals in the entry above and every **Draft** marker in `game-design.md` (biome deposits, copper and coal within about 200 m of spawn, hand mining slower than the first extractor, the unlock rule, the tier ladder and pacing targets, stone tools without a workbench, ruins and puzzles, machine upgrades, the final goal); open questions 36 and 37.
+The author found the draft ladder flat: each tier hinged on one new ore, and the engine was fed one material. Directions from the author: every tier also brings other resource wells and products, and the engine is fed produced items made from everything the tier unlocked, as in Satisfactory. The four follow-up proposals (phases gate tiers, engine link, quantities, relics) were confirmed as proposed.
+
+### Decided
+
+| # | Topic | Decision | Consequences |
+|---|---|---|---|
+| 62 | Tier structure | A tier brings one tiered ore (#17), one or two other new sources (wells, vents or deposits), products that combine the new sources with earlier tiers' materials, and one new problem. No single resource carries a tier. | The machine that taps a new source (pump, oil pump, gas extractor) gates it, not the pickaxe. New deposit types: sulfur (highlands, around geothermal vents), sand (desert), ice (tundra). Items and deposits are catalogue data plus one model and one icon each (#51); no mechanics beyond the earlier draft. The tier contents in `game-design.md` section 9 are reworked and stay a draft. |
+| 63 | Engine phases | The ancient engine is fed engine parts, not raw material: one phase per tier from 1 to 6, each asking for 2–3 parts built from all of that tier's sources, plus more of the previous phase's part (as Smart Plating returns in Satisfactory). | Earlier production lines keep running. Engine parts are catalogue items with recipes. |
+| 64 | Phases gate tiers | Completing phase N unlocks tier N+1's entry recipes for the team: the pickaxe and extractor that mine its ore and the machines that tap its other sources. Within an unlocked tier, a recipe unlocks once the team has obtained its inputs (#18). Tiers 0 and 1 need no phase. One engine per world, progress per team (answers open question 36). | Unlock conditions get a second kind (phase completed) next to obtained items. Completed phases are unlocks and follow #47 (merged on joining, copied on leaving). Phase 1 gates tier 2, so the engine link and phase deliveries move into Stage 4. |
+| 65 | Engine link | Teams deliver engine parts at an engine link they build in their base, as the space elevator stands in the player's base in Satisfactory. The engine at the world centre is the landmark and lights up with each completed phase. | Engine link is placeable from tier 1. Deliveries count for the team that owns the link (#36). Each player sees their own team's progress on the engine. |
+| 66 | Phase targets | Phases 1–5 ask for fixed quantities; stockpiled parts count, so a slow factory still progresses. Phase 6 asks for a rate held over a set time, as the final throughput test. | Replaces "concordite parts at set rates" from the earlier draft. |
+| 67 | Relics instead of blueprints | From phase 3 on, each phase also needs one relic from a vault in that tier's biome. This replaces the blueprint gate (key machine blueprints in vaults from tier 3 on). | Exploration stays required without a separate lock. Loot is once per structure per team, so every team can take a relic from each vault; generation still guarantees enough vaults per biome. Derived: tier 6 has no biome, so the phase 6 relic lies in an ancient seal, which already held parts for the final goal. |
+
+### Open
+
+38. **Partial phase deliveries.** Answered by #68.
+
+## 2026-11-27 — Partial phase deliveries
+
+### Decided
+
+| # | Topic | Decision | Consequences |
+|---|---|---|---|
+| 68 | Partial phase deliveries | Parts delivered towards an unfinished phase belong to the team and never move with a player. Joining a team does not add the joiner's partial deliveries to the team's; leaving starts the leaver's solo team at 0 for its unfinished phase. Completed phases still follow #47. | Avoids the exploit where a player leaves with a copy of the progress and rejoins to count it twice. Two solo players who team up lose the joiner's partial deliveries for the current phase; the join and leave dialogs say what will be lost. If merging completed phases (#47) moves the team past its current phase, that phase's partial deliveries no longer matter. |
+
+## Where things stand (end of 2026-11-27)
+
+- **Awaiting the author's review:** the tier and phase contents in `game-design.md` section 9 (sources, products, engine parts) and the remaining **Draft** markers there (biome deposits, copper and coal within about 200 m of spawn, hand mining slower than the first extractor, pacing targets, stone tools without a workbench, ruins and puzzles, machine upgrades, scanner); open question 37.
 - **No proposal yet:** inventory and stack sizes, the gathering key, audio. Recipe numbers come with implementation.
 - **Next step after the review:** rewrite the spec and stage plans in `docs/superpowers/` from this log and the GDD (#54), folding in the plan review findings that are still open (first entry).

@@ -76,7 +76,7 @@ A user owns at most 3 worlds. Worlds are never deleted automatically. Deleting a
 - **Buildings (#36).** A building on claimed land belongs to whoever owns the land. A building on unclaimed land belongs to the builder's current team.
 - **Leaving a team (#30, #33, #37).** The player's claims and the buildings on them go back to their solo team. A leaving team owner picks an admin as successor, otherwise a random admin takes over; without admins the team is disbanded and everyone returns to their solo team.
 - **Containers (#28, #31, #32).** A container is either private (only its owner opens it) or open to the owner's team. Platform admins can view private containers but not take anything. The world owner and team admins can remove a private container; its contents are destroyed (with a confirmation naming the owner).
-- **Unlocks (#47).** Shared per team and never lost: joining merges the player's unlocks into the team's; leaving copies the team's unlocks to the solo team.
+- **Unlocks (#47).** Shared per team and never lost: joining merges the player's unlocks into the team's; leaving copies the team's unlocks to the solo team. Completed engine phases are unlocks; parts delivered towards an unfinished phase stay with the team (#68).
 - **Inventory (#3).** Per player. Teams share through containers.
 
 ## 6. The world
@@ -89,9 +89,9 @@ Terrain is smooth, static (not editable) and generated from the seed, with caves
 |---|---|---|---|---|---|
 | Grassland | sparse to medium | fresh green | green | gentle | water wells, copper ore, limestone |
 | Forest | dense | dark green | dark green and brown | gentle to medium | coal, copper ore; thrumite in caves |
-| Highlands | sparse | yellow-green | grey rock | rugged | iron ore, stone, geothermal vents; thrumite in caves |
-| Desert | almost none | olive | sand | gentle dunes | crude oil, natural gas, limestone; pyrelith deep down |
-| Tundra | sparse | pale blue-green | snow | medium | natural gas; rimeglass deep down |
+| Highlands | sparse | yellow-green | grey rock | rugged | iron ore, stone, geothermal vents with sulfur around them; thrumite in caves |
+| Desert | almost none | olive | sand | gentle dunes | crude oil, sand, natural gas, limestone; pyrelith deep down |
+| Tundra | sparse | pale blue-green | snow | medium | natural gas, ice; rimeglass deep down |
 
 One wood type and one tree model; only the leaf colour changes (#14).
 
@@ -107,7 +107,7 @@ Always in grassland or forest, with loose stones, branches, trees and a stone de
 | Branch | hand | wood | no |
 | Tree | axe | wood, at least 1 sapling | by planting saplings (#41) |
 | Rock formation | pickaxe | stone | no |
-| Solid deposit (ores, stone, limestone, coal) | pickaxe or extractor | its resource | infinite |
+| Solid deposit (ores, stone, limestone, coal, sulfur, sand, ice) | pickaxe or extractor | its resource | infinite |
 | Well or vent (fluids, gases) | pump or gas extractor only | its resource | infinite |
 
 Trees and rock formations block building; loose stones and branches under a new building go into the builder's inventory (#39).
@@ -121,8 +121,8 @@ The old automata, a machine civilisation that came before the players, left ruin
 | Structure | Where | How to get in | Loot |
 |---|---|---|---|
 | Wreck | surface, common | walk in; some need a minimum pickaxe tier to break open (#19) | ancient gears, parts |
-| Vault | caves, several per biome | a puzzle at the door | harmonic cores, alternative recipes, blueprints |
-| Ancient seal | deep, rare | concordite tools plus a large puzzle | late blueprints, parts for the final goal |
+| Vault | caves, several per biome | a puzzle at the door | harmonic cores, alternative recipes, engine relics (#67) |
+| Ancient seal | deep, rare | concordite tools plus a large puzzle | the phase 6 relic, rare alternative recipes |
 
 **Puzzles** use the game's own mechanics, never programming (#6). Each is a throughput or balancing problem:
 
@@ -149,31 +149,56 @@ The old automata, a machine civilisation that came before the players, left ruin
 - **Workbench:** everything beyond basic tools, i.e. better tools and intermediate parts (e.g. plates, gears, wire) until machines take over. The player has to be within reach of a placed workbench.
 - **Buildings are not crafted (#56).** They are placed directly by paying their cost, the workbench itself included (wood).
 - **Machines** take over automated production. The furnace is the first machine: it smelts and burns wood or coal, no power needed.
-- **Draft — unlock rule (#18):** a recipe or building becomes available to a team once the team has obtained each of its inputs (or cost items) at least once. Hand recipes are available from the start.
+- **Unlock rule (#18, #64):** a tier's entry recipes (the pickaxe and extractor that mine its ore, and the machines that tap its other new sources) unlock when the team completes the engine phase before it (see *Tier ladder*). Within an unlocked tier, a recipe or building becomes available to a team once the team has obtained each of its inputs (or cost items) at least once. Hand recipes are available from the start.
 
-## 9. Tier ladder — **Draft**
+## 9. Tier ladder — **Draft** for the contents
 
-**Rule (#17).** Every tier brings a new material, a new place to find it and a new kind of problem. Tools and extractors made from a tier's material mine the next tier's resources and everything below. The next pickaxe and extractor cost many processed parts of the current tier, so the factory sets the pace of progress, not hand-mining.
+**Structure (#17, #62).** A tier is not one new ore. It brings:
 
-| Tier | Material | Where | Mined with | New problem | Main unlocks | Fits stage |
+- one tiered ore, mined with a pickaxe or extractor of the previous tier or higher (#17);
+- one or two other new sources: wells, vents or deposits. The pickaxe does not gate them; the machine that taps them does (pump, oil pump, gas extractor), and the tier unlocks that machine;
+- products that combine the new sources with earlier tiers' materials, so earlier production lines stay in use (copper wire is still needed in tier 5);
+- one new problem.
+
+No single resource carries a tier; the engine phase checks that all of a tier's sources are used (see *The ancient engine*). The next pickaxe and extractor cost many processed parts of the current tier, so the factory sets the pace of progress, not hand-mining.
+
+**Progression (#64).** Completing engine phase N unlocks tier N+1's entry recipes for the team: the pickaxe and extractor that mine its ore and the machines that tap its other new sources. Within an unlocked tier, recipes unlock as the team obtains their inputs (#18, section 8). Tiers 0 and 1 need no phase.
+
+| Tier | Tiered ore (where) | Mined with | Other new sources | New problem | Main unlocks | Fits stage |
 |---|---|---|---|---|---|---|
-| 0 | primitive: wood and loose stone | spawn | hands | scarcity: nothing respawns | hand: stone axe and pickaxe; placeable: workbench (wood), wooden chest, furnace (stone), simple supports (wood) | 3 |
-| 1 | copper | grassland, forest; surface | stone pickaxe | first automation; ratios (extractors vs. furnaces) | copper ingot and wire, burner extractor (burns wood or coal), belts, splitter and merger, supports, vertical belts, scanner | 3–4 |
-| 2 | iron, plus steel (iron + coal) | highlands; surface and shallow caves | copper pickaxe | shared power grid, water, recipes with several inputs | iron plate, gears, steel; coal generator with water pump, poles, electric extractor, constructor, pipes, tank, faster belts, tree farm | 4–5 |
-| 3 | **thrumite**, a humming crystal that stores energy | cave walls below about −30 m in forest and highlands | iron pickaxe | caves: moving things up and down; storing power | batteries, geothermal generator, faster belts | 5 |
-| 4 | **pyrelith**, a stone that holds heat | deep under the desert, next to oil | thrumite pickaxe | by-products: smelting makes slag, which blocks the machine unless it is carried away | slag processing, oil pump, fuel generator | 5 |
-| 5 | **rimeglass**, a crystal that has to stay cold | deep under the tundra | pyrelith pickaxe | gas pressure: processing needs pressurised natural gas as coolant | gas extractor, compressor, pressure tanks | 5 |
-| 6 | **concordite**, an alloy fused from thrumite, pyrelith and rimeglass products | made, not mined | — | long distances: three far-apart biomes at once | concordite tools; the final goal | 5 |
+| 0 | none; wood and loose stone (spawn) | hands | trees, rock formations, stone deposit | scarcity: nothing respawns | hand: stone axe and pickaxe; placeable: workbench (wood), wooden chest, furnace (stone), simple supports (wood) | 3 |
+| 1 | copper ore (grassland, forest; surface) | stone pickaxe | coal deposits; stone and wood get processed | first automation; ratios (extractors vs. furnaces) | copper ingot, wire and sheet, stone brick, wooden beam, charcoal; burner extractor (burns wood, charcoal or coal), belts, splitter and merger, supports, vertical belts, scanner, engine link | 3–4 |
+| 2 | iron ore (highlands; surface and shallow caves) | copper pickaxe | water wells, limestone deposits, tree farm (renewable wood) | shared power grid, water, recipes with several inputs | iron plate, rod and gear, steel (iron + coal), concrete (limestone + water); coal generator with water pump, poles, electric extractor, constructor, pipes, tank, faster belts, tree farm | 4–5 |
+| 3 | **thrumite**, a humming crystal that stores energy (cave walls below about −30 m in forest and highlands) | iron pickaxe | geothermal vents with sulfur deposits around them (highlands) | caves: moving things up and down; storing power; power from fixed places | sulfuric acid (sulfur + water), resonator, storage cell; batteries, geothermal generator, faster belts | 5 |
+| 4 | **pyrelith**, a stone that holds heat (deep under the desert, next to oil) | thrumite pickaxe | crude oil wells, sand deposits (desert) | by-products: smelting pyrelith makes slag, which blocks the machine unless it is carried away | pyrelith ingot, glass (sand), plastic and fuel (oil), gravel from slag (goes into concrete); oil pump, refinery, slag processing, fuel generator | 5 |
+| 5 | **rimeglass**, a crystal that has to stay cold (deep under the tundra) | pyrelith pickaxe | natural gas wells (tundra, desert), ice deposits (tundra) | gas pressure and cooling: ice is a cheap coolant carried on belts, pressurised natural gas handles more throughput | coolant, rimeglass lens, superconducting wire; gas extractor, compressor, pressure tanks | 5 |
+| 6 | **concordite**, an alloy fused from thrumite, pyrelith and rimeglass products (made, not mined) | — | — | long distances: three far-apart biomes at once | concordite ingot and parts, concordite tools | 5 |
 
-Solids come first without a power grid (burner machines use fuel), which matches Stage 4; power, fluids and gases arrive with tiers 2 to 5, which matches Stage 5.
+Solids come first without a power grid (burner machines use fuel), which matches Stage 4; power, fluids and gases arrive with tiers 2 to 5, which matches Stage 5. Phase 1 gates tier 2, so the engine link and phase deliveries belong to Stage 4.
 
-**Blueprints.** From tier 3 on, the blueprint for each tier's key machine lies in a vault in that tier's biome (see *Ruins*). The world generator guarantees enough vaults, so progress never depends on luck. Picking up a blueprint unlocks like any other item (#18). Everything else from ruins is optional.
+### The ancient engine (#63–#67)
+
+An ancient engine stands at the centre of the world, one per world. Each team restores it on its own, and every player sees their own team's progress (#64). Teams deliver at an **engine link** they build in their base, as the space elevator stands in the player's base in Satisfactory; the engine at the centre is the landmark and lights up with each completed phase (#65). It is an in-game goal, not the assignment goals and grading left out by #25.
+
+- **One phase per tier (#63).** Phase N asks for 2–3 engine parts built from all of tier N's sources, plus more of phase N−1's part, so earlier lines keep running (as Smart Plating returns in Satisfactory's second elevator phase).
+- **Quantities, then a rate (#66).** Phases 1–5 ask for fixed quantities; stockpiled parts count, so a slow factory still progresses. Phase 6 asks for a rate held over a set time: the final throughput test.
+- **Relics (#67).** From phase 3 on, each phase also needs one relic from a vault in that tier's biome, so exploration stays required without a separate lock. Loot is taken once per structure per team (see *Ruins*), so every team can take a relic from each vault; the world generator guarantees enough vaults per biome, so progress never depends on luck. Tier 6 has no biome; its relic lies in an ancient seal.
+- **Changing teams (#68).** Completed phases are unlocks and follow #47. Parts delivered towards an unfinished phase belong to the team: a joining player's partial deliveries do not carry over, and a leaving player's solo team starts that phase at 0. The join and leave dialogs say what will be lost.
+
+Part names and recipes are placeholders:
+
+| Phase | Asks for | Relic from | Completing it unlocks |
+|---|---|---|---|
+| 1 | wired frames (wooden beam + copper wire), brick housings (stone brick + copper sheet) | — | tier 2 |
+| 2 | motors (rod + gear + copper wire), reinforced casings (steel + concrete), wired frames | — | tier 3 |
+| 3 | resonant coils (thrumite + copper wire + steel), storage cells (thrumite + sulfuric acid + reinforced casing), motors | a vault in forest or highland caves | tier 4 |
+| 4 | heat exchangers (pyrelith + steel + glass), polymer housings (plastic + glass), resonant coils | a vault in the desert | tier 5 |
+| 5 | superconducting coils, cryo lattices, heat exchangers | a vault in the tundra | tier 6 |
+| 6 | concordite parts at a rate held over a set time | an ancient seal | the engine wakes up: the final goal |
 
 **Scanner.** From tier 1, points to the nearest deposit of a chosen kind; a later upgrade also finds ruins.
 
-**Final goal.** An ancient engine stands at the centre of the world. Feeding it concordite parts at set rates, in phases, brings it back to life, like Satisfactory's space elevator: a long-term goal that is itself a throughput target. It is an in-game goal, not the assignment goals and grading left out by #25. Open: one engine per world that all teams build up together, or one per team.
-
-**Names.** Thrumite, pyrelith, rimeglass and concordite are invented placeholders; check that none is already in use before settling on them.
+**Names.** Thrumite, pyrelith, rimeglass, concordite and the engine part names are invented placeholders; check that none is already in use before settling on them.
 
 **Pacing targets (to tune):**
 
@@ -185,7 +210,7 @@ Solids come first without a power grid (burner machines use fuel), which matches
 | First automated line (burner extractor → belt → furnace → chest) | 20–30 min |
 | First power grid | about 1 h |
 
-**For the author to decide:** the tiers, names and contents above; the final goal's scope; whether hand-crafted stone tools need the workbench (draft: no).
+**For the author to decide:** the sources, products and engine parts per tier; the names; whether hand-crafted stone tools need the workbench (draft: no).
 
 ## 10. Building
 
@@ -246,8 +271,7 @@ First person only (#7): WASD, mouse look, pointer lock, jump, build mode with a 
 
 ## 16. Open points
 
-- Review of every **Draft** marker: biome deposits and spawn distances (section 6), ruins and puzzles (6), hand mining speed (7), the unlock rule (8), tier ladder, blueprints, scanner, final goal and pacing (9), machine upgrades (11).
-- Recipes and balance numbers.
+- Review of every **Draft** marker: biome deposits and spawn distances (section 6), ruins and puzzles (6), hand mining speed (7), tier and phase contents, scanner and pacing (9), machine upgrades (11).- Recipes and balance numbers.
 - Inventory size and stack sizes.
 - Key for gathering and picking up.
 - Audio.
