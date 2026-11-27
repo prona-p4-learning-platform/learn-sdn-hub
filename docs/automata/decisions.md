@@ -122,7 +122,7 @@ Smaller:
 |---|---|---|---|
 | 22 | Invites | Anyone can be invited with an invite code. | No user lists or name search are needed, so no usernames are exposed across courses. "Anyone" still means users who can reach the game (review A4). Codes must be unguessable, and redeeming them must be rate-limited. |
 | 23 | World settings | The creator chooses the settings and the seed when creating a world; the seed can also be generated randomly. | The world creation dialog sets seed and settings; the assignment's `game` block no longer provides seed, template or rules. The world server validates settings within fixed bounds (e.g. a maximum world size) so a world cannot exhaust server resources. Settings are stored at creation (review B5). |
-| 24 | Rights and teams | Plots stay. The world owner has full rights on every plot. Below the owner, a team system with its own team management, in the style of FTB Teams (inspired by, not copied). | Teams replace the platform group as the in-game ownership unit. Needs team management UI and protocol (create team, invite, roles, leave). Details are open question 20. |
+| 24 | Rights and teams | *(Plots and claims superseded by #27 and #72; the world owner's full rights now cover every building.)* Plots stay. The world owner has full rights on every plot. Below the owner, a team system with its own team management, in the style of FTB Teams (inspired by, not copied). | Teams replace the platform group as the in-game ownership unit. Needs team management UI and protocol (create team, invite, roles, leave). Details are open question 20. |
 | 25 | Goals | Goals (step checks) are an afterthought and probably not needed for the game. A game assignment is an entry point that starts the game, plus its lab sheet (supersedes #12). | `WorldQuery` checks, the goals panel and submit leave the core scope; Stage 6 keeps catch-up, admin, archiving and deployment. The loader no longer needs `WorldQuery` validation for now. Worlds do not belong to an assignment (#21), so several game assignments would lead into the same worlds. Production metrics stay, for the statistics panel (#5). |
 
 ### Open
@@ -138,7 +138,7 @@ Smaller:
 | # | Topic | Decision | Consequences |
 |---|---|---|---|
 | 26 | Invite codes | The world owner and admins create invite codes. Codes are reusable, can be revoked, and expire. | World metadata stores codes with creator, expiry and revoked flag; redeeming checks all three. |
-| 27 | Teams and claims | Teams exist per world. Roles: one owner, admins, and members. Members claim land. Team owner and admins can unclaim land a member claimed and have full access within the team, except members' private storages. | Land is claimed by area (in the style of FTB Chunks) instead of plots allocated in ring order around spawn as in the spec. Review B2 (per-plot deposit guarantee) no longer applies, because there are no fixed plots. Containers get a private flag that only their owner can open. Needs team and claim management in protocol and UI. |
+| 27 | Teams and claims | *(Claims superseded by #72.)* Teams exist per world. Roles: one owner, admins, and members. Members claim land. Team owner and admins can unclaim land a member claimed and have full access within the team, except members' private storages. | Land is claimed by area (in the style of FTB Chunks) instead of plots allocated in ring order around spawn as in the spec. Review B2 (per-plot deposit guarantee) no longer applies, because there are no fixed plots. Containers get a private flag that only their owner can open. Needs team and claim management in protocol and UI. |
 
 ### Open
 
@@ -171,7 +171,7 @@ Smaller:
 |---|---|---|---|
 | 28 | Private containers | The world owner's full rights on every plot (#24) do not include containers set to private. | A container is either private or not (corrected from "fully private"; there is only one private level). Private: only the player who owns it can open it, not the team owner or admins, not the world owner. Not private: open to the owner's team. Platform admins: #31; removal: #32. |
 | 29 | Solo teams | Every player is always in a team. A player on their own has a solo team, named by default after their username until they rename it. | Team is always set, so ownership never falls back to a single player outside the team model. The solo team persists: claims return to it when a player leaves a team (#30). |
-| 30 | Claims | A claim is a 32 × 32 m area (matching the terrain chunk size). The world owner sets the claim limit. When a player leaves or abandons their team, their buildings stay and their claims stay, but move back to their solo team. | Claims follow the member who made them. The claim limit is a world setting the owner can change later (bounded by a server cap). A claim covers the full height, from bedrock to the build ceiling (assumed, so caves are included). |
+| 30 | Claims | **Superseded by #72.** (Was: a claim is a 32 × 32 m area; the world owner sets the claim limit; a player who leaves their team keeps their claims and buildings in their solo team.) | — |
 
 ### Open
 
@@ -197,7 +197,7 @@ Smaller:
 | 31 | Platform admins and private containers | Platform admins can open private containers but cannot take anything out. | Read-only container view for platform admins. |
 | 32 | Removing private containers | The world owner and team admins can remove a private container; its contents are destroyed. | So a private container can never block land permanently. The UI asks for confirmation and names the owner. |
 | 33 | Team owner leaving | Team ownership passes to an admin the leaving owner chooses. If they chose nobody, a random admin becomes owner. | Leave dialog for team owners with an admin picker. |
-| 34 | Claim limits | There is a limit per player, per team and for the whole world. The world owner sets all three. | A claim succeeds only if none of the three limits would be exceeded. All three are bounded by a server cap. |
+| 34 | Claim limits | **Superseded by #72.** (Was: claim limits per player, per team and per world, set by the world owner within a server cap.) | — |
 
 ### Open
 
@@ -214,9 +214,9 @@ Smaller:
 
 | # | Topic | Decision | Consequences |
 |---|---|---|---|
-| 35 | Claims follow the player | A claim is stored with the player who made it; the team it shows is always that player's current team. Joining a team brings the player's claims into it; leaving takes them back to the solo team (#30). If joining would push the team over its claim limit (#34), the join is still allowed, but the team cannot claim more until it is back under the limit. | Joining and leaving move nothing in the data; claim → player → current team is looked up. |
-| 36 | Buildings follow the land | A building on claimed land belongs to whoever owns that land. Example: Alice and Bob are in team X; Bob built a smelter on Alice's claim; when Alice leaves, her claim returns to her solo team and the smelter becomes hers. Private containers stay their owner's, but the new land owner can remove them, destroying their contents (#32). Buildings on unclaimed land belong to the builder's current team. | Each building also stores the player who built it, so buildings on unclaimed land can follow their builder (#37). |
-| 37 | Team without admins | When the team owner leaves and the team has no admins, the team is disbanded: every member returns to their solo team, and their claims go with them (#35). | Buildings on claimed land follow the claims (#36). Buildings the team had on unclaimed land go to the solo team of the player who built them (derived from #36). |
+| 35 | Claims follow the player | **Superseded by #72.** (Was: a claim is stored with the player who made it and counts for that player's current team.) | — |
+| 36 | Buildings follow the land | **Superseded by #72.** (Was: a building on claimed land belongs to whoever owns that land; a building on unclaimed land belongs to the builder's current team.) | Kept: each building stores the player who built it (#37, #86). |
+| 37 | Team without admins | *(Claims part superseded by #72.)* When the team owner leaves and the team has no admins, the team is disbanded: every member returns to their solo team, and their claims go with them (#35). | Buildings on claimed land follow the claims (#36). Buildings the team had on unclaimed land go to the solo team of the player who built them (derived from #36). |
 
 ## 2026-11-26 — Remaining questions and proposals
 
@@ -225,7 +225,7 @@ Smaller:
 | # | Topic | Decision | Consequences |
 |---|---|---|---|
 | 38 | Biomes | Five biomes: grassland, forest, highlands, desert, tundra. A biome sets tree density and leaf colour, ground colour, terrain relief, how common each kind of deposit is, and how many stones, branches and rock formations there are. No gameplay effects such as temperature. The spawn point is always in grassland or forest. | Biome map from the seed in core. Uneven deposit distribution makes transport over distance part of the game. The spawn rule prevents a start without branches. |
-| 39 | Building over objects | Trees and rock formations block building; players harvest them first. Stones and branches on the ground do not block: building over them moves them into the builder's inventory; if it is full, the build is refused. | Keeps the tier system intact (nobody clears a rock their pickaxe cannot mine). Placement checks include world objects. |
+| 39 | Building over objects | *(Refusal with a full inventory superseded by #99.)* Trees and rock formations block building; players harvest them first. Stones and branches on the ground do not block: building over them moves them into the builder's inventory; if it is full, the build is refused. | Keeps the tier system intact (nobody clears a rock their pickaxe cannot mine). Placement checks include world objects. |
 | 40 | Stone source | Infinite stone and limestone deposits (like resource wells, just for stone), mined with the pickaxe and with extractors. | Stone never runs out, although loose stones and rock formations do. Derived: at least one stone deposit near spawn, minable with the first pickaxe. |
 | 41 | Saplings | Every harvested tree drops at least one sapling. A tree grows in about 10 minutes of real time, computed from the planting time (so also while the world is unloaded). Saplings go on natural ground only, not on foundations; leaf colour follows the biome where the sapling is planted. An automated tree farm machine arrives at a mid tier. | Wood is renewable by hand and later automatically. |
 | 42 | Public and private worlds | Public worlds are listed for everyone who can open the game. The list shows world name, player count and preset, no usernames. Private worlds are never listed for non-members; they are reached only with an invite code, and members find them under their own worlds. | The game no longer looks up courses (review A5 mostly obsolete); review A4 (who may open the game) stays. |
@@ -233,7 +233,7 @@ Smaller:
 | 44 | Limits and cleanup | A user owns at most 3 worlds (environment variable). No automatic deletion (optional lifetime variable, off by default). Deleting a world needs the world name typed as confirmation; the world is kept for 7 days and the owner can restore it; members get a notice. The owner can transfer world ownership to a world admin. | Replaces the sandbox TTL and its daily cleanup job. |
 | 45 | World settings | Confirmed as proposed under open question 21 (settings table and presets). | — |
 | 46 | World and team roles | Confirmed as proposed under open question 22: separate role sets; world admins create and revoke invite codes, kick and ban; team invites happen inside the world without codes. | — |
-| 47 | Unlocks | Shared per team and never lost: joining a team merges the player's unlocks into the team's; leaving copies the team's unlocks to the player's solo team. | — |
+| 47 | Unlocks | *(Completed phases superseded by #81.)* Shared per team and never lost: joining a team merges the player's unlocks into the team's; leaving copies the team's unlocks to the player's solo team. | — |
 | 48 | Membership check | Confirmed as proposed: the world server stores and checks world membership; the backend checks who may open the game at all. | Changes the spec's rule that all authorization happens in the backend. |
 | 49 | Stage placement | Stage 1: main menu, world creation, invite codes, world roles. Stage 2: biomes, trees, stones, branches, rock formations (with terrain and deposits). Stage 3: inventory, gathering, crafting, tiers, unlocks, building costs, teams and claims. | Supersedes the earlier stage placement proposal. |
 | 50 | Game design document | `docs/automata/game-design.md`, as proposed. | Created 2026-11-26. |
@@ -274,7 +274,7 @@ Smaller:
 | 58 | Placement on terrain | Confirmed as proposed: the ground under a footprint may vary by at most 1 m; the building snaps to the lowest point and may sink into the higher side. | — |
 | 59 | Foundations without support | Confirmed as proposed: no support needed underneath; partly but not completely inside the terrain; ramps for higher floors. | — |
 | 60 | Support limits | Confirmed as proposed: 1–8 m per support, stacking up to the build ceiling, at most 16 m apart with automatic supports during drag placement, at most 1 m rise per 2 m, vertical belts and pipes 1–16 m per piece, stackable. | — |
-| 61 | Refund and drag cost | Confirmed as proposed: a removal whose refund does not fit is refused; a drag placement is paid in full or refused. | — |
+| 61 | Refund and drag cost | *(Refusal for a refund that does not fit superseded by #94.)* Confirmed as proposed: a removal whose refund does not fit is refused; a drag placement is paid in full or refused. | — |
 
 ## 2026-11-26 — Tiers, machine upgrades and ruins (proposals)
 
@@ -287,7 +287,7 @@ The author asked for a tier recommendation drawing on modded Minecraft, Terraria
 - *(Superseded by #63–#66.)* **Final goal.** An ancient engine at the world centre, fed concordite parts at set rates in phases. In-game only; not the assignment goals left out by #25.
 - **Machine upgrades.** 3 upgrade slots and 1 core slot per machine: mainspring (+50 % speed, power grows faster), escapement (−25 % energy per item), harmonic core (double output at about 4× power; vault-only, never craftable, limited per world).
 - **Ruins.** Wrecks (surface, common), vaults (caves, puzzle door), ancient seals (deep, rare; concordite tools plus a large puzzle). Puzzles are delivery, power, pressure and routing tasks (#6).
-- **Loot.** Once per structure per team; a player who looted a structure cannot loot it again through another team.
+- *(Superseded by #73.)* **Loot.** Once per structure per team; a player who looted a structure cannot loot it again through another team.
 - *(Superseded by #67.)* **Progression dependency.** From tier 3 on, each tier's key machine blueprint lies in a vault in that tier's biome; generation guarantees enough vaults. Upgrades and alternative recipes are optional.
 - **Scanner.** From tier 1; points to the nearest deposit of a chosen kind; an upgrade also finds ruins.
 - *(Changed by #64: the engine link and phase deliveries move to Stage 4.)* **Stage placement.** Ruins are generated with the world in Stage 2; loot and the once-per-team rule in Stage 3; upgrades, alternative recipes, the scanner and delivery puzzles in Stage 4; power and pressure puzzles, tiers 2 to 6 and the final goal in Stage 5.
@@ -295,7 +295,7 @@ The author asked for a tier recommendation drawing on modded Minecraft, Terraria
 ### Open
 
 36. **Final goal scope.** Answered by #64.
-37. **Invented names.** Thrumite, pyrelith, rimeglass and concordite are placeholders until checked for existing use.
+37. **Invented names.** Answered by #116.
 
 ## 2026-11-27 — Tier structure and the ancient engine
 
@@ -324,8 +324,222 @@ The author found the draft ladder flat: each tier hinged on one new ore, and the
 |---|---|---|---|
 | 68 | Partial phase deliveries | Parts delivered towards an unfinished phase belong to the team and never move with a player. Joining a team does not add the joiner's partial deliveries to the team's; leaving starts the leaver's solo team at 0 for its unfinished phase. Completed phases still follow #47. | Avoids the exploit where a player leaves with a copy of the progress and rejoins to count it twice. Two solo players who team up lose the joiner's partial deliveries for the current phase; the join and leave dialogs say what will be lost. If merging completed phases (#47) moves the team past its current phase, that phase's partial deliveries no longer matter. |
 
+## 2026-11-27 — Gap review: caves, ownership, loot and smaller rules
+
+A review of this log, the GDD and the stage plans listed gaps that no decision covered yet. The author answered most of them; the rest are open questions 39–55.
+
+### Decided
+
+| # | Topic | Decision | Consequences |
+|---|---|---|---|
+| 69 | Cave access | Caves are generally accessible: every cave system connects to the surface through at least one entrance a player can walk through. | Generator guarantee in core, pinned by a test over sampled seeds. Derived: terrain is not editable (#19), so belts and pipes leave caves through these entrances too; an entrance needs room for a belt or pipe next to the walking path, and either a slope that sloped belts can follow (#60) or a vertical stretch for vertical belts and pipes. Closes the cave part of review B3. |
+| 70 | Cave resources | Caves hold deposits and wells on their floors and formations on their walls. Wall formations are mined by hand with a pickaxe. | Thrumite (tier 3) comes from floor deposits (extractors) and wall formations (pickaxe). Deposits on cave floors stay as in the spec (flat extractor footprint). Assumed: wall formations do not renew, like rock formations (#20), and take no extractor; the pickaxe tier rule (#17) applies to them. |
+| 71 | Biomes in every world | Every world contains each of the five biomes at least once. Worlds become bigger in general. | Generator guarantee for every combination of world size and biome size, pinned by a test; the same holds for deep caves under desert and tundra (pyrelith, rimeglass) and for enough vaults per biome (#67). New radii proposed below. Longer distances make open question 49 (travel) more pressing. |
+| 72 | Protection instead of claims | There are no claims. What a team builds is protected: only that team opens, configures or removes it. Everything generated with the world (trees, stones, branches, rock and wall formations, deposits, wells, ruins) is open to everyone. | Supersedes #30, #34, #35, #36 and the claim parts of #24, #27 and #37. The world owner keeps full rights on every building except private containers (#24, #28); private containers stay as in #28, #31 and #32. No team can lock a vault or seal away from the others (#67). A deposit is held by the first extractor placed on it (one extractor per deposit, spec). Claim limits leave the world settings (#45). Assumed: saplings a team plants, and the trees grown from them, count as built by that team. Opened: buildings when players change teams (40), building next to other teams and limits (43), deposits at spawn (44). |
+| 73 | Loot | Loot containers in ruins work per player, as in the Lootr mod (inspired by, not copied): every player opens their own copy of the contents. | Supersedes the proposal "once per structure per team". Every player can take a relic from each vault (#67), so a team does not depend on one member. Late joiners get full loot, which softens #20. Door and wreck state: open question 47. |
+| 74 | Obtained | An item counts as obtained for the unlock rule (#18) once any member of the team holds it in their inventory. | Items that only pass through machines or sit in containers count once someone picks one up. The server records it on inventory changes. |
+| 75 | Contents on removal | Removing part of a belt moves the items on it into the remover's inventory, as in Satisfactory. Fluids and gases in removed pipes are lost. | Assumed, same rule: items in machine buffers, containers and installed upgrades move into the inventory; fluids and gases in tanks and machines are lost. Full inventory: open question 45. |
+| 76 | No special material handling | Rimeglass does not need to stay cold, and smelting pyrelith makes no slag. The tier structure (#62) gives the tiers their depth instead. | Tier 4 loses slag, gravel and slag processing; tier 5 loses cooling as its problem (ice still makes coolant as an ordinary ingredient). Tier 4 needs a new "new problem" entry (GDD section 9, Draft). |
+| 77 | Crafting time | Crafting by hand and at the workbench is instant. | No crafting queue or progress bar. |
+| 78 | Mining time | *(Time changed to 2 s by #85.)* Mining one item takes 1.25 s when the tool has the tier the target requires. | Assumed: "the tier the target requires" is the minimum tier of #17 (e.g. a stone pickaxe on copper ore). Hand mining yields at most 48 items/min, so the GDD draft "hand mining is slower than the first extractor" needs a burner extractor faster than that. Better tools: open question 46. |
+| 79 | Engine link | One engine link per team. | Placing a second one is refused. Delivered parts belong to the team (#68), so removing and rebuilding the link loses nothing. A joining player's own link: see the proposal for open question 40. |
+| 80 | Statistics panel | Per world and per team. | Two views: the own team's production and consumption, and the totals of the whole world. |
+
+### Open
+
+39. **Phase progress across teams.** Answered by #81.
+40. **Buildings when a player changes teams.** Answered by #86.
+41. **Kick and ban.** Answered by #82.
+42. **Connections across teams.** Answered by #98.
+43. **Building next to other teams.** Answered by #87.
+44. **Deposits at spawn.** Answered by #88.
+45. **Removal with a full inventory.** Answered by #89.
+46. **Better tools.** Answered by #103.
+47. **Ruin state.** Answered by #90.
+48. **Player collision with buildings.** Answered by #104.
+49. **Travel.** Answered by #105.
+50. **Map.** Answered by #106.
+51. **Chat.** Answered by #107.
+52. **Usernames in public worlds.** Answered by #108.
+53. **Teacher workflow.** Answered by #109.
+54. **Onboarding.** Answered by #110.
+55. **Art workload.** Answered by #111.
+
+### Proposed, awaiting confirmation
+
+- *(Superseded by #91: bigger still.)* **World sizes (#71).** Double the radii: small / medium / large = 1024 / 2048 / 4096 m. Terrain and deposits are never stored, and the view distance stays 8 chunks, so neither storage nor loading time (review B7) grows. The cost is walking: from the centre to the edge of a large world takes about 14 minutes at 5 m/s.
+- *(Option B confirmed as #81.)* **Phase progress across teams (open question 39).** Item records (#74) merge freely in both directions: a recipe also needs its tier (#64), so they never let a team skip a phase. For completed phases:
+  - *A. Stays with the team.* Joining brings no phases in, leaving takes none out; the solo team keeps what it had before the player joined. Same principle as #68. A player who leaves after months of team work keeps only their solo team's progress.
+  - *B. Keep what you were there for* (recommended). As A, and leaving also gives the solo team every phase the team completed while the player was a member. Fair to long-time members; joining just before a phase completes still pays off, but needs the team's invitation.
+  - *C. Keep #47 with a waiting period.* Merging and copying count only after e.g. 24 h of membership, plus a cooldown between team changes. Least change, but the numbers are arbitrary, and a joiner still lifts a team after the wait.
+
+  With A or B, a player whose solo team is ahead plays at the team's level while a member; the join dialog says so. The #68 note about merged phases moving a team past its current phase no longer applies.
+- *(The alternative was chosen: #86.)* **Buildings when a player changes teams (open question 40).** A building belongs to its builder's current team, as buildings on unclaimed land did under #36: joining brings the player's buildings into the team, leaving takes them out, and disbanding returns each to its builder's solo team (#37). Nothing moves in the data; each building already stores its builder. Downside: a leaving member takes their machines out of a shared line; the team gets a notice. A joining player's own engine link is dismantled into their inventory (#79). Alternative: buildings stay with the team they were built in. That keeps lines whole, but a player who leaves loses everything they built, and if team admins can remove members (not decided yet), they could keep a member's whole base.
+- *(Confirmed as #82.)* **Kick and ban (open question 41).**
+  - *Kick* (world owner or world admins): disconnects the player and removes them from the member list; a valid invite code brings them back. Team, inventory, buildings and unlocks stay as they are.
+  - *Ban*: removed, and codes no longer let them in. The player leaves their team as on a normal leave (#33, #37), but their buildings stay with that team, so a ban never tears holes into teammates' factories. What they built for their solo team stays until the world owner or a world admin removes it in one action ("remove everything this player built"), without refund. Inventory and unlocks are kept; an unban returns the player to their solo team.
+  - World admins kick and ban players; only the world owner kicks or bans world admins; only platform admins act against the world owner.
+  - The world owner cannot leave without transferring ownership (#44). If the owner's platform account is removed, ownership passes to the longest-serving world admin; without one, platform admins transfer or delete the world.
+- *(Confirmed as #87, with limits adjustable at any time.)* **Building limits (open question 43).** Claim limits (#34) become building limits per player, per team and per world, set by the world owner within a server cap. Building in someone's way stays a moderation case: the world owner can remove any building (#24). A keep-out distance around other teams' buildings is possible but not recommended: it blocks dense building near spawn and works like a claim again.
+- *(Confirmed as #89.)* **Removal with a full inventory (open question 45).** Items held by the building that do not fit go into a dismantle crate at the spot, as in Satisfactory; the crate belongs to the remover's team and disappears when empty. The refund rule of #61 stays; optionally the crate also takes a refund that does not fit, which would replace #61's refusal.
+- *(Confirmed as #90.)* **Ruin state (open question 47).** Physical state per team, contents per player: a door opened by a puzzle, or a wreck broken open, is open for the whole team that did it; every player still loots their own copy (#73). Harmonic cores drop "limited per world": they stay vault-only, never craftable and one per machine; their number is set by how many vaults hold one.
+
+## 2026-11-27 — Gap review proposals answered
+
+### Decided
+
+| # | Topic | Decision | Consequences |
+|---|---|---|---|
+| 81 | Phase progress across teams | Option B (open question 39): completed phases stay with the team; leaving gives the player's solo team every phase the team completed while the player was a member. Item records (#74) merge freely in both directions. | Supersedes #47 for completed phases. Joining brings no phases in; a player whose solo team is ahead plays at the team's level while a member, and the join dialog says so. The solo team keeps its own phases while the player is away. Disbanding (#37) counts as everyone leaving. The #68 note about merged phases no longer applies. The server stores when each player joined their team and when each phase was completed. |
+| 82 | Kick and ban | As proposed (open question 41). Kick: disconnects the player and removes them from the member list; a valid invite code brings them back; nothing else changes. Ban: codes no longer let the player in; they leave their team as on a normal leave; the world owner or a world admin can remove everything they built for their solo team in one action, without refund; inventory and unlocks are kept for an unban. World admins act against players, the world owner against world admins, platform admins against the world owner. The world owner cannot leave without transferring ownership (#44); if the owner's platform account is removed, the longest-serving world admin becomes owner, otherwise platform admins transfer or delete the world. | World metadata stores a ban list and when each world admin was appointed. Under #86 a banned player's team buildings stay with the team anyway. |
+| 83 | Confirmed assumptions | #70: wall formations do not renew and take no extractor. #72: saplings a team plants, and the trees grown from them, count as built by that team. #75: items in machine buffers, containers and installed upgrades also move into the inventory. | — |
+| 84 | Hand mining deposits | Deposits on cave floors can also be mined by hand with a pickaxe, as resource nodes in Satisfactory. | The same rule as for solid deposits on the surface (pickaxe or extractor). Assumed: solid deposits only; fluid wells and gas vents still need a pump or gas extractor. |
+| 85 | Mining time | 2 s per item instead of 1.25 s (changes #78), with the minimum tool tier of #17. | Hand mining yields at most 30 items/min, so the burner extractor needs more than that to pay off (GDD draft). Better tools: still open question 46. |
+| 86 | Buildings when changing teams | Buildings stay with the team they were built for (open question 40). Nothing moves when a player joins or leaves a team. | Joining does not bring the solo team's buildings: they stay with the solo team, keep running and are back in reach when the player returns to it (as phases under #81). A leaving player keeps nothing they built for the team. A joiner can no longer bring a second engine link (#79). Disbanding (#37) is the only case where buildings move: each goes to its builder's solo team; if that solo team already has an engine link, the second one is dismantled into the builder's inventory (#89). Assumed: a private container stays private to its owner after they leave; they can still open and empty it, and the team's owner or admins can remove it (#32). Removing members from a team: open question 56. |
+| 87 | Building limits | Claim limits become building limits per player, per team and per world (open question 43). The world owner can adjust all three at any time, within a server cap. | Lowering a limit below the current count removes nothing; no new buildings until back under it (as #35 handled claims). Building in someone's way stays a moderation case for the world owner (#24); no keep-out distance. |
+| 88 | Deposits at spawn | No guarantee per team (open question 44): once the deposits near spawn are taken, later teams venture further out. | The spawn draft (copper and coal within about 200 m) stays. The scanner (tier 1) helps find deposits further out. Known limitation, like #20. |
+| 89 | Removal with a full inventory | Items held by a removed building that do not fit into the inventory go into a dismantle crate at the spot, as in Satisfactory (open question 45). The crate belongs to the remover's team and disappears when empty. | Changed by #94: the crate also takes a refund that does not fit. |
+| 90 | Ruin state | As proposed (open question 47): a door opened by a puzzle, or a wreck broken open, is open for the whole team that did it; every player loots their own copy (#73). Harmonic cores are not limited per world: vault-only, never craftable, one per machine. | Each player sees doors and wrecks in their own team's state; players of another team cannot pass a door that is open only for someone else (the movement check knows the player's team). A player who changes teams sees the new team's state. |
+| 91 | World sizes | Bigger than proposed: the smallest world has a radius of 4096 m. | Replaces the proposal of 1024 / 2048 / 4096 m; medium and large proposed below. Walking from the centre to the edge of a small world takes about 14 min at 5 m/s, so travel (open question 49) becomes pressing. Derived for Stage 2: the renderer draws chunks relative to the camera so that float32 precision holds at these distances; positions in 1/256 m (`i32`) and Q16.16 noise inputs (±32 768 m) still fit. |
+| 92 | Rubber | Rubber joins tier 4 as an oil product, next to plastic and fuel. | Draft tier 4 problem adjusted: every refinery recipe makes fuel next to plastic or rubber, so the fuel needs a consumer (fuel generator). Where rubber is used comes with the tier content review. |
+
+### Open
+
+56. **Removing team members.** Answered by #97.
+
+### Proposed, awaiting confirmation
+
+- *(Confirmed as #95.)* **Medium and large worlds (#91).** Keep doubling: small / medium / large = 4096 / 8192 / 16 384 m radius. Walking from the centre to the edge takes about 14 / 27 / 55 min at 5 m/s.
+- *(Confirmed as #96.)* **Biome distance bound (#71, #91).** Every biome lies within a set distance of the spawn, scaled by biome size (e.g. 2 km for normal biomes), whatever the world size. Tiers 4–6 then never need a trip of 10 km or more, and bigger worlds add room and further deposits instead of longer mandatory distances. Tier 6 stays a long-distance tier within that bound.
+
+## 2026-11-27 — Confirmations and energy
+
+The author confirmed the remaining proposals and asked for energy generation to be worked out in full, for tier 4 and in general. The energy proposal is written out in `game-design.md` section 12 (*Energy*, Draft); its main points are listed below.
+
+### Decided
+
+| # | Topic | Decision | Consequences |
+|---|---|---|---|
+| 93 | Confirmations | #86 as read: nothing moves when a player joins a team either; the solo team's buildings stay with it. #84: hand mining applies to solid deposits only. A private container stays its former owner's to open and empty until the team removes it (#86). #85: the burner extractor yields more than 30 items/min. | — |
+| 94 | Refund into the crate | The dismantle crate (#89) also takes a refund that does not fit. A removal is never refused for lack of inventory space. | Supersedes the refusal in #61; a drag placement is still paid in full or refused. Building over loose stones with a full inventory is still refused (#39): open question 57. |
+| 95 | World sizes | Small / medium / large = 4096 / 8192 / 16 384 m radius, as proposed. | — |
+| 96 | Biome distance bound | Every biome lies within a set distance of the spawn, scaled by biome size (target about 2 km for normal biomes), whatever the world size. | Generator guarantee next to #71, pinned by the same test. Tiers 4–6 never need a trip of 10 km or more; bigger worlds add room and deposits further out. |
+| 97 | Removing team members | The team owner and team admins can remove members from the team (open question 56). | Assumed, as with world roles (#82): the team owner removes admins and members, admins remove members. A removed member returns to their solo team as on leaving: phases per #81, buildings stay with the team (#86), private containers per #93. |
+
+### Open
+
+57. **Loose stones with a full inventory.** Answered by #99.
+
+### Proposed, awaiting confirmation
+
+Energy (details, tables and numbers in `game-design.md` section 12):
+
+- **Units.** MW and MJ on screen; integer kW and kJ in the simulation (one tick at 1 MW = 50 kJ).
+- **Grid.** Wires cost copper wire by length and may not pass through terrain, so power reaches caves through their entrances (#69). Three pole tiers: wooden pole (tier 2, 20 m), steel pole (tier 3, 40 m), power tower (tier 5, 150 m, superconducting wire) for the large worlds (#95).
+- **Dispatch every tick.** Working machines draw full power, idle ones nothing. Supply in order: geothermal, then fuel generators at equal load, then batteries; a shortfall slows every machine equally (as before); leftover capacity charges batteries. Fuel use follows load.
+- **Fuels.** Wood 15 MJ, charcoal 40 MJ, coal 60 MJ (furnace, burner extractor, coal generator); fuel 500 MJ/m³ (fuel generator); natural gas 100 MJ/m³ at 1 bar (gas turbine).
+- **Generators.** Coal generator (tier 2, 30 MW, solid fuel plus water); geothermal generator (tier 3, 80 MW average on a normal vent, scaled by purity, swinging between 50 % and 150 % over 60 s, no fuel, cannot throttle); fuel generator (tier 4, 100 MW, burns the refinery's fuel); gas turbine (tier 5, 250 MW, stops below a minimum pressure). No new generator in tier 6.
+- **Battery** (tier 3, thrumite): 600 MJ, 50 MW; one battery per normal vent smooths its swing.
+- **Ratio targets** for the recipes: tier 2, one extractor on a normal coal deposit and one water pump feed two coal generators; tier 4, a refinery's fuel runs slightly more than the refinery and its oil pump need.
+- **Power draw** starting values per machine, and **upgrade factors**: with n mainsprings, speed 1 + n/2 and power speed²; each escapement ×0.75 energy per item; harmonic core ×4 power.
+- **Not planned:** solar (no day/night gameplay, spec non-goals), nuclear (waste handling is a special material rule of the kind #76 removed), capacity limits on wires (belts and pipes already teach capacity).
+
+Also:
+
+- *(Confirmed as #98.)* **Connections across teams (open question 42).** Recommended: none. Belts, pipes and wires connect only to the own team's buildings, so every grid and network belongs to one team: protection (#72) covers it as a whole, its brownouts and statistics (#80) are the team's own, and no team pulls items out of another team's container. Teams that want to share a factory join one team.
+
+## 2026-11-27 — Team connections, loose stones, day and night
+
+### Decided
+
+| # | Topic | Decision | Consequences |
+|---|---|---|---|
+| 98 | Connections across teams | Confirmed as proposed (open question 42): belts, pipes and wires connect only to the own team's buildings. | Every grid and network belongs to one team: protection (#72) covers it as a whole, its brownouts and statistics (#80) are the team's own, and no team pulls items out of another team's container. Teams that want to share a factory join one team. |
+| 99 | Loose stones with a full inventory | Building over loose stones or branches with a full inventory is allowed; what does not fit is voided (open question 57). | Supersedes the refusal in #39. Nothing respawns (#20), so voided stones and branches are gone for good; stone deposits stay infinite (#40). Assumed: the build preview says how many will be lost. |
+| 100 | Day and night | There is a day and night cycle. It is purely visual: no gameplay derives from it. | The spec's non-goal "day/night gameplay effects" stays. Nights stay bright enough to build, find the way and read every status display; caves stay dark with the player's light, as before. All players in a world see the same time of day, computed from the real time since the world was created, so it also runs while the world is unloaded (like sapling growth, #41) and needs no catch-up. Solar power stays out, since it would tie output to the time of day. Renderer: sun direction, sky colour and ambient light become uniforms. Cycle length proposed below. |
+
+### Open
+
+58. **Nuclear power.** Answered by #101.
+
+### Proposed, awaiting confirmation
+
+- *(Confirmed as #102.)* **Day length (#100).** A 30-minute cycle: 20 minutes of day, 10 of night including dusk and dawn. Since nothing depends on it, a per-player display setting can keep it at day.
+- *(Option B confirmed as #101.)* **Nuclear power (open question 58).** Left out because its interesting part in factory games is radioactive waste that must be stored or reprocessed, plus radiation damage: a special material rule of the kind #76 removed, and radiation has nothing to act on without health or damage (spec non-goals). Without waste it is only a bigger fuel generator and adds no new problem. Options:
+  - *A. Leave it out* (current energy draft).
+  - *B. A reactor as tier 6's generator* (recommended). Fuel cells made from tier 3–5 products (thrumite, pyrelith and rimeglass parts), a very high output (e.g. 1.5 GW), and a large water demand as an ordinary recipe input; no waste, no radiation. Its fuel cells need all three far-apart biomes, which is tier 6's long-distance problem, and it powers the final rate test (#66). An invented reactor (e.g. a resonance reactor) fits the invented materials better than uranium.
+  - *C. As B, plus spent cells* that must be carried away (the general rule that a full output stops a machine) and are reprocessed into something useful, as the refinery's fuel is (#92). Adds a loop, closer to Satisfactory's nuclear chain.
+
+## 2026-11-27 — Resonance reactor, day length, remaining questions
+
+### Decided
+
+| # | Topic | Decision | Consequences |
+|---|---|---|---|
+| 101 | Resonance reactor | Option B (open question 58): a resonance reactor is tier 6's generator. It burns resonance cells made from thrumite, pyrelith and rimeglass products, has a very high output and a large water demand as an ordinary input; no waste, no radiation. | Replaces "no new generator in tier 6". Its cells need all three far-apart biomes (tier 6's problem), and it powers the final rate test (#66). Starting values in GDD section 12: 1.5 GW, one resonance cell per minute, 300 m³ of water per minute. "Resonance reactor" joins the name check (open question 37). |
+| 102 | Day length | As proposed: a 30-minute cycle with 20 minutes of day; a display setting keeps it at day. | — |
+
+### Open
+
+59. **Player health.** Players should have health points (author); details are discussed later. Touches the spec's non-goals (combat, creatures) and needs: what causes damage (falls, machines, the reactor?), what happens at zero (respawn point, inventory), and how the server checks it.
+60. **Schedule.** Answered by #117.
+
+### Proposed, awaiting confirmation
+
+- *(Confirmed as #103, with felling.)* **Better tools (open question 46).** Each tool tier above the minimum a target requires cuts the mining time by 25 % (2 s → 1.5 s → 1.125 s), down to 1 s. One axe without tiers: trees have no tier, 2 s per wood.
+- *(Confirmed as #104.)* **Player collision (open question 48).** Players collide with every building except wires; foundations, ramps and the tops of machines are walkable. The server's movement check uses the occupancy map next to the terrain. A building cannot be placed where a player stands.
+- *(Confirmed as #105.)* **Travel (open question 49).** Sprinting from the start (walking 5 m/s, sprinting 8 m/s). From tier 3, teleport beacons: a player jumps between their own team's beacons and the spawn; a beacon needs power. No vehicles or trains in v1: vehicles need their own physics and network prediction, trains are a second logistics system; both can come later. Cargo keeps moving on belts and pipes, within the distances #96 bounds.
+- *(Confirmed as #106, plus a minimap.)* **Map (open question 50).** A map overlay (key M) drawn from the terrain functions, so it needs no stored data: explored area only, shaded by biome, with the own team's buildings and members, the engine, discovered ruins, scanner hits, beacons and the player's own markers.
+- *(Confirmed as #107.)* **Chat (open question 51).** Team chat and world chat; the world owner can turn world chat off; world admins mute players. Messages live only in the running world's memory (the last 100 per world, for moderators) and are never stored in the database. Team members can also ping a spot on the map or in the world.
+- *(Confirmed as #108.)* **Names (open question 52).** One display name per user for the game, chosen at the first start (the username is suggested and may be kept). Other players only ever see display names; solo teams are named after them (#29). Usernames are visible to the world owner and world admins of private worlds (the join dialog says so, so a teacher knows their students) and to platform admins; never to other players in public worlds. Bans are stored by user id.
+- *(Confirmed as #109.)* **Teacher view (open question 53).** The world owner and world admins get a world overview: teams and their members, each team's current phase and its progress, last activity, and the team statistics (#80). Teachers run class worlds as their owner (#43).
+- *(Confirmed as #110, plus list crafting.)* **Onboarding (open question 54).** A recipe browser (what makes and what uses an item; locked recipes show what unlocks them), an unlock tree per tier, and short first-steps hints for tiers 0 and 1 (stones and branches → stone tools → workbench → furnace → first extractor) that players can hide. No quest system.
+- *(Answered by #111.)* **Art (open question 55).** v1 builds placeholder models in code for every catalogue entry (simple shapes in palette colours, a distinct silhouette per kind) and renders the icons from them, so the asset test of #51 passes from the start. CC0 asset packs fill in where they fit (credits per #51); real models replace the placeholders over time. Still open: who makes the real models.
+- *(Confirmed as #112.)* **Inventory and stacks.** 40 slots, 8 of them a hotbar for tools. Stack sizes: 100 for resources and simple parts, 50 for larger parts, 10 for engine parts, relics and upgrades, 1 for tools. No inventory upgrades in v1.
+- *(Confirmed as #113.)* **Keys.** Hold the left mouse button to mine or harvest; E to pick up and to interact (containers, machines, workbench); Q build menu; R rotate and X remove (#7); Tab inventory; M map; T chat.
+- *(Replaced by #114.)* **Audio.** No audio in v1 beyond a few UI sounds; machine and ambient sounds later.
+
+## 2026-11-27 — Interface, tools, art and audio
+
+### Decided
+
+| # | Topic | Decision | Consequences |
+|---|---|---|---|
+| 103 | Better tools and felling | As proposed (open question 46): each tool tier above the minimum a target requires cuts the mining time by 25 %, down to 1 s. Trees are felled: a player chops a tree with the axe until it falls and disappears, dropping its logs and at least one sapling (#41). One axe, without tiers. | Replaces "2 s per wood" for trees. Assumed: logs are the existing wood item. Chopping time and logs per tree come with the balance numbers. |
+| 104 | Player collision | As proposed (open question 48): players collide with every building except wires; foundations, ramps and machine tops are walkable; nothing can be placed where a player stands. | The server's movement check uses the occupancy map next to the terrain. |
+| 105 | Travel | As proposed (open question 49): sprinting from the start (walking 5 m/s, sprinting 8 m/s); from tier 3, powered teleport beacons between the own team's beacons and the spawn. No vehicles or trains in v1. | Beacons join tier 3's unlocks; their power draw comes with the machine roster. |
+| 106 | Map and minimap | As proposed (open question 50), plus a minimap in the top right corner. | Assumed: the minimap shows the same content around the player, north up, and can be hidden. |
+| 107 | Chat | As proposed (open question 51). | New protocol messages for chat and pings, size-limited and rate-limited like build actions. |
+| 108 | Display names | As proposed (open question 52). | Display names need length and character rules, as world and team names do; platform admins can reset one. They replace usernames in `PlayerJoined` and in default solo team names (#29). |
+| 109 | World overview | As proposed (open question 53). | — |
+| 110 | Onboarding and crafting | As proposed (open question 54). Crafting works from a recipe list, as in Satisfactory and Terraria: no crafting grid. | The list shows hand recipes, plus workbench recipes while a workbench is in reach; crafting is instant (#77). The crafting list and the recipe browser share one view of the recipe data. |
+| 111 | Art | The author's team makes the real assets: 3D models, textures, shaders, VFX, music and sound. | Placeholders built in code stand in until a model exists (as proposed for open question 55); asset tasks go into the stage plans; #51's conventions apply. The renderer's layers leave room for custom WGSL shaders and VFX. |
+| 112 | Inventory and stacks | As proposed: 40 slots with an 8-slot hotbar; stacks of 100, 50, 10 and 1. | Revisited with balancing. |
+| 113 | Keys | As proposed. | — |
+| 114 | Audio | Audio is in scope: the author produces it on request. | Replaces "no audio in v1". Scope proposed below; #51 gains an audio format. |
+
+### Name check (open question 37)
+
+A web search on 2026-11-27 found no existing use of thrumite, pyrelith, rimeglass or concordite, and no game called "Resonance Reactor". Only near misses: Thrumstål (a material on a worldbuilding site), thumite (an old name for the mineral axinite), pyrolite and "The Pyrolith" (a ceramics material and an EP title), HAY's "Rim Glass" drinkware, and cordite (an explosive). A web search is not a trademark search; before a public release, check the trademark registers. The author can settle the names.
+
+### Proposed, awaiting confirmation
+
+- *(Confirmed as #115.)* **Audio scope for v1 (#114).** UI sounds; footsteps per ground (grass, sand, rock, snow, foundation); tool hits (pickaxe on stone and ore, axe on wood, a falling tree); one positional loop per machine class, fading with distance (extractors, furnaces, constructors, generators, pumps, the reactor); a quiet belt loop; ambience per biome and for caves; a few calm music tracks. Volume per category (master, effects, ambience, music, UI). Playback through the Web Audio API with positional sources. The asset test of #51 also checks that every machine class has its loop. The file format is chosen for the browsers that run WebGPU and added to #51.
+
+## 2026-11-27 — Names and schedule
+
+### Decided
+
+| # | Topic | Decision | Consequences |
+|---|---|---|---|
+| 115 | Confirmations | #103: logs are the existing wood item. #106: the minimap is north up and can be hidden. #114: the audio scope for v1 as proposed. | — |
+| 116 | Names | Thrumite, pyrelith, rimeglass, concordite and the resonance reactor are settled (open question 37). | The engine part names stay placeholders until the tier content review. |
+| 117 | Schedule | The target stays March 2027 with everything in v1 (open question 60). The author's team works on Automata nearly full time. | Confirms #11 after the scope grew. The rewritten stage plans keep every feature in v1 and propose a stage for each feature added since #49 (energy in full, reactor, day and night, travel, map, chat, display names, world overview, onboarding, audio). |
+
 ## Where things stand (end of 2026-11-27)
 
-- **Awaiting the author's review:** the tier and phase contents in `game-design.md` section 9 (sources, products, engine parts) and the remaining **Draft** markers there (biome deposits, copper and coal within about 200 m of spawn, hand mining slower than the first extractor, pacing targets, stone tools without a workbench, ruins and puzzles, machine upgrades, scanner); open question 37.
-- **No proposal yet:** inventory and stack sizes, the gathering key, audio. Recipe numbers come with implementation.
-- **Next step after the review:** rewrite the spec and stage plans in `docs/superpowers/` from this log and the GDD (#54), folding in the plan review findings that are still open (first entry).
+- **Awaiting the author's answer:** the energy proposal (GDD section 12, with the resonance reactor). Until then it serves as the working basis.
+- **Later:** player health (open question 59).
+- **Still awaiting review:** the tier and phase contents in `game-design.md` section 9 (sources, products, engine parts and their names, the tier 4 problem after #76 and #92) and the remaining **Draft** markers there (biome deposits, copper and coal within about 200 m of spawn, pacing targets, stone tools without a workbench, ruins and puzzles, machine upgrades, scanner). These are catalogue data and do not block the rewrite.
+- Recipe numbers come with implementation.
+- **Next step:** rewrite the spec and stage plans in `docs/superpowers/` from this log and the GDD (#54), folding in the plan review findings that are still open (first entry).
