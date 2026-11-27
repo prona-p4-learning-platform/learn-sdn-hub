@@ -569,17 +569,22 @@ const SubmissionOverview = ({ assignments }: SubmissionProps): JSX.Element => {
                       </Typography>
                     </AccordionSummary>
                     <AccordionDetails>
-                      <Box width="100%">
+                      <Box sx={{
+                        width: "100%"
+                      }}>
                         {groupSubmissions.map((submission, index) => (
                           <div key={submission.submissionID}>
                             <Box
-                              mb={1}
-                              display="flex"
-                              justifyContent="space-between"
-                              alignItems="flex-start"
-                              width="100%"
-                            >
-                              <Box flex="0 0 120px">
+                              sx={{
+                                mb: 1,
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "flex-start",
+                                width: "100%"
+                              }}>
+                              <Box sx={{
+                                flex: "0 0 120px"
+                              }}>
                                 <Typography variant="body1">
                                   <strong>Username:</strong>
                                 </Typography>
@@ -587,7 +592,9 @@ const SubmissionOverview = ({ assignments }: SubmissionProps): JSX.Element => {
                                   <strong>Last Changed:</strong>
                                 </Typography>
                               </Box>
-                              <Box flex="1">
+                              <Box sx={{
+                                flex: "1"
+                              }}>
                                 <Typography variant="body1">
                                   {submission.username}
                                 </Typography>
@@ -617,7 +624,9 @@ const SubmissionOverview = ({ assignments }: SubmissionProps): JSX.Element => {
                             </Box>
                             {submission.dialogAnswers &&
                               submission.dialogAnswers.length > 0 && (
-                                <Box mb={2}>
+                                <Box sx={{
+                                  mb: 2
+                                }}>
                                   {submission.dialogAnswers.map(
                                     (dialog, index) => {
                                       const dialogKey = `${submission.submissionID}_dialog_${index}`;
@@ -649,7 +658,11 @@ const SubmissionOverview = ({ assignments }: SubmissionProps): JSX.Element => {
                                             </Typography>
                                           </AccordionSummary>
                                           <AccordionDetails>
-                                            <Box width="100%" height="200px">
+                                            <Box
+                                              sx={{
+                                                width: "100%",
+                                                height: "200px"
+                                              }}>
                                               <Editor
                                                 height="100%"
                                                 value={dialog.answer}
@@ -669,7 +682,9 @@ const SubmissionOverview = ({ assignments }: SubmissionProps): JSX.Element => {
                                 </Box>
                               )}
                             {submission.fileNames.length > 0 && (
-                              <Box mb={2}>
+                              <Box sx={{
+                                mb: 2
+                              }}>
                                 {submission.fileNames.map((fileName) => {
                                   const fileKey = `${submission.submissionID}_${fileName}`;
                                   const isExpanded =
@@ -691,11 +706,12 @@ const SubmissionOverview = ({ assignments }: SubmissionProps): JSX.Element => {
                                         id={`file-${fileKey}-header`}
                                       >
                                         <Box
-                                          display="flex"
-                                          width="100%"
-                                          justifyContent="space-between"
-                                          alignItems="center"
-                                        >
+                                          sx={{
+                                            display: "flex",
+                                            width: "100%",
+                                            justifyContent: "space-between",
+                                            alignItems: "center"
+                                          }}>
                                           <Typography variant="body2">
                                             {fileName}
                                           </Typography>
@@ -716,7 +732,11 @@ const SubmissionOverview = ({ assignments }: SubmissionProps): JSX.Element => {
                                         </Box>
                                       </AccordionSummary>
                                       <AccordionDetails>
-                                        <Box width="100%" height="400px">
+                                        <Box
+                                          sx={{
+                                            width: "100%",
+                                            height: "400px"
+                                          }}>
                                           {fileContents[fileKey] !==
                                           undefined ? (
                                             <Editor
@@ -751,17 +771,22 @@ const SubmissionOverview = ({ assignments }: SubmissionProps): JSX.Element => {
                                     assignmentName + groupNumber,
                                   ) && (
                                     <Box
-                                      mb={1}
                                       key={`${submission.submissionID}_${index}`}
+                                      sx={{
+                                        mb: 1
+                                      }}
                                     >
                                       <Box
-                                        mb={1}
-                                        display="flex"
-                                        justifyContent="space-between"
-                                        alignItems="center"
-                                        width="100%"
-                                      >
-                                        <Box flex="1">
+                                        sx={{
+                                          mb: 1,
+                                          display: "flex",
+                                          justifyContent: "space-between",
+                                          alignItems: "center",
+                                          width: "100%"
+                                        }}>
+                                        <Box sx={{
+                                          flex: "1"
+                                        }}>
                                           <Typography variant="body1">
                                             <strong>{endpoint}</strong>
                                           </Typography>
@@ -803,7 +828,6 @@ const SubmissionOverview = ({ assignments }: SubmissionProps): JSX.Element => {
                             {getMaxPointsOfAssignment(assignmentName) !==
                               undefined && (
                               <Box
-                                flex="1"
                                 component="form"
                                 onSubmit={(event) =>
                                   handlePointsSubmit(
@@ -817,17 +841,21 @@ const SubmissionOverview = ({ assignments }: SubmissionProps): JSX.Element => {
                                     )?.value,
                                   )
                                 }
+                                sx={{
+                                  flex: "1"
+                                }}
                               >
                                 <Typography variant="body1">
                                   Award bonus points for submission:
                                 </Typography>
                                 <Box
-                                  mb={1}
-                                  display="flex"
-                                  justifyContent="flex-start"
-                                  alignItems="center"
-                                  width="100%"
-                                >
+                                  sx={{
+                                    mb: 1,
+                                    display: "flex",
+                                    justifyContent: "flex-start",
+                                    alignItems: "center",
+                                    width: "100%"
+                                  }}>
                                   <TextField
                                     required
                                     error={

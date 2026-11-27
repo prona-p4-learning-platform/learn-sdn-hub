@@ -606,10 +606,11 @@ function Environment(): JSX.Element {
             <Grid
               container
               direction="row"
-              justifyContent="flex-start"
-              alignItems="center"
               spacing={1}
-            >
+              sx={{
+                justifyContent: "flex-start",
+                alignItems: "center"
+              }}>
               <Grid item xs={12}>
                 <ReactMarkdown className="myMarkdownContainer">
                   {assignment}
@@ -619,10 +620,11 @@ function Environment(): JSX.Element {
                 <Grid
                   container
                   direction="row"
-                  justifyContent="flex-start"
-                  alignItems="center"
                   spacing={1}
-                >
+                  sx={{
+                    justifyContent: "flex-start",
+                    alignItems: "center"
+                  }}>
                   {state.stepLabels.length > 0 && (
                     <Grid item>
                       <Stepper nonLinear activeStep={activeStep}>
@@ -660,10 +662,11 @@ function Environment(): JSX.Element {
             <Grid
               container
               direction="row"
-              justifyContent="flex-start"
-              alignItems="center"
               spacing={1}
-            >
+              sx={{
+                justifyContent: "flex-start",
+                alignItems: "center"
+              }}>
               <Grid item>
                 {(() => {
                   if (environmentStatus === "running" && environmentName) {

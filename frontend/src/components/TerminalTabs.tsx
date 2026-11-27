@@ -53,7 +53,9 @@ export default function TerminalTabs(props: TabControlProps): JSX.Element {
 
   return (
     <Grid className={fullscreen ? "myFullscreenTerminalTab" : "myTerminalTab"}>
-      <Grid container justifyContent="flex-end">
+      <Grid container sx={{
+        justifyContent: "flex-end"
+      }}>
         <Tabs value={value} onChange={handleChange} aria-label="terminal tabs">
           {props.tabNames.map((name) => (
             <Tab label={name} key={name} />

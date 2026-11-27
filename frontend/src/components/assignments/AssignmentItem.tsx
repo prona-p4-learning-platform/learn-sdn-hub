@@ -1,4 +1,4 @@
-import { Box, Button, Checkbox, CircularProgress, createTheme, LinearProgress, ListItem, ListItemSecondaryAction, ListItemText, Tooltip, Typography } from "@mui/material"
+import { Box, Button, Checkbox, CircularProgress, createTheme, LinearProgress, ListItem, ListItemText, Tooltip, Typography } from "@mui/material"
 import CloudUploadIcon from "@mui/icons-material/CloudUpload"
 import CloudOffIcon from "@mui/icons-material/CloudOff"
 import PlayCircleFilledWhiteIcon from "@mui/icons-material/PlayCircleFilledWhite"
@@ -45,82 +45,90 @@ const AssignmentItem = ({name, data, onDeploy, onUndeploy, onResubmit}:Props): J
     return "No bonus points available"
   }
   return (
-    <ListItem divider>
+    <ListItem
+      divider
+      secondaryAction={
+        <Box sx={{ display: "flex", alignItems: "center" }}>
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<CloudUploadIcon />}
+            disabled={!canDeploy || isSubmitted || data.preparing}
+            onClick={() => onDeploy(name)}
+            sx={{ margin: theme.spacing(1) }}
+          >
+            Deploy
+          </Button>
+          <Button
+            variant="contained"
+            color="secondary"
+            startIcon={<PlayCircleFilledWhiteIcon />}
+            disabled={!isActiveDeployment || data.preparing}
+            onClick={() => void navigate(`/environment/${name}`)}
+            sx={{ margin: theme.spacing(1) }}
+          >
+            Start Assignment
+          </Button>
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<CloudOffIcon />}
+            disabled={!isActiveDeployment || data.preparing}
+            onClick={() => onUndeploy(name)}
+            sx={{ margin: theme.spacing(1) }}
+          >
+            Undeploy
+          </Button>
+          <Tooltip title={getSubmissionTooltip()}>
+            <Checkbox
+              edge="end"
+              checked={isSubmitted}
+              disabled={!isSubmitted}
+              color="primary"
+              onClick={() => onResubmit(name)}
+            />
+          </Tooltip>
+          {data.pointLimits[name] ? (
+            <Tooltip title={getPointsTooltip()}>
+              <Box sx={{ display: "inline-flex", alignItems: "center", ml: 2 }}>
+                <Box sx={{ width: "100px" }}>
+                  <LinearProgress
+                    variant="determinate"
+                    value={submission?.points && data.pointLimits[name] ? (submission.points / data.pointLimits[name]) * 100 : 0}
+                    color={isSubmitted ? "primary" : "warning"}
+                  />
+                </Box>
+                <Typography variant="body2" sx={{
+                  color: "text.secondary"
+                }}>
+                  {submission?.points ?? "?"} / {data.pointLimits[name]}
+                </Typography>
+              </Box>
+            </Tooltip>
+          ) : (
+            <Box
+              sx={{ display: "inline-flex", alignItems: "center", ml: 2 }}
+            >
+              <Box sx={{ width: "158px" }}>
+                <Typography variant="body2" sx={{
+                  color: "text.secondary"
+                }}>
+                  No bonus points
+                </Typography>
+              </Box>
+            </Box>
+          )}
+        </Box>
+      }
+    >
       <ListItemText primary={name} />
       {data.progressAssignment === name && (
         <Box sx={{ display: "inline-flex", alignItems: "center", ml: 2 }}>
           <CircularProgress size={16} />
         </Box>
       )}
-      <ListItemSecondaryAction>
-        <Button
-          variant="contained"
-          color="primary"
-          startIcon={<CloudUploadIcon />}
-          disabled={!canDeploy || isSubmitted || data.preparing}
-          onClick={() => onDeploy(name)}
-          sx={{ margin: theme.spacing(1) }}
-        >
-          Deploy
-        </Button>
-        <Button
-          variant="contained"
-          color="secondary"
-          startIcon={<PlayCircleFilledWhiteIcon />}
-          disabled={!isActiveDeployment || data.preparing}
-          onClick={() => void navigate(`/environment/${name}`)}
-          sx={{ margin: theme.spacing(1) }}
-        >
-          Start Assignment
-        </Button>
-        <Button
-          variant="contained"
-          color="primary"
-          startIcon={<CloudOffIcon />}
-          disabled={!isActiveDeployment || data.preparing}
-          onClick={() => onUndeploy(name)}
-          sx={{ margin: theme.spacing(1) }}
-        >
-          Undeploy
-        </Button>
-        <Tooltip title={getSubmissionTooltip()}>
-          <Checkbox
-            edge="end"
-            checked={isSubmitted}
-            disabled={!isSubmitted}
-            color="primary"
-            onClick={() => onResubmit(name)}
-          />
-        </Tooltip>
-        {data.pointLimits[name] ? (
-          <Tooltip title={getPointsTooltip()}>
-            <Box sx={{ display: "inline-flex", alignItems: "center", ml: 2 }}>
-              <Box sx={{ width: "100px" }}>
-                <LinearProgress
-                  variant="determinate"
-                  value={submission?.points && data.pointLimits[name] ? (submission.points / data.pointLimits[name]) * 100 : 0}
-                  color={isSubmitted ? "primary" : "warning"}
-                />
-              </Box>
-              <Typography variant="body2" color="text.secondary">
-                {submission?.points ?? "?"} / {data.pointLimits[name]}
-              </Typography>
-            </Box>
-          </Tooltip>
-        ) : (
-          <Box
-            sx={{ display: "inline-flex", alignItems: "center", ml: 2 }}
-          >
-            <Box sx={{ width: "158px" }}>
-              <Typography variant="body2" color="text.secondary">
-                No bonus points
-              </Typography>
-            </Box>
-          </Box>
-        )}
-      </ListItemSecondaryAction>
     </ListItem>
-  )
+  );
 }
 
 export default AssignmentItem

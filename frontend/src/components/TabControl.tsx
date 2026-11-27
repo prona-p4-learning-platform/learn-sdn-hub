@@ -30,7 +30,9 @@ function TabPanel(props: TabsProps) {
       {...other}
     >
       {value === index && (
-        <Box p={1}>
+        <Box sx={{
+          p: 1
+        }}>
           <Typography component="span">{children}</Typography>
         </Box>
       )}
@@ -61,10 +63,11 @@ export default function TabControl(props: TabControlProps): JSX.Element {
     <>
       <Grid
         container
-        justifyContent="flex-end"
         direction="row"
-        alignItems="center"
-      >
+        sx={{
+          justifyContent: "flex-end",
+          alignItems: "center"
+        }}>
         <Tabs value={value} onChange={handleChange} aria-label="tabs">
           {props.tabNames.map((name) => (
             <Tab label={name} key={name} />
