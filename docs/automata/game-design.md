@@ -44,7 +44,7 @@ Fixed at creation:
 
 Presets: **Standard**, **Scarce** (sparse deposits and surface resources; puts resource management first) and **Plentiful** (rich; for worlds with many players, since nothing respawns). An *Advanced* section exposes the single settings.
 
-The world owner can change later: name, visibility, maximum players (default 32), and the building limits per player, per team and per world (#87; defaults 2 000 / 6 000 / 20 000, #139). Caves, recipes, tiers, rates and the tick rate are not settings. Server operators cap everything (worlds per user, world size, players per world).
+The world owner can change later: name, visibility, maximum players (default 32), the building limits per player, per team and per world (#87; defaults 2 000 / 6 000 / 20 000, #139), and **items on death**: death crate (default) or keep everything (#146). Caves, recipes, tiers, rates and the tick rate are not settings. Server operators cap everything (worlds per user, world size, players per world).
 
 ### Visibility (#42)
 
@@ -78,7 +78,9 @@ A user owns at most 3 worlds. Worlds are never deleted automatically. Deleting a
 - **Changing teams (#33, #37).** A leaving team owner picks an admin as successor, otherwise a random admin takes over; without admins the team is disbanded and everyone returns to their solo team. Buildings stay with the team they were built for; nothing moves when a player joins or leaves (#86). Only when a team is disbanded does each building go to its builder's solo team.
 - **Containers (#28, #31, #32, #133).** A container is private (only its owner opens it), open to the owner's team, or public (every player in the world can put items in and take them out). Only the owning team configures or removes it, and belts and pipes connect only to the own team's buildings (#98), so public containers are filled and emptied by hand. Platform admins can view private containers but not take anything. The world owner and team admins can remove a private container; its contents are destroyed (with a confirmation naming the owner). After its owner leaves the team, a private container stays theirs to open and empty until the team removes it (#93).
 - **Unlocks (#47, #74).** Shared per team. An item counts as obtained once any team member holds it; these item records merge freely when players join or leave. Completed phases stay with the team: joining brings none in, and leaving gives the solo team every phase the team completed while the player was a member (#81). Parts delivered towards an unfinished phase stay with the team (#68).
-- **Inventory (#3, #112).** Per player: 40 slots, 8 of them a hotbar for tools. Stack sizes: 100 for resources and simple parts, 50 for larger parts, 10 for engine parts, relics and upgrades, 1 for tools (revisited with balancing). Team members share through containers. Players of different teams share by dropping items on the ground, where anyone can pick them up, or through public containers (#133); picking up counts as obtained (#74). **Draft:** drop details and items above a team's tier are open questions 74–75.
+- **Inventory (#3, #112).** Per player: 40 slots, 8 of them a hotbar for tools and healing items (#144), plus a suit slot (#145). Stack sizes: 100 for resources and simple parts, 50 for larger parts, 10 for engine parts, relics and upgrades, 1 for tools (revisited with balancing). Team members share through containers. Players of different teams share by dropping items on the ground, where anyone can pick them up, or through public containers (#133, #142); picking up counts as obtained (#74).
+- **Dropped items (#140).** Dropping a stack (drag it out of the inventory window, or G for the selected hotbar item) puts it into a ground pile at the player's feet. A pile is open to everyone: it holds whatever is dropped at that spot, shows the items' belt models (#8), and disappears when empty, never on its own, since nothing respawns (#20). Any player takes from it with E. While it exists, a pile counts towards the building limit (#87) of the player who started it, and the world owner can remove any pile (#24). A pile occupies its 1 m cell, so nothing can be placed there until it is empty or removed (#148).
+- **Items above a team's tier (#141).** An item can always be held, stored and passed on, but it works at most at the highest tier its holder's team has unlocked: a pickaxe from a later tier mines like the team's best pickaxe, and an upgrade from a locked tier cannot be installed. Engine parts and relics cannot be dropped or put into public containers, so each team builds its own phases; inside a team they move freely.
 
 ## 6. The world
 
@@ -108,7 +110,7 @@ Always in grassland or forest, with loose stones, branches, trees and a stone de
 |---|---|---|---|
 | Loose stone | hand | stone | no |
 | Branch | hand | wood | no |
-| Tree | axe (felled, #103) | logs (wood), at least 1 sapling | by planting saplings (#41) |
+| Tree | axe (felled, #103) | logs (wood), at least 1 sapling, resin (#144) | by planting saplings (#41) |
 | Rock formation | pickaxe | stone | no |
 | Wall formation (caves) | pickaxe | its ore, e.g. thrumite | no |
 | Solid deposit (ores, stone, limestone, coal, sulfur, sand, ice), on the surface and on cave floors | pickaxe or extractor | its resource | infinite |
@@ -143,7 +145,7 @@ The old automata, a machine civilisation that came before the players, left ruin
 ## 7. Gathering and tools
 
 - Hands pick up loose stones and branches.
-- The axe fells trees: a player chops a tree until it falls and disappears, dropping its logs and at least one sapling (#103). There is one axe, without tiers.
+- The axe fells trees: a player chops a tree until it falls and disappears, dropping its logs, at least one sapling and resin (#103, #144). There is one axe, without tiers.
 - The pickaxe mines solid deposits, rock formations and wall formations, never terrain (#19, #70).
 - Tools have no durability (#13).
 - A tool's tier decides what it can mine (see *Tier ladder*). With the tier the target requires, mining one item takes 2 s (#85); each tier above that cuts the time by 25 %, down to 1 s (#103).
@@ -173,12 +175,12 @@ No single resource carries a tier; the engine phase checks that all of a tier's 
 
 | Tier | Tiered ore (where) | Mined with | Other new sources | New problem | Main unlocks | Fits stage |
 |---|---|---|---|---|---|---|
-| 0 | none; wood and loose stone (spawn) | hands | trees, rock formations, stone deposit | scarcity: nothing respawns | hand: stone axe and pickaxe; placeable: workbench (wood), wooden chest, furnace (stone), simple supports (wood) | 3 |
+| 0 | none; wood and loose stone (spawn) | hands | trees, rock formations, stone deposit | scarcity: nothing respawns | hand: stone axe and pickaxe; placeable: workbench (wood), wooden chest, furnace (stone), simple supports (wood); workbench: salve (resin, #144) | 3 |
 | 1 | copper ore (grassland, forest; surface) | stone pickaxe | coal deposits; stone and wood get processed | first automation; ratios (extractors vs. furnaces) | copper ingot, wire and sheet, stone brick, wooden beam, charcoal; burner extractor (burns wood, charcoal or coal), belts (30/min, #130), item sink (#134), splitter and merger, supports, vertical belts, scanner, engine link | 3–4 |
-| 2 | iron ore (highlands; surface and shallow caves) | copper pickaxe | water (wells, lakes and the sea, #132), limestone deposits, tree farm (renewable wood) | shared power grid, water, recipes with several inputs | iron plate, rod and gear, steel (iron + coal), concrete (limestone + water); coal generator (burns wood, charcoal or coal; needs water) with water pump, wooden and steel poles, electric extractor, constructor, pipes (300 m³/min), tank, fluid vent (#134), faster belts (60/min), tree farm | 4–5 |
+| 2 | iron ore (highlands; surface and shallow caves) | copper pickaxe | water (wells, lakes and the sea, #132), limestone deposits, tree farm (renewable wood and resin) | shared power grid, water, recipes with several inputs | iron plate, rod and gear, steel (iron + coal), concrete (limestone + water); coal generator (burns wood, charcoal or coal; needs water) with water pump, wooden and steel poles, electric extractor, constructor, pipes (300 m³/min), tank, fluid vent (#134), faster belts (60/min), tree farm | 4–5 |
 | 3 | **thrumite**, a humming crystal that stores energy (cave floor deposits and wall formations below about −30 m in forest and highlands, #70) | iron pickaxe | geothermal vents with sulfur deposits around them (highlands) | caves: moving things up and down; storing power; power from fixed places | sulfuric acid (sulfur + water), resonator, storage cell; batteries, geothermal generator, power towers, faster belts (120/min), teleport beacons (#105) | 5 |
-| 4 | **pyrelith**, a stone that holds heat (deep under the desert, next to oil) | thrumite pickaxe | crude oil wells, sand deposits (desert) | **Draft** (#76 removed slag): refining: every refinery recipe makes fuel next to plastic or rubber, so the fuel needs a consumer | pyrelith ingot, glass (sand), plastic, rubber and fuel (oil, #92), insulated cable (copper wire + rubber, #126); oil pump, refinery, fuel generator, faster belts (240/min), faster pipes (600 m³/min) | 5 |
-| 5 | **rimeglass**, a clear crystal (deep under the tundra) | pyrelith pickaxe | natural gas wells (tundra, desert), ice deposits (tundra) | gas pressure: pressurised natural gas handles more throughput, compressors raise pressure between networks | coolant (from ice, an ordinary ingredient, #76), rimeglass lens, superconducting wire (copper wire + rimeglass + coolant, #127); gas extractor, compressor, pressure tanks, gas turbine, superconducting towers, fastest belts (480/min) | 5 |
+| 4 | **pyrelith**, a stone that holds heat (deep under the desert, next to oil) | thrumite pickaxe | crude oil wells, sand deposits (desert) | **Draft** (#76 removed slag): refining: every refinery recipe makes fuel next to plastic or rubber, so the fuel needs a consumer | pyrelith ingot, glass (sand), plastic, rubber and fuel (oil, #92), insulated cable (copper wire + rubber, #126), heat suit and medkit (#144, #145); oil pump, refinery, fuel generator, faster belts (240/min), faster pipes (600 m³/min) | 5 |
+| 5 | **rimeglass**, a clear crystal (deep under the tundra) | pyrelith pickaxe | natural gas wells (tundra, desert), ice deposits (tundra) | gas pressure: pressurised natural gas handles more throughput, compressors raise pressure between networks | coolant (from ice, an ordinary ingredient, #76), rimeglass lens, superconducting wire (copper wire + rimeglass + coolant, #127), cold suit (#145); gas extractor, compressor, pressure tanks, gas turbine, superconducting towers, fastest belts (480/min) | 5 |
 | 6 | **concordite**, an alloy fused from thrumite, pyrelith and rimeglass products (made, not mined) | — | — | long distances: three far-apart biomes at once | concordite ingot and parts, concordite tools; resonance cell, resonance reactor (#101) | 5 |
 
 Solids come first without a power grid (burner machines use fuel), which matches Stage 4; power, fluids and gases arrive with tiers 2 to 5, which matches Stage 5. Phase 1 gates tier 2, so the engine link and phase deliveries belong to Stage 4.
@@ -342,7 +344,7 @@ Upgrades change these (section 11).
 
 First person only (#7): WASD, mouse look, pointer lock, jump, sprint, wading and slow swimming (#132), build mode with a snapped preview, fullscreen toggle.
 
-- **Keys (#113).** Hold the left mouse button to mine, chop or harvest; E picks up and interacts (containers, machines, workbench); Q opens the build menu; R rotates; X removes; Tab opens the inventory; M the map; T the chat.
+- **Keys (#113).** Hold the left mouse button to mine, chop or harvest; E picks up and interacts (containers, machines, workbench); Q opens the build menu; R rotates; X removes; G drops the selected hotbar item (#140); the right mouse button uses it, e.g. a healing item (#144); Tab opens the inventory; M the map; T the chat.
 - **Collision (#104).** Players collide with every building except wires; foundations, ramps and machine tops are walkable. Nothing can be placed where a player stands.
 - **Travel (#105).** Walking 5 m/s, sprinting 8 m/s from the start. From tier 3, teleport beacons let a player jump between their own team's beacons and the spawn; a beacon needs power. No vehicles or trains in v1.
 - **Map (#106).** M opens a map of the explored area, shaded by biome, with the own team's buildings and members, the engine, discovered ruins, scanner hits, beacons and the player's own markers. It is drawn from the terrain functions, so it needs no stored data. A minimap in the top right corner shows the same around the player (north up, can be hidden).
@@ -361,17 +363,36 @@ First person only (#7): WASD, mouse look, pointer lock, jump, sprint, wading and
 - Every item has a small 3D model for belts plus an icon for the UI.
 - Asset layout and conventions: #51.
 - **Made by the team (#111):** 3D models, textures, shaders, VFX, music and sound. Until a model exists, a placeholder built in code (simple shapes in palette colours, a distinct silhouette per kind) and an icon rendered from it stand in, so the asset test of #51 passes from the start; CC0 packs can fill gaps (credits per #51).
-- **Audio (#114)** is in scope and produced by the author on request. Scope for v1 (#115): UI sounds, footsteps per ground, tool hits and falling trees, a positional loop per machine class, a quiet belt loop, ambience per biome and for caves, a few calm music tracks; volume per category.
+- **Audio (#114)** is in scope and produced by the author on request. Scope for v1 (#115): UI sounds, footsteps per ground, tool hits and falling trees, a positional loop per machine class, a quiet belt loop, ambience per biome and for caves, a few calm music tracks, a hurt and a heal sound (#147); volume per category.
 
 ## 15. Performance and accessibility
 
 - 60 fps at the default view distance on an integrated GPU.
 - Status is never shown by colour alone: always an icon plus colour, so it works for colour-blind players.
 
-## 16. Open points
+## 16. Player health (#143–#147)
+
+Players have 100 HP. There is no combat and there are no creatures (spec non-goals); damage comes only from the world, and it cannot be turned off.
+
+- **Falls (#143).** Harmless up to 5 m, then 10 HP per metre, so a 15 m fall from full health is fatal. Landing in water does no damage.
+- **Hazard zones (#143).** Heat in the deep desert caves where pyrelith lies (tier 4), cold in the deep tundra caves where rimeglass lies (tier 5). Without the matching suit a player loses 5 HP/s there, about 20 s from full health. Zones are computed from biome and depth, like the deposits; a warning with an icon shows on entering one.
+- **Nothing else hurts:** no hunger, no drowning (players swim at the surface, #132), no damage from machines, belts or the reactor.
+- **Regeneration (#144).** 0.5 HP/s once a player has taken no damage for 10 s; full in about 3.5 min.
+- **Healing items (#144).** Selected in the hotbar and used with the right mouse button; using one takes 1 s. Names are placeholders; recipes and amounts come with the catalogue.
+
+  | Item | Tier | Made from | Heals |
+  |---|---|---|---|
+  | Salve | 0 (workbench) | resin, which felled trees and the tree farm yield | 40 HP |
+  | Medkit | 4 | with the catalogue | to full |
+
+- **Suits (#145).** One suit slot next to the inventory; a suit protects while worn. The heat suit is one of tier 4's entry recipes, the cold suit one of tier 5's (it may be lined with pyrelith, which holds heat). Suits have no durability (#13) and use up nothing. Healing items and suits from a locked tier neither heal nor protect (#141).
+- **Death and respawn (#146).** At 0 HP the player comes back after 5 s at their team's engine link, or at the world spawn if the team has none; from tier 3 they may pick a powered teleport beacon of the team instead (#105). The world setting *items on death* decides what is kept:
+  - **Death crate** (default): the hotbar and the worn suit stay with the player; the other 32 slots go into a crate at the spot. It belongs to the player's team like the dismantle crate (#89), disappears when empty (never on its own) and is marked on the player's map (#106).
+  - **Keep everything:** nothing is left behind.
+- **Server and display (#147).** Health is stored per player and world, next to the inventory. The movement check (#104) measures falls; nothing happens to players who are offline. The HUD shows a health bar with its number (section 15).
+
+## 17. Open points
 
 - Review of every **Draft** marker: biome deposits and spawn distances (section 6), ruins and puzzles (6), tier and phase contents including the tier 4 problem, scanner and pacing (9), machine upgrades and their power factors (11), energy (12).
-- The full catalogue (items, machines, buildings, recipes with starting numbers) in `catalogue.md`, framed by #128–#131.
-- Dropped items in detail and items above a team's tier (open questions 74–75).
-- Player health (open question 59), discussed later.
+- The full catalogue (items, machines, buildings, recipes with starting numbers): first draft in [`catalogue.md`](catalogue.md), framed by #128–#131 and under review as open questions 81–89. It proposes values for the **Draft** markers above; they stay until the author confirms the draft.
 - Recipes and balance numbers; inventory and stack sizes revisited with balancing (#112).

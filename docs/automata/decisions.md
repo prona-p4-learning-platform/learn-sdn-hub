@@ -481,7 +481,7 @@ Also:
 
 ### Open
 
-59. **Player health.** Players should have health points (author); details are discussed later. Touches the spec's non-goals (combat, creatures) and needs: what causes damage (falls, machines, the reactor?), what happens at zero (respawn point, inventory), and how the server checks it.
+59. **Player health.** Split into open questions 76–80 (entry *Sharing items confirmed, player health*). Original text: players should have health points (author); details are discussed later. Touches the spec's non-goals (combat, creatures) and needs: what causes damage (falls, machines, the reactor?), what happens at zero (respawn point, inventory), and how the server checks it.
 60. **Schedule.** Answered by #117.
 
 ### Proposed, awaiting confirmation
@@ -670,22 +670,128 @@ The author confirmed the proposals for open questions 62–73, except 67: items 
 
 ### Open
 
-74. **Dropped items.** What a drop looks like, who picks it up, whether it ever disappears, and what keeps drops from filling a world.
-75. **Items above a team's tier.** Under #133, items reach teams that have not unlocked their tier. Recipes and buildings still need the tier (#64, #81), but some items are used directly: a team could mine with a pickaxe it cannot make yet, install an upgrade from a later tier, or deliver engine parts another team built and skip a phase.
+74. **Dropped items.** Answered by #140.
+75. **Items above a team's tier.** Answered by #141.
 
 ### Proposed, awaiting confirmation
 
-- **74:** dropping a stack (drag it out of the inventory window, or G for the selected hotbar item) puts it into a ground pile at the player's feet. A pile works like the dismantle crate (#89), but open to everyone: it holds whatever is dropped at that spot, shows the items' belt models (#8), and disappears when empty. Any player takes from it with E (#113). Piles never disappear on their own, since nothing respawns (#20). While it exists, a pile counts towards the building limit (#87) of the player who started it, so drops cannot fill a world, and the world owner can remove any pile (#24).
-- **75:** one rule for use: an item can always be held, stored and passed on, but it works at most at the highest tier its holder's team has unlocked. A pickaxe from a later tier mines like the team's best pickaxe; an upgrade from a locked tier cannot be installed. This also covers a player who joins a team that is behind their solo team (#81). Engine parts and relics cannot be dropped or put into public containers, so each team still builds its own phases (#64); inside a team they move freely. Alternative: allow everything and treat it as cooperation, which the world overview (#109) shows a teacher.
+- *(Confirmed as #140.)* **74:** dropping a stack (drag it out of the inventory window, or G for the selected hotbar item) puts it into a ground pile at the player's feet. A pile works like the dismantle crate (#89), but open to everyone: it holds whatever is dropped at that spot, shows the items' belt models (#8), and disappears when empty. Any player takes from it with E (#113). Piles never disappear on their own, since nothing respawns (#20). While it exists, a pile counts towards the building limit (#87) of the player who started it, so drops cannot fill a world, and the world owner can remove any pile (#24).
+- *(First option confirmed as #141.)* **75:** one rule for use: an item can always be held, stored and passed on, but it works at most at the highest tier its holder's team has unlocked. A pickaxe from a later tier mines like the team's best pickaxe; an upgrade from a locked tier cannot be installed. This also covers a player who joins a team that is behind their solo team (#81). Engine parts and relics cannot be dropped or put into public containers, so each team still builds its own phases (#64); inside a team they move freely. Alternative: allow everything and treat it as cooperation, which the world overview (#109) shows a teacher.
+
+## 2026-11-27 — Sharing items confirmed, player health
+
+The author confirmed the proposals for open questions 74 and 75 (the first option for 75) and the assumption in #133. Player health (open question 59) is settled before the catalogue, since healing and protection add items to it; it is split into open questions 76–80, each with a proposal.
+
+### Decided
+
+| # | Topic | Decision | Consequences |
+|---|---|---|---|
+| 140 | Dropped items | As proposed (open question 74): dropping a stack (drag it out of the inventory window, or G for the selected hotbar item) puts it into a ground pile at the player's feet. A pile works like the dismantle crate (#89) but is open to everyone: it holds whatever is dropped at that spot, shows the items' belt models (#8) and disappears when empty. Any player takes from it with E (#113). Piles never disappear on their own. | Nothing respawns (#20), so a pile that expired would destroy items for good. While a pile exists it counts towards the building limit (#87) of the player who started it, so drops cannot fill a world, and the world owner can remove any pile (#24). G joins the keys of #113. Assumed: a pile occupies its 1 m cell like a building, so nothing can be placed there until it is empty or removed. |
+| 141 | Items above a team's tier | First option (open question 75): an item can always be held, stored and passed on, but it works at most at the highest tier its holder's team has unlocked. A pickaxe from a later tier mines like the team's best pickaxe; an upgrade from a locked tier cannot be installed. Engine parts and relics cannot be dropped or put into public containers; inside a team they move freely. | Each team still builds its own phases (#64). Also covers a player who joins a team that is behind their solo team (#81). Assumed: the item's tooltip says when it is above the team's tier; engine parts and relics a player carries when leaving a team go with them, as the rest of the inventory does (to confirm). |
+| 142 | Public containers | Confirms the assumption in #133: containers have a third setting, **public**, next to private and team. Every player in the world can put items in and take them out. | Configuring and removing stay with the owning team and the world owner (#133). |
+
+### Open
+
+76. **Damage sources.** Answered by #143.
+77. **Health and healing.** Answered by #144.
+78. **Protective gear.** Answered by #145.
+79. **Death and respawn.** Answered by #146.
+80. **Damage setting, checks and display.** Answered by #147; the damage setting became the items-on-death setting of #146.
+
+### Proposed, awaiting confirmation
+
+- *(Confirmed as #143.)* **76:** two sources only.
+  - *Falls:* harmless up to 5 m, then 10 HP per metre, so a 15 m fall from full health is fatal. Landing in water does no damage.
+  - *Hazard zones:* heat in the deep desert caves where pyrelith lies (tier 4) and cold in the deep tundra caves where rimeglass lies (tier 5), computed from biome and depth like the deposits, so they need no stored data. Without the matching suit (78) a player loses 5 HP/s there: about 20 s from full health to get out.
+  - Nothing else hurts: no combat or creatures (the spec's non-goals stay), no hunger, no damage from machines, belts or the reactor (#101), no drowning (players swim at the surface, #132).
+- *(Confirmed as #144.)* **77:** 100 HP. Health regenerates 0.5 HP/s once a player has taken no damage for 10 s (full in about 3.5 min), so nobody is stuck at low health far from home. Two healing items (names are placeholders, recipes and amounts come with the catalogue):
+  - *Salve* (tier 0, workbench): heals 40 HP. Made from *resin*, a new resource that felled trees drop next to logs and saplings (#103) and the tree farm (tier 2) produces, so healing renews as wood does (#41).
+  - *Medkit* (tier 4, with the first hazard zone): heals to full.
+  - Using one takes 1 s: select it in the hotbar and press the right mouse button. A healing item from a locked tier does not work (#141).
+- *(Confirmed as #145.)* **78:** one suit slot next to the inventory; a suit protects while worn, as Satisfactory's hazmat suit does (inspired by, not copied). A *heat suit* joins tier 4's entry recipes and a *cold suit* tier 5's (#64), since each tier's ore lies in its zone; the cold suit could be lined with pyrelith, which holds heat. Suits have no durability (#13) and use up nothing. Swapping suits is a drag in the inventory window. A suit from a locked tier does not protect (#141).
+- *(Confirmed as #146, with a world setting for items on death.)* **79:** at 0 HP the player comes back after 5 s at their team's engine link (#79), or at the world spawn if the team has none; from tier 3 they may pick a powered teleport beacon of the team instead (#105). The hotbar and the worn suit stay with the player. The other 32 slots go into a death crate at the spot, as in Satisfactory: it belongs to the player's team like the dismantle crate (#89), disappears when empty, never on its own, and is marked on the player's map (#106). Nothing is destroyed. Alternative: players keep everything, so death costs only the walk back.
+- *(Confirmed as #147, without the damage setting: damage is always on.)* **80:**
+  - *Setting:* a world setting **player damage** (on / off, default on) that the world owner can change at any time (#45), so a teacher can run a class world without it. With damage off, suits and healing items still exist but are not needed.
+  - *Checks:* health lives on the server and is stored per player and world, next to the inventory. The movement check (#104) measures falls; the server computes hazard zones from the terrain functions; using a healing item is a player action like crafting. Nothing happens to players who are offline.
+  - *Display:* a health bar with its number in the HUD, and a warning with an icon on entering a hazard zone (never colour alone, GDD section 15). A short hurt and heal sound join the audio scope (#115).
+  - *Spec:* the non-goals keep combat and creatures; health from falls and hazard zones becomes part of the scope and gets a stage in the spec rewrite (#117).
+
+## 2026-11-27 — Player health
+
+The author confirmed the assumptions in #140 and #141 and the proposals for open questions 76–80, with one change: damage cannot be turned off. Instead, a world setting decides whether a player who dies loses their items into a death crate.
+
+### Decided
+
+| # | Topic | Decision | Consequences |
+|---|---|---|---|
+| 143 | Damage sources | As proposed (open question 76): falls and hazard zones only. Falls are harmless up to 5 m, then cost 10 HP per metre; landing in water does no damage. Heat in the deep desert caves where pyrelith lies (tier 4) and cold in the deep tundra caves where rimeglass lies (tier 5) cost 5 HP/s without the matching suit (#145). No combat, creatures, hunger or drowning, and no damage from machines, belts or the reactor. | The spec's non-goals (combat, creatures) stay. Zones are computed from biome and depth like the deposits and need no stored data. Assumed: a zone covers the caves below the depth where its ore starts, so every pyrelith and rimeglass deposit lies inside one; whether the desert and tundra vaults (#67) lie inside comes with the ruins in the catalogue. |
+| 144 | Health and healing | As proposed (open question 77): 100 HP, regenerating 0.5 HP/s once a player has taken no damage for 10 s. The *salve* (tier 0, workbench) heals 40 HP and is made from *resin*, a new resource that felled trees drop next to logs and saplings (#103) and the tree farm (tier 2) produces. The *medkit* (tier 4) heals to full. Using one takes 1 s: select it in the hotbar and press the right mouse button. | Resin joins the tree's yields and the tree farm's output; amounts and recipes come with the catalogue (names are placeholders). The right mouse button joins the keys of #113. A healing item from a locked tier does not work (#141). Assumed: the hotbar (#112) holds healing items as well as tools. |
+| 145 | Protective gear | As proposed (open question 78): one suit slot next to the inventory; a suit protects while worn. The heat suit joins tier 4's entry recipes, the cold suit tier 5's (#64). Suits have no durability (#13) and use up nothing. | The cold suit may be lined with pyrelith, which holds heat; recipes come with the catalogue. A suit from a locked tier does not protect (#141). Assumed: the suit slot is not one of the 40 inventory slots (#112). |
+| 146 | Death and respawn | As proposed (open question 79): at 0 HP the player comes back after 5 s at their team's engine link (#79), or at the world spawn if the team has none; from tier 3 they may pick a powered teleport beacon of the team instead (#105). New world setting **items on death**: *death crate* or *keep everything*. With the death crate, the hotbar and the worn suit stay with the player; the other 32 slots go into a crate at the spot that belongs to the player's team like the dismantle crate (#89), disappears when empty, never on its own, and is marked on the player's map (#106). | Replaces the damage setting proposed for open question 80. Nothing is destroyed either way. Assumed: *death crate* is the default, and the world owner can change the setting at any time, like the building limits (#87), since generation does not depend on it. |
+| 147 | Health checks and display | As proposed (open question 80), without the damage setting: damage is always on. Health lives on the server, stored per player and world next to the inventory. The movement check (#104) measures falls, the server computes hazard zones from the terrain functions, and using a healing item is a player action like crafting. Nothing happens to players who are offline. The HUD shows a health bar with its number and a warning with an icon on entering a hazard zone; a hurt and a heal sound join the audio scope (#115). | Health from falls and hazard zones becomes part of the v1 scope and gets a stage in the spec rewrite (#117). |
+| 148 | Confirmed assumptions | #140: a pile occupies its 1 m cell, so nothing can be placed there until it is empty or removed. #141: engine parts and relics a player carries when leaving a team go with them, as the rest of the inventory does. | Accepted: a leaving player can deliver carried engine parts for their solo team. |
+
+## 2026-11-27 — Health assumptions confirmed
+
+| # | Topic | Decision | Consequences |
+|---|---|---|---|
+| 149 | Confirmed assumptions | #143: a hazard zone covers the caves below the depth where its ore starts. #144: the hotbar holds healing items as well as tools. #145: the suit slot is not one of the 40 inventory slots. #146: *death crate* is the default, and the world owner can change the setting at any time. | Already reflected in GDD sections 4, 5 and 16. Whether the desert and tundra vaults lie inside a zone still comes with the ruins in the catalogue. |
+
+## 2026-11-27 — Catalogue draft
+
+The author asked to go straight to drafting. [`catalogue.md`](catalogue.md) holds the first full draft (#131): resources and deposits, extractors, tools and gear, items and recipes by tier, the machine roster, logistics and storage, power buildings, building pieces, engine phases with quantities and reference factories, ruins, loot tables and alternative recipes. Its numbers come from a recipe model that checks rates, machine counts, raw needs and power for each phase. Nothing in it is decided yet; the choices that need the author are open questions 81–89.
+
+### Open
+
+81. **Catalogue as working basis.** Is the draft accepted as the working basis, with every number open to tuning in playtests?
+82. **Burner extractor and the tier 1 belt.** #93 asks for more than 30 items/min from the burner extractor; #130 sets the tier 1 belt to 30 items/min. Which gives way?
+83. **Workbench scope.** Workbench crafting is instant (#77), so a workbench that makes every part makes the constructor pointless. Where does the workbench stop?
+84. **Smelting.** Does smelting move to an electric machine in a later tier, or does the furnace stay the only smelter?
+85. **Electric extractor tiers.** Do extractor Mk2–Mk5 differ only in what they mine, or also in rate?
+86. **Phase sizing.** How are the engine phase quantities sized against the pacing targets (#128)?
+87. **Vaults in hazard zones.** Do the desert and tundra vaults lie inside the heat and cold zones (#143, #149)?
+88. **Spawn guarantees.** Which deposits does the generator guarantee near the spawn, and at what distance (GDD section 6, #88)?
+89. **Names.** Which placeholder names stay?
+
+### Proposed, awaiting confirmation
+
+- **81:** yes. Numbers are starting values; the first playtests tune phase quantities before recipes (catalogue section 11). Additions that go beyond earlier decisions and come with this confirmation:
+  - Intermediates *rotor* (tier 2, so the motor keeps its three ingredients without a four-input machine before tier 3) and *concordite blend* (tier 6, the first of two fusing steps).
+  - An *advanced scanner* in tier 3 as the GDD's "later upgrade" that finds ruins.
+  - The tree farm needs 10 m³ water/min and yields 1 resin/min next to 12 wood; the salve also runs in a constructor, the medkit (2 salve + 1 plastic) in an assembler.
+  - Gas rules: a gas network carries its weakest pipe's capacity times its pressure in bar; the mixer takes gas from 0.5 bar; compressors move up to 600 m³/min (at 1 bar) and raise pressure up to 5 bar; pressure tanks hold up to 10 bar.
+  - Container sizes: wooden chest 16 slots (tier 0), storage container 32 (tier 2), steel container 48 (tier 3); tanks and pressure tanks 400 m³.
+- **82:** keep the burner extractor at 40 items/min. On a normal deposit the belt is then the bottleneck from the first line on, which makes the status display and the speed setting the first lesson: at 75 % the extractor fits the belt and burns about 37 % less fuel per minute (#123).
+- **83:** the workbench makes tools, suits, healing items, upgrades, scanners and the parts of tiers 0 and 1. From tier 2 on, parts come only from machines, so automating pays off. Tier 2's first buildings (water pump, coal generator, wooden poles, pipes, extractor Mk2) cost tier 1 parts; the constructor costs iron ingots, which a furnace smelts from hand-mined iron ore. This narrows GDD section 8's "until machines take over" to a fixed line.
+- **84:** the furnace stays the only smelter and burns wood, charcoal or coal in every tier; the foundry (alloys) draws power. Coal stays needed to the end (about 28 coal/min at the phase 6 reference factory), and a furnace hall keeps a fuel belt to plan.
+- **85:** all electric extractors yield 60 items/min at 5 MW; a higher tier only widens what they mine. Rate grows through speed upgrades and pure deposits, up to 300 items/min, so the faster belt tiers find a use. One extractor per job keeps the roster to one building per tier (#129).
+- **86:** each phase asks for about 60–105 minutes of output from a reference factory for that phase (catalogue section 9); the rest of the phase's time goes into building, exploring and fetching the relic. A team that builds bigger finishes sooner.
+  - Phase 1: 150 wired frames, 150 brick housings (about 2.5 h from first login).
+  - Phase 2: 350 motors, 350 reinforced casings, 350 wired frames (6.5 h).
+  - Phase 3: 600 resonant coils, 750 storage cells, 900 motors, humming relic (12.5 h).
+  - Phase 4: 1 400 heat exchangers, 1 800 polymer housings, 1 400 resonant coils, ember relic (20 h).
+  - Phase 5: 2 000 superconducting coils, 2 000 cryo lattices, 2 000 heat exchangers, frost relic (30 h).
+  - Phase 6: 20 concordite assemblies per minute held for 10 minutes, concord relic (40 h). Its reference factory draws about 1.3 GW (#121), which one resonance reactor covers.
+- **87:** yes. Desert vaults lie in the heat zone and tundra vaults in the cold zone, so the suit unlocked with the previous phase (#145) is the key to the relic. Vault puzzles: delivery (grassland, forest), pipe routing (highlands), holding 40–45 MW into the door (desert), holding a gas chamber at 3–3.5 bar (tundra); the ancient seal needs the concordite pickaxe, then 4 superconducting coils/min while 200–210 MW flow in, for 3 minutes.
+- **88:** a stone deposit within 100 m of the spawn, copper ore and coal within 200 m, limestone and open water within 500 m, iron ore within 1 km. Pinned by the generator test next to #71 and #96; still no guarantee per team (#88).
+- **89:** keep the draft's names as placeholders until the string table (#135) and the team's art (#111) give a reason to change them: the engine parts, *extractor Mk2–Mk5*, the relics (*humming*, *ember*, *frost*, *concord*), *resin*, *salve*, *medkit* and the alternative recipes. The GDD's "electric extractor" becomes extractor Mk2.
 
 ## Where things stand (end of 2026-11-27)
 
 Session paused here; the next one starts from this list.
 
-1. **Answer open questions 74–75** (entry *Catalogue frame, remaining gaps and sharing items*, each with a proposal), by number. Both follow from #133.
-2. **Draft `docs/automata/catalogue.md`** (#131) from #128–#130: every item per tier, the machine roster with inputs, outputs, footprint and power, recipes at starting numbers, extractor tiers and rates, tools, storage sizes, cosmetic pieces, engine phase quantities, loot tables, puzzles and alternative recipes. Settle the GDD's remaining **Draft** markers in the same pass: biome deposits, spawn distances, pacing, scanner, ruins and puzzles, machine upgrade sources, energy numbers, whether stone tools need the workbench.
-   - Known gaps the catalogue closes: machines for steel, concrete, sulfuric acid and coolant; recipes for copper sheet, wooden beam, iron rod and gear, resonator, rimeglass lens, cryo lattices, concordite parts and resonance cells; extractor tiers; container sizes; phase quantities; engine part names (#116).
-3. **Rewrite the spec and stage plans** in `docs/superpowers/` (#54) from this log, the GDD and the catalogue: fold in the plan review findings that are still open (first entry: A1–A3, A6, B5, B7, B8 and the smaller ones, including the `AGENTS.md` architecture map), and give every feature added since #49 a stage (#117), including sea and lakes (#132), drops and public containers (#133), sink and vent (#134), the string table (#135), cosmetic pieces (#136) and the settings menu (#138). Weather is listed as optional (#137).
+1. **Review the catalogue draft** (`catalogue.md`, #131). Open questions 81–89 each have a proposal in the entry *Catalogue draft*, not answered yet:
+   - 81: accept the draft as the working basis, including the additions listed there (rotor, concordite blend, advanced scanner, the tree farm's water and resin, gas rules, container sizes).
+   - 82: burner extractor stays at 40 items/min above the 30/min tier 1 belt.
+   - 83: the workbench makes tools, suits, healing items, upgrades, scanners and tier 0–1 parts; from tier 2 on, parts come only from machines.
+   - 84: the furnace stays the only smelter and burns fuel in every tier.
+   - 85: extractor Mk2–Mk5 all yield 60 items/min at 5 MW; the tier only widens what they mine.
+   - 86: phase quantities equal 60–105 minutes of a reference factory's output (phase 1: 150 + 150; phase 6: 20 concordite assemblies/min for 10 minutes, about 1.3 GW), for about 2.5 / 6.5 / 12.5 / 20 / 30 / 40 h.
+   - 87: desert and tundra vaults lie inside the heat and cold zones.
+   - 88: stone within 100 m of the spawn, copper ore and coal within 200 m, limestone and open water within 500 m, iron ore within 1 km.
+   - 89: all names stay placeholders; the GDD's "electric extractor" becomes extractor Mk2.
 
-- **Parked:** player health (open question 59).
-- **Assumptions to confirm on the way:** #123 treats the rest of the energy draft (GDD section 12) as the working basis; #133 reads "public/team containers" as a new public setting next to the team one.
+   Once 81 is confirmed, the GDD drops the **Draft** markers the catalogue settles (biome deposits and spawn distances, ruins and puzzles, tier and phase contents, scanner, pacing, machine upgrade sources) and points to the catalogue for numbers. The reference factories in catalogue section 9 were checked with a throwaway recipe model outside the repo; when a recipe changes, re-check them from the recipe tables in section 4.
+2. **Rewrite the spec and stage plans** in `docs/superpowers/` (#54) from this log, the GDD and the catalogue: fold in the plan review findings that are still open (first entry: A1–A3, A6, B5, B7, B8 and the smaller ones, including the `AGENTS.md` architecture map), and give every feature added since #49 a stage (#117), including sea and lakes (#132), drops and public containers (#133, #140, #142), sink and vent (#134), the string table (#135), cosmetic pieces (#136), the settings menu (#138) and player health (#143–#147). Weather is listed as optional (#137).
+
+- **Assumptions to confirm on the way:** #123 treats the rest of the energy draft (GDD section 12) as the working basis; the catalogue builds on it.
