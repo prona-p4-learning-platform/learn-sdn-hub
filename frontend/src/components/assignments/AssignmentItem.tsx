@@ -72,7 +72,7 @@ const AssignmentItem = ({name, data, onDeploy, onUndeploy, onResubmit}:Props): J
             color={isSubmitted ? "primary" : "warning"}
           />
         </Box>
-        <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: "nowrap" }}>
+        <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: "nowrap", ml: 1 }}>
           {earned ?? "?"} / {max}
         </Typography>
       </Box>
