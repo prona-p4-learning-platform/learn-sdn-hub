@@ -48,7 +48,7 @@ describe("AssignmentItem points wording", () => {
     expect(tooltip).toHaveTextContent("You have earned 5 out of 10 bonus points.")
   })
 
-  it("exam assignment shows points wording and a separate bonus line", async () => {
+  it("exam assignment shows points wording in a single bar", async () => {
     const data = baseData({
       submissions: [
         { assignmentName: "exam-1", lastChanged: new Date(), points: 5, gradePoints: 20 },
@@ -59,10 +59,10 @@ describe("AssignmentItem points wording", () => {
     })
     renderItem(data, "exam-1")
 
-    // grade points are the main label, worded as "points" — never "bonus points"
+    // grade points are the only student-visible bar, worded as "points" — never "bonus points"
     expect(screen.getByText("20 / 40 points")).toBeInTheDocument()
-    // bonus points appear as a separate line
-    expect(screen.getByText("5 / 5 bonus points")).toBeInTheDocument()
+    // bonus points are examiner-only: no bonus bar, no bonus wording
+    expect(screen.queryByText(/bonus points/)).not.toBeInTheDocument()
 
     const tooltip = await openPointsTooltip(/20 \/ 40 points/)
     expect(tooltip).toHaveTextContent("You have earned 20 out of 40 points.")
@@ -79,9 +79,21 @@ describe("AssignmentItem points wording", () => {
     renderItem(data, "exam-1")
 
     expect(screen.getByText("? / 40 points")).toBeInTheDocument()
-    expect(screen.getByText("? / 5 bonus points")).toBeInTheDocument()
 
     const tooltip = await openPointsTooltip(/\? \/ 40 points/)
     expect(tooltip).toHaveTextContent("The submission was not graded yet")
+  })
+
+  it("exam without grade points falls back to the bonus bar", () => {
+    const data = baseData({
+      submissions: [{ assignmentName: "exam-1", lastChanged: new Date(), points: 5 }],
+      pointLimits: {
+        "exam-1": { maxBonusPoints: 5, isExam: true },
+      },
+    })
+    renderItem(data, "exam-1")
+
+    expect(screen.getByText("5 / 5")).toBeInTheDocument()
+    expect(screen.queryByText(/\/ 40/)).not.toBeInTheDocument()
   })
 })

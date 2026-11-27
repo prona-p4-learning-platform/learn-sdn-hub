@@ -36,7 +36,7 @@ const AssignmentItem = ({name, data, onDeploy, onUndeploy, onResubmit}:Props): J
 
   const getPointsTooltip = () => {
     if(limit) {
-      if(isExam) {
+      if(isExam && limit.maxGradePoints !== undefined) {
         if(submission?.gradePoints !== undefined) {
           return `You have earned ${submission.gradePoints} out of ${limit.maxGradePoints} points.`
         }
@@ -62,7 +62,7 @@ const AssignmentItem = ({name, data, onDeploy, onUndeploy, onResubmit}:Props): J
     }
     const percentage = earned && max ? (earned / max) * 100 : 0
     return (
-      <Box sx={{ display: "inline-flex", alignItems: "center", ml: 2 }}>
+      <Box sx={{ display: "inline-flex", alignItems: "center" }}>
         <Box sx={{ width: "100px" }}>
           <LinearProgress
             variant="determinate"
@@ -126,14 +126,11 @@ const AssignmentItem = ({name, data, onDeploy, onUndeploy, onResubmit}:Props): J
         </Tooltip>
         {limit ? (
           <Tooltip title={getPointsTooltip()}>
-            <Box sx={{ display: "flex", flexDirection: "column", alignItems: "flex-end", ml: 2 }}>
-              {isExam ? (
-                <>
-                  {renderPointsProgress(submission?.gradePoints, limit.maxGradePoints, "points")}
-                  {limit.maxBonusPoints > 0 && renderPointsProgress(submission?.points, limit.maxBonusPoints, "bonus points")}
-                </>
+            <Box sx={{ display: "inline-flex", alignItems: "center", ml: 2 }}>
+              {isExam && limit.maxGradePoints !== undefined ? (
+                renderPointsProgress(submission?.gradePoints, limit.maxGradePoints, "points")
               ) : (
-                limit.maxBonusPoints > 0 && renderPointsProgress(submission?.points, limit.maxBonusPoints)
+                renderPointsProgress(submission?.points, limit.maxBonusPoints)
               )}
             </Box>
           </Tooltip>
