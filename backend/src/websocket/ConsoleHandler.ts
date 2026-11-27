@@ -20,9 +20,9 @@ export default function (
       return;
     }
 
-    const initialConsoleBuffer = envConsole.consumeInitialConsoleBuffer();
-    if (initialConsoleBuffer.length > 0) {
-      ws.send(initialConsoleBuffer);
+    const consoleBuffer = envConsole.getBufferedOutput();
+    if (consoleBuffer.length > 0) {
+      ws.send(consoleBuffer);
     }
 
     // Store listener references so they can be removed when WebSocket closes

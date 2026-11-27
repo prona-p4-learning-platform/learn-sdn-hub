@@ -416,15 +416,14 @@ export default (persister: Persister, provider: InstanceProvider): Router => {
         reqWithUser.user.groupNumber,
         reqWithUser.user.sessionId,
       );
-      const { activeStep, terminalState, dialogAnswer } = reqWithUser.body as {
+      const { activeStep, dialogAnswer } = reqWithUser.body as {
         activeStep: string;
-        terminalState: TerminalStateType[];
         dialogAnswer?: string;
       };
 
       if (env) {
         env
-          .test(activeStep, terminalState, dialogAnswer)
+          .test(activeStep, dialogAnswer)
           .then((testResult) => {
             if (testResult.code === 299) {
               // special code for dialog test - the frontend needs to ask the
