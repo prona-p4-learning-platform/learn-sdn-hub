@@ -1,6 +1,6 @@
 # Automata — Game Design Document
 
-Living document: what the game is and why. Numbers here are design targets; once implemented, the authoritative values live in code (`automata/core/src/catalog/`) and this document links to them. Decisions are referenced as #N from [`decisions.md`](decisions.md). Sections marked **Draft** are proposals for the author to review.
+Living document: what the game is and why. Numbers here are design targets; the full content (items, machines, buildings, recipes at starting numbers) goes into `catalogue.md` (#131); once implemented, the authoritative values live in code (`automata/core/src/catalog/`) and this document links to them. Decisions are referenced as #N from [`decisions.md`](decisions.md). Sections marked **Draft** are proposals for the author to review.
 
 ## 1. Pitch
 
@@ -44,7 +44,7 @@ Fixed at creation:
 
 Presets: **Standard**, **Scarce** (sparse deposits and surface resources; puts resource management first) and **Plentiful** (rich; for worlds with many players, since nothing respawns). An *Advanced* section exposes the single settings.
 
-The world owner can change later: name, visibility, maximum players, and the building limits per player, per team and per world (#87). Caves, recipes, tiers, rates and the tick rate are not settings. Server operators cap everything (worlds per user, world size, players per world).
+The world owner can change later: name, visibility, maximum players (default 32), and the building limits per player, per team and per world (#87; defaults 2 000 / 6 000 / 20 000, #139). Caves, recipes, tiers, rates and the tick rate are not settings. Server operators cap everything (worlds per user, world size, players per world).
 
 ### Visibility (#42)
 
@@ -73,16 +73,18 @@ A user owns at most 3 worlds. Worlds are never deleted automatically. Deleting a
 
 ## 5. Teams and ownership
 
-- **Teams (#27, #29).** Every player is always in exactly one team per world. Alone, a player has a solo team named after their username until they rename it. Roles: one owner, admins, members. Team invites happen inside the world: a team owner or admin invites a player who is there; the player accepts (#46). The team owner removes admins and members, team admins remove members; a removed member returns to their solo team, as on leaving (#97).
-- **Protection instead of claims (#72).** There are no claims. What a team builds is protected: only that team opens, configures or removes it. Saplings a team plants, and the trees grown from them, count as built by that team. Everything generated with the world (trees, stones, branches, rock and wall formations, deposits, wells, ruins) is open to everyone; a deposit is held by the first extractor placed on it. Belts, pipes and wires connect only to the own team's buildings (#98); teams that want to share a factory join one team.
+- **Teams (#27, #29).** Every player is always in exactly one team per world. Alone, a player has a solo team named after their username until they rename it. Roles: one owner, admins, members. There is no team size limit below the world's maximum players (#139). Team invites happen inside the world: a team owner or admin invites a player who is there; the player accepts (#46). The team owner removes admins and members, team admins remove members; a removed member returns to their solo team, as on leaving (#97).
+- **Protection instead of claims (#72).** There are no claims. What a team builds is protected: only that team opens, configures or removes it; public containers are the one exception for opening (#133). Saplings a team plants, and the trees grown from them, count as built by that team. Everything generated with the world (trees, stones, branches, rock and wall formations, deposits, wells, ruins) is open to everyone; a deposit is held by the first extractor placed on it. Belts, pipes and wires connect only to the own team's buildings (#98); teams that want to share a factory join one team.
 - **Changing teams (#33, #37).** A leaving team owner picks an admin as successor, otherwise a random admin takes over; without admins the team is disbanded and everyone returns to their solo team. Buildings stay with the team they were built for; nothing moves when a player joins or leaves (#86). Only when a team is disbanded does each building go to its builder's solo team.
-- **Containers (#28, #31, #32).** A container is either private (only its owner opens it) or open to the owner's team. Platform admins can view private containers but not take anything. The world owner and team admins can remove a private container; its contents are destroyed (with a confirmation naming the owner). After its owner leaves the team, a private container stays theirs to open and empty until the team removes it (#93).
+- **Containers (#28, #31, #32, #133).** A container is private (only its owner opens it), open to the owner's team, or public (every player in the world can put items in and take them out). Only the owning team configures or removes it, and belts and pipes connect only to the own team's buildings (#98), so public containers are filled and emptied by hand. Platform admins can view private containers but not take anything. The world owner and team admins can remove a private container; its contents are destroyed (with a confirmation naming the owner). After its owner leaves the team, a private container stays theirs to open and empty until the team removes it (#93).
 - **Unlocks (#47, #74).** Shared per team. An item counts as obtained once any team member holds it; these item records merge freely when players join or leave. Completed phases stay with the team: joining brings none in, and leaving gives the solo team every phase the team completed while the player was a member (#81). Parts delivered towards an unfinished phase stay with the team (#68).
-- **Inventory (#3, #112).** Per player: 40 slots, 8 of them a hotbar for tools. Stack sizes: 100 for resources and simple parts, 50 for larger parts, 10 for engine parts, relics and upgrades, 1 for tools (revisited with balancing). Teams share through containers.
+- **Inventory (#3, #112).** Per player: 40 slots, 8 of them a hotbar for tools. Stack sizes: 100 for resources and simple parts, 50 for larger parts, 10 for engine parts, relics and upgrades, 1 for tools (revisited with balancing). Team members share through containers. Players of different teams share by dropping items on the ground, where anyone can pick them up, or through public containers (#133); picking up counts as obtained (#74). **Draft:** drop details and items above a team's tier are open questions 74–75.
 
 ## 6. The world
 
 Terrain is smooth, static (not editable) and generated from the seed, with caves below the surface. Caves are generally accessible: every cave system connects to the surface through at least one entrance that players can walk through and belts and pipes can follow (#69). Cave floors hold deposits, mined by extractors or by hand with a pickaxe (#84), and wells; cave walls hold formations that are mined by hand with a pickaxe and do not renew (#70, #83).
+
+**Water (#132).** One sea level for every world: terrain below it is water, so a sea surrounds the world beyond its radius and inland basins become lakes. The spawn, every biome and every cave entrance lie on land. Players wade and swim slowly; the server stops swimmers a set distance beyond the radius. Buildings may stand on the ground under shallow water as on land.
 
 ### Biomes (#38) — **Draft** for the deposit column
 
@@ -111,6 +113,7 @@ Always in grassland or forest, with loose stones, branches, trees and a stone de
 | Wall formation (caves) | pickaxe | its ore, e.g. thrumite | no |
 | Solid deposit (ores, stone, limestone, coal, sulfur, sand, ice), on the surface and on cave floors | pickaxe or extractor | its resource | infinite |
 | Well or vent (fluids, gases), on the surface and in caves | pump or gas extractor only | its resource | infinite |
+| Lake or sea | water pump | water | infinite |
 
 Trees and rock formations block building; loose stones and branches under a new building go into the builder's inventory; what does not fit is lost, and the build preview says how many (#39, #99).
 
@@ -171,11 +174,11 @@ No single resource carries a tier; the engine phase checks that all of a tier's 
 | Tier | Tiered ore (where) | Mined with | Other new sources | New problem | Main unlocks | Fits stage |
 |---|---|---|---|---|---|---|
 | 0 | none; wood and loose stone (spawn) | hands | trees, rock formations, stone deposit | scarcity: nothing respawns | hand: stone axe and pickaxe; placeable: workbench (wood), wooden chest, furnace (stone), simple supports (wood) | 3 |
-| 1 | copper ore (grassland, forest; surface) | stone pickaxe | coal deposits; stone and wood get processed | first automation; ratios (extractors vs. furnaces) | copper ingot, wire and sheet, stone brick, wooden beam, charcoal; burner extractor (burns wood, charcoal or coal), belts, splitter and merger, supports, vertical belts, scanner, engine link | 3–4 |
-| 2 | iron ore (highlands; surface and shallow caves) | copper pickaxe | water wells, limestone deposits, tree farm (renewable wood) | shared power grid, water, recipes with several inputs | iron plate, rod and gear, steel (iron + coal), concrete (limestone + water); coal generator (burns wood, charcoal or coal; needs water) with water pump, wooden and steel poles, electric extractor, constructor, pipes, tank, faster belts, tree farm | 4–5 |
-| 3 | **thrumite**, a humming crystal that stores energy (cave floor deposits and wall formations below about −30 m in forest and highlands, #70) | iron pickaxe | geothermal vents with sulfur deposits around them (highlands) | caves: moving things up and down; storing power; power from fixed places | sulfuric acid (sulfur + water), resonator, storage cell; batteries, geothermal generator, power towers, faster belts, teleport beacons (#105) | 5 |
-| 4 | **pyrelith**, a stone that holds heat (deep under the desert, next to oil) | thrumite pickaxe | crude oil wells, sand deposits (desert) | **Draft** (#76 removed slag): refining: every refinery recipe makes fuel next to plastic or rubber, so the fuel needs a consumer | pyrelith ingot, glass (sand), plastic, rubber and fuel (oil, #92), insulated cable (copper wire + rubber, #126); oil pump, refinery, fuel generator | 5 |
-| 5 | **rimeglass**, a clear crystal (deep under the tundra) | pyrelith pickaxe | natural gas wells (tundra, desert), ice deposits (tundra) | gas pressure: pressurised natural gas handles more throughput, compressors raise pressure between networks | coolant (from ice, an ordinary ingredient, #76), rimeglass lens, superconducting wire (copper wire + rimeglass + coolant, #127); gas extractor, compressor, pressure tanks, gas turbine, superconducting towers | 5 |
+| 1 | copper ore (grassland, forest; surface) | stone pickaxe | coal deposits; stone and wood get processed | first automation; ratios (extractors vs. furnaces) | copper ingot, wire and sheet, stone brick, wooden beam, charcoal; burner extractor (burns wood, charcoal or coal), belts (30/min, #130), item sink (#134), splitter and merger, supports, vertical belts, scanner, engine link | 3–4 |
+| 2 | iron ore (highlands; surface and shallow caves) | copper pickaxe | water (wells, lakes and the sea, #132), limestone deposits, tree farm (renewable wood) | shared power grid, water, recipes with several inputs | iron plate, rod and gear, steel (iron + coal), concrete (limestone + water); coal generator (burns wood, charcoal or coal; needs water) with water pump, wooden and steel poles, electric extractor, constructor, pipes (300 m³/min), tank, fluid vent (#134), faster belts (60/min), tree farm | 4–5 |
+| 3 | **thrumite**, a humming crystal that stores energy (cave floor deposits and wall formations below about −30 m in forest and highlands, #70) | iron pickaxe | geothermal vents with sulfur deposits around them (highlands) | caves: moving things up and down; storing power; power from fixed places | sulfuric acid (sulfur + water), resonator, storage cell; batteries, geothermal generator, power towers, faster belts (120/min), teleport beacons (#105) | 5 |
+| 4 | **pyrelith**, a stone that holds heat (deep under the desert, next to oil) | thrumite pickaxe | crude oil wells, sand deposits (desert) | **Draft** (#76 removed slag): refining: every refinery recipe makes fuel next to plastic or rubber, so the fuel needs a consumer | pyrelith ingot, glass (sand), plastic, rubber and fuel (oil, #92), insulated cable (copper wire + rubber, #126); oil pump, refinery, fuel generator, faster belts (240/min), faster pipes (600 m³/min) | 5 |
+| 5 | **rimeglass**, a clear crystal (deep under the tundra) | pyrelith pickaxe | natural gas wells (tundra, desert), ice deposits (tundra) | gas pressure: pressurised natural gas handles more throughput, compressors raise pressure between networks | coolant (from ice, an ordinary ingredient, #76), rimeglass lens, superconducting wire (copper wire + rimeglass + coolant, #127); gas extractor, compressor, pressure tanks, gas turbine, superconducting towers, fastest belts (480/min) | 5 |
 | 6 | **concordite**, an alloy fused from thrumite, pyrelith and rimeglass products (made, not mined) | — | — | long distances: three far-apart biomes at once | concordite ingot and parts, concordite tools; resonance cell, resonance reactor (#101) | 5 |
 
 Solids come first without a power grid (burner machines use fuel), which matches Stage 4; power, fluids and gases arrive with tiers 2 to 5, which matches Stage 5. Phase 1 gates tier 2, so the engine link and phase deliveries belong to Stage 4.
@@ -204,7 +207,7 @@ Part names and recipes are placeholders:
 
 **Names.** Thrumite, pyrelith, rimeglass, concordite and the resonance reactor are settled (#116); the engine part names are still placeholders.
 
-**Pacing targets (to tune):**
+**Pacing targets (to tune).** About 40 hours of play for a team of three from first login to waking the engine, roughly a semester at a few hours a week; each phase takes longer than the one before (#128).
 
 | Milestone | Target time from first login |
 |---|---|
@@ -212,7 +215,9 @@ Part names and recipes are placeholders:
 | Workbench placed | about 5 min |
 | First copper ingot | about 10 min |
 | First automated line (burner extractor → belt → furnace → chest) | 20–30 min |
-| First power grid | about 1 h |
+| Phase 1 completed | about 2–3 h (#128) |
+| First power grid | about 3 h: power needs tier 2, after phase 1 (#128) |
+| Engine wakes up | about 40 h (#128) |
 
 **For the author to decide:** the sources, products and engine parts per tier; the engine part names; whether hand-crafted stone tools need the workbench (draft: no).
 
@@ -229,12 +234,15 @@ Part names and recipes are placeholders:
   - A belt or pipe between two supports at different heights rises at most 1 m per 2 m (about 27°).
   - Steeper changes use vertical belts and vertical pipes: 1 to 16 m per piece, stackable, e.g. out of caves.
 - **Cost and refund (#1, #4, #56).** The cost is paid from the inventory when placing, as in Satisfactory; the build menu shows it. Removing a building puts its full cost back into the inventory. A drag placement shows its total cost, automatic supports included, and is refused as a whole if the inventory cannot pay it (#61). Removing a building that holds items, belts included, moves those items into the inventory; fluids and gases in it are lost (#75). Whatever does not fit, refund or contents, goes into a dismantle crate at the spot, which disappears when empty (#89, #94).
+- **Cosmetic pieces (#136).** Walls, windows, roofs, stairs, railings and lamps, without gameplay effects. Like every building they cost materials and count towards the building limits (#87); stairs are walkable (#104). Lamps need no power and light caves and nights.
 - **Placement (#52).** Drag placement for belts, pipes and wires (click the start, click the end). Build reach about 20–30 m.
 
 ## 11. Logistics and production
 
-- **Belts** show every item they carry as a small 3D model (#8). Belt tiers have fixed speeds.
+- **Belts** show every item they carry as a small 3D model (#8). Belt tiers have fixed speeds that double each time: 30, 60, 120, 240 and 480 items/min, one in each of tiers 1 to 5 (#130).
 - **Splitters and mergers**; splitters can filter by item.
+- **Machine roster (#129).** One machine per job shape, as in Satisfactory: one input, two inputs, four inputs, smelting, alloy smelting, refining, fluid mixing. Production machines have no tiers; extractors get one tier per tiered ore (#17). Names, footprints, power and recipes come with the catalogue.
+- **Item sink and fluid vent (#134)** destroy what they receive, without any reward, for by-products and overflow; the vent also takes gases.
 - **Machines** have input buffers, crafting progress and output buffers. A full output stops the machine. Every machine's speed can be set in its menu, which also holds its upgrade slots (#118): 1–100 % from the start, up to 250 % with speed upgrades (#123).
 - **Status everywhere:** each machine shows working, starved, blocked or unpowered; belts and pipes show their fill; a statistics panel shows produced and consumed amounts per resource, for the own team and for the whole world (#80).
 
@@ -326,13 +334,13 @@ Upgrades change these (section 11).
 
 ### Fluids and gases
 
-- **Fluids.** A pipe network carries one fluid. Its capacity is set by its weakest pipe tier; producers and consumers share it proportionally.
+- **Fluids.** A pipe network carries one fluid. Its capacity is set by its weakest pipe tier (300 m³/min from tier 2, 600 m³/min from tier 4, #130); producers and consumers share it proportionally.
 - **Gases.** Like fluids, plus pressure: producers stop at their maximum pressure, consumers need a minimum, and compressors raise pressure between two networks.
 - Fluids and gases never mix: connecting networks with different contents is refused.
 
 ## 13. Controls, camera and interface
 
-First person only (#7): WASD, mouse look, pointer lock, jump, sprint, build mode with a snapped preview, fullscreen toggle.
+First person only (#7): WASD, mouse look, pointer lock, jump, sprint, wading and slow swimming (#132), build mode with a snapped preview, fullscreen toggle.
 
 - **Keys (#113).** Hold the left mouse button to mine, chop or harvest; E picks up and interacts (containers, machines, workbench); Q opens the build menu; R rotates; X removes; Tab opens the inventory; M the map; T the chat.
 - **Collision (#104).** Players collide with every building except wires; foundations, ramps and machine tops are walkable. Nothing can be placed where a player stands.
@@ -341,12 +349,15 @@ First person only (#7): WASD, mouse look, pointer lock, jump, sprint, build mode
 - **Chat (#107).** Team chat and world chat; the world owner can turn world chat off, and world admins mute players. Messages live only in the running world's memory (the last 100 per world, for moderators), never in the database. Team members can ping a spot on the map or in the world.
 - **Display names (#108).** One display name per user for the game, chosen at the first start (the username is suggested and may be kept). Other players only see display names. Usernames are visible to the world owner and world admins of private worlds (the join dialog says so) and to platform admins. Bans are stored by user id.
 - **Onboarding (#110).** A recipe browser (what makes and what uses an item; locked recipes show what unlocks them), an unlock tree per tier, and short first-steps hints for tiers 0 and 1 that players can hide. No quest system.
+- **Settings (#138).** Key rebinding, mouse sensitivity, field of view, view distance and graphics quality, volumes per category (#115), always day (#102), minimap on or off (#106), hints on or off (#110). Stored per user; view distance and graphics quality per device.
+- **Language (#135).** English first. Every text, item, machine and recipe names included, comes from one string table, so German can follow without code changes.
 - **World overview (#109).** The world owner and world admins see the teams and their members, each team's current phase and its progress, last activity and the team statistics (#80). Teachers run class worlds as their owner (#43).
 
 ## 14. Art and audio
 
 - Low-poly, flat colours from one shared palette texture, so all buildings fit one rendering path.
 - **Day and night (#100)** are purely visual: the sun, sky colour and ambient light follow a cycle shared by everyone in the world (30 minutes, 20 of them day, #102). Nights stay bright enough to build and read every status display; caves stay dark, lit by the player's light. A display setting can keep it at day.
+- **Weather (#137):** visual-only rain and snow, later and only if time remains; not part of the v1 scope.
 - Every item has a small 3D model for belts plus an icon for the UI.
 - Asset layout and conventions: #51.
 - **Made by the team (#111):** 3D models, textures, shaders, VFX, music and sound. Until a model exists, a placeholder built in code (simple shapes in palette colours, a distinct silhouette per kind) and an icon rendered from it stand in, so the asset test of #51 passes from the start; CC0 packs can fill gaps (credits per #51).
@@ -360,6 +371,7 @@ First person only (#7): WASD, mouse look, pointer lock, jump, sprint, build mode
 ## 16. Open points
 
 - Review of every **Draft** marker: biome deposits and spawn distances (section 6), ruins and puzzles (6), tier and phase contents including the tier 4 problem, scanner and pacing (9), machine upgrades and their power factors (11), energy (12).
-- The full catalogue (items, machines, buildings, recipes with starting numbers), framed by open questions 62–65; remaining design gaps 66–73 (water and world edge, items between players, item sink, UI language, cosmetic pieces, weather, settings, defaults).
+- The full catalogue (items, machines, buildings, recipes with starting numbers) in `catalogue.md`, framed by #128–#131.
+- Dropped items in detail and items above a team's tier (open questions 74–75).
 - Player health (open question 59), discussed later.
 - Recipes and balance numbers; inventory and stack sizes revisited with balancing (#112).

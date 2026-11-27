@@ -169,7 +169,7 @@ Smaller:
 
 | # | Topic | Decision | Consequences |
 |---|---|---|---|
-| 28 | Private containers | The world owner's full rights on every plot (#24) do not include containers set to private. | A container is either private or not (corrected from "fully private"; there is only one private level). Private: only the player who owns it can open it, not the team owner or admins, not the world owner. Not private: open to the owner's team. Platform admins: #31; removal: #32. |
+| 28 | Private containers | *(A third setting, public, added by #133.)* The world owner's full rights on every plot (#24) do not include containers set to private. | A container is either private or not (corrected from "fully private"; there is only one private level). Private: only the player who owns it can open it, not the team owner or admins, not the world owner. Not private: open to the owner's team. Platform admins: #31; removal: #32. |
 | 29 | Solo teams | Every player is always in a team. A player on their own has a solo team, named by default after their username until they rename it. | Team is always set, so ownership never falls back to a single player outside the team model. The solo team persists: claims return to it when a player leaves a team (#30). |
 | 30 | Claims | **Superseded by #72.** (Was: a claim is a 32 × 32 m area; the world owner sets the claim limit; a player who leaves their team keeps their claims and buildings in their solo team.) | — |
 
@@ -335,7 +335,7 @@ A review of this log, the GDD and the stage plans listed gaps that no decision c
 | 69 | Cave access | Caves are generally accessible: every cave system connects to the surface through at least one entrance a player can walk through. | Generator guarantee in core, pinned by a test over sampled seeds. Derived: terrain is not editable (#19), so belts and pipes leave caves through these entrances too; an entrance needs room for a belt or pipe next to the walking path, and either a slope that sloped belts can follow (#60) or a vertical stretch for vertical belts and pipes. Closes the cave part of review B3. |
 | 70 | Cave resources | Caves hold deposits and wells on their floors and formations on their walls. Wall formations are mined by hand with a pickaxe. | Thrumite (tier 3) comes from floor deposits (extractors) and wall formations (pickaxe). Deposits on cave floors stay as in the spec (flat extractor footprint). Assumed: wall formations do not renew, like rock formations (#20), and take no extractor; the pickaxe tier rule (#17) applies to them. |
 | 71 | Biomes in every world | Every world contains each of the five biomes at least once. Worlds become bigger in general. | Generator guarantee for every combination of world size and biome size, pinned by a test; the same holds for deep caves under desert and tundra (pyrelith, rimeglass) and for enough vaults per biome (#67). New radii proposed below. Longer distances make open question 49 (travel) more pressing. |
-| 72 | Protection instead of claims | There are no claims. What a team builds is protected: only that team opens, configures or removes it. Everything generated with the world (trees, stones, branches, rock and wall formations, deposits, wells, ruins) is open to everyone. | Supersedes #30, #34, #35, #36 and the claim parts of #24, #27 and #37. The world owner keeps full rights on every building except private containers (#24, #28); private containers stay as in #28, #31 and #32. No team can lock a vault or seal away from the others (#67). A deposit is held by the first extractor placed on it (one extractor per deposit, spec). Claim limits leave the world settings (#45). Assumed: saplings a team plants, and the trees grown from them, count as built by that team. Opened: buildings when players change teams (40), building next to other teams and limits (43), deposits at spawn (44). |
+| 72 | Protection instead of claims | *(Public containers open to everyone, #133.)* There are no claims. What a team builds is protected: only that team opens, configures or removes it. Everything generated with the world (trees, stones, branches, rock and wall formations, deposits, wells, ruins) is open to everyone. | Supersedes #30, #34, #35, #36 and the claim parts of #24, #27 and #37. The world owner keeps full rights on every building except private containers (#24, #28); private containers stay as in #28, #31 and #32. No team can lock a vault or seal away from the others (#67). A deposit is held by the first extractor placed on it (one extractor per deposit, spec). Claim limits leave the world settings (#45). Assumed: saplings a team plants, and the trees grown from them, count as built by that team. Opened: buildings when players change teams (40), building next to other teams and limits (43), deposits at spawn (44). |
 | 73 | Loot | Loot containers in ruins work per player, as in the Lootr mod (inspired by, not copied): every player opens their own copy of the contents. | Supersedes the proposal "once per structure per team". Every player can take a relic from each vault (#67), so a team does not depend on one member. Late joiners get full loot, which softens #20. Door and wreck state: open question 47. |
 | 74 | Obtained | An item counts as obtained for the unlock rule (#18) once any member of the team holds it in their inventory. | Items that only pass through machines or sit in containers count once someone picks one up. The server records it on inventory changes. |
 | 75 | Contents on removal | Removing part of a belt moves the items on it into the remover's inventory, as in Satisfactory. Fluids and gases in removed pipes are lost. | Assumed, same rule: items in machine buffers, containers and installed upgrades move into the inventory; fluids and gases in tanks and machines are lost. Full inventory: open question 45. |
@@ -619,42 +619,73 @@ The design now covers the systems, but not the full content: many items, machine
 
 ### Open
 
-62. **Playtime target.** How long should a small team take from first login to waking the engine? It sets every quantity: phase amounts, recipe times, extractor rates.
-63. **Machine roster.** A small set of general machines, or machines specialised per product? Do production machines come in tiers, or only extractors?
-64. **Belt and pipe tiers.** How many, at which rates.
-65. **Where the catalogue lives.** A design document now, or straight into code.
-66. **Water and the world's edge.** Are there lakes or a sea; can pumps draw from them; what does a player see at the edge of the world radius?
-67. **Items between players.** Nobody can open another team's containers (#72) or connect to its buildings (#98), so items cannot change teams. Ground drops, a trade dialog, or nothing?
-68. **Item sink.** A building that destroys items, and one that vents fluids and gases, for by-products and overflow.
-69. **UI language.** English only, or German as well?
-70. **Cosmetic building pieces.** Walls, roofs, stairs, railings, lamps, or only functional pieces?
-71. **Weather.** Visual-only rain and snow, like day and night (#100)?
-72. **Settings menu.** What players can adjust.
-73. **Defaults.** Maximum team size, default building limits (#87), default maximum players per world.
+62. **Playtime target.** Answered by #128.
+63. **Machine roster.** Answered by #129.
+64. **Belt and pipe tiers.** Answered by #130.
+65. **Where the catalogue lives.** Answered by #131.
+66. **Water and the world's edge.** Answered by #132.
+67. **Items between players.** Answered by #133.
+68. **Item sink.** Answered by #134.
+69. **UI language.** Answered by #135.
+70. **Cosmetic building pieces.** Answered by #136.
+71. **Weather.** Answered by #137.
+72. **Settings menu.** Answered by #138.
+73. **Defaults.** Answered by #139.
 
 ### Proposed, awaiting confirmation
 
-- **62:** about 40 hours of play for a team of three to wake the engine, roughly a semester at a few hours a week; phase 1 after about 2–3 hours, each later phase longer than the one before.
-- **63:** a Satisfactory-style roster with one machine per job shape: one input, two inputs, four inputs, smelting, alloy smelting, refining, fluid mixing. Production machines have no tiers; extractors get one tier per tiered ore (#17); speed comes from speed settings and upgrades (#118).
-- **64:** five belt tiers that double each time (30, 60, 120, 240, 480 items/min, in tiers 1 to 5); two pipe tiers for fluids and gases (300 and 600 m³/min, in tiers 2 and 4).
-- **65:** `docs/automata/catalogue.md` now, with resources, items, machines, buildings and recipes at starting numbers. Once Stage 4 brings `automata/core/src/catalog/`, the code is authoritative and the document points to it, as the GDD intro says.
-- **66:** a global sea level: terrain below it is water, so a sea surrounds the world beyond its radius and inland basins become lakes. Water pumps work on any lake or the sea; water wells stay for places without open water. Players can wade and swim slowly.
-- **67:** a trade dialog between two nearby players in which both confirm; no ground drops, so no loose items to store.
-- **68:** an item sink (tier 1) and a fluid vent (tier 2) that destroy what they receive, without any reward.
-- **69:** English first, with every text in one string table, so German can follow without code changes.
-- **70:** a small cosmetic set (walls, windows, roofs, stairs, railings, lamps) without gameplay effects, since the team makes the art.
-- **71:** later, visual only, if time remains.
-- **72:** key rebinding, mouse sensitivity, field of view, view distance and graphics quality, volumes per category (#115), always day (#102), minimap on or off (#106), hints on or off (#110).
-- **73:** no team size limit below the world's maximum players; 32 players per world by default; default building limits 2 000 per player, 6 000 per team and 20 000 per world (the spec's entity cap). Whether an endgame factory at 1–2 GW (#121) fits under that cap and the tick budget is checked against the Stage 4 benchmark.
+- *(Confirmed as #128.)* **62:** about 40 hours of play for a team of three to wake the engine, roughly a semester at a few hours a week; phase 1 after about 2–3 hours, each later phase longer than the one before.
+- *(Confirmed as #129.)* **63:** a Satisfactory-style roster with one machine per job shape: one input, two inputs, four inputs, smelting, alloy smelting, refining, fluid mixing. Production machines have no tiers; extractors get one tier per tiered ore (#17); speed comes from speed settings and upgrades (#118).
+- *(Confirmed as #130.)* **64:** five belt tiers that double each time (30, 60, 120, 240, 480 items/min, in tiers 1 to 5); two pipe tiers for fluids and gases (300 and 600 m³/min, in tiers 2 and 4).
+- *(Confirmed as #131.)* **65:** `docs/automata/catalogue.md` now, with resources, items, machines, buildings and recipes at starting numbers. Once Stage 4 brings `automata/core/src/catalog/`, the code is authoritative and the document points to it, as the GDD intro says.
+- *(Confirmed as #132.)* **66:** a global sea level: terrain below it is water, so a sea surrounds the world beyond its radius and inland basins become lakes. Water pumps work on any lake or the sea; water wells stay for places without open water. Players can wade and swim slowly.
+- *(Not taken: #133 shares items by drops and containers instead.)* **67:** a trade dialog between two nearby players in which both confirm; no ground drops, so no loose items to store.
+- *(Confirmed as #134.)* **68:** an item sink (tier 1) and a fluid vent (tier 2) that destroy what they receive, without any reward.
+- *(Confirmed as #135.)* **69:** English first, with every text in one string table, so German can follow without code changes.
+- *(Confirmed as #136.)* **70:** a small cosmetic set (walls, windows, roofs, stairs, railings, lamps) without gameplay effects, since the team makes the art.
+- *(Confirmed as #137.)* **71:** later, visual only, if time remains.
+- *(Confirmed as #138.)* **72:** key rebinding, mouse sensitivity, field of view, view distance and graphics quality, volumes per category (#115), always day (#102), minimap on or off (#106), hints on or off (#110).
+- *(Confirmed as #139.)* **73:** no team size limit below the world's maximum players; 32 players per world by default; default building limits 2 000 per player, 6 000 per team and 20 000 per world (the spec's entity cap). Whether an endgame factory at 1–2 GW (#121) fits under that cap and the tick budget is checked against the Stage 4 benchmark.
+
+## 2026-11-27 — Catalogue frame, remaining gaps and sharing items
+
+The author confirmed the proposals for open questions 62–73, except 67: items change hands by dropping them or through containers, not in a trade dialog.
+
+### Decided
+
+| # | Topic | Decision | Consequences |
+|---|---|---|---|
+| 128 | Playtime target | As proposed (open question 62): about 40 hours of play for a team of three from first login to waking the engine, roughly a semester at a few hours a week. Phase 1 after about 2–3 hours, each later phase longer than the one before. | Sets every quantity in the catalogue: phase amounts, recipe times, extractor rates. The pacing draft's "first power grid after about 1 h" no longer fits, since power arrives with tier 2 after phase 1 (#64); assumed: about 3 h. |
+| 129 | Machine roster | As proposed (open question 63): a Satisfactory-style roster with one machine per job shape: one input, two inputs, four inputs, smelting, alloy smelting, refining, fluid mixing. Production machines have no tiers; extractors get one tier per tiered ore (#17). | Speed comes from speed settings and upgrades (#118, #123). Names, footprints, power and the recipes per machine come with the catalogue, which also fills the machine gaps for steel, concrete, sulfuric acid and coolant. |
+| 130 | Belt and pipe tiers | As proposed (open question 64): five belt tiers that double each time (30, 60, 120, 240, 480 items/min, one in each of tiers 1 to 5); two pipe tiers for fluids and gases (300 and 600 m³/min, in tiers 2 and 4). | Tier rows in the GDD updated. The first pipe carries the water of five water pumps (target 60 m³/min) or one resonance reactor (300 m³/min, #101). |
+| 131 | Catalogue location | As proposed (open question 65): `docs/automata/catalogue.md` now, with resources, items, machines, buildings and recipes at starting numbers. Once Stage 4 brings `automata/core/src/catalog/`, the code is authoritative and the document points to it. | Same rule as the GDD intro. The catalogue draft is the next step. |
+| 132 | Water and the world's edge | As proposed (open question 66): a global sea level. Terrain below it is water, so a sea surrounds the world beyond its radius and inland basins become lakes. Water pumps work on any lake or the sea; water wells stay for places without open water. Players wade and swim slowly. | The generator lowers the terrain below sea level towards the radius and keeps the spawn (#38), the biome guarantees (#71, #96) and cave entrances (#69) on land, pinned by tests. The renderer draws a water surface, the map (#106) shades water, and the movement check gains wading and swimming. Assumed: the sea level is the same in every world, not a world setting (#45); the server stops swimmers a set distance beyond the radius; buildings may stand on the ground under shallow water as on land (#57). |
+| 133 | Items between players | Not the trade dialog proposed for open question 67: players share items by dropping them on the ground, where anyone can pick them up, or through containers. Assumed from "public/team containers": containers gain a third setting, **public**, next to private and team: every player in the world can put items in and take them out. | Supersedes "only one private level" in #28 and extends #72: opening a public container is the one exception to "only that team opens it"; configuring and removing it stay with the owning team and the world owner (#24). Belts and pipes still connect only to the own team's buildings (#98), so public containers are filled and emptied by hand. Picking up another team's item counts as obtained (#74); recipes and buildings still need their tier (#64, #81). Opened: dropped items in detail (74), items above a team's tier (75). |
+| 134 | Item sink and vent | As proposed (open question 68): an item sink (tier 1) and a fluid vent (tier 2) destroy what they receive, without any reward. | Tier rows in the GDD updated. The vent also takes gases once they arrive (tier 5). Assumed: the statistics panel (#80) counts what they destroy as consumed. |
+| 135 | UI language | As proposed (open question 69): English first, with every text in one string table, so German can follow without code changes. | Assumed: item, machine and recipe names from the catalogue go through the string table too; a test checks that every key has an English text. |
+| 136 | Cosmetic pieces | As proposed (open question 70): walls, windows, roofs, stairs, railings and lamps, without gameplay effects. | The team makes their art (#111). Assumed: like every building they cost materials and count towards the building limits (#87); collision follows #104 (stairs walkable); lamps need no power and are light sources for caves and nights in the renderer. |
+| 137 | Weather | As proposed (open question 71): visual-only rain and snow, later and only if time remains. | Not part of the v1 scope confirmed by #117; the stage plans list it as optional. |
+| 138 | Settings menu | As proposed (open question 72): key rebinding, mouse sensitivity, field of view, view distance and graphics quality, volumes per category (#115), always day (#102), minimap on or off (#106), hints on or off (#110). | Assumed: stored per user; view distance and graphics quality per device, since they depend on the GPU. |
+| 139 | Defaults | As proposed (open question 73): no team size limit below the world's maximum players; 32 players per world by default; default building limits 2 000 per player, 6 000 per team and 20 000 per world (the spec's entity cap). | The world owner adjusts both later (#87), within the server cap. Whether an endgame factory at 1–2 GW (#121) fits under 20 000 buildings and the tick budget is checked against the Stage 4 benchmark. |
+
+### Open
+
+74. **Dropped items.** What a drop looks like, who picks it up, whether it ever disappears, and what keeps drops from filling a world.
+75. **Items above a team's tier.** Under #133, items reach teams that have not unlocked their tier. Recipes and buildings still need the tier (#64, #81), but some items are used directly: a team could mine with a pickaxe it cannot make yet, install an upgrade from a later tier, or deliver engine parts another team built and skip a phase.
+
+### Proposed, awaiting confirmation
+
+- **74:** dropping a stack (drag it out of the inventory window, or G for the selected hotbar item) puts it into a ground pile at the player's feet. A pile works like the dismantle crate (#89), but open to everyone: it holds whatever is dropped at that spot, shows the items' belt models (#8), and disappears when empty. Any player takes from it with E (#113). Piles never disappear on their own, since nothing respawns (#20). While it exists, a pile counts towards the building limit (#87) of the player who started it, so drops cannot fill a world, and the world owner can remove any pile (#24).
+- **75:** one rule for use: an item can always be held, stored and passed on, but it works at most at the highest tier its holder's team has unlocked. A pickaxe from a later tier mines like the team's best pickaxe; an upgrade from a locked tier cannot be installed. This also covers a player who joins a team that is behind their solo team (#81). Engine parts and relics cannot be dropped or put into public containers, so each team still builds its own phases (#64); inside a team they move freely. Alternative: allow everything and treat it as cooperation, which the world overview (#109) shows a teacher.
 
 ## Where things stand (end of 2026-11-27)
 
 Session paused here; the next one starts from this list.
 
-1. **Answer open questions 62–73** (entry *Catalogue and remaining gaps*, each with a proposal), by number. 62–65 frame the catalogue; 66–73 are remaining design gaps.
-2. **Draft `docs/automata/catalogue.md`** from the answers to 62–65: every item per tier, the machine roster with inputs, outputs, footprint and power, recipes at starting numbers, extractor tiers and rates, tools, storage sizes, engine phase quantities, loot tables, puzzles and alternative recipes. Settle the GDD's remaining **Draft** markers in the same pass: biome deposits, spawn distances, pacing, scanner, ruins and puzzles, machine upgrade sources, energy numbers, whether stone tools need the workbench.
-   - Known gaps the catalogue closes: machines for steel, concrete, sulfuric acid and coolant; recipes for copper sheet, wooden beam, iron rod and gear, resonator, rimeglass lens, cryo lattices, concordite parts and resonance cells; belt and pipe rates; extractor tiers; container sizes; phase quantities; engine part names (#116).
-3. **Rewrite the spec and stage plans** in `docs/superpowers/` (#54) from this log, the GDD and the catalogue: fold in the plan review findings that are still open (first entry: A1–A3, A6, B5, B7, B8 and the smaller ones, including the `AGENTS.md` architecture map), and give every feature added since #49 a stage (#117).
+1. **Answer open questions 74–75** (entry *Catalogue frame, remaining gaps and sharing items*, each with a proposal), by number. Both follow from #133.
+2. **Draft `docs/automata/catalogue.md`** (#131) from #128–#130: every item per tier, the machine roster with inputs, outputs, footprint and power, recipes at starting numbers, extractor tiers and rates, tools, storage sizes, cosmetic pieces, engine phase quantities, loot tables, puzzles and alternative recipes. Settle the GDD's remaining **Draft** markers in the same pass: biome deposits, spawn distances, pacing, scanner, ruins and puzzles, machine upgrade sources, energy numbers, whether stone tools need the workbench.
+   - Known gaps the catalogue closes: machines for steel, concrete, sulfuric acid and coolant; recipes for copper sheet, wooden beam, iron rod and gear, resonator, rimeglass lens, cryo lattices, concordite parts and resonance cells; extractor tiers; container sizes; phase quantities; engine part names (#116).
+3. **Rewrite the spec and stage plans** in `docs/superpowers/` (#54) from this log, the GDD and the catalogue: fold in the plan review findings that are still open (first entry: A1–A3, A6, B5, B7, B8 and the smaller ones, including the `AGENTS.md` architecture map), and give every feature added since #49 a stage (#117), including sea and lakes (#132), drops and public containers (#133), sink and vent (#134), the string table (#135), cosmetic pieces (#136) and the settings menu (#138). Weather is listed as optional (#137).
 
 - **Parked:** player health (open question 59).
-- **Assumption to confirm on the way:** #123 treats the rest of the energy draft (GDD section 12) as the working basis.
+- **Assumptions to confirm on the way:** #123 treats the rest of the energy draft (GDD section 12) as the working basis; #133 reads "public/team containers" as a new public setting next to the team one.
